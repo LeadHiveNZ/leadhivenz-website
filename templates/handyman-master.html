@@ -1,0 +1,799 @@
+<!--
+  LEADHIVE — SOUTH & WEST AUCKLAND HANDYMAN MASTER TEMPLATE  v1
+  Variant: planned intent
+
+  ZONE A — CONFIG (bottom, marked ▼ CONFIG ▼): the ONLY editable block.
+  ZONE B — everything else: LOCKED.
+
+  Preview any service page in this single file with ?page=<key>  (e.g. ?page=fence)
+  In Lovable each key becomes its own route from CONFIG.services[key].path.
+
+  PHONE: CONFIG.business.phone and the #nb-source span must hold the number Nimbata is
+  configured to REPLACE for this project (the old hardcoded one), never a tracking number.
+-->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F4F6F9">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F4F6F9; --card:#FFFFFF; --ink:#101C2C; --ink-2:#4A5A6C; --ink-3:#8593A3; --rule:#DCE3EB;
+  --signal:#E8740C; --signal-lo:#C9610A; --live:#158A4F; --live-bg:#E4F5EC; --mark:#1F4D3A; --mark-ink:#FFFFFF;
+  --shell:600px; --bar:74px;
+  --font:"Inter Tight",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{scroll-behavior:smooth}
+body{font-family:var(--font);font-weight:500;background:var(--paper);color:var(--ink);line-height:1.4;-webkit-font-smoothing:antialiased;padding-bottom:calc(var(--bar) + env(safe-area-inset-bottom))}
+a{color:inherit}
+.shell{max-width:var(--shell);margin:0 auto;padding:0 20px}
+.ico{width:18px;height:18px;flex:none;fill:currentColor}
+.status{background:var(--live-bg);border-bottom:1px solid #CDE9DA;padding:9px 20px;display:flex;justify-content:center;align-items:center;gap:8px;font-size:13.5px;font-weight:600;color:#0F6B3D}
+.status .dot{width:8px;height:8px;border-radius:50%;background:var(--live);flex:none;box-shadow:0 0 0 0 rgba(21,138,79,.5);animation:pulse 2.4s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(21,138,79,.5)}70%{box-shadow:0 0 0 8px rgba(21,138,79,0)}100%{box-shadow:0 0 0 0 rgba(21,138,79,0)}}
+@media(prefers-reduced-motion:reduce){.status .dot{animation:none}}
+.mast{display:flex;align-items:center;gap:12px;padding:16px 0 20px}
+.mark{width:42px;height:42px;border-radius:10px;flex:none;background:var(--mark);color:var(--mark-ink);display:grid;place-items:center;font-weight:800;font-size:16px;letter-spacing:-.5px}
+.mark img{width:100%;height:100%;object-fit:contain;border-radius:10px}
+.mast-name{font-size:15.5px;font-weight:700;letter-spacing:-.2px}
+.mast-name small{display:block;font-size:12.5px;font-weight:500;color:var(--ink-2);margin-top:1px}
+.tpl-h1{font-size:clamp(32px,8.6vw,46px);line-height:1.03;letter-spacing:-1.4px;font-weight:800;margin-bottom:10px;text-wrap:balance;color:var(--ink)}
+.lede{font-size:clamp(16px,4.2vw,18px);color:var(--ink-2);margin-bottom:20px;max-width:36ch;line-height:1.45}
+.lede b{color:var(--ink);font-weight:700}
+.call{display:block;text-decoration:none;color:#fff;background:var(--signal);border-radius:14px;padding:16px 18px 18px;text-align:center;box-shadow:0 12px 28px -10px color-mix(in srgb,var(--signal) 55%,transparent)}
+.call:active{background:var(--signal-lo)}
+.call-k{display:flex;justify-content:center;align-items:center;gap:7px;font-size:12.5px;font-weight:700;letter-spacing:.4px;opacity:.95;margin-bottom:2px}
+.call-n{display:block;font-size:clamp(36px,10.2vw,48px);font-weight:800;letter-spacing:-1.6px;line-height:1.1;font-variant-numeric:tabular-nums;white-space:nowrap}
+.quote{display:block;text-decoration:none;text-align:center;margin-top:10px;padding:15px;border-radius:14px;border:2px solid var(--ink);color:var(--ink);font-size:16.5px;font-weight:800;letter-spacing:-.2px;background:var(--card)}
+.answered{display:flex;align-items:center;justify-content:center;gap:7px;margin-top:11px;font-size:13.5px;color:var(--ink-2);font-weight:500}
+.trust{margin:22px 0 0;background:var(--card);border:1px solid var(--rule);border-radius:14px;display:grid;grid-template-columns:repeat(3,1fr);align-items:stretch}
+.trust>div{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px 6px;gap:3px;min-height:64px;text-align:center}
+.trust>div+div{border-left:1px solid var(--rule)}
+.trust .v{font-size:17px;font-weight:800;letter-spacing:-.4px;line-height:1.1}
+.trust .l{font-size:11.5px;color:var(--ink-2);line-height:1.2;white-space:nowrap;font-weight:500}
+.stars{color:#F2A900;font-size:13px;letter-spacing:.5px;line-height:1}
+.price,.oncall,.cost{margin:14px 0 0;background:var(--card);border:1px solid var(--rule);border-radius:14px;padding:15px 16px;display:flex;gap:14px;align-items:center}
+.price .amt,.cost .amt{font-size:clamp(24px,6.5vw,28px);font-weight:800;letter-spacing:-1px;line-height:1;white-space:nowrap}
+.price .amt small{font-size:12px;font-weight:600;color:var(--ink-2);letter-spacing:0;display:block;margin-top:4px;white-space:normal}
+.price p,.cost p{font-size:14px;color:var(--ink-2);line-height:1.4;flex:1}
+.price p b,.cost p b{color:var(--ink);font-weight:700}
+.face{width:54px;height:54px;border-radius:50%;flex:none;background:#E5EBF2;overflow:hidden;display:grid;place-items:center;font-weight:800;color:var(--ink-2);font-size:20px}
+.face img{width:100%;height:100%;object-fit:cover}
+.oncall .who{font-size:15.5px;font-weight:700;letter-spacing:-.2px}
+.oncall .what{font-size:13.5px;color:var(--ink-2);margin-top:2px}
+.oncall .tag{display:inline-flex;align-items:center;gap:5px;margin-top:6px;font-size:12px;font-weight:700;color:#0F6B3D;background:var(--live-bg);padding:3px 8px;border-radius:99px}
+.oncall .tag i{width:6px;height:6px;border-radius:50%;background:var(--live)}
+.h2{font-size:20px;font-weight:800;letter-spacing:-.5px;margin:34px 0 12px}
+.points{list-style:none}
+.points li{display:flex;gap:11px;align-items:flex-start;padding:10px 0;font-size:15.5px;border-bottom:1px solid var(--rule)}
+.points li:last-child{border-bottom:0}
+.tick{flex:none;width:21px;height:21px;border-radius:50%;background:var(--live-bg);display:grid;place-items:center;margin-top:1px}
+.tick svg{width:11px;height:11px;stroke:var(--live);fill:none;stroke-width:3.4;stroke-linecap:round;stroke-linejoin:round}
+.jobs{display:flex;flex-wrap:wrap;gap:8px}
+.job{background:var(--card);border:1px solid var(--rule);border-radius:9px;padding:8px 12px;font-size:14px;color:var(--ink-2);font-weight:500}
+.jobgroup{margin-bottom:14px}
+.jobgroup .g{font-size:12.5px;font-weight:700;color:var(--ink-3);margin-bottom:7px;letter-spacing:.2px}
+.photos{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.photos img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:10px;border:1px solid var(--rule)}
+.svc-intro{font-size:15.5px;line-height:1.5;max-width:60ch}
+.steps{list-style:none;counter-reset:s}
+.steps li{display:flex;gap:12px;padding:11px 0;border-bottom:1px solid var(--rule);counter-increment:s}
+.steps li:last-child{border-bottom:0}
+.steps li::before{content:counter(s);flex:none;width:26px;height:26px;border-radius:50%;background:var(--mark);color:var(--mark-ink);font-size:13px;font-weight:800;display:grid;place-items:center;margin-top:1px}
+.steps b{display:block;font-size:15.5px;font-weight:700}
+.steps span{display:block;font-size:14.5px;color:var(--ink-2);margin-top:2px;line-height:1.4}
+.review{background:var(--card);border:1px solid var(--rule);border-radius:14px;padding:14px 16px;margin-bottom:10px}
+.review .stars{margin-bottom:6px}
+.review p{font-size:15px;line-height:1.45}
+.review .by{font-size:12.5px;color:var(--ink-3);margin-top:7px;font-weight:500}
+.area{font-size:14.5px;color:var(--ink-2);line-height:1.6}
+.area b{color:var(--ink);font-weight:700}
+.faq details{border-bottom:1px solid var(--rule)}
+.faq summary{list-style:none;cursor:pointer;padding:13px 0;font-size:15.5px;font-weight:700;display:flex;justify-content:space-between;align-items:center;gap:12px}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";font-weight:600;color:var(--ink-3);font-size:20px;line-height:1}
+.faq details[open] summary::after{content:"–"}
+.faq details p{padding:0 0 14px;font-size:14.5px;color:var(--ink-2);line-height:1.5}
+.enquiry{background:var(--card);border:1px solid var(--rule);border-radius:14px;padding:16px}
+.enquiry-lede{font-size:14px;color:var(--ink-2);margin-bottom:12px;line-height:1.45}
+.enquiry label{display:block;font-size:12.5px;font-weight:700;color:var(--ink-2);margin:10px 0 5px}
+.enquiry input,.enquiry select,.enquiry textarea{width:100%;font:inherit;font-size:16px;padding:12px 13px;border:1px solid var(--rule);border-radius:10px;background:var(--paper);color:var(--ink)}
+.enquiry input:focus,.enquiry select:focus,.enquiry textarea:focus{outline:2px solid var(--mark);outline-offset:1px;border-color:transparent}
+.enquiry .chk{display:flex;align-items:center;gap:9px;margin:12px 0 14px;font-size:14px;font-weight:500;color:var(--ink)}
+.enquiry .chk input{width:18px;height:18px;padding:0;accent-color:var(--signal)}
+.enquiry button{width:100%;font:inherit;font-size:16px;font-weight:800;letter-spacing:-.2px;padding:15px;border:0;border-radius:12px;background:var(--signal);color:#fff;cursor:pointer;margin-top:14px}
+.enquiry button:disabled{opacity:.6;cursor:default}
+.enquiry .msg{margin-top:10px;font-size:14px;color:var(--ink-2)}
+.enquiry .ok{font-size:15.5px;font-weight:700;color:#0F6B3D}
+.footnav{margin-top:30px;border-top:1px solid var(--rule);padding:20px 0 6px}
+.footnav .t{font-size:13px;font-weight:700;margin-bottom:8px}
+.footnav ul{list-style:none;columns:2;column-gap:16px}
+.footnav li{font-size:14px;padding:4px 0;break-inside:avoid}
+.footnav a{color:var(--ink-2);text-decoration:none}
+.footnav a.on{color:var(--ink);font-weight:700}
+.foot{padding:16px 0 20px;font-size:12px;color:var(--ink-3);line-height:1.6}
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:50;background:rgba(244,246,249,.92);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--rule);padding:10px 0 calc(10px + env(safe-area-inset-bottom))}
+.bar-inner{max-width:var(--shell);margin:0 auto;padding:0 20px;display:flex;gap:9px}
+.bar-call{flex:1;display:flex;align-items:center;justify-content:center;gap:9px;text-decoration:none;background:var(--signal);color:#fff;border-radius:12px;padding:15px 10px;font-size:18px;font-weight:800;letter-spacing:-.5px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.bar-call:active{background:var(--signal-lo)}
+.bar-txt{flex:none;display:flex;align-items:center;text-decoration:none;background:var(--card);border:1px solid var(--rule);color:var(--ink);border-radius:12px;padding:15px 16px;font-size:14px;font-weight:700}
+.dev{position:fixed;top:8px;right:8px;z-index:60;font-size:11px;background:#111;color:#fff;padding:5px 8px;border-radius:6px;opacity:.75}
+.dev a{color:#fff;margin-left:6px}
+</style>
+
+<span id="nb-source" data-fallback="" style="position:absolute;left:-9999px;top:0"></span>
+<div class="dev" id="dev"></div>
+
+<div class="status"><span class="dot"></span><span id="status-text"></span></div>
+
+<div class="shell">
+  <div class="mast">
+    <div class="mark" id="mark"></div>
+    <div class="mast-name"><span id="biz"></span><small id="cred"></small></div>
+  </div>
+
+  <h1 class="tpl-h1" id="h1"></h1>
+  <p class="lede" id="lede"></p>
+
+  <a class="call" href="#" data-phone-link>
+    <span class="call-k"><svg class="ico" viewBox="0 0 24 24" style="width:14px;height:14px"><path d="M6.6 10.8a15.1 15.1 0 006.6 6.6l2.2-2.2a1 1 0 011-.24 11.4 11.4 0 003.6.58 1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1 11.4 11.4 0 00.57 3.6 1 1 0 01-.25 1z"/></svg><span id="call-k"></span></span>
+    <span class="call-n" data-phone-display></span>
+  </a>
+  <a class="quote" href="#enquiry" id="quote-btn"></a>
+  <div class="answered"><svg class="ico" viewBox="0 0 24 24" style="width:15px;height:15px"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm-1 14.6l-4-4 1.4-1.4 2.6 2.6 5.6-5.6L18 9.6z"/></svg><span id="answered"></span></div>
+
+  <div class="trust">
+    <div><div class="stars">★★★★★</div><div class="l" id="t1"></div></div>
+    <div><div class="v" id="t2v"></div><div class="l" id="t2l"></div></div>
+    <div><div class="v" id="t3v"></div><div class="l" id="t3l"></div></div>
+  </div>
+
+  <div class="price" id="price-card"><div class="amt"><span id="fee"></span><small id="fee-lab"></small></div><p id="fee-copy"></p></div>
+  <div class="oncall" id="oncall-card"><div class="face" id="face"></div><div><div class="who" id="oc-name"></div><div class="what" id="oc-role"></div><span class="tag"><i></i><span id="oc-tag"></span></span></div></div>
+
+  <div id="body"></div>
+
+  <div class="h2" id="h-rev"></div><div id="reviews"></div>
+  <div class="h2" id="h-area"></div><p class="area"><b id="area-lead"></b> <span id="area-list"></span></p>
+
+  <div class="h2" id="h-form"></div>
+  <form class="enquiry" id="enquiry" novalidate>
+    <p class="enquiry-lede" id="form-lede"></p>
+    <label for="f-name">Name</label><input id="f-name" type="text" autocomplete="name" required>
+    <label for="f-phone">Mobile</label><input id="f-phone" type="tel" inputmode="tel" autocomplete="tel" required>
+    <label for="f-suburb">Suburb</label><select id="f-suburb" required></select>
+    <div id="f-extra"></div>
+    <label for="f-issue" id="f-issue-lab"></label><textarea id="f-issue" rows="2" required></textarea>
+    <div id="f-urgency"></div>
+    <button type="submit" id="f-btn"></button>
+    <div class="msg" id="f-msg"></div>
+  </form>
+
+  <nav class="footnav"><div class="t" id="fn-title"></div><ul id="fn-list"></ul></nav>
+  <p class="foot" id="foot"></p>
+</div>
+
+<div class="bar"><div class="bar-inner">
+  <a class="bar-call" href="#" data-phone-link><svg class="ico" viewBox="0 0 24 24"><path d="M6.6 10.8a15.1 15.1 0 006.6 6.6l2.2-2.2a1 1 0 011-.24 11.4 11.4 0 003.6.58 1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1 11.4 11.4 0 00.57 3.6 1 1 0 01-.25 1z"/></svg><span data-phone-display></span></a>
+  <a class="bar-txt" href="#enquiry" id="bar-form"></a>
+</div></div>
+
+<script>
+/* ═══════════════ ▼ CONFIG ▼ — the only editable block ═══════════════ */
+const CONFIG = {
+  "variant": "planned",
+  "business": {
+    "name": "South & West Auckland Handyman",
+    "initials": "SW",
+    "logoUrl": "",
+    "credential": "Owner-operator · Insured · South & West Auckland",
+    "city": "South & West Auckland",
+    "country": "NZ",
+    "phone": "REPLACE_WITH_NIMBATA_TARGET_NUMBER"
+  },
+  "hours": {
+    "open": 7,
+    "close": 18,
+    "days": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ]
+  },
+  "quoteButton": "Get a quote",
+  "headlines": {
+    "default": {
+      "h1": "Need a handyman in South or West Auckland?",
+      "lede": "Repairs, fences, decks, gib, painting and the jobs nobody else wants. <b>Quoted before we start</b>, done properly."
+    },
+    "fence": {
+      "h1": "Fence repair or new fence?",
+      "lede": "Leaning posts, rotten palings, storm damage, or a new boundary fence. <b>Fixed-price quote</b> from a photo."
+    },
+    "deck": {
+      "h1": "Deck repair or rebuild?",
+      "lede": "Rotten boards, wobbly rails, a deck that's past it. Repaired or rebuilt, <b>quoted before we start</b>."
+    },
+    "gib": {
+      "h1": "Holes or cracks in the walls?",
+      "lede": "Gib patching, stopping, sanding and painting so you can't tell it was there. <b>Small jobs welcome</b>."
+    },
+    "paint": {
+      "h1": "Interior or exterior painting?",
+      "lede": "A room, a fence, a weatherboard side. Prepped properly and painted properly. <b>Fixed-price quote</b>."
+    },
+    "repairs": {
+      "h1": "Got a list of small jobs?",
+      "lede": "Doors that stick, gutters, shelves, leaky taps, curtain rails. <b>One visit</b>, all done, one price."
+    },
+    "gutters": {
+      "h1": "Gutters blocked or overflowing?",
+      "lede": "Cleaned, repaired or replaced before the next downpour. <b>Quoted from a photo</b>."
+    }
+  },
+  "callKicker": {
+    "open": "TAP TO CALL",
+    "closed": "TAP TO CALL",
+    "planned": "CALL FOR A QUOTE"
+  },
+  "answered": {
+    "open": "Answered by the handyman, not a call centre.",
+    "closed": "Leave a message or use the form. Reply first thing tomorrow.",
+    "planned": "Answered by the handyman. Quotes usually same day."
+  },
+  "statusLine": {
+    "open": "Taking bookings this week · quotes today",
+    "closed": "After hours · message now, reply first thing tomorrow"
+  },
+  "trust": [
+    {
+      "lab": "REPLACE · X Google reviews"
+    },
+    {
+      "v": "Fixed",
+      "lab": "Price before we start"
+    },
+    {
+      "v": "Small",
+      "lab": "Jobs welcome"
+    }
+  ],
+  "pricing": {
+    "fee": "",
+    "feeLabel": "",
+    "copy": "",
+    "copyOnly": "<b>How pricing works.</b> Small jobs quoted from a photo, same day. Bigger jobs get a free site visit. You get one fixed number before anything starts, and no surprises after."
+  },
+  "person": {
+    "name": "Soahel",
+    "role": "Owner-operator · RNZ Renovations",
+    "photoUrl": "",
+    "tagOpen": "Booking this week",
+    "tagClosed": "Replies first thing"
+  },
+  "sections": {
+    "why": "Why people book us",
+    "jobs": "What we do",
+    "rev": "Recent jobs",
+    "area": "Where we work",
+    "faq": "Before you book",
+    "photos": "Recent work"
+  },
+  "points": [
+    "One fixed price before we start, no hourly creep",
+    "Small jobs welcome — the list on the fridge is our speciality",
+    "Turn up when we say, clean up when we're done",
+    "Insured, and we'll say no to work that needs a licensed trade"
+  ],
+  "jobs": {
+    "Repairs": [
+      "Doors and locks",
+      "Leaky taps",
+      "Curtain rails and blinds",
+      "Shelving and TV mounts",
+      "Flat-pack assembly",
+      "Rotten weatherboards"
+    ],
+    "Outdoor": [
+      "Fence repairs",
+      "New fences",
+      "Deck repairs",
+      "Gutter cleaning",
+      "Water blasting",
+      "Retaining walls"
+    ],
+    "Walls & paint": [
+      "Gib patching",
+      "Plaster and stopping",
+      "Interior painting",
+      "Exterior painting",
+      "Ceiling repairs"
+    ],
+    "Property & rentals": [
+      "End-of-tenancy fixes",
+      "Healthy Homes items",
+      "Pre-sale tidy-ups",
+      "Landlord maintenance lists"
+    ]
+  },
+  "photos": [],
+  "reviews": [],
+  "areaLead": "South Auckland and West Auckland.",
+  "areas": [
+    "Manukau",
+    "Papakura",
+    "Manurewa",
+    "Howick",
+    "Botany",
+    "Flat Bush",
+    "Takanini",
+    "Mangere",
+    "Otahuhu",
+    "Papatoetoe",
+    "New Lynn",
+    "Henderson",
+    "Avondale",
+    "Massey",
+    "Titirangi",
+    "Glen Eden",
+    "Te Atatu"
+  ],
+  "faq": [
+    {
+      "q": "Do you do small jobs?",
+      "a": "Yes. That's most of what we do. Send the list and we'll price the lot for one visit."
+    },
+    {
+      "q": "How do you quote?",
+      "a": "Small jobs from a photo, usually the same day. Bigger jobs get a free visit. Either way you get one fixed price before we start."
+    },
+    {
+      "q": "Are you a licensed builder?",
+      "a": "No, and we'll tell you straight if a job needs one. Structural, plumbing and electrical work goes to a licensed trade. Everything else, we do."
+    },
+    {
+      "q": "Do you do rentals?",
+      "a": "Yes. Landlords and property managers are a big part of the week. Healthy Homes lists, end-of-tenancy fixes, pre-inspection tidy-ups."
+    }
+  ],
+  "services": {
+    "fence": {
+      "path": "/fence-repairs",
+      "nav": "Fences",
+      "intent": "planned",
+      "title": "Fence Repair & New Fences South & West Auckland | Fixed-Price Quote",
+      "metaDesc": "Fence repairs and new fences across South and West Auckland. Leaning posts, rotten palings, storm damage. Fixed-price quote from a photo.",
+      "headlineKey": "fence",
+      "introTitle": "Fence jobs we do most",
+      "intro": "Posts rotted at the ground line, palings blown off in a storm, a gate that won't latch, or a whole boundary that needs replacing. Most Auckland fences fail at the posts first. Often we can replace the posts and keep the rest, which is a fraction of a new fence.",
+      "stepsTitle": "How a fence job goes",
+      "steps": [
+        {
+          "t": "Send a photo and rough length",
+          "d": "Phone photo along the fence line. That's usually enough to quote."
+        },
+        {
+          "t": "One fixed price",
+          "d": "Materials, labour, old fence removed if needed. One number."
+        },
+        {
+          "t": "Booked in",
+          "d": "Most repairs are a half day. New fences a day or two depending on length."
+        },
+        {
+          "t": "Done and tidied",
+          "d": "Offcuts gone, old timber gone unless you want it for firewood."
+        }
+      ],
+      "costTitle": "How fence pricing works",
+      "cost": {
+        "from": "",
+        "to": "",
+        "note": "Depends on length, height, timber and how many posts need replacing. Quoted as one fixed price from a photo before we start."
+      },
+      "coversTitle": "Fence jobs",
+      "covers": [
+        "Post replacement",
+        "Paling replacement",
+        "Storm damage",
+        "New boundary fence",
+        "Gates and latches",
+        "Fence painting and staining",
+        "Retaining walls"
+      ],
+      "faqTitle": "Fence questions",
+      "faq": [
+        {
+          "q": "Do I have to split the cost with the neighbour?",
+          "a": "For a boundary fence, you can ask them to under the Fencing Act. We just build it. We'll give you a quote you can show them."
+        },
+        {
+          "q": "Can you save the existing fence?",
+          "a": "Often. If the palings and rails are sound and it's the posts that have gone, we replace the posts and re-hang. Much cheaper."
+        },
+        {
+          "q": "Do you stain or paint?",
+          "a": "Yes, if you want it done at the same time. Quoted separately so you can decide."
+        }
+      ]
+    },
+    "deck": {
+      "path": "/deck-repairs",
+      "nav": "Decks",
+      "intent": "planned",
+      "title": "Deck Repair & Rebuild South & West Auckland | Quoted Before We Start",
+      "metaDesc": "Deck repairs and rebuilds across South and West Auckland. Rotten boards, wobbly rails, sagging joists. Fixed-price quote.",
+      "headlineKey": "deck",
+      "introTitle": "When a deck needs work",
+      "intro": "Soft spots when you walk on it, boards cupping or splitting, rails that move, or a deck that's just grey and tired. Sometimes it's a few boards. Sometimes the joists underneath have gone and it's a rebuild. We'll tell you which after a look, not guess from the top.",
+      "stepsTitle": "How a deck job goes",
+      "steps": [
+        {
+          "t": "Photo or a quick visit",
+          "d": "Small repairs from a photo. Anything structural we come and look under it."
+        },
+        {
+          "t": "Repair or rebuild, priced both ways",
+          "d": "If it's borderline you'll see both numbers and choose."
+        },
+        {
+          "t": "Booked and built",
+          "d": "Board replacement is a day. A rebuild is a few, and we'll say how many."
+        },
+        {
+          "t": "Finished properly",
+          "d": "Sanded or stained if you want it, offcuts gone."
+        }
+      ],
+      "costTitle": "How deck pricing works",
+      "cost": {
+        "from": "",
+        "to": "",
+        "note": "Depends on size, timber and whether it's boards only or the frame too. Fixed price before we start, and we'll flag if a rebuild needs council consent."
+      },
+      "coversTitle": "Deck jobs",
+      "covers": [
+        "Board replacement",
+        "Rail and baluster repair",
+        "Joist and bearer repair",
+        "Full rebuild",
+        "Sanding and staining",
+        "Steps and landings"
+      ],
+      "faqTitle": "Deck questions",
+      "faq": [
+        {
+          "q": "Does a deck need consent?",
+          "a": "Low decks usually don't. Higher than 1.5m or attached in certain ways can. We'll tell you before quoting a rebuild."
+        },
+        {
+          "q": "Can you match the existing timber?",
+          "a": "Usually close enough that after staining you won't see it. We'll show you the options."
+        },
+        {
+          "q": "How long will it last?",
+          "a": "Done with the right timber and fixings, decades. Most failures we see are from cheap fixings and no gap for drainage."
+        }
+      ]
+    },
+    "gib": {
+      "path": "/gib-repairs",
+      "nav": "Gib & plaster",
+      "intent": "planned",
+      "title": "Gib Repair, Plastering & Painting South & West Auckland | Small Jobs Welcome",
+      "metaDesc": "Gib patching, plaster repairs, cracks, holes and water damage across South and West Auckland. Stopped, sanded and painted so it disappears. Small jobs welcome.",
+      "headlineKey": "gib",
+      "introTitle": "Wall repairs that actually disappear",
+      "intro": "Door-handle holes, cracks along the joins, water-damaged ceilings, dents from moving furniture. The difference between a patch you can see and one you can't is the stopping and sanding, which is the bit most people skip. We do the whole job including paint.",
+      "stepsTitle": "How a gib job goes",
+      "steps": [
+        {
+          "t": "Photo of the damage",
+          "d": "That's enough to quote almost every wall repair."
+        },
+        {
+          "t": "One fixed price",
+          "d": "Patch, stop, sand, paint. Or just the patching if you're painting anyway."
+        },
+        {
+          "t": "Usually one visit, sometimes two",
+          "d": "Plaster needs to dry before sanding. Bigger repairs are two short visits."
+        },
+        {
+          "t": "Painted to match",
+          "d": "We'll match the existing colour or paint the whole wall if a patch won't blend."
+        }
+      ],
+      "costTitle": "How gib pricing works",
+      "cost": {
+        "from": "",
+        "to": "",
+        "note": "Depends on the size of the repair and whether we're painting. Quoted from a photo. Several small repairs in one visit is much cheaper than one at a time."
+      },
+      "coversTitle": "Wall and ceiling jobs",
+      "covers": [
+        "Holes and dents",
+        "Cracks",
+        "Water-damaged ceilings",
+        "Corner and join repairs",
+        "Full re-stop and paint",
+        "Textured ceiling repairs"
+      ],
+      "faqTitle": "Gib questions",
+      "faq": [
+        {
+          "q": "Will I see the patch?",
+          "a": "Not if it's done properly. That means proper stopping, a wide feather, sanding and painting past the patch edges."
+        },
+        {
+          "q": "Can you match the paint?",
+          "a": "If you have the tin or the colour name, yes. If not we'll match as close as possible or recommend painting the wall."
+        },
+        {
+          "q": "Is water damage a bigger problem?",
+          "a": "Sometimes. If the gib is soft or stained and growing, the leak needs fixing first. We'll tell you if that's the case."
+        }
+      ]
+    },
+    "paint": {
+      "path": "/painting",
+      "nav": "Painting",
+      "intent": "planned",
+      "title": "Interior & Exterior Painting South & West Auckland | Prepped Properly, Fixed Price",
+      "metaDesc": "Interior and exterior painting across South and West Auckland. Rooms, fences, weatherboards, ceilings. Fixed-price quote, proper prep.",
+      "headlineKey": "paint",
+      "introTitle": "Painting that lasts",
+      "intro": "A room before tenants move in, a tired fence, a weatherboard side that's flaking. The paint is the easy part. The prep is what makes it last, and it's what gets skipped when someone quotes cheap. We wash, sand, fill and prime before a coat goes on.",
+      "stepsTitle": "How a paint job goes",
+      "steps": [
+        {
+          "t": "Photos or a quick visit",
+          "d": "Rooms and fences from photos. Whole exteriors we come and look at."
+        },
+        {
+          "t": "Fixed price, prep included",
+          "d": "Wash, sand, fill, prime, two coats. Colour help if you want it."
+        },
+        {
+          "t": "Booked and painted",
+          "d": "A room is a day. An exterior side is a few, weather permitting."
+        },
+        {
+          "t": "Cleaned up",
+          "d": "Drop sheets, tape, furniture back where it was."
+        }
+      ],
+      "costTitle": "How painting pricing works",
+      "cost": {
+        "from": "",
+        "to": "",
+        "note": "Depends on area, condition and access. Fixed price before we start, paint included unless you'd rather supply it."
+      },
+      "coversTitle": "Painting jobs",
+      "covers": [
+        "Single rooms",
+        "Whole interiors",
+        "Ceilings",
+        "Fences and decks",
+        "Weatherboards",
+        "Doors and trims",
+        "Rental refresh"
+      ],
+      "faqTitle": "Painting questions",
+      "faq": [
+        {
+          "q": "Do I need to move furniture?",
+          "a": "We'll shift and cover what's in the room. Small stuff off shelves and walls is a help but not essential."
+        },
+        {
+          "q": "Which paint do you use?",
+          "a": "Resene or Dulux, whichever suits the job. Or supply your own and we'll price the labour only."
+        },
+        {
+          "q": "Can you do it while tenants are in?",
+          "a": "Yes, room by room. We'll work around them."
+        }
+      ]
+    },
+    "repairs": {
+      "path": "/general-repairs",
+      "nav": "General repairs",
+      "intent": "planned",
+      "title": "Handyman Repairs South & West Auckland | One Visit, All Done, One Price",
+      "metaDesc": "General handyman repairs across South and West Auckland. Doors, taps, gutters, shelves, curtain rails, flat-pack. Send the list, get one price.",
+      "headlineKey": "repairs",
+      "introTitle": "The list on the fridge",
+      "intro": "The door that sticks, the tap that drips, the towel rail that came off the wall, the gutter that overflows, the shelf that's still in the box. None of them worth a trade call-out on their own. All of them worth one visit. Send us the list and we price it as one job.",
+      "stepsTitle": "How a repairs visit goes",
+      "steps": [
+        {
+          "t": "Send the list",
+          "d": "Text or form. Photos of anything that's hard to describe."
+        },
+        {
+          "t": "One price for the visit",
+          "d": "Not per item. A half day or a day, everything on the list."
+        },
+        {
+          "t": "Turn up with the gear",
+          "d": "Common parts on the van. Anything specific we'll confirm before the day."
+        },
+        {
+          "t": "Tick them off",
+          "d": "Done, tested, tidied. Anything that turns out to need a licensed trade, we'll tell you."
+        }
+      ],
+      "costTitle": "How repairs pricing works",
+      "cost": {
+        "from": "",
+        "to": "",
+        "note": "Priced as a visit, not per item. Send the list and you'll get one number for the lot."
+      },
+      "coversTitle": "Repairs we do",
+      "covers": [
+        "Sticking doors",
+        "Locks and handles",
+        "Dripping taps",
+        "Towel rails and hooks",
+        "Curtain rails",
+        "Shelving",
+        "TV mounting",
+        "Flat-pack",
+        "Gutter cleaning",
+        "Rotten weatherboards",
+        "Cat doors",
+        "Draught stopping"
+      ],
+      "faqTitle": "Repairs questions",
+      "faq": [
+        {
+          "q": "Is there a minimum?",
+          "a": "A visit is priced as a half day minimum, so it's worth getting the list together. Three or four jobs in one go is where it makes sense."
+        },
+        {
+          "q": "What can't you do?",
+          "a": "Anything that legally needs a licensed trade: electrical work beyond changing a fitting, plumbing beyond taps and washers, structural building. We'll say so."
+        },
+        {
+          "q": "Do you bring parts?",
+          "a": "Common stuff yes. Specific fittings or hardware we'll confirm with you before the visit so there's no second trip."
+        }
+      ]
+    }
+  },
+  "form": {
+    "enabled": true,
+    "heading": "Get a quote",
+    "barLabel": "Get a quote",
+    "navLabel": "Get a quote",
+    "lede": "Tell us what needs doing. Photos help. You'll get a price back the same day during the week.",
+    "jobTypeLabel": "What kind of job?",
+    "jobTypes": [
+      "Fence",
+      "Deck",
+      "Gib / walls",
+      "Painting",
+      "Small repairs list",
+      "Gutters",
+      "Something else"
+    ],
+    "issueLabel": "Tell us about it",
+    "issuePlaceholder": "e.g. two fence posts leaning, about 6m of fence",
+    "urgency": "select",
+    "urgencyLabel": "When?",
+    "timing": [
+      "As soon as possible",
+      "This week or next",
+      "In the next month",
+      "Flexible"
+    ],
+    "button": "Send for a quote",
+    "success": "Got it. You'll hear back with a price today if it's a weekday, or first thing Monday.",
+    "error": "That didn't send. Please tap the number above to call instead.",
+    "endpoint": "/functions/v1/send-lead-notification"
+  },
+  "footer": "Independent handyman. Not a licensed building practitioner — structural, plumbing and electrical work is referred to licensed trades. Site by LeadHive."
+};
+/* ═══════════════ ▲ CONFIG ▲ ═══════════════ */
+
+/* ───────── TEMPLATE LOGIC — locked ───────── */
+(function(){
+  const $=id=>document.getElementById(id); const B=CONFIG.business; const V=CONFIG.variant;
+  const tz = B.country==="AU" ? "Australia/Sydney" : "Pacific/Auckland";
+  const parts = new Intl.DateTimeFormat("en-NZ",{timeZone:tz,hour:"numeric",hour12:false,weekday:"short"}).formatToParts(new Date());
+  const hr = +parts.find(p=>p.type==="hour").value;
+  const wd = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].indexOf(parts.find(p=>p.type==="weekday").value);
+  const open = CONFIG.hours.days.includes(wd) && hr>=CONFIG.hours.open && hr<CONFIG.hours.close;
+  const mode = open?"open":"closed";
+
+  const q = new URLSearchParams(location.search);
+  const pageKey = q.get("page"); const svc = pageKey && CONFIG.services[pageKey];
+  const hKey = svc ? svc.headlineKey : (q.get("s")||"").toLowerCase();
+  const H = CONFIG.headlines[hKey] || CONFIG.headlines.default;
+  const intent = svc && svc.intent ? svc.intent : V;
+
+  /* dev switcher (single-file preview only; not part of the Lovable build) */
+  $("dev").innerHTML = 'preview: <a href="?">home</a>' + Object.keys(CONFIG.services).map(k=>`<a href="?page=${k}">${k}</a>`).join("");
+
+  $("status-text").textContent = CONFIG.statusLine[mode];
+  if (B.logoUrl) $("mark").innerHTML=`<img src="${B.logoUrl}" alt="">`; else $("mark").textContent=B.initials;
+  $("biz").textContent=B.name; $("cred").textContent=B.credential;
+  $("h1").textContent=H.h1; $("lede").innerHTML=H.lede;
+  $("call-k").textContent = intent==="planned" ? CONFIG.callKicker.planned : CONFIG.callKicker[mode];
+  $("answered").textContent = intent==="planned" ? CONFIG.answered.planned : CONFIG.answered[mode];
+  if (intent==="planned" && CONFIG.quoteButton) $("quote-btn").textContent=CONFIG.quoteButton; else $("quote-btn").remove();
+  $("t1").innerHTML=CONFIG.trust[0].lab; $("t2v").textContent=CONFIG.trust[1].v; $("t2l").innerHTML=CONFIG.trust[1].lab; $("t3v").textContent=CONFIG.trust[2].v; $("t3l").innerHTML=CONFIG.trust[2].lab;
+  if (CONFIG.pricing && CONFIG.pricing.fee){ $("fee").textContent=CONFIG.pricing.fee; $("fee-lab").textContent=CONFIG.pricing.feeLabel; $("fee-copy").innerHTML=CONFIG.pricing.copy; }
+  else if (CONFIG.pricing && CONFIG.pricing.copyOnly){ $("price-card").querySelector(".amt").remove(); $("fee-copy").innerHTML=CONFIG.pricing.copyOnly; }
+  else $("price-card").remove();
+  if (CONFIG.person && CONFIG.person.name){ const oc=CONFIG.person; $("face").innerHTML = oc.photoUrl?`<img src="${oc.photoUrl}" alt="">`:oc.name[0]; $("oc-name").textContent=oc.name; $("oc-role").textContent=oc.role; $("oc-tag").textContent=open?oc.tagOpen:oc.tagClosed; } else $("oncall-card").remove();
+
+  const chips = arr => arr.map(j=>`<span class="job">${j}</span>`).join("");
+  const faqHtml = arr => `<div class="faq">${arr.map(f=>`<details><summary>${f.q}</summary><p>${f.a}</p></details>`).join("")}</div>`;
+  const S=CONFIG.sections; let body="";
+  if (svc){
+    body += `<div class="h2">${svc.introTitle}</div><p class="svc-intro">${svc.intro}</p>`;
+    body += `<div class="h2">${svc.stepsTitle}</div><ol class="steps">${svc.steps.map(s=>`<li><div><b>${s.t}</b><span>${s.d}</span></div></li>`).join("")}</ol>`;
+    if (svc.cost){ body += `<div class="h2">${svc.costTitle}</div><div class="cost">${svc.cost.from?`<div class="amt">${svc.cost.from} – ${svc.cost.to}</div>`:""}<p>${svc.cost.note}</p></div>`; }
+    body += `<div class="h2">${svc.coversTitle}</div><div class="jobs">${chips(svc.covers)}</div>`;
+    body += `<div class="h2">${svc.faqTitle}</div>${faqHtml(svc.faq)}`;
+    document.title = svc.title;
+  } else {
+    body += `<div class="h2">${S.why}</div><ul class="points">${CONFIG.points.map(p=>`<li><span class="tick"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></span><span>${p}</span></li>`).join("")}</ul>`;
+    body += `<div class="h2">${S.jobs}</div>`;
+    if (Array.isArray(CONFIG.jobs)) body += `<div class="jobs">${chips(CONFIG.jobs)}</div>`;
+    else body += Object.entries(CONFIG.jobs).map(([g,arr])=>`<div class="jobgroup"><div class="g">${g}</div><div class="jobs">${chips(arr)}</div></div>`).join("");
+    if (CONFIG.photos && CONFIG.photos.length) body += `<div class="h2">${S.photos}</div><div class="photos">${CONFIG.photos.map(p=>`<img src="${p}" alt="">`).join("")}</div>`;
+    body += `<div class="h2">${S.faq}</div>${faqHtml(CONFIG.faq)}`;
+  }
+  $("body").innerHTML=body;
+
+  const revs = (svc && svc.reviews) || CONFIG.reviews;
+  if (revs && revs.length){ $("h-rev").textContent=S.rev; $("reviews").innerHTML=revs.map(r=>`<div class="review"><div class="stars">★★★★★</div><p>${r.text}</p><div class="by">${r.by}</div></div>`).join(""); }
+  else { $("h-rev").remove(); $("reviews").remove(); }
+  $("h-area").textContent=S.area; $("area-lead").textContent=CONFIG.areaLead; $("area-list").textContent=CONFIG.areas.join(" · ");
+
+  /* form */
+  const F=CONFIG.form;
+  if (F && F.enabled){
+    $("h-form").textContent=F.heading; $("form-lede").textContent=F.lede; $("f-btn").textContent=F.button; $("bar-form").textContent=F.barLabel;
+    $("f-suburb").innerHTML='<option value="">Choose…</option>'+CONFIG.areas.map(a=>`<option>${a}</option>`).join("")+'<option>Other</option>';
+    $("f-issue-lab").textContent=F.issueLabel; $("f-issue").placeholder=F.issuePlaceholder;
+    if (F.jobTypes){ $("f-extra").innerHTML=`<label for="f-type">${F.jobTypeLabel}</label><select id="f-type" required><option value="">Choose…</option>${F.jobTypes.map(t=>`<option>${t}</option>`).join("")}</select>`; }
+    if (F.urgency==="checkbox") $("f-urgency").innerHTML=`<label class="chk"><input id="f-urgent" type="checkbox"> ${F.urgencyLabel}</label>`;
+    else if (F.urgency==="select") $("f-urgency").innerHTML=`<label for="f-when">${F.urgencyLabel}</label><select id="f-when">${F.timing.map(t=>`<option>${t}</option>`).join("")}</select>`;
+    $("bar-form").addEventListener("click",e=>{e.preventDefault();$("enquiry").scrollIntoView({behavior:"smooth",block:"start"});setTimeout(()=>$("f-name").focus(),450);});
+    const qb=$("quote-btn"); if(qb) qb.addEventListener("click",e=>{e.preventDefault();$("enquiry").scrollIntoView({behavior:"smooth",block:"start"});setTimeout(()=>$("f-name").focus(),450);});
+    $("enquiry").addEventListener("submit", async e=>{
+      e.preventDefault(); const f=$("enquiry"); if(!f.reportValidity()) return;
+      const btn=$("f-btn"), msg=$("f-msg"); const type=$("f-type"), when=$("f-when"), urg=$("f-urgent");
+      const body={ name:$("f-name").value.trim(), phone:$("f-phone").value.trim(), suburb:$("f-suburb").value,
+        issue:(type?type.value+" — ":"")+$("f-issue").value.trim()+(when?" ("+when.value+")":""),
+        isUrgent: urg ? (urg.checked || !open) : (when ? when.selectedIndex===0 : false) };
+      btn.disabled=true; btn.textContent="Sending…"; msg.textContent="";
+      try{ const r=await fetch(F.endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}); if(!r.ok) throw 0; f.innerHTML=`<p class="ok">${F.success}</p>`; }
+      catch(_){ msg.textContent=F.error; btn.disabled=false; btn.textContent=F.button; }
+    });
+  } else { $("h-form").remove(); $("enquiry").remove(); $("bar-form").remove(); }
+
+  /* footer nav */
+  $("fn-title").textContent=B.name;
+  const links=[["/","Home"],...Object.values(CONFIG.services).map(s=>[s.path,s.nav]),["#enquiry",F.navLabel||"Request a call back"]];
+  const here = svc ? svc.path : "/";
+  $("fn-list").innerHTML=links.map(([h,t])=>`<li><a href="${h.startsWith("/")?("?page="+(Object.keys(CONFIG.services).find(k=>CONFIG.services[k].path===h)||"")).replace("?page=","?page="):h}" class="${h===here?"on":""}">${t}</a></li>`).join("").replace('href="?page="','href="?"');
+  $("foot").textContent=CONFIG.footer;
+
+  /* ─── PHONE PROPAGATION — the attribution fix ─── */
+  const src=$("nb-source"); src.textContent=B.phone; src.dataset.fallback=B.phone;
+  const prefix = B.country==="AU" ? "+61" : "+64";
+  const toDial = s => { const d=s.replace(/[^\d+]/g,""); return d.startsWith("+")?d:(d.startsWith("0")?prefix+d.slice(1):d); };
+  function apply(){ const shown=(src.textContent||"").trim()||src.dataset.fallback; if(!shown) return; const dial=toDial(shown);
+    document.querySelectorAll("[data-phone-display]").forEach(el=>el.textContent=shown);
+    document.querySelectorAll("[data-phone-link]").forEach(el=>el.setAttribute("href","tel:"+dial)); }
+  apply(); new MutationObserver(apply).observe(src,{childList:true,characterData:true,subtree:true}); [300,900,2000,4000].forEach(t=>setTimeout(apply,t));
+})();
+</script>
