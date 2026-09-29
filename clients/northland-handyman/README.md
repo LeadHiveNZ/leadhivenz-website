@@ -50,5 +50,21 @@ top-right is dev-only and is not part of the Lovable build.
   `reviews` and job photo URLs to `photos` when he sends them.
 - **Logo / photo**: `business.logoUrl` and `person.photoUrl` are blank; initials "NH"
   and "B" render instead.
-- **Form endpoint** is the standard `/functions/v1/send-lead-notification`; wire it to
-  Brian's email `nbm.br001@gmail.com` in the Lovable backend.
+- **Form endpoint**: the static file uses `/functions/v1/send-lead-notification`; the Lovable
+  build uses its own `/api/public/enquiry` route, which emails the enquiry to
+  hello@leadhivenz.com via Resend (same pattern as Tauranga Handyman). Add Brian's
+  `nbm.br001@gmail.com` as a second recipient if you want leads to reach him directly.
+
+## Lovable
+
+Remixed from Tauranga Handyman (same SitePage + site-config structure) on 29/09/2026.
+
+- Editor: https://lovable.dev/projects/0f71f34c-8d67-4a57-a0c5-4a19452a11e3
+- Preview: https://id-preview--0f71f34c-8d67-4a57-a0c5-4a19452a11e3.lovable.app
+- `src/lib/site-config.ts` holds this CONFIG with `form.endpoint` set to `/api/public/enquiry`.
+- Routes: `src/routes/index.tsx`, `carpentry.tsx`, `decks-fences.tsx`, `renovations.tsx`,
+  `general-repairs.tsx`. Tauranga's fence, deck, gib, painting, gutter and suburb routes were
+  removed.
+- Root layout keeps the Nimbata DNI script; `#nb-source` carries 022 322 1137 for the swap.
+- Check the `RESEND_API_KEY` secret carried over from the remix before publishing; if not,
+  add it in the Lovable project settings or the form will return 503.
