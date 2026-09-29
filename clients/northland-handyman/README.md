@@ -66,5 +66,17 @@ Remixed from Tauranga Handyman (same SitePage + site-config structure) on 29/09/
   `general-repairs.tsx`. Tauranga's fence, deck, gib, painting, gutter and suburb routes were
   removed.
 - Root layout keeps the Nimbata DNI script; `#nb-source` carries 022 322 1137 for the swap.
-- Check the `RESEND_API_KEY` secret carried over from the remix before publishing; if not,
-  add it in the Lovable project settings or the form will return 503.
+- Built 29/09/2026, Lovable commit 895deb1, build clean, 1.8 credits. Not yet published.
+- `RESEND_API_KEY`: the Lovable agent reports the secret name is present after the remix, but
+  Lovable's remix notice asked for its value to be re-entered. Send a test enquiry from the
+  preview before launch; a 503 from the form means the key needs pasting in Project Settings
+  → Secrets. `RESEND_FROM_EMAIL` is not set in `.env`, so the sender falls back to
+  onboarding@resend.dev, same as Tauranga.
+
+## Launch checklist
+
+1. Publish the Lovable project and attach the Northland domain.
+2. Create the Nimbata project with 022 322 1137 as the number to replace, using the
+   published URL. Confirm the swap on the live site.
+3. Point each ad group's final URL at its route (table above).
+4. Test the enquiry form end to end and confirm the email lands at hello@leadhivenz.com.
