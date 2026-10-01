@@ -361,7 +361,14 @@
     async intake(text, file) {
       const body = { text };
       if (file) { body.file_base64 = await fileToBase64(file); body.file_type = file.type; }
-      const { data, error } = await this.sb.functions.invoke("intake", { body });
+      // Function names are case-sensitive on Supabase. Try the configured name, then the other casings.
+      const names = [...new Set([CFG.INTAKE_FUNCTION || "intake", "intake", "Intake", "INTAKE"])];
+      let data = null, error = null;
+      for (const name of names) {
+        ({ data, error } = await this.sb.functions.invoke(name, { body }));
+        const unreachable = error && !(error.context && typeof error.context.status === "number" && error.context.status !== 404);
+        if (!unreachable) break;
+      }
       if (error || data?.error) {
         // Pull the real reason out of the function's response so the flag says what to fix.
         let reason = data?.error || (error && error.message) || "Intake failed";

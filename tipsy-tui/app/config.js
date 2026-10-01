@@ -13,4 +13,6 @@ window.TIPSY_CONFIG = {
   // Who gets which tasks by default. "admin" = client, money and paperwork. "ops" = caravan, stock, gear.
   // Day-of tasks stay unassigned (you're both there).
   ASSIGN: { admin: "Joe", ops: "Kieran" },
+  // Name of the Supabase edge function that reads contracts (as shown in its URL). Case matters.
+  INTAKE_FUNCTION: "Intake",
 };
