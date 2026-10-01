@@ -24,15 +24,16 @@ Without Supabase the app runs in **Demo mode** on one device with example jobs, 
 
 ---
 
-## Setup (about 30 minutes, no coding)
+## Setup (about 30 minutes, no coding, no command line)
 
 ### 1. Create the database (Supabase, free)
 
-1. Go to [supabase.com](https://supabase.com), sign up, **New project**. Name it `tipsy-tui`, pick the Sydney region, save the database password somewhere.
-2. Left menu → **SQL Editor** → **New query**. Paste the whole of `supabase/schema.sql` and press **Run**. You should see "Success".
-3. Left menu → **Authentication** → **Users** → **Add user** → **Create new user**. Add yourself (email + a password you choose). Tick "Auto Confirm User". Do the same for Kieran.
-   - To show the right first name on the home screen, open **Table Editor** → `profiles` and set the `name` column to `Joe` and `Kieran`.
-4. Left menu → **Project Settings** → **API**. Copy the **Project URL** and the **anon public** key.
+1. Go to [supabase.com](https://supabase.com) → **Start your project** → sign up with Google or email.
+2. **New project**. Organisation: the default one. Name: `tipsy-tui`. Database password: generate one and save it in your password manager (you won't need it day to day). Region: **Sydney**. Click **Create new project** and wait a minute or two.
+3. Left menu → **SQL Editor** → **New query** (or the **+**). Paste the whole of `supabase/schema.sql` and press **Run** (or Ctrl/Cmd + Enter). You should see "Success. No rows returned".
+4. Left menu → **Authentication** → **Users** → **Add user** → **Create new user**. Email: yours. Password: choose one. Tick **Auto Confirm User**. Create. Repeat for Kieran.
+5. Left menu → **Table Editor** → `profiles`. Set `name` to `Joe` and `Kieran` so the home screen greets the right person.
+6. Left menu → **Project Settings** (gear) → **API Keys**. Copy the **Publishable key** (`sb_publishable_…`). Also note the **Project URL** at the top (`https://xxxx.supabase.co`). If your project only shows the older **anon** key (`eyJ…`), that works too.
 
 ### 2. Point the app at it
 
@@ -40,18 +41,16 @@ Open `app/config.js` and paste the two values:
 
 ```js
 SUPABASE_URL: "https://xxxx.supabase.co",
-SUPABASE_ANON_KEY: "eyJ...",
+SUPABASE_ANON_KEY: "sb_publishable_...",
 ```
 
-The anon key is safe to ship in the app. The database rules in `schema.sql` only let logged-in users read or write anything.
+The publishable key is safe to ship in the app. The rules in `schema.sql` only let logged-in users read or write anything.
 
 ### 3. Put the app online (Netlify, free, 2 minutes)
 
 1. Go to [app.netlify.com/drop](https://app.netlify.com/drop).
 2. Drag the whole `app` folder onto the page.
-3. It gives you a link like `https://something.netlify.app`. Rename it under **Site settings → Change site name** to `tipsytui-bookings` or similar. That's the app's address.
-
-(Any static host works: Vercel, Cloudflare Pages, GitHub Pages. Netlify Drop is just the fastest.)
+3. It gives you a link like `https://something.netlify.app`. Rename it under **Site configuration → Change site name** to `tipsytui-bookings` or similar. That's the app's address.
 
 To update the app later, drag the folder onto the same site's **Deploys** page.
 
@@ -62,33 +61,24 @@ To update the app later, drag the folder onto the same site's **Deploys** page.
 
 It opens full screen with the Tipsy Tui icon and remembers your login.
 
-### 5. Turn on the AI intake (reads contracts for you)
+### 5. Turn on the AI intake (reads contracts, photos and email threads)
 
-This needs the Supabase command line once, from a laptop.
+All in the Supabase dashboard:
 
-```bash
-# Install the Supabase CLI (Mac: brew install supabase/tap/supabase, or see supabase.com/docs/guides/cli)
-supabase login
-cd tipsy-tui/supabase
-supabase link --project-ref YOUR_PROJECT_REF      # the xxxx part of https://xxxx.supabase.co
+1. Get a Claude API key: [console.anthropic.com](https://console.anthropic.com) → **API Keys** → **Create Key**. Add a few dollars of credit under Billing. A contract read costs a fraction of a cent.
+2. Supabase left menu → **Edge Functions** → **Secrets** → add `ANTHROPIC_API_KEY` = your key → Save.
+3. **Edge Functions** → **Deploy a new function** → **Via Editor**. Name it exactly `intake`. Delete the sample code, paste the whole of `supabase/functions/intake/index.ts`, click **Deploy**.
+4. Open the function → **Details** / settings: leave **Verify JWT** on (the app sends the login token).
 
-# Your Claude API key from console.anthropic.com → API keys
-supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
-
-supabase functions deploy intake
-```
-
-Cost: a contract read is a fraction of a cent. If the key is missing or wrong, the app quietly falls back to its built-in pattern parser and tells you it did. The built-in parser reads your own quote and agreement PDFs and layouts without any AI; Claude is what handles messy email threads, photos of contracts and anything unusual.
+If the function is missing or the key is wrong, the app falls back to its built-in parser and tells you.
 
 ### 6. Turn on the shared calendar feed
 
-```bash
-# Any long random string. This is the "password" in the calendar link.
-supabase secrets set CALENDAR_TOKEN=$(openssl rand -hex 16)
-supabase functions deploy calendar --no-verify-jwt
-```
-
-Then in the app → **More** → paste the token. It builds the link:
+1. Make up a long random token (a password generator is fine, 20+ characters, letters and numbers only).
+2. **Edge Functions** → **Secrets** → add `CALENDAR_TOKEN` = that token.
+3. **Deploy a new function** → **Via Editor** → name `calendar` → paste `supabase/functions/calendar/index.ts` → **Deploy**.
+4. Open the function's settings and turn **Verify JWT off** (calendar apps can't log in; the token is the password).
+5. In the app → **More** → paste the token. It builds the link:
 
 ```
 https://xxxx.supabase.co/functions/v1/calendar?token=YOUR_TOKEN
@@ -99,9 +89,17 @@ https://xxxx.supabase.co/functions/v1/calendar?token=YOUR_TOKEN
 
 Every confirmed and quoted job appears with the run sheet in the event notes. Quoted jobs show as tentative. Calendars refresh the feed themselves (Google can take up to a day; iPhone is quicker).
 
-Each job also has a **Google Calendar** button and a **Download .ics** button for one-off adds.
+<details><summary>Prefer the command line? (optional)</summary>
 
----
+```bash
+supabase login
+cd tipsy-tui/supabase
+supabase link --project-ref YOUR_PROJECT_REF
+supabase secrets set ANTHROPIC_API_KEY=sk-ant-... CALENDAR_TOKEN=$(openssl rand -hex 16)
+supabase functions deploy intake
+supabase functions deploy calendar --no-verify-jwt
+```
+</details>
 
 ## What the app works out for you
 
@@ -134,4 +132,4 @@ To change any rule, edit the constants at the top of `app/app.js` (`BOND_DEFAULT
 - **"Couldn't start"** on launch: the URL or key in `config.js` is wrong, or `schema.sql` hasn't been run.
 - **Login fails:** the user wasn't created under Authentication → Users, or wasn't auto-confirmed.
 - **Intake says it used the basic parser:** the `intake` function isn't deployed or the `ANTHROPIC_API_KEY` secret is missing.
-- **Calendar link gives "Not found":** the token in the link doesn't match `CALENDAR_TOKEN`, or the function was deployed without `--no-verify-jwt`.
+- **Calendar link gives "Not found" or "Invalid JWT":** the token in the link doesn't match `CALENDAR_TOKEN`, or Verify JWT is still on for the `calendar` function.
