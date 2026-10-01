@@ -130,7 +130,9 @@ async function handle(req: Request): Promise<Response> {
 
   const apiKey = findApiKey();
   if (!apiKey) return json({ error: "No Claude key found. Add a secret named ANTHROPIC_API_KEY under Edge Functions → Secrets." }, 500);
-  const client = new Anthropic({ apiKey });
+  // An organisation-level key needs the workspace named on every request; a workspace key does not.
+  const workspaceId = Deno.env.get("ANTHROPIC_WORKSPACE_ID");
+  const client = new Anthropic({ apiKey, defaultHeaders: workspaceId ? { "anthropic-workspace-id": workspaceId } : undefined });
 
   try {
     const response = await client.beta.messages.create({

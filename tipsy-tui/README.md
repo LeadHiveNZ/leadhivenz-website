@@ -65,7 +65,7 @@ It opens full screen with the Tipsy Tui icon and remembers your login.
 
 All in the Supabase dashboard:
 
-1. Get a Claude API key: [console.anthropic.com](https://console.anthropic.com) → **API Keys** → **Create Key**. Add a few dollars of credit under Billing. A contract read costs a fraction of a cent.
+1. Get a Claude API key: [console.anthropic.com](https://console.anthropic.com) → **API Keys** → make sure the workspace selector at the top says **Default** (a key made outside a workspace is rejected with "not scoped to a workspace") → **Create Key**. Add a few dollars of credit under Billing. A contract read costs a fraction of a cent.
 2. Supabase left menu → **Edge Functions** → **Secrets** → add `ANTHROPIC_API_KEY` = your key → Save.
 3. **Edge Functions** → **Deploy a new function** → **Via Editor**. Name it exactly `intake`. Delete the sample code, paste the whole of `supabase/functions/intake/index.ts`, click **Deploy**.
 4. Open the function → **Details** / settings: leave **Verify JWT** on (the app sends the login token).
