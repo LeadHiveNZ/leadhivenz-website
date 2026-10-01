@@ -13,10 +13,12 @@ A phone app for Joe and Kieran that turns a signed contract into a booked job: t
 
 **How you'll use it day to day**
 
-1. Client signs. Open the app → **Book** → paste the agreement, the quote, or the whole email thread (or attach the PDF).
-2. It reads it, fills in the booking, and lists anything to double-check ("no bar hours found", "venue says TBC").
-3. Tap **Save and build the checklist**. The job is now on the calendar with a run sheet (depart time, set-up, bar hours, pack-down, home), the standard checklist with due dates, how many bartenders it needs, and the deposit, balance and bond.
-4. Both of you see the same jobs. Tick tasks off, pass them to each other with the name pill, roster bartenders, and copy the run sheet into the crew WhatsApp.
+1. Client signs. Open the app → **Book** → attach the agreement or quote PDF (or a photo once the AI function is on), or paste the email thread.
+2. Tap **Book it in**. That's it. The job is saved, it's on the shared calendar, the run sheet is built (depart time, set-up, bar hours, pack-down, home), the checklist is created with due dates and each task already assigned (client, money and paperwork to Joe; caravan, stock and gear to Kieran; day-of jobs to both), and you're both rostered as crew.
+3. Anything it couldn't read is listed at the top of the job page ("no bar hours found", "venue says TBC"). Fix it with **Edit booking** and tap **All sorted**.
+4. If it can't find the client's name or the date it shows the check screen instead of guessing. Untick "Book it straight in" on the Book screen if you'd rather always review first.
+
+Who gets which tasks is set in `app/config.js` (`ASSIGN`). Swap the names if Kieran does the paperwork and you do the gear.
 
 Without Supabase the app runs in **Demo mode** on one device with example jobs, so you can try it before setting anything up.
 
@@ -76,7 +78,7 @@ supabase secrets set ANTHROPIC_API_KEY=sk-ant-...
 supabase functions deploy intake
 ```
 
-Cost: a contract read is a fraction of a cent. If the key is missing or wrong, the app quietly falls back to its built-in pattern parser (which already handles your own quote and agreement layouts) and tells you it did.
+Cost: a contract read is a fraction of a cent. If the key is missing or wrong, the app quietly falls back to its built-in pattern parser and tells you it did. The built-in parser reads your own quote and agreement PDFs and layouts without any AI; Claude is what handles messy email threads, photos of contracts and anything unusual.
 
 ### 6. Turn on the shared calendar feed
 

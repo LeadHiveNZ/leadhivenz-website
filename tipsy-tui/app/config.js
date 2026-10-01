@@ -8,4 +8,9 @@ window.TIPSY_CONFIG = {
   TEAM: ["Joe", "Kieran"],
   // Home base for travel calculations.
   BASE: "Christchurch",
+  // Upload a contract and it books straight in (no review screen) when it can read the client and the date.
+  AUTO_BOOK: true,
+  // Who gets which tasks by default. "admin" = client, money and paperwork. "ops" = caravan, stock, gear.
+  // Day-of tasks stay unassigned (you're both there).
+  ASSIGN: { admin: "Joe", ops: "Kieran" },
 };

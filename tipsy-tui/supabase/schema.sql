@@ -90,7 +90,8 @@ create table if not exists public.bookings (
   bond_refunded boolean not null default false,
 
   notes text,
-  source_text text                 -- the contract / email that was pasted in
+  source_text text,                -- the contract / email that was pasted in
+  review_flags jsonb not null default '[]'::jsonb   -- things the intake couldn't read, cleared from the job page
 );
 
 create index if not exists bookings_event_date_idx on public.bookings (event_date);

@@ -7,6 +7,8 @@
   const TEAM = CFG.TEAM || ["Joe", "Kieran"];
   const BASE = CFG.BASE || "Christchurch";
   const DEMO = !(CFG.SUPABASE_URL && CFG.SUPABASE_ANON_KEY);
+  const ASSIGN = Object.assign({ admin: TEAM[0], ops: TEAM[1] || TEAM[0] }, CFG.ASSIGN || {});
+  const AUTO_BOOK = CFG.AUTO_BOOK !== false;
 
   const PKG = {
     dry_hire: { label: "Dry Hire", alt: "Classic Tui", short: "Dry" },
@@ -125,44 +127,45 @@
 
   function generateTasks(b) {
     const d = b.event_date; const T = [];
-    const add = (phase, title, offset) => T.push({ phase, title, due_date: d ? addDays(d, offset) : null, sort: T.length });
+    // who: "admin" (client, money, paperwork), "ops" (caravan, stock, gear) or "both" (left unassigned)
+    const add = (phase, title, offset, who = "admin") => T.push({ phase, title, due_date: d ? addDays(d, offset) : null, sort: T.length, assigned_to: who === "both" ? null : ASSIGN[who] || null });
     const pkg = b.package; const staffed = pkg !== "dry_hire";
     const dep = depositFor(b);
     // Lock it in
     add("booking", "Send the booking agreement for signing", 0 - Math.max(0, daysUntil(d) || 0));
     add("booking", `Collect the ${dep != null ? money(dep) + " " : ""}deposit (25%) to secure the date`, -Math.max(7, (daysUntil(d) || 0) - 7));
-    add("booking", "Add to the shared calendar and tell " + (TEAM[1] || "the team"), -Math.max(7, (daysUntil(d) || 0) - 1));
+    add("booking", "Check the job is on the shared calendar and tell " + (TEAM[1] || "the team"), -Math.max(7, (daysUntil(d) || 0) - 1));
     if (pkg === "byo") add("booking", "Send the Local Pour Guide (kegs, local beer and wine partners)", -Math.max(14, (daysUntil(d) || 0) - 3));
     if (pkg === "fully_catered") add("booking", "Send the Drinks List guide and ask for their wish list", -Math.max(14, (daysUntil(d) || 0) - 3));
     // Lead-up
-    if (staffed) add("prep", `Roster ${bartendersFor(b)} bartender${bartendersFor(b) === 1 ? "" : "s"} and confirm they're keen`, -28);
+    if (staffed) add("prep", `Roster ${bartendersFor(b)} bartender${bartendersFor(b) === 1 ? "" : "s"} and confirm they're keen`, -28, "ops");
     add("prep", "Confirm with client: site access, power, where the caravan parks", -28);
     add("prep", "Check whether the venue needs a liquor licence or permit (client's job, but chase it)", -28);
-    if (b.accommodation || Number(b.travel_minutes) >= 120) add("prep", "Book staff accommodation", -28);
-    if (pkg === "fully_catered") { add("prep", "Price the drinks list and get it approved", -21); add("prep", "Order stock from suppliers", -14); }
+    if (b.accommodation || Number(b.travel_minutes) >= 120) add("prep", "Book staff accommodation", -28, "ops");
+    if (pkg === "fully_catered") { add("prep", "Price the drinks list and get it approved", -21); add("prep", "Order stock from suppliers", -14, "ops"); }
     if (pkg === "byo") add("prep", "Check the client has ordered their kegs and drinks", -14);
     add("prep", "Confirm final guest count and bar hours with the client", -14);
     // Week of
     add("week_of", `Chase the balance${b.total ? " (" + money(runSheet(b).balance) + ")" : ""}: due 7 days out`, -7);
     if (pkg === "dry_hire") add("week_of", `Collect the ${money(Number(b.bond_amount) || BOND_DEFAULT)} bond`, -7);
-    add("week_of", "Send the run sheet to the crew", -3);
-    if (pkg === "fully_catered") add("week_of", "Pick up stock and get it chilling", -2);
-    add("week_of", "Check CO2 bottle, keg couplers and tap lines", -2);
-    if (b.generator) add("week_of", "Fuel and test the generator", -2);
-    if (b.fairy_lights) add("week_of", "Charge and test the lights", -2);
+    add("week_of", "Send the run sheet to the crew", -3, "ops");
+    if (pkg === "fully_catered") add("week_of", "Pick up stock and get it chilling", -2, "ops");
+    add("week_of", "Check CO2 bottle, keg couplers and tap lines", -2, "ops");
+    if (b.generator) add("week_of", "Fuel and test the generator", -2, "ops");
+    if (b.fairy_lights) add("week_of", "Charge and test the lights", -2, "ops");
     // Day before
-    add("day_before", "Buy ice", -1);
-    add("day_before", "Clean the caravan, stock bar tools, napkins, straws, water station", -1);
-    if (b.glassware || staffed) add("day_before", "Pack glassware and ice bins", -1);
-    add("day_before", "Hitch up and road check: tyres, lights, hitch, gas off", -1);
+    add("day_before", "Buy ice", -1, "ops");
+    add("day_before", "Clean the caravan, stock bar tools, napkins, straws, water station", -1, "ops");
+    if (b.glassware || staffed) add("day_before", "Pack glassware and ice bins", -1, "ops");
+    add("day_before", "Hitch up and road check: tyres, lights, hitch, gas off", -1, "ops");
     add("day_before", "Text the client and the crew to confirm times", -1);
     // Day of
-    add("day_of", "Depart base with the caravan", 0);
-    add("day_of", "Set up on site and run a pour test on every tap", 0);
-    add("day_of", "Bar service", 0);
-    add("day_of", "Pack down, final clean, photos for socials", 0);
+    add("day_of", "Depart base with the caravan", 0, "both");
+    add("day_of", "Set up on site and run a pour test on every tap", 0, "both");
+    add("day_of", "Bar service", 0, "both");
+    add("day_of", "Pack down, final clean, photos for socials", 0, "both");
     // After
-    if (pkg === "fully_catered") add("after", "Settle unopened stock: buy back at cost or leave with client", 1);
+    if (pkg === "fully_catered") add("after", "Settle unopened stock: buy back at cost or leave with client", 1, "ops");
     add("after", "Thank-you message, ask for a Google review and tag us in photos", 2);
     if (pkg === "dry_hire") add("after", "Inspect for damage, then refund the bond within 7 business days", 3);
     add("after", "Mark the balance paid and close the job", 7);
@@ -262,9 +265,11 @@
     b.event_name = line(/^\s*EVENT\s*[:\-]?\s+(.+)$/m) || null;
     b.event_date = parseDateText(line(/Event Date\s*[:\-]?\s*(.+)/i) || line(/^\s*DATE\s*[:\-]?\s+(.+)$/m) || line(/Hire Date\(s\):\s*(.+)/i) || t);
     b.venue = line(/^\s*Venue\s*[:\-]?\s*(.+)$/im) || line(/^\s*LOCATION\s*[:\-]?\s+(.+)$/m) || line(/Event Location:\s*(.+)/i) || null;
-    const g = t.match(/Guest(?:s| Count| numbers)?\s*[:\-]?\s*(?:Approximately|approx\.?)?\s*(\d{1,4})/i); if (g) b.guest_count = +g[1];
-    const times = t.match(/(\d{1,2}(?::\d{2})?\s*[ap]\.?m)\s*(?:–|-|—|to)\s*(\d{1,2}(?::\d{2})?\s*[ap]\.?m)/i);
-    if (times) { b.start_time = parseTime(times[1]); b.finish_time = parseTime(times[2]); } else flags.push("No bar hours found. Confirm start and finish times.");
+    const g = t.match(/Guest(?:s| Count| numbers)?\s*[:\-]?\s*(?:Approximately|approx\.?|about)?\s*(\d{1,4})/i) || t.match(/(?:about|around|approx\.?|roughly)?\s*(\d{2,4})\s*(?:people|pax|guests|heads|ppl)/i); if (g) b.guest_count = +g[1];
+    const times = t.match(/(\d{1,2}(?::\d{2})?\s*[ap]\.?m)\s*(?:–|-|—|to|till|until)\s*(\d{1,2}(?::\d{2})?\s*[ap]\.?m)/i);
+    if (times) { b.start_time = parseTime(times[1]); b.finish_time = parseTime(times[2]); }
+    else { const one = t.match(/(?:from|at|start(?:ing)?|kick(?:s|ing)? off)\s*(\d{1,2}(?::\d{2})?\s*[ap]\.?m)/i) || t.match(/(\d{1,2}(?::\d{2})?\s*[ap]\.?m)\s*(?:till|until|-|–)\s*late/i); if (one) { b.start_time = parseTime(one[1]); flags.push("Only a start time found. Confirm when the bar closes."); } else flags.push("No bar hours found. Confirm start and finish times."); }
+    if (!b.client_name) { const signoff = t.match(/(?:cheers|thanks|thank you|regards|kind regards|ta|ngā mihi),?\s*\n?\s*([A-Z][a-z]+(?:\s+(?:&|and)\s+[A-Z][a-z]+)?(?:\s+[A-Z][a-z]+)?)\s*$/im); if (signoff) { b.client_name = signoff[1].trim(); flags.push("Client name taken from the email sign-off. Check it."); } }
     const bt = t.match(/Bartenders?\s*[:\-]?\s*(\d+)/i); if (bt) b.bartender_count = +bt[1];
     const total = t.match(/TOTAL\s*(?:NZ)?\$\s*([\d,]+(?:\.\d{1,2})?)/i) || t.match(/HIRE FEE\s*(?:NZ)?\$\s*([\d,]+(?:\.\d{1,2})?)/i);
     if (total) b.total = Number(total[1].replace(/,/g, "")); else flags.push("No total found. Add the price.");
@@ -284,6 +289,7 @@
     if (!b.venue) flags.push("No venue found.");
     if (/venue tbc|date tbc/i.test(t)) flags.push("Document says venue or date is TBC.");
     if (/liquor licen/i.test(t)) flags.push("Check the client has sorted the liquor licence.");
+    if (/travel/i.test(t) && !b.travel_minutes) flags.push("It mentions travel but no drive time was set. Add the minutes from Christchurch so the run sheet times are right.");
     b.flags = flags;
     b.summary = `Read ${b.package === "dry_hire" ? "a dry hire" : b.package === "byo" ? "a BYO bar" : "a fully catered"} job${b.client_name ? " for " + b.client_name : ""}${b.event_date ? " on " + fmtDate(b.event_date) : ""}. Have a look over it before you save.`;
     return b;
@@ -293,7 +299,7 @@
   const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : "id-" + Math.random().toString(36).slice(2) + Date.now());
 
   const LocalDB = {
-    key: "tipsy-tui-demo-v1",
+    key: "tipsy-tui-demo-v2",
     read() { try { return JSON.parse(localStorage.getItem(this.key)) || null; } catch { return null; } },
     write(d) { try { localStorage.setItem(this.key, JSON.stringify(d)); } catch { /* storage blocked: stay in memory */ } },
     data: null,
@@ -338,7 +344,7 @@
       return { bookings: b.data, tasks: t.data, staff: s.data, booking_staff: bs.data };
     },
     async upsertBooking(b) {
-      const row = { ...b }; delete row.flags; delete row.summary; delete row.engine;
+      const row = { ...b }; delete row.flags; delete row.summary; delete row.engine; if (!Array.isArray(row.review_flags)) row.review_flags = [];
       for (const k of Object.keys(row)) if (row[k] === "") row[k] = null;
       if (!row.id) { delete row.id; row.created_by = this.user.id; }
       const { data, error } = await this.sb.from("bookings").upsert(row).select().single(); if (error) throw error; return data;
@@ -384,10 +390,9 @@
     ];
     const tasks = [];
     for (const b of bookings) {
-      const gen = generateTasks(b).map((t) => ({ ...t, id: uuid(), booking_id: b.id, done: false, assigned_to: null }));
+      const gen = generateTasks(b).map((t) => ({ ...t, id: uuid(), booking_id: b.id, done: false }));
       // Anything that would already be overdue on a sample job is ticked off, so the demo looks like a job that's been run properly.
       gen.forEach((t) => { if (t.due_date && t.due_date < todayISO()) { t.done = true; t.done_at = new Date().toISOString(); } });
-      if (b.id === "b1") gen.forEach((t) => { if (/Chase the balance/.test(t.title)) t.assigned_to = TEAM[0]; if (/Buy ice|CO2/.test(t.title)) t.assigned_to = TEAM[1] || "Kieran"; });
       if (b.id === "b2") gen.forEach((t) => { if (/Roster|liquor licence/.test(t.title)) { t.done = false; delete t.done_at; } });
       if (b.id === "b3") gen.forEach((t) => { if (t.phase === "booking") t.done = true; });
       if (b.id === "b5") gen.forEach((t) => { if (!/review/.test(t.title)) t.done = true; });
@@ -547,6 +552,7 @@
         <div class="row"><span class="chip pkg-${b.package}">${PKG[b.package].label}</span>${b.status === "confirmed" && !b.deposit_paid && rs.deposit ? `<span class="chip warn">Deposit unpaid</span>` : ""}${rs.bartenders && crew.length < rs.bartenders ? `<span class="chip warn">Crew ${crew.length}/${rs.bartenders}</span>` : rs.bartenders ? `<span class="chip good">Crew sorted</span>` : ""}</div>
       </div>
 
+      ${Array.isArray(b.review_flags) && b.review_flags.length ? `<div class="card flags" style="margin-bottom:12px"><div class="row"><b class="grow">Read from the contract. Check these:</b><button class="btn sm" data-action="clear-flags">All sorted</button></div><ul>${b.review_flags.map((x) => `<li>${h(x)}</li>`).join("")}</ul><p class="small muted" style="margin-top:6px">Fix anything wrong with <b>Edit booking</b> below.</p></div>` : ""}
       <div class="card facts">
         <div class="fact"><div class="k">Bar hours</div><div class="v num">${fmt12(b.start_time)} – ${fmt12(b.finish_time)}${rs.hours != null ? ` <span class="muted small">(${rs.hours}h)</span>` : ""}</div></div>
         <div class="fact"><div class="k">Guests</div><div class="v num">${b.guest_count || "TBC"}</div></div>
@@ -596,7 +602,7 @@
         <div class="card">
           ${tasks.length ? `<div class="progress" style="margin:0 0 10px"><i style="width:${tasks.length ? Math.round(done / tasks.length * 100) : 0}%"></i></div>${phaseBlocks}` : `<p class="muted">No checklist yet.</p><button class="btn sm" data-action="gen-tasks" style="margin-top:8px">Build the standard checklist</button>`}
           <form class="row" data-action="add-task" style="margin-top:12px"><input class="grow" id="newTask" placeholder="Add a task…" aria-label="New task" style="padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:var(--surface)"><button class="btn sm" type="submit">Add</button></form>
-          <p class="small muted" style="margin-top:6px">Tap the name pill on a task to pass it between ${TEAM.join(" and ")}.</p>
+          <p class="small muted" style="margin-top:6px">Client, money and paperwork go to ${h(ASSIGN.admin)}; caravan, stock and gear go to ${h(ASSIGN.ops)}; day-of jobs are both of you. Tap the name pill to pass one across.</p>
         </div>
       </div>
 
@@ -690,11 +696,12 @@
   function renderNew(v) {
     if (state.editing) return renderForm(v);
     v.innerHTML = `
-      <div class="greeting"><h1>Book a job</h1><p class="muted">Paste the signed agreement, the quote, or the email thread. ${DEMO ? "Demo mode reads it with the built-in parser; the real app sends it to Claude." : "Claude reads it and fills in the booking for you to check."}</p></div>
+      <div class="greeting"><h1>Book a job</h1><p class="muted">Attach the signed agreement or quote (PDF${DEMO ? "" : ", or a photo"}), or paste the email thread. It books the job, builds the checklist with tasks split between ${TEAM.join(" and ")}, rosters the crew, and puts it on the shared calendar. ${DEMO ? "Demo mode uses the built-in parser; the live app sends it to Claude." : ""}</p></div>
       <div class="card intake stack">
-        <div class="field"><label for="intakeText">Contract, quote or email</label><textarea id="intakeText" placeholder="Paste here…&#10;&#10;e.g. Client: Sarah & Jake&#10;Event Date: 14 March 2027&#10;Venue: Riverside Barn, Hawke's Bay&#10;Guest Count: 100&#10;Times: 3:00 PM – 11:00 PM&#10;TOTAL $1,769"></textarea></div>
-        <div class="drop">Or attach the PDF or a photo of it${DEMO ? " (needs the real app)" : ""}<input type="file" id="intakeFile" accept="application/pdf,image/*" ${DEMO ? "disabled" : ""}></div>
-        <button class="btn primary block" data-action="intake" ${state.intakeBusy ? "disabled" : ""}>${state.intakeBusy ? "Reading it…" : "Read it in"}</button>
+        <div class="drop"><b>Upload the contract</b><br>PDF${DEMO ? "" : " or photo"} of the agreement or quote<input type="file" id="intakeFile" accept="application/pdf${DEMO ? "" : ",image/*"}"></div>
+        <div class="field"><label for="intakeText">Or paste it (contract, quote or email)</label><textarea id="intakeText" placeholder="Paste here…&#10;&#10;e.g. Client: Sarah & Jake&#10;Event Date: 14 March 2027&#10;Venue: Riverside Barn, Hawke's Bay&#10;Guest Count: 100&#10;Times: 3:00 PM – 11:00 PM&#10;TOTAL $1,769"></textarea></div>
+        <div class="checks"><label><input type="checkbox" id="autoBook" ${AUTO_BOOK ? "checked" : ""}> Book it straight in (skip the check screen)</label></div>
+        <button class="btn primary block" data-action="intake" ${state.intakeBusy ? "disabled" : ""}>${state.intakeBusy ? "Reading it…" : "Book it in"}</button>
         <button class="btn block" data-action="manual">Or type it in by hand</button>
       </div>`;
   }
@@ -776,34 +783,82 @@
     const fd = new FormData(e.target); const b = { ...state.editing };
     for (const [k, val] of fd.entries()) b[k] = val;
     for (const k of ["glassware", "cocktails", "generator", "fairy_lights", "accommodation", "deposit_paid", "balance_paid"]) b[k] = fd.get(k) === "on";
+    const btn = e.target.querySelector("button[type=submit]"); if (btn) btn.disabled = true;
+    try { await saveBooking(b); } catch (err) { if (btn) btn.disabled = false; toast("Couldn't save: " + err.message); }
+  }
+
+  // Saves a booking. For a new one it also builds the checklist (tasks pre-assigned), rosters the owners as crew,
+  // and opens the job page. The shared calendar feed picks the job up on its own.
+  async function saveBooking(input, opts = {}) {
+    const b = { ...input };
     for (const k of ["travel_minutes", "guest_count", "bartender_count", "total", "deposit_amount", "bond_amount", "setup_hours", "packdown_hours"]) b[k] = b[k] === "" || b[k] == null ? null : Number(b[k]);
     if (b.travel_minutes == null) b.travel_minutes = 0; if (b.setup_hours == null) b.setup_hours = 1; if (b.packdown_hours == null) b.packdown_hours = 1; if (b.bond_amount == null) b.bond_amount = b.package === "dry_hire" ? BOND_DEFAULT : 0;
     if (b.package !== "dry_hire") { b.bond_paid = false; b.bond_refunded = false; }
+    if (!Array.isArray(b.review_flags)) b.review_flags = [];
+    delete b.flags; delete b.summary; delete b.engine;
     const isNew = !b.id;
-    try {
-      const saved = await DB.upsertBooking(b);
-      if (isNew) {
-        const rows = generateTasks(saved).map((t) => ({ ...t, booking_id: saved.id }));
-        await DB.insertTasks(rows);
+    const saved = await DB.upsertBooking(b);
+    if (isNew) {
+      await DB.insertTasks(generateTasks(saved).map((t) => ({ ...t, booking_id: saved.id })));
+      const need = bartendersFor(saved);
+      if (need > 0) {
+        const owners = state.staff.filter((st) => st.role === "owner" && st.active !== false).slice(0, need).map((st) => st.id);
+        if (owners.length) await DB.setCrew(saved.id, owners);
       }
-      await reload();
-      state.editing = null; state.draft = null;
-      toast(isNew ? "Booked in. Checklist built." : "Saved");
-      setView("detail", { bookingId: saved.id });
-    } catch (err) { toast("Couldn't save: " + err.message); }
+    }
+    await reload();
+    state.editing = null; state.draft = null;
+    if (!opts.quiet) toast(isNew ? "Booked in. Checklist built and assigned." : "Saved");
+    setView("detail", { bookingId: saved.id });
+    return saved;
+  }
+
+  async function pdfToText(file) {
+    if (!window.pdfjsLib) throw new Error("PDF reader didn't load. Paste the text instead.");
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc = CFG.PDFJS_WORKER || "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+    const pdf = await window.pdfjsLib.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+    const pages = [];
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const content = await (await pdf.getPage(i)).getTextContent();
+      let line = "", lastY = null, out = [];
+      for (const item of content.items) {
+        if (lastY !== null && Math.abs(item.transform[5] - lastY) > 2) { out.push(line.trim()); line = ""; }
+        line += item.str + (item.hasEOL ? "\n" : " "); lastY = item.transform[5];
+      }
+      out.push(line.trim()); pages.push(out.join("\n"));
+    }
+    return pages.join("\n\n");
   }
 
   async function doIntake() {
-    const text = (el("intakeText")?.value || "").trim(); const file = el("intakeFile")?.files?.[0];
-    if (!text && !file) return toast("Paste something first");
+    let text = (el("intakeText")?.value || "").trim(); const file = el("intakeFile")?.files?.[0];
+    const auto = el("autoBook") ? el("autoBook").checked : AUTO_BOOK;
+    if (!text && !file) return toast("Paste something or attach the contract first");
     state.intakeBusy = true; render();
     try {
+      if (file && file.type === "application/pdf") {
+        const pdfText = await pdfToText(file);
+        if (pdfText.replace(/\s/g, "").length < 40 && DEMO) throw new Error("That PDF is a scan with no text. Paste the details instead (the live app can read photos and scans).");
+        text = [text, pdfText].filter(Boolean).join("\n\n");
+      } else if (file && DEMO) {
+        throw new Error("Demo mode can't read photos. Paste the text, or attach a PDF.");
+      }
       const { booking, source_text, engine } = await DB.intake(text, file);
       const draft = { status: "confirmed", setup_hours: 1, packdown_hours: 1, bond_amount: 0, travel_minutes: 0, ...booking };
       if (draft.package === "dry_hire" && !draft.bond_amount) draft.bond_amount = BOND_DEFAULT;
       draft.source_text = source_text; delete draft.engine;
-      state.editing = draft; state.intakeBusy = false;
+      draft.review_flags = Array.isArray(draft.flags) ? [...draft.flags] : [];
       if (engine === "local" && !DEMO) toast("Used the basic parser");
+      const canAuto = auto && draft.client_name && draft.event_date;
+      if (canAuto) {
+        if (draft.status !== "confirmed") draft.review_flags.push(`Saved as "${STATUS[draft.status] || draft.status}" because it didn't look signed. Change the status once the deposit lands.`);
+        state.intakeBusy = false;
+        await saveBooking(draft, { quiet: true });
+        toast(draft.review_flags.length ? `Booked in. ${draft.review_flags.length} thing${draft.review_flags.length === 1 ? "" : "s"} to check.` : "Booked in and on the calendar.");
+        return;
+      }
+      if (auto) draft.flags = ["Couldn't book it straight in: " + (!draft.client_name ? "no client name found." : "no event date found.") + " Fill it in and save.", ...(draft.flags || [])];
+      state.editing = draft; state.intakeBusy = false;
       render(); window.scrollTo({ top: 0 });
     } catch (err) { state.intakeBusy = false; render(); toast("Couldn't read it: " + err.message); }
   }
@@ -835,6 +890,7 @@
       if (a === "edit") { state.editing = { ...bookingById(state.bookingId) }; return setView("new"); }
       if (a === "delete") { if (!state.confirmDelete) { state.confirmDelete = true; return render(); } await DB.deleteBooking(state.bookingId); await reload(); toast("Deleted"); return setView("jobs"); }
       if (a === "cancel-delete") { state.confirmDelete = false; return render(); }
+      if (a === "clear-flags") { const b = bookingById(state.bookingId); b.review_flags = []; await DB.upsertBooking(b); toast("Cleared"); return render(); }
       if (a === "copy-runsheet") { const b = bookingById(state.bookingId); return copyText(runSheetText(b, runSheet(b, crewFor(b.id).map((s) => s.name)))); }
       if (a === "ics") { const b = bookingById(state.bookingId); return download(`TipsyTui_${(b.client_name || "job").replace(/[^a-z0-9]+/gi, "")}_${b.event_date}.ics`, icsForBooking(b)); }
       if (a === "gen-tasks") { const b = bookingById(state.bookingId); await DB.insertTasks(generateTasks(b).map((x) => ({ ...x, booking_id: b.id }))); await reload(); return render(); }
