@@ -2,8 +2,8 @@
 // Paste your Supabase project values here (Supabase → Project Settings → API).
 // Leave both blank and the app runs in Demo mode with sample jobs stored only on this device.
 window.TIPSY_CONFIG = {
-  SUPABASE_URL: "",
-  SUPABASE_ANON_KEY: "",
+  SUPABASE_URL: "https://uyertymsgxxiwcnhovlm.supabase.co",
+  SUPABASE_ANON_KEY: "sb_publishable_NLHiSoxqXc1dzKgbz8ooSw_td-L3Tft",
   // Names shown on the checklist "who" toggle. Order matters: first is the default.
   TEAM: ["Joe", "Kieran"],
   // Home base for travel calculations.
