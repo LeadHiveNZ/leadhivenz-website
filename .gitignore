@@ -1,0 +1,2 @@
+# Packaged downloads handed to the user in chat; rebuild from tipsy-tui/app rather than committing
+*.zip
