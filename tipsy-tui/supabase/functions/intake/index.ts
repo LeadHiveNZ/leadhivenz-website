@@ -17,7 +17,7 @@ const corsHeaders = {
 
 const SYSTEM = `You are the booking assistant for The Tipsy Tui, a mobile caravan bar in Christchurch, New Zealand, run by Joe and Kieran.
 
-Your job: read whatever Joe sends (a signed hire agreement, a quote PDF, an email thread, a text message, a photo of a contract) and extract one booking as structured data for the team's job scheduler. Extract only what is in the material. Leave fields null when the material does not say. Never invent a date, a price or a guest count.
+Your job: read whatever Joe sends (a signed hire agreement, a quote PDF, an email thread, a text message, a photo of a contract) and extract one booking as structured data for the team's job scheduler. Extract only what is in the material. For text fields, use an empty string "" when the material does not say. For number fields, use null when unknown. Never invent a date, a price or a guest count.
 
 How The Tipsy Tui works (use this to classify, not to invent):
 - Three packages. "dry_hire" (also called Classic Tui): caravan delivered, set up and packed down, client supplies and serves their own drinks, no bartenders, $300 refundable bond. "byo" (also called The Tui Experience or BYO Bar Package): client supplies the alcohol, Tipsy Tui supplies bartenders and runs the bar. "fully_catered" (also called The Premium Tui or Fully Catered Bar): Tipsy Tui supplies and serves all drinks.
@@ -31,21 +31,22 @@ Also write:
 - "flags": a short list of things Joe needs to confirm or chase (missing times, no deposit mentioned, venue TBC, liquor licence, access, power, accommodation for far-away jobs). Keep each flag one plain sentence.
 - "summary": one or two casual sentences in the team's voice, like a text to Kieran. Kiwi, direct, no corporate tone.`;
 
+// Text fields use "" (empty) for unknown. Only the six numeric fields may be null. The API allows at most 16 nullable fields.
 const BOOKING_SCHEMA = {
   type: "object",
   additionalProperties: false,
   properties: {
-    client_name: { type: ["string", "null"], description: "Person or business booking, e.g. 'Sarah & Jake' or 'Tuatara Structures'" },
-    contact_name: { type: ["string", "null"], description: "First name of the person to email/text" },
-    email: { type: ["string", "null"] },
-    phone: { type: ["string", "null"] },
-    event_name: { type: ["string", "null"], description: "e.g. 'Golden Oldies Rugby Reunion', 'Sarah & Jake's wedding'" },
+    client_name: { type: "string", description: "Person or business booking, e.g. 'Sarah & Jake' or 'Tuatara Structures'" },
+    contact_name: { type: "string", description: "First name of the person to email/text" },
+    email: { type: "string" },
+    phone: { type: "string" },
+    event_name: { type: "string", description: "e.g. 'Golden Oldies Rugby Reunion', 'Sarah & Jake's wedding'" },
     event_type: { type: "string", enum: ["wedding", "birthday", "corporate", "reunion", "festival", "other"], description: "Use 'other' when unsure" },
-    event_date: { type: ["string", "null"], description: "ISO date YYYY-MM-DD" },
-    start_time: { type: ["string", "null"], description: "Bar service start, HH:MM 24h" },
-    finish_time: { type: ["string", "null"], description: "Bar service finish, HH:MM 24h" },
-    venue: { type: ["string", "null"] },
-    address: { type: ["string", "null"] },
+    event_date: { type: "string", description: "ISO date YYYY-MM-DD" },
+    start_time: { type: "string", description: "Bar service start, HH:MM 24h" },
+    finish_time: { type: "string", description: "Bar service finish, HH:MM 24h" },
+    venue: { type: "string" },
+    address: { type: "string" },
     travel_minutes: { type: ["integer", "null"], description: "One-way drive minutes from Christchurch, 0 for local" },
     guest_count: { type: ["integer", "null"] },
     package: { type: "string", enum: ["dry_hire", "byo", "fully_catered"] },
@@ -55,14 +56,14 @@ const BOOKING_SCHEMA = {
     fairy_lights: { type: "boolean" },
     cocktails: { type: "boolean", description: "Cocktail service or cocktail station included" },
     accommodation: { type: "boolean", description: "Staff accommodation included" },
-    kegs_on_tap: { type: ["string", "null"], description: "What is going on the taps, if mentioned" },
-    drinks_notes: { type: ["string", "null"], description: "Drinks allowance, drinks list, or what the client is bringing" },
+    kegs_on_tap: { type: "string", description: "What is going on the taps, if mentioned" },
+    drinks_notes: { type: "string", description: "Drinks allowance, drinks list, or what the client is bringing" },
     total: { type: ["number", "null"], description: "Total price in NZD incl. GST" },
     deposit_amount: { type: ["number", "null"] },
     deposit_paid: { type: "boolean" },
     bond_amount: { type: ["number", "null"] },
     status: { type: "string", enum: ["enquiry", "quoted", "confirmed"], description: "confirmed if it is a signed agreement or Joe says it is booked/locked in; quoted if it is only a quote; enquiry otherwise" },
-    notes: { type: ["string", "null"], description: "Anything else the team needs on the day: access, power, licence, special requests" },
+    notes: { type: "string", description: "Anything else the team needs on the day: access, power, licence, special requests" },
     flags: { type: "array", items: { type: "string" } },
     summary: { type: "string" },
   },
@@ -152,6 +153,7 @@ async function handle(req: Request): Promise<Response> {
     if (!textBlock || textBlock.type !== "text") return json({ error: "No booking found in that material" }, 422);
 
     const booking = JSON.parse(textBlock.text);
+    for (const k of Object.keys(booking)) if (booking[k] === "") booking[k] = null;
     return json({ booking, source_text: text || `(uploaded ${fileType})` });
   } catch (err) {
     console.error("intake failed:", err);
