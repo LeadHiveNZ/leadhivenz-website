@@ -40,7 +40,7 @@ const BOOKING_SCHEMA = {
     email: { type: ["string", "null"] },
     phone: { type: ["string", "null"] },
     event_name: { type: ["string", "null"], description: "e.g. 'Golden Oldies Rugby Reunion', 'Sarah & Jake's wedding'" },
-    event_type: { type: ["string", "null"], enum: ["wedding", "birthday", "corporate", "reunion", "festival", "other", null] },
+    event_type: { type: "string", enum: ["wedding", "birthday", "corporate", "reunion", "festival", "other"], description: "Use 'other' when unsure" },
     event_date: { type: ["string", "null"], description: "ISO date YYYY-MM-DD" },
     start_time: { type: ["string", "null"], description: "Bar service start, HH:MM 24h" },
     finish_time: { type: ["string", "null"], description: "Bar service finish, HH:MM 24h" },
