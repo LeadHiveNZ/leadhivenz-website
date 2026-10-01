@@ -109,8 +109,9 @@ Deno.serve(async (req) => {
     text: `Today's date is ${new Date().toISOString().slice(0, 10)}.\n\nExtract the booking from the material below. Use the extract_booking schema.\n\n<material>\n${text || "(see attached file)"}\n</material>`,
   });
 
-  const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
-  if (!apiKey) return json({ error: "ANTHROPIC_API_KEY secret is not set. Add it under Edge Functions → Secrets." }, 500);
+  // Accept a few secret names so a typo in the dashboard doesn't block bookings.
+  const apiKey = Deno.env.get("ANTHROPIC_API_KEY") ?? Deno.env.get("CLAUDE_KEY") ?? Deno.env.get("Claude Key") ?? Deno.env.get("CLAUDE_API_KEY");
+  if (!apiKey) return json({ error: "No Claude key found. Add a secret named ANTHROPIC_API_KEY under Edge Functions → Secrets." }, 500);
   const client = new Anthropic({ apiKey });
 
   try {
