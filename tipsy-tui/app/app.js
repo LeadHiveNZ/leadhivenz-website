@@ -363,9 +363,12 @@
       if (file) { body.file_base64 = await fileToBase64(file); body.file_type = file.type; }
       const { data, error } = await this.sb.functions.invoke("intake", { body });
       if (error || data?.error) {
+        // Pull the real reason out of the function's response so the flag says what to fix.
+        let reason = data?.error || (error && error.message) || "Intake failed";
+        try { const ctx = error && error.context; if (ctx && typeof ctx.json === "function") { const j = await ctx.clone().json(); if (j && j.error) reason = j.error + " (HTTP " + ctx.status + ")"; } } catch { /* keep the generic message */ }
         // Fall back to the pattern parser so a bad API key never blocks a booking.
-        if (!text) throw new Error((error && error.message) || data?.error || "Intake failed");
-        const b = localParse(text); b.flags.unshift("AI intake unavailable (" + ((error && error.message) || data?.error) + "). Used the basic parser instead.");
+        if (!text) throw new Error(reason);
+        const b = localParse(text); b.flags.unshift("AI intake unavailable: " + reason + ". Used the basic parser instead.");
         return { booking: b, source_text: text, engine: "local" };
       }
       return { ...data, engine: "claude" };

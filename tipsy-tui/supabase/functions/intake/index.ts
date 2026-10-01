@@ -109,7 +109,9 @@ Deno.serve(async (req) => {
     text: `Today's date is ${new Date().toISOString().slice(0, 10)}.\n\nExtract the booking from the material below. Use the extract_booking schema.\n\n<material>\n${text || "(see attached file)"}\n</material>`,
   });
 
-  const client = new Anthropic({ apiKey: Deno.env.get("ANTHROPIC_API_KEY") });
+  const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
+  if (!apiKey) return json({ error: "ANTHROPIC_API_KEY secret is not set. Add it under Edge Functions → Secrets." }, 500);
+  const client = new Anthropic({ apiKey });
 
   try {
     const response = await client.beta.messages.create({
@@ -131,6 +133,7 @@ Deno.serve(async (req) => {
     const booking = JSON.parse(textBlock.text);
     return json({ booking, source_text: text || `(uploaded ${fileType})` });
   } catch (err) {
+    console.error("intake failed:", err);
     if (err instanceof Anthropic.AuthenticationError) return json({ error: "ANTHROPIC_API_KEY is missing or wrong" }, 500);
     if (err instanceof Anthropic.RateLimitError) return json({ error: "Rate limited, try again in a minute" }, 429);
     if (err instanceof Anthropic.APIError) return json({ error: `Claude API error ${err.status}: ${err.message}` }, 502);
