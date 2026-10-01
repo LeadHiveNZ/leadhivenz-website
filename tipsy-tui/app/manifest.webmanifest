@@ -1,0 +1,16 @@
+{
+  "name": "The Tipsy Tui Bookings",
+  "short_name": "Tipsy Tui",
+  "description": "Upcoming jobs, run sheets, checklists and crew for The Tipsy Tui mobile bar.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F7F3E9",
+  "theme_color": "#1B4F4A",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
