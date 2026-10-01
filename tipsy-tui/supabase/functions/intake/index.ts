@@ -78,7 +78,26 @@ const BOOKING_SCHEMA = {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
+  // Everything is inside one try so the app always gets a readable answer, even when something unexpected breaks.
+  try {
+    return await handle(req);
+  } catch (err) {
+    console.error("intake crashed:", err);
+    return json({ error: "Function crashed: " + (err instanceof Error ? err.message : String(err)) }, 500);
+  }
+});
 
+function findApiKey(): string | undefined {
+  // Accept a few secret names so a typo in the dashboard doesn't block bookings.
+  const env = Deno.env.toObject();
+  for (const name of ["ANTHROPIC_API_KEY", "CLAUDE_KEY", "CLAUDE_API_KEY", "Claude Key", "Claude_Key", "CLAUDE"]) {
+    if (env[name]) return env[name];
+  }
+  const loose = Object.keys(env).find((k) => /claude|anthropic/i.test(k) && env[k]?.startsWith("sk-ant-"));
+  return loose ? env[loose] : undefined;
+}
+
+async function handle(req: Request): Promise<Response> {
   // Only logged-in team members can use this.
   const authHeader = req.headers.get("Authorization") ?? "";
   const supabase = createClient(
@@ -87,7 +106,7 @@ Deno.serve(async (req) => {
     { global: { headers: { Authorization: authHeader } } },
   );
   const { data: { user }, error: authError } = await supabase.auth.getUser();
-  if (authError || !user) return json({ error: "Not logged in" }, 401);
+  if (authError || !user) return json({ error: "Not logged in (" + (authError?.message ?? "no user") + ")" }, 401);
 
   const body = await req.json().catch(() => ({}));
   const text: string = (body.text ?? "").trim();
@@ -109,8 +128,7 @@ Deno.serve(async (req) => {
     text: `Today's date is ${new Date().toISOString().slice(0, 10)}.\n\nExtract the booking from the material below. Use the extract_booking schema.\n\n<material>\n${text || "(see attached file)"}\n</material>`,
   });
 
-  // Accept a few secret names so a typo in the dashboard doesn't block bookings.
-  const apiKey = Deno.env.get("ANTHROPIC_API_KEY") ?? Deno.env.get("CLAUDE_KEY") ?? Deno.env.get("Claude Key") ?? Deno.env.get("CLAUDE_API_KEY");
+  const apiKey = findApiKey();
   if (!apiKey) return json({ error: "No Claude key found. Add a secret named ANTHROPIC_API_KEY under Edge Functions → Secrets." }, 500);
   const client = new Anthropic({ apiKey });
 
@@ -135,12 +153,12 @@ Deno.serve(async (req) => {
     return json({ booking, source_text: text || `(uploaded ${fileType})` });
   } catch (err) {
     console.error("intake failed:", err);
-    if (err instanceof Anthropic.AuthenticationError) return json({ error: "ANTHROPIC_API_KEY is missing or wrong" }, 500);
+    if (err instanceof Anthropic.AuthenticationError) return json({ error: "The Claude key is wrong or revoked" }, 500);
     if (err instanceof Anthropic.RateLimitError) return json({ error: "Rate limited, try again in a minute" }, 429);
     if (err instanceof Anthropic.APIError) return json({ error: `Claude API error ${err.status}: ${err.message}` }, 502);
     return json({ error: String(err) }, 500);
   }
-});
+}
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
