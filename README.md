@@ -7,9 +7,10 @@ locked so every site behaves the same (hours-aware status line, Nimbata phone sw
 ```
 templates/                      master templates (edit CONFIG only in client copies)
   handyman-master.html          handyman / building maintenance, "planned intent" variant
-portal/                         LeadHive Partner Portal (client login: leads, recordings, reports)
-  leadhive-portal-master.html   working prototype + design reference for the Lovable build
-  README.md                     monthly routine, CSV format, webhook, data model
+portal/                         LeadHive Partner Portal (partner login: leads, recordings, reports)
+  app/                          the live app: Supabase (logins, data, files) + Netlify (hosting)
+  leadhive-portal-master.html   the original design prototype
+  README.md                     go-live steps, monthly routine, CSV format, webhook
 clients/
   northland-handyman/           Northland Building Maintenance (Brian Redwood), Northland NZ
     northland-handyman-master.html
