@@ -1,0 +1,879 @@
+<!doctype html>
+<html lang="en">
+<head>
+<!--
+  LEADHIVE — PARTNER PORTAL MASTER  v1
+  Mobile-first client portal: each LeadHive partner logs in and sees their leads, calls,
+  recordings, monthly notes and web enquiries. Joe (admin) uploads a Nimbata call export
+  per client per month, writes the notes, and publishes.
+
+  This file is the design + behaviour reference for the Lovable build (see README.md).
+  It runs fully in the browser on demo data (saved in localStorage) so it can be used
+  in sales calls as-is. Nothing here talks to a server.
+
+  Demo logins (prototype only):
+    client  mike@mikesplumbing.co.nz / demo
+    admin   hello@leadhivenz.com     / admin
+-->
+<meta charset="utf-8">
+<title>LeadHive Partner Portal</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0F1A2E">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="LeadHive">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F4F6FA; --card:#FFFFFF; --ink:#0F1A2E; --ink-2:#4A5668; --ink-3:#8A96A3; --rule:#DDE3ED; --rule-2:#EDF1F6;
+  --navy:#0F1A2E; --navy-2:#1B2B4A; --gold:#EFA41E; --gold-ink:#7A4E00; --gold-bg:#FFF4DC;
+  --blue:#0077C0; --blue-lo:#D9ECF8; --blue-track:#E4F0F9;
+  --good:#158A4F; --good-bg:#E4F5EC; --warn:#B86E00; --warn-bg:#FFF1D6; --bad:#C93A3A; --bad-bg:#FBE7E7;
+  --shell:600px; --bar:64px;
+  --sans:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --head:"Space Grotesk",var(--sans);
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{scroll-behavior:smooth}
+body{font-family:var(--sans);font-weight:400;background:var(--paper);color:var(--ink);line-height:1.4;-webkit-font-smoothing:antialiased;min-height:100vh}
+body.has-tabs{padding-bottom:calc(var(--bar) + env(safe-area-inset-bottom) + 12px)}
+a{color:inherit}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+input,select,textarea{font:inherit;color:inherit}
+h1,h2,h3,.head{font-family:var(--head);letter-spacing:-.3px}
+.shell{max-width:var(--shell);margin:0 auto;padding:0 18px}
+.ico{width:18px;height:18px;flex:none;fill:currentColor}
+.hidden{display:none!important}
+
+/* top bar */
+.top{position:sticky;top:0;z-index:30;background:var(--navy);color:#fff;padding-top:env(safe-area-inset-top)}
+.top-in{max-width:var(--shell);margin:0 auto;padding:12px 18px;display:flex;align-items:center;gap:12px;min-height:58px}
+.top .back{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;margin-left:-8px;color:#fff}
+.top .back:active{background:rgba(255,255,255,.12)}
+.top .ttl{font-family:var(--head);font-weight:600;font-size:17px;flex:1;letter-spacing:-.2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top .ttl small{display:block;font-family:var(--sans);font-weight:400;font-size:12px;opacity:.7;letter-spacing:0}
+.brand{display:flex;align-items:center;gap:9px;flex:1}
+.brand .mk{width:30px;height:30px}
+.brand .nm{font-family:var(--head);font-weight:700;font-size:18px;letter-spacing:-.4px}
+.brand .nm span{color:var(--gold)}
+.avatar{width:34px;height:34px;border-radius:50%;background:var(--gold);color:var(--navy);display:grid;place-items:center;font-weight:700;font-size:13px;font-family:var(--head);flex:none}
+.pill-admin{font-size:11px;font-weight:700;letter-spacing:.4px;background:var(--gold);color:var(--navy);padding:4px 8px;border-radius:99px}
+
+/* cards + type */
+.card{background:var(--card);border:1px solid var(--rule);border-radius:16px;padding:16px}
+.card+.card{margin-top:12px}
+.sec{margin-top:22px}
+.sec-h{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:10px}
+.sec-h h2{font-size:16px;font-weight:600}
+.sec-h a,.sec-h button{font-size:13.5px;font-weight:600;color:var(--blue);text-decoration:none}
+.lede{font-size:14.5px;color:var(--ink-2);line-height:1.5}
+.muted{color:var(--ink-3)}
+.small{font-size:12.5px}
+.b{font-weight:600}
+.row{display:flex;align-items:center;gap:10px}
+.grow{flex:1;min-width:0}
+.right{text-align:right}
+.mt8{margin-top:8px}.mt12{margin-top:12px}.mt16{margin-top:16px}.mt20{margin-top:20px}
+
+/* chips + badges */
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;padding:4px 9px;border-radius:99px;background:var(--rule-2);color:var(--ink-2);white-space:nowrap}
+.chip i{width:7px;height:7px;border-radius:50%;background:currentColor;flex:none}
+.chip.good{background:var(--good-bg);color:var(--good)}
+.chip.warn{background:var(--warn-bg);color:var(--warn)}
+.chip.bad{background:var(--bad-bg);color:var(--bad)}
+.chip.blue{background:var(--blue-lo);color:#005B93}
+.chip.gold{background:var(--gold-bg);color:var(--gold-ink)}
+.chip.navy{background:var(--navy);color:#fff}
+.chips{display:flex;gap:8px;overflow-x:auto;padding:2px 0 6px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.chips::-webkit-scrollbar{display:none}
+.chips .f{flex:none;font-size:13.5px;font-weight:600;padding:8px 14px;border-radius:99px;background:var(--card);border:1px solid var(--rule);color:var(--ink-2)}
+.chips .f.on{background:var(--navy);border-color:var(--navy);color:#fff}
+
+/* hero + stats */
+.hero{background:var(--navy);color:#fff;border-radius:18px;padding:18px 18px 16px;position:relative;overflow:hidden}
+.hero::after{content:"";position:absolute;right:-40px;top:-40px;width:160px;height:160px;border-radius:50%;background:radial-gradient(closest-side,rgba(239,164,30,.35),transparent)}
+.hero .k{font-size:12.5px;font-weight:600;letter-spacing:.3px;text-transform:uppercase;opacity:.75}
+.hero .n{font-family:var(--head);font-size:56px;font-weight:700;line-height:1;letter-spacing:-2px;margin:6px 0 2px}
+.hero .n small{font-size:18px;font-weight:600;letter-spacing:-.3px;margin-left:6px;opacity:.9}
+.hero .sub{font-size:14px;opacity:.8}
+.meter{margin-top:14px;position:relative;height:10px;border-radius:99px;background:rgba(255,255,255,.14)}
+.meter .fill{position:absolute;left:0;top:0;bottom:0;border-radius:99px;background:var(--gold);transition:width .6s cubic-bezier(.2,.8,.2,1)}
+.meter .fill.good{background:#3DBE7A}
+.meter .tick{position:absolute;top:-4px;width:2px;height:18px;background:#fff;opacity:.85;border-radius:2px}
+.meter-l{display:flex;justify-content:space-between;font-size:12px;opacity:.75;margin-top:7px}
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+.kpi{background:var(--card);border:1px solid var(--rule);border-radius:14px;padding:13px 14px 12px}
+.kpi .l{font-size:12.5px;color:var(--ink-2);font-weight:500}
+.kpi .v{font-family:var(--head);font-size:26px;font-weight:700;letter-spacing:-.8px;line-height:1.15;margin-top:3px}
+.kpi .v small{font-family:var(--sans);font-size:13px;font-weight:500;color:var(--ink-3);letter-spacing:0;margin-left:3px}
+.kpi .d{font-size:12px;margin-top:4px;font-weight:600;display:flex;align-items:center;gap:4px}
+.kpi .d.up{color:var(--good)}.kpi .d.dn{color:var(--bad)}.kpi .d.flat{color:var(--ink-3)}
+
+/* note card */
+.note{border-left:4px solid var(--gold)}
+.note .who{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.note .who .avatar{width:30px;height:30px;font-size:12px}
+.note .who b{font-size:14px;display:block}
+.note .who small{font-size:12px;color:var(--ink-3)}
+.note p{font-size:14.5px;line-height:1.5;color:var(--ink)}
+.note p+p{margin-top:8px}
+
+/* charts */
+.chart{position:relative}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.chart .t{font-size:11.5px;fill:var(--ink-3)}
+.chart .v{font-size:12px;font-weight:600;fill:var(--ink)}
+.chart .grid{stroke:var(--rule);stroke-width:1}
+.chart rect.bar{fill:#C7D3DF}
+.chart rect.bar.on{fill:var(--blue)}
+.chart rect.bar.gold{fill:var(--gold)}
+.chart rect.hit{fill:transparent;cursor:pointer}
+.chart rect.hit:hover+rect.bar,.chart rect.hit:focus+rect.bar{filter:brightness(1.12)}
+.tip{position:fixed;z-index:80;pointer-events:none;background:var(--navy);color:#fff;font-size:12.5px;padding:7px 10px;border-radius:9px;box-shadow:0 8px 24px -8px rgba(15,26,46,.5);transform:translate(-50%,calc(-100% - 10px));white-space:nowrap}
+.tip b{display:block;font-size:14px}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--ink-2);margin-top:6px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+
+/* lists */
+.list{background:var(--card);border:1px solid var(--rule);border-radius:16px;overflow:hidden}
+.list .day{font-size:12px;font-weight:600;color:var(--ink-3);padding:12px 16px 4px;letter-spacing:.3px;text-transform:uppercase;background:var(--card)}
+.li{display:flex;align-items:center;gap:12px;padding:12px 16px;border-top:1px solid var(--rule-2);text-decoration:none;color:inherit;width:100%;text-align:left}
+.li:active{background:var(--paper)}
+.li .ic{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;flex:none;background:var(--blue-lo);color:var(--blue)}
+.li .ic.form{background:var(--gold-bg);color:var(--gold-ink)}
+.li .ic.miss{background:var(--bad-bg);color:var(--bad)}
+.li .ic .ico{width:19px;height:19px}
+.li .t1{font-size:15px;font-weight:600;display:flex;align-items:center;gap:8px;min-width:0}
+.li .t1 span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.li .t2{font-size:13px;color:var(--ink-2);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:6px}
+.li .t2 .chip{font-size:11px;padding:2px 7px}
+.li .t2 span.tx{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.li .meta{text-align:right;flex:none}
+.li .meta .tm{font-size:13px;color:var(--ink-3);font-variant-numeric:tabular-nums}
+.li .meta .du{font-size:12.5px;font-weight:600;margin-top:3px;color:var(--ink-2)}
+.li .chev{color:var(--ink-3);width:16px;height:16px;flex:none}
+.play{width:28px;height:28px;border-radius:50%;background:var(--navy);color:#fff;display:grid;place-items:center;flex:none}
+.play .ico{width:12px;height:12px;margin-left:2px}
+.empty{padding:28px 16px;text-align:center;color:var(--ink-3);font-size:14px}
+
+/* buttons */
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:14px 16px;border-radius:13px;font-size:15.5px;font-weight:700;text-decoration:none;font-family:var(--head);letter-spacing:-.2px}
+.btn.primary{background:var(--gold);color:var(--navy)}
+.btn.primary:active{filter:brightness(.95)}
+.btn.navy{background:var(--navy);color:#fff}
+.btn.ghost{background:var(--card);border:1.5px solid var(--rule);color:var(--ink)}
+.btn.danger{background:var(--bad-bg);color:var(--bad)}
+.btn[disabled]{opacity:.5}
+.btn.sm{padding:10px 14px;font-size:14px;border-radius:11px;width:auto}
+.btn-row{display:flex;gap:10px}
+.btn-row .btn{flex:1}
+
+/* forms */
+.fld{display:block;margin-top:12px}
+.fld>span{display:block;font-size:12.5px;font-weight:600;color:var(--ink-2);margin-bottom:5px}
+.fld input,.fld select,.fld textarea{width:100%;font-size:16px;padding:12px 13px;border:1px solid var(--rule);border-radius:11px;background:var(--paper);color:var(--ink)}
+.fld input:focus,.fld select:focus,.fld textarea:focus{outline:2px solid var(--blue);outline-offset:1px;border-color:transparent}
+.fld textarea{min-height:92px;resize:vertical;line-height:1.45}
+.fld .hint{font-size:12px;color:var(--ink-3);margin-top:5px;line-height:1.4}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.switch{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-top:1px solid var(--rule-2)}
+.switch:first-child{border-top:0}
+.switch b{font-size:14.5px;display:block}
+.switch small{font-size:12.5px;color:var(--ink-3);display:block;margin-top:2px;line-height:1.35}
+.tog{width:46px;height:28px;border-radius:99px;background:#CBD5E0;position:relative;flex:none;transition:background .2s}
+.tog::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:left .2s;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.tog.on{background:var(--good)}.tog.on::after{left:21px}
+.seg{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.seg button{padding:9px 2px;min-height:60px;border-radius:10px;border:1.5px solid var(--rule);background:var(--card);font-size:11.5px;line-height:1.15;text-align:center;font-weight:600;color:var(--ink-2);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:5px}
+.seg button .ico{width:17px;height:17px}
+.seg button.on{border-color:var(--navy);background:var(--navy);color:#fff}
+.seg button.on.won{background:var(--good);border-color:var(--good)}
+.seg button.on.spam,.seg button.on.not_lead{background:var(--ink-2);border-color:var(--ink-2)}
+
+/* detail */
+.big-num{font-family:var(--head);font-size:34px;font-weight:700;letter-spacing:-1.2px;line-height:1.1}
+.facts{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;margin-top:12px}
+.facts div{font-size:14px}
+.facts div small{display:block;font-size:12px;color:var(--ink-3);margin-bottom:1px}
+.player{display:flex;align-items:center;gap:12px;margin-top:10px}
+.player .play{width:44px;height:44px}
+.player .play .ico{width:17px;height:17px}
+.player .track{flex:1;height:6px;border-radius:99px;background:var(--blue-track);position:relative;cursor:pointer}
+.player .track i{position:absolute;left:0;top:0;bottom:0;border-radius:99px;background:var(--blue);width:0}
+.player .tm{font-size:12.5px;color:var(--ink-2);font-variant-numeric:tabular-nums;flex:none;min-width:72px;text-align:right}
+
+/* tabs */
+.tabs{position:fixed;left:0;right:0;bottom:0;z-index:40;background:rgba(255,255,255,.94);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--rule);padding:6px 0 calc(6px + env(safe-area-inset-bottom))}
+.tabs-in{max-width:var(--shell);margin:0 auto;display:flex}
+.tabs a{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 4px;text-decoration:none;font-size:11px;font-weight:600;color:var(--ink-3)}
+.tabs a .ico{width:22px;height:22px}
+.tabs a.on{color:var(--navy)}
+.tabs a .bdg{position:absolute;margin-left:22px;margin-top:-2px;background:var(--bad);color:#fff;font-size:10px;font-weight:700;padding:1px 5px;border-radius:99px}
+
+/* login */
+.login{min-height:100vh;display:flex;flex-direction:column;background:var(--navy);color:#fff}
+.login .hd{padding:calc(48px + env(safe-area-inset-top)) 24px 28px;text-align:center}
+.login .hd .mk{width:64px;height:64px;margin:0 auto 14px}
+.login .hd h1{font-size:28px;font-weight:700;letter-spacing:-.8px}
+.login .hd h1 span{color:var(--gold)}
+.login .hd p{font-size:14.5px;opacity:.75;margin-top:6px}
+.login .pane{background:var(--paper);color:var(--ink);border-radius:24px 24px 0 0;flex:1;padding:24px 20px calc(24px + env(safe-area-inset-bottom))}
+.login .pane h2{font-size:20px;font-weight:600}
+.login .pane .fld{margin-top:14px}
+.login .err{color:var(--bad);font-size:13.5px;margin-top:10px;font-weight:600}
+.demo{margin-top:22px;border-top:1px solid var(--rule);padding-top:14px;font-size:12.5px;color:var(--ink-3);line-height:1.6}
+.demo code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:var(--ink-2);background:var(--rule-2);padding:1px 5px;border-radius:5px}
+
+/* table (admin csv preview + report table) */
+.tbl{width:100%;border-collapse:collapse;font-size:13px}
+.tbl th,.tbl td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--rule-2);vertical-align:top}
+.tbl th{font-size:11.5px;color:var(--ink-3);font-weight:600;text-transform:uppercase;letter-spacing:.3px}
+.tbl td.r,.tbl th.r{text-align:right;font-variant-numeric:tabular-nums}
+.tbl tr:last-child td{border-bottom:0}
+.tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+.rpt-k{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--rule-2);font-size:14.5px}
+.rpt-k:last-child{border-bottom:0}
+.rpt-k b{font-variant-numeric:tabular-nums}
+.pt{display:flex;gap:12px;padding:12px 0;border-top:1px solid var(--rule-2)}
+.pt:first-child{border-top:0;padding-top:0}
+.pt .ix{flex:none;width:28px;height:28px;border-radius:50%;background:var(--gold-bg);color:var(--gold-ink);font-family:var(--head);font-weight:700;font-size:13px;display:grid;place-items:center}
+.pt b{display:block;font-size:14.5px}
+.pt p{font-size:14px;color:var(--ink-2);line-height:1.45;margin-top:2px}
+
+/* admin */
+.drop{display:block;border:2px dashed var(--rule);border-radius:14px;padding:22px 16px;text-align:center;color:var(--ink-2);font-size:14px;background:var(--card)}
+.drop.on{border-color:var(--blue);background:var(--blue-lo)}
+.drop b{display:block;color:var(--ink);font-size:15px;margin-bottom:4px}
+.drop input{display:none}
+.steps{display:flex;gap:6px;margin:14px 0 6px}
+.steps i{flex:1;height:4px;border-radius:99px;background:var(--rule)}
+.steps i.on{background:var(--gold)}
+.map{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;font-size:13px}
+.map div{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid var(--rule-2)}
+.map div span:last-child{color:var(--ink-3);text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:55%}
+.map div.ok span:last-child{color:var(--good);font-weight:600}
+.client-li .ic{background:var(--navy);color:#fff;font-family:var(--head);font-weight:700;font-size:14px}
+.toast{position:fixed;left:50%;bottom:calc(var(--bar) + 20px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);background:var(--navy);color:#fff;padding:11px 16px;border-radius:12px;font-size:14px;font-weight:600;opacity:0;transition:all .25s;z-index:90;pointer-events:none;white-space:nowrap;box-shadow:0 12px 30px -10px rgba(0,0,0,.5)}
+.toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+.dev{position:fixed;top:8px;right:8px;z-index:60;font-size:11px;background:#111;color:#fff;padding:5px 8px;border-radius:6px;opacity:.75}
+.dev a{color:#fff;margin-left:6px}
+@media(min-width:640px){.kpis{grid-template-columns:repeat(3,1fr)}}
+@media(prefers-reduced-motion:reduce){.meter .fill,.toast{transition:none}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<nav id="tabs" class="tabs hidden"><div class="tabs-in" id="tabs-in"></div></nav>
+<div id="toast" class="toast"></div>
+<div id="tip" class="tip hidden"></div>
+
+<script>
+/* ═══════════════════════════ utilities ═══════════════════════════ */
+const $=(id)=>document.getElementById(id);
+const h=(s)=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
+const money=(n,dp=0)=>"$"+Number(n||0).toLocaleString("en-NZ",{minimumFractionDigits:dp,maximumFractionDigits:dp});
+const pct=(a,b)=>b?Math.round(a/b*100):0;
+const dur=(s)=>{s=Math.round(s||0);const m=Math.floor(s/60),r=s%60;return m?`${m}m ${String(r).padStart(2,"0")}s`:`${r}s`};
+const durShort=(s)=>{s=Math.round(s||0);return `${Math.floor(s/60)}:${String(s%60).padStart(2,"0")}`};
+const MONTHS=["January","February","March","April","May","June","July","August","September","October","November","December"];
+const MON=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const ymOf=(d)=>{d=new Date(d);return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}`};
+const ymLabel=(ym,long=true)=>{const [y,m]=ym.split("-").map(Number);return `${(long?MONTHS:MON)[m-1]} ${y}`};
+const ymAdd=(ym,n)=>{let [y,m]=ym.split("-").map(Number);m+=n;while(m>12){m-=12;y++}while(m<1){m+=12;y--}return `${y}-${String(m).padStart(2,"0")}`};
+const daysIn=(ym)=>{const [y,m]=ym.split("-").map(Number);return new Date(y,m,0).getDate()};
+const weekOf=(d)=>Math.min(5,Math.floor((new Date(d).getDate()-1)/7)+1);
+const fmtDay=(d)=>{d=new Date(d);const t=new Date(TODAY);const same=(a,b)=>a.toDateString()===b.toDateString();if(same(d,t))return "Today";const y=new Date(t);y.setDate(t.getDate()-1);if(same(d,y))return "Yesterday";return d.toLocaleDateString("en-NZ",{weekday:"short",day:"numeric",month:"short"})};
+const fmtTime=(d)=>new Date(d).toLocaleTimeString("en-NZ",{hour:"numeric",minute:"2-digit"}).toLowerCase().replace(" ","");
+const fmtDT=(d)=>`${fmtDay(d)}, ${fmtTime(d)}`;
+const fmtDate=(d)=>new Date(d).toLocaleDateString("en-NZ",{day:"numeric",month:"short",year:"numeric"});
+const uid=()=>Math.random().toString(36).slice(2,10);
+const TODAY=new Date("2026-10-02T09:30:00+13:00"); // demo clock; the real app uses the device date
+const CUR_YM=ymOf(TODAY);
+function rng(seed){let s=seed>>>0||1;return()=>{s=(s*1664525+1013904223)>>>0;return s/4294967296}}
+function toast(m){const t=$("toast");t.textContent=m;t.classList.add("on");clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove("on"),2200)}
+const ICON={
+  phone:'<svg class="ico" viewBox="0 0 24 24"><path d="M6.6 10.8a15.1 15.1 0 006.6 6.6l2.2-2.2a1 1 0 011-.24 11.4 11.4 0 003.6.58 1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1 11.4 11.4 0 00.57 3.6 1 1 0 01-.25 1z"/></svg>',
+  missed:'<svg class="ico" viewBox="0 0 24 24"><path d="M3.5 4.9l15.6 15.6 1.4-1.4-3.2-3.2 1.2-1.2a1 1 0 00.3-.7v-2.1a1 1 0 00-.9-1 13.6 13.6 0 00-4.2-.3L10.2 7.1a13.6 13.6 0 00-.3-2.2 1 1 0 00-1-.9H6.8a1 1 0 00-.7.3L4.9 5.5 3.5 4.9zm-1 3.2a15.4 15.4 0 0012.8 12.8l1.4-1.4A13.6 13.6 0 014 6.7L2.5 8.1z"/></svg>',
+  form:'<svg class="ico" viewBox="0 0 24 24"><path d="M4 3h16a1 1 0 011 1v16a1 1 0 01-1 1H4a1 1 0 01-1-1V4a1 1 0 011-1zm2 4v2h12V7H6zm0 4v2h12v-2H6zm0 4v2h8v-2H6z"/></svg>',
+  play:'<svg class="ico" viewBox="0 0 24 24"><path d="M7 4.5v15l12-7.5z"/></svg>',
+  pause:'<svg class="ico" viewBox="0 0 24 24"><path d="M6 4h4v16H6zm8 0h4v16h-4z"/></svg>',
+  chev:'<svg class="ico" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7-1.4-1.4L13.2 12 7.6 6.4z"/></svg>',
+  back:'<svg class="ico" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7 1.4-1.4L10.8 12l5.6-5.6z"/></svg>',
+  home:'<svg class="ico" viewBox="0 0 24 24"><path d="M12 3l9 8h-3v9h-5v-6h-2v6H6v-9H3z"/></svg>',
+  leads:'<svg class="ico" viewBox="0 0 24 24"><path d="M4 5h16v2H4zm0 6h16v2H4zm0 6h10v2H4z"/></svg>',
+  report:'<svg class="ico" viewBox="0 0 24 24"><path d="M5 20V10h3v10zm5.5 0V4h3v16zM16 20v-7h3v7z"/></svg>',
+  user:'<svg class="ico" viewBox="0 0 24 24"><path d="M12 12a4.5 4.5 0 100-9 4.5 4.5 0 000 9zm0 2c-4 0-8 2-8 5v2h16v-2c0-3-4-5-8-5z"/></svg>',
+  tick:'<svg class="ico" viewBox="0 0 24 24"><path d="M9 16.2l-3.5-3.5L4 14.2 9 19l11-11-1.4-1.4z"/></svg>',
+  star:'<svg class="ico" viewBox="0 0 24 24"><path d="M12 2l3 6.3 7 1-5 4.9 1.2 6.9L12 17.8 5.8 21l1.2-6.9-5-4.9 7-1z"/></svg>',
+  quote:'<svg class="ico" viewBox="0 0 24 24"><path d="M5 4h14a1 1 0 011 1v11a1 1 0 01-1 1H9l-5 4V5a1 1 0 011-1z"/></svg>',
+  x:'<svg class="ico" viewBox="0 0 24 24"><path d="M18.3 5.7L12 12l6.3 6.3-1.4 1.4L12 13.4l-6.3 6.3-1.4-1.4L10.6 12 4.3 5.7l1.4-1.4L12 10.6l6.3-6.3z"/></svg>',
+  ban:'<svg class="ico" viewBox="0 0 24 24"><path d="M12 2a10 10 0 100 20 10 10 0 000-20zm0 2a8 8 0 016.3 12.9L7.1 5.7A8 8 0 0112 4zm-6.3 3.1l11.2 11.2A8 8 0 015.7 7.1z"/></svg>',
+  dot:'<svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/></svg>',
+  up:'<svg class="ico" viewBox="0 0 24 24" style="width:12px;height:12px"><path d="M12 5l7 7-1.4 1.4L13 8.8V19h-2V8.8l-4.6 4.6L5 12z"/></svg>',
+  dn:'<svg class="ico" viewBox="0 0 24 24" style="width:12px;height:12px"><path d="M12 19l-7-7 1.4-1.4L11 15.2V5h2v10.2l4.6-4.6L19 12z"/></svg>',
+  mark:'<svg viewBox="0 0 48 48" class="mk" aria-hidden="true"><path d="M24 3l18 10.5v21L24 45 6 34.5v-21z" fill="#EFA41E"/><path d="M24 11l11 6.5v13L24 37l-11-6.5v-13z" fill="#0F1A2E"/><path d="M24 18l5.5 3.25v6.5L24 31l-5.5-3.25v-6.5z" fill="#EFA41E"/></svg>',
+  upload:'<svg class="ico" viewBox="0 0 24 24"><path d="M11 15V7.8L8.4 10.4 7 9l5-5 5 5-1.4 1.4L13 7.8V15zM5 18h14v2H5z"/></svg>',
+  cog:'<svg class="ico" viewBox="0 0 24 24"><path d="M19.4 13a7.6 7.6 0 000-2l2.1-1.6-2-3.5-2.5 1a7.4 7.4 0 00-1.7-1l-.4-2.7h-4l-.4 2.7a7.4 7.4 0 00-1.7 1l-2.5-1-2 3.5L6.6 11a7.6 7.6 0 000 2l-2.1 1.6 2 3.5 2.5-1a7.4 7.4 0 001.7 1l.4 2.7h4l.4-2.7a7.4 7.4 0 001.7-1l2.5 1 2-3.5zM12 15.5a3.5 3.5 0 110-7 3.5 3.5 0 010 7z"/></svg>',
+  out:'<svg class="ico" viewBox="0 0 24 24"><path d="M10 17l1.4-1.4L8.8 13H20v-2H8.8l2.6-2.6L10 7l-5 5zM4 3h8v2H6v14h6v2H4a1 1 0 01-1-1V4a1 1 0 011-1z"/></svg>',
+  copy:'<svg class="ico" viewBox="0 0 24 24"><path d="M8 2h11a1 1 0 011 1v13h-2V4H8zM4 6h11a1 1 0 011 1v14a1 1 0 01-1 1H4a1 1 0 01-1-1V7a1 1 0 011-1zm1 2v12h9V8z"/></svg>',
+  dl:'<svg class="ico" viewBox="0 0 24 24"><path d="M11 3h2v9.2l2.6-2.6L17 11l-5 5-5-5 1.4-1.4L11 12.2zM5 18h14v2H5z"/></svg>'
+};
+
+/* ═══════════════════════════ demo data ═══════════════════════════ */
+const KEYWORDS=["emergency plumber auckland","plumber near me","blocked drain auckland","hot water cylinder repair","burst pipe plumber","leaking tap repair","toilet not flushing","24 hour plumber"];
+const KEYWORDS_EL=["emergency electrician gold coast","electrician near me","power outage electrician","switchboard upgrade","ceiling fan installation","smoke alarm installer"];
+const SUBURBS_AK=["Mt Eden","Ponsonby","Howick","Takapuna","Manukau","Henderson","Glenfield","Remuera","Papakura","Botany","Onehunga","Albany"];
+const SUBURBS_GC=["Southport","Robina","Burleigh Heads","Nerang","Coomera","Helensvale","Varsity Lakes","Palm Beach"];
+const ADMIN_NOTES=["Blocked kitchen drain, wanted same day.","Hot water cylinder leaking, landlord calling for tenant.","Burst pipe under house, urgent.","Toilet cistern running, asked for a price.","Tap dripping, flexible on timing.","New dishwasher install, quote request.","Water pressure drop, whole house.","Gas hob disconnect for kitchen reno."];
+const ADMIN_NOTES_EL=["Half the house lost power, urgent.","Switchboard upgrade quote for a 1970s home.","Smoke alarms for rental compliance.","Ceiling fans x3, flexible.","Outdoor power point for a spa.","Flickering lights in kitchen."];
+const CALLERS_NZ=(r)=>`0${[21,22,27][Math.floor(r()*3)]} ${String(Math.floor(r()*900+100))} ${String(Math.floor(r()*9000+1000))}`;
+const CALLERS_AU=(r)=>`04${String(Math.floor(r()*90+10))} ${String(Math.floor(r()*900+100))} ${String(Math.floor(r()*900+100))}`;
+
+function genCalls(r,clientId,ym,n,{au=false,missRate=.22,tagged=false}={}){
+  const out=[];const days=daysIn(ym);const [y,m]=ym.split("-").map(Number);
+  const kw=au?KEYWORDS_EL:KEYWORDS, notes=au?ADMIN_NOTES_EL:ADMIN_NOTES, subs=au?SUBURBS_GC:SUBURBS_AK;
+  for(let i=0;i<n;i++){
+    const day=1+Math.floor(r()*days), hr=7+Math.floor(r()*12), mi=Math.floor(r()*60);
+    const at=new Date(y,m-1,day,hr,mi).toISOString();
+    const rr=r();const outcome=rr<missRate?"missed":rr<missRate+.06?"voicemail":"answered";
+    const durSec=outcome==="answered"?45+Math.floor(r()*400):outcome==="voicemail"?20+Math.floor(r()*40):0;
+    const c={id:"c"+uid(),clientId,at,caller:au?CALLERS_AU(r):CALLERS_NZ(r),durationSec:durSec,outcome,source:"Google Ads",campaign:au?"GC Electrician · Search":"AKL Plumber · Search",keyword:kw[Math.floor(r()*kw.length)],city:subs[Math.floor(r()*subs.length)],recording:outcome==="answered",adminNote:outcome==="answered"&&r()<.6?notes[Math.floor(r()*notes.length)]:"",status:"new",jobValue:0,clientNote:""};
+    if(tagged&&outcome==="answered"){const t=r();if(t<.3){c.status="won";c.jobValue=[280,420,650,1850,3200,540][Math.floor(r()*6)]}else if(t<.5)c.status="quoted";else if(t<.56)c.status="not_lead";}
+    if(tagged&&outcome!=="answered"&&r()<.08)c.status="spam";
+    out.push(c);
+  }
+  return out.sort((a,b)=>a.at<b.at?-1:1);
+}
+function genEnquiries(r,clientId,ym,n,{au=false}={}){
+  const names=["Sarah M.","Dave Henderson","Priya K.","Tom Walker","Aroha N.","Chris B.","Mel Tui","Jordan P.","Liam O'Connor","Hine R."];
+  const msgs=au?["Lost power to half the house after the storm, can someone come today?","Need a quote for a switchboard upgrade, old ceramic fuses.","Smoke alarms for a rental, need compliance cert.","Install 3 ceiling fans, already have the fans."]:["Blocked drain in the kitchen, water backing up into the sink.","Hot water cylinder is leaking from the bottom, no hot water this morning.","Toilet keeps running, can you give me a rough price?","Need a dishwasher plumbed in, kitchen is done next week."];
+  const subs=au?SUBURBS_GC:SUBURBS_AK;const days=daysIn(ym);const [y,m]=ym.split("-").map(Number);const out=[];
+  for(let i=0;i<n;i++){const day=1+Math.floor(r()*days);const at=new Date(y,m-1,day,8+Math.floor(r()*11),Math.floor(r()*60)).toISOString();
+    out.push({id:"e"+uid(),clientId,at,name:names[Math.floor(r()*names.length)],phone:au?CALLERS_AU(r):CALLERS_NZ(r),suburb:subs[Math.floor(r()*subs.length)],message:msgs[Math.floor(r()*msgs.length)],urgent:r()<.5,page:"/",status:"new",jobValue:0,clientNote:""})}
+  return out.sort((a,b)=>a.at<b.at?-1:1);
+}
+function applyTags(calls,spec){ // spec: [[status,jobValue],...] applied to answered calls in order; spam goes on the first missed call
+  const ans=calls.filter(c=>c.outcome==="answered");spec.forEach(([st,v],i)=>{if(ans[i]){ans[i].status=st;ans[i].jobValue=v||0}});
+  const miss=calls.find(c=>c.outcome!=="answered");if(miss&&spec.spam)miss.status="spam";
+}
+function forceOutcomes(calls,nMissed,nVoicemail,lunch=false){ // first n calls become missed/voicemail (optionally moved to the 12-2pm slot the notes talk about)
+  calls.forEach((c,i)=>{if(i<nMissed+nVoicemail){c.outcome=i<nMissed?"missed":"voicemail";c.durationSec=c.outcome==="voicemail"?25+i*7:0;c.recording=false;c.adminNote="";if(lunch){const d=new Date(c.at);d.setHours(12+(i%2),5+i*11);c.at=d.toISOString()}}else{c.outcome="answered";if(c.durationSec<45)c.durationSec=60+i*9;c.recording=true}});
+}
+function buildDemo(){
+  const r=rng(20261002);
+  const clients=[
+    {id:"mikes",business:"Mike's Plumbing",initials:"MP",contact:"Mike",email:"mike@mikesplumbing.co.nz",phone:"021 555 0192",niche:"Emergency plumber",region:"Auckland",country:"NZ",pkg:"Starter",fee:1500,targetMin:15,targetMax:25,started:"2026-06-01",billingDay:1,showAdSpend:false,showCPL:true,webhookKey:"lh_mikes_"+uid()+uid(),active:true},
+    {id:"bayside",business:"Bayside Electrical",initials:"BE",contact:"Sam",email:"sam@baysideelectrical.com.au",phone:"0412 338 901",niche:"Emergency electrician",region:"Gold Coast",country:"AU",pkg:"Growth",fee:2200,targetMin:25,targetMax:35,started:"2026-08-01",billingDay:1,showAdSpend:false,showCPL:true,webhookKey:"lh_bayside_"+uid()+uid(),active:true},
+    {id:"northland",business:"Northland Building Maintenance",initials:"NH",contact:"Brian",email:"nbm.br001@gmail.com",phone:"022 322 1137",niche:"Handyman",region:"Northland",country:"NZ",pkg:"Starter (trial)",fee:1500,targetMin:15,targetMax:25,started:"2026-09-28",billingDay:28,showAdSpend:false,showCPL:true,webhookKey:"lh_northland_"+uid()+uid(),active:true}
+  ];
+  let calls=[],enquiries=[],months=[];
+  const plan=[["2026-06",16,2,false],["2026-07",19,3,false],["2026-08",24,3,true],["2026-09",18,4,true]];
+  for(const [ym,nc,ne] of plan){calls=calls.concat(genCalls(r,"mikes",ym,nc));enquiries=enquiries.concat(genEnquiries(r,"mikes",ym,ne))}
+  const sep=calls.filter(c=>c.clientId==="mikes"&&ymOf(c.at)==="2026-09");forceOutcomes(sep,2,2,true);applyTags(sep,[["won",1850],["quoted"],["won",3200],["not_lead"],["quoted"],["won",420],["quoted"],["won",280],["quoted"]]);
+  const aug=calls.filter(c=>c.clientId==="mikes"&&ymOf(c.at)==="2026-08");forceOutcomes(aug,4,2);applyTags(aug,[["won",650],["won",2400],["quoted"],["won",380],["not_lead"],["won",1200],["quoted"],["won",540],["quoted"],["won",900]]);
+  const jul=calls.filter(c=>c.clientId==="mikes"&&ymOf(c.at)==="2026-07");forceOutcomes(jul,3,1);applyTags(jul,[["won",420],["quoted"],["won",1600],["won",260]]);
+  const jun=calls.filter(c=>c.clientId==="mikes"&&ymOf(c.at)==="2026-06");forceOutcomes(jun,2,0);
+  // October so far (live enquiries + one call that came through the Nimbata webhook)
+  calls.push({id:"c"+uid(),clientId:"mikes",at:new Date(2026,9,1,8,12).toISOString(),caller:"027 441 2093",durationSec:212,outcome:"answered",source:"Google Ads",campaign:"AKL Plumber · Search",keyword:"emergency plumber auckland",city:"Mt Roskill",recording:true,adminNote:"",status:"new",jobValue:0,clientNote:""});
+  enquiries.push({id:"e"+uid(),clientId:"mikes",at:new Date(2026,9,2,7,48).toISOString(),name:"Kelly Shaw",phone:"021 097 5581",suburb:"Howick",message:"Water coming through the ceiling under the upstairs bathroom. Need someone this morning if possible.",urgent:true,page:"/burst-pipes",status:"new",jobValue:0,clientNote:""});
+  for(const [ym,nc,ne] of [["2026-08",26,4],["2026-09",31,5]]){calls=calls.concat(genCalls(r,"bayside",ym,nc,{au:true,missRate:.14}));enquiries=enquiries.concat(genEnquiries(r,"bayside",ym,ne,{au:true}))}
+  const bsep=calls.filter(c=>c.clientId==="bayside"&&ymOf(c.at)==="2026-09");forceOutcomes(bsep,3,1);const bspec=[["won",2900],["won",640],["quoted"],["won",4200],["not_lead"],["won",380],["quoted"],["won",1150],["quoted"],["won",760]];bspec.spam=true;applyTags(bsep,bspec);
+  applyTags(calls.filter(c=>c.clientId==="bayside"&&ymOf(c.at)==="2026-08"),[["won",1800],["quoted"],["won",520],["won",3100],["quoted"],["won",690]]);
+  // Brian's first call since launch 28/09
+  calls.push({id:"c"+uid(),clientId:"northland",at:new Date(2026,8,30,14,5).toISOString(),caller:"021 884 0022",durationSec:168,outcome:"answered",source:"Google Ads",campaign:"Northland Handyman · Search",keyword:"deck builder whangarei",city:"Whangārei",recording:true,adminNote:"Deck rebuild, Kamo. Wants a quote next week.",status:"new",jobValue:0,clientNote:""});
+  const mk=(clientId,ym,status,adSpend,summary,points,pdf=true)=>({id:"m"+uid(),clientId,ym,status,adSpend,summary,points,pdf,publishedAt:status==="published"?new Date(ymAdd(ym,1)+"-02T18:00:00").toISOString():null});
+  months.push(mk("mikes","2026-06","published",612,"First month in and we're already inside the target range. The campaign is still learning, so expect leads to climb from here as Google works out which searches turn into calls for you.",[{t:"Keyword refinement",b:"Adding negative keywords for DIY and price-shopping searches so the budget only goes to people who need a plumber now."},{t:"Ad copy testing",b:"Running two headline variants to see whether 'same day' or '24/7' pulls more calls."},{t:"Call hours",b:"Tightening the ad schedule to the hours you answer best."}]));
+  months.push(mk("mikes","2026-07","published",688,"Up on June, with more calls landing in the afternoon. Missed calls crept up a little; the ones you did answer were strong, mostly blocked drains and hot water.",[{t:"Missed call follow-up",b:"4 of 19 calls went unanswered. Each one is a job that probably went to the next plumber on Google. Even a text back within 10 minutes recovers a lot of these."},{t:"Scaling what's working",b:"'Blocked drain' searches are converting best, so I'm moving more of the budget there."},{t:"Keyword refinement",b:"Weekly search term review, more negatives added."}]));
+  months.push(mk("mikes","2026-08","published",741,"Best month yet: 27 leads against a 15 to 25 plan. Hot water cylinder searches picked up with the cold snap and the ads were there for it.",[{t:"Scaling what's working",b:"We cleared the top of the target range, so I'm pushing bids on the hot water and burst pipe terms to hold this volume."},{t:"Keyword refinement",b:"Added 14 negatives after the search term review. 'Plumbing course' and 'plumber salary' were burning clicks."},{t:"Landing page",b:"Added a hot water cylinder page so those searches land on a page about hot water, not the generic one."}]));
+  months.push(mk("mikes","2026-09","published",702,"A steady month. 22 leads, inside the plan. The one thing to work on is answering: 4 calls went to voicemail or rang out, all between 12 and 2pm. The jobs you tagged as won this month came to $5,750, from a $1,500 plan.",[{t:"Missed call follow-up",b:"22% of calls weren't answered. I've shifted the ad schedule so fewer calls land over lunch, but a quick call-back on the missed ones is the easiest money in this report."},{t:"Scaling what's working",b:"'Emergency plumber Auckland' and 'blocked drain' are still the winners. More budget there, less on the broad 'plumber near me' term."},{t:"Keyword refinement",b:"Search term review done weekly. 9 new negatives this month."}]));
+  months.push(mk("bayside","2026-08","published",1180,"Strong start on the Gold Coast. 30 leads in month one with a low missed rate, which is exactly what we want to see from an emergency sparky campaign.",[{t:"Scaling what's working",b:"Storm week drove the 'power outage' searches. Budget is weighted there for the storm season."},{t:"Keyword refinement",b:"Negatives added for solar and 'electrician jobs' searches."},{t:"Ad copy testing",b:"Testing 'licensed, insured, 60 min response' as the lead headline."}]));
+  months.push(mk("bayside","2026-09","published",1240,"35 leads after pulling out one spam call, above the top of the Growth plan. Missed calls stayed low at 13%, nice work. Smoke alarm compliance searches are a growing stream worth talking about.",[{t:"Scaling what's working",b:"We're past the 35 lead ceiling on Growth. Worth a chat about the Dominator plan if you have the capacity to take 40 to 60 a month."},{t:"Keyword refinement",b:"Search term review weekly. Negatives for 'free' and 'DIY' searches."},{t:"New service page",b:"Added a smoke alarm page to catch the compliance searches."}]));
+  months.push(mk("northland","2026-09","draft",48,"",[],false));
+  return {clients,calls,enquiries,months,users:[
+    {email:"hello@leadhivenz.com",password:"admin",role:"admin",name:"Joe"},
+    {email:"mike@mikesplumbing.co.nz",password:"demo",role:"client",clientId:"mikes"},
+    {email:"sam@baysideelectrical.com.au",password:"demo",role:"client",clientId:"bayside"},
+    {email:"nbm.br001@gmail.com",password:"demo",role:"client",clientId:"northland"}
+  ]};
+}
+const KEY="lh-portal-demo-v1";
+let DB=null;
+function load(){try{const s=localStorage.getItem(KEY);if(s){DB=JSON.parse(s);if(DB&&DB.clients)return}}catch(e){}DB=buildDemo();save()}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(DB))}catch(e){}}
+function resetDemo(){localStorage.removeItem(KEY);localStorage.removeItem(KEY+":session");DB=buildDemo();save()}
+const SESSION={get(){try{return JSON.parse(localStorage.getItem(KEY+":session"))}catch(e){return null}},set(u){localStorage.setItem(KEY+":session",JSON.stringify(u))},clear(){localStorage.removeItem(KEY+":session")}};
+const client=(id)=>DB.clients.find(c=>c.id===id);
+const monthRec=(cid,ym)=>DB.months.find(m=>m.clientId===cid&&m.ym===ym);
+
+/* ═══════════════════════════ stats ═══════════════════════════ */
+function monthStats(cid,ym){
+  const c=client(cid);
+  const calls=DB.calls.filter(x=>x.clientId===cid&&ymOf(x.at)===ym);
+  const enq=DB.enquiries.filter(x=>x.clientId===cid&&ymOf(x.at)===ym);
+  const spam=calls.filter(x=>x.status==="spam").length+enq.filter(x=>x.status==="spam").length;
+  const answered=calls.filter(x=>x.outcome==="answered");
+  const missed=calls.filter(x=>x.outcome!=="answered");
+  const leads=calls.length+enq.length-spam;
+  const won=[...calls,...enq].filter(x=>x.status==="won");
+  const wonValue=won.reduce((a,x)=>a+(Number(x.jobValue)||0),0);
+  const quoted=[...calls,...enq].filter(x=>x.status==="quoted").length;
+  const weeks=[0,0,0,0,0];for(const x of [...calls,...enq]){if(x.status!=="spam")weeks[weekOf(x.at)-1]++}
+  const nWeeks=Math.ceil(daysIn(ym)/7);
+  const avgDur=answered.length?answered.reduce((a,x)=>a+x.durationSec,0)/answered.length:0;
+  const m=monthRec(cid,ym);
+  return {ym,calls:calls.length,enq:enq.length,answered:answered.length,missed:missed.length,missedRate:pct(missed.length,calls.length),leads,won:won.length,wonValue,quoted,weeks:weeks.slice(0,nWeeks),avgDur,spam,
+    cplFee:leads?c.fee/leads:0,cplAd:(m&&m.adSpend&&leads)?m.adSpend/leads:0,adSpend:m?m.adSpend:0,
+    target:leads>=c.targetMin?(leads>c.targetMax?"above":"on"):"below",month:m};
+}
+function clientMonths(cid){ // published months newest first, plus the current month if it has any data
+  const set=new Set(DB.months.filter(m=>m.clientId===cid&&m.status==="published").map(m=>m.ym));
+  for(const x of [...DB.calls,...DB.enquiries])if(x.clientId===cid&&ymOf(x.at)===CUR_YM)set.add(CUR_YM);
+  return [...set].sort().reverse();
+}
+function leadsFor(cid,ym){
+  const items=[...DB.calls.filter(x=>x.clientId===cid).map(x=>({...x,kind:"call"})),...DB.enquiries.filter(x=>x.clientId===cid).map(x=>({...x,kind:"enquiry"}))];
+  return items.filter(x=>!ym||ymOf(x.at)===ym).sort((a,b)=>a.at<b.at?1:-1);
+}
+function findLead(id){const c=DB.calls.find(x=>x.id===id);if(c)return{...c,kind:"call"};const e=DB.enquiries.find(x=>x.id===id);return e?{...e,kind:"enquiry"}:null}
+function updateLead(id,patch){const c=DB.calls.find(x=>x.id===id)||DB.enquiries.find(x=>x.id===id);if(c)Object.assign(c,patch);save()}
+
+/* ═══════════════════════════ CSV import (Nimbata export) ═══════════════════════════ */
+function parseCSV(text){
+  const rows=[];let row=[],cur="",q=false;text=text.replace(/^﻿/,"");
+  for(let i=0;i<text.length;i++){const ch=text[i],nx=text[i+1];
+    if(q){if(ch==='"'&&nx==='"'){cur+='"';i++}else if(ch==='"')q=false;else cur+=ch}
+    else if(ch==='"')q=true;else if(ch===","||ch==="\t"&&!text.includes(",")){row.push(cur);cur=""}
+    else if(ch==="\n"||ch==="\r"){if(ch==="\r"&&nx==="\n")i++;row.push(cur);cur="";if(row.some(v=>v!==""))rows.push(row);row=[]}
+    else cur+=ch}
+  row.push(cur);if(row.some(v=>v!==""))rows.push(row);
+  return rows;
+}
+const norm=(s)=>String(s||"").toLowerCase().replace(/[^a-z0-9]/g,"");
+const COLS={
+  datetime:["datetime","calldatetime","starttime","callstart","timestamp","started","date"],
+  date:["date","calldate","day"],
+  time:["time","calltime","starttime"],
+  caller:["caller","callerid","callernumber","callerphone","from","fromnumber","phone","phonenumber","customernumber"],
+  duration:["duration","callduration","talktime","durationsec","durationseconds","length","calllength"],
+  outcome:["outcome","status","callstatus","disposition","answered","result","callresult"],
+  recording:["recording","recordingurl","recordurl","recordinglink","audio","audiourl","recorded"],
+  source:["source","sourcetype","medium","channel","trafficsource"],
+  campaign:["campaign","campaignname","adcampaign"],
+  keyword:["keyword","searchterm","term","searchkeyword","gclidkeyword"],
+  city:["city","callercity","location","region","town"],
+  callId:["callid","id","uuid","calluuid","sid"],
+  notes:["notes","note","comment","comments","agentnotes"],
+  tracking:["trackingnumber","tracking","dialednumber","tonumber","number"],
+  leadStatus:["leadstatus","lead","qualified","rating"],
+  value:["value","leadvalue","revenue","amount"]
+};
+function mapColumns(headers){
+  const nh=headers.map(norm);const map={};const used=new Set();
+  for(const [field,aliases] of Object.entries(COLS)){
+    for(const a of aliases){const ix=nh.findIndex((x,i)=>x===a&&!used.has(i));if(ix>=0){map[field]=ix;used.add(ix);break}}
+    if(map[field]===undefined){for(const a of aliases){const ix=nh.findIndex((x,i)=>x.includes(a)&&!used.has(i));if(ix>=0){map[field]=ix;used.add(ix);break}}}
+  }
+  // "date" alias is shared: if we have both a datetime and a date, prefer the longer header as datetime
+  if(map.datetime!==undefined&&map.date!==undefined&&map.datetime===map.date)delete map.date;
+  if(map.datetime===undefined&&map.date!==undefined){map.datetime=map.date;delete map.date}
+  return map;
+}
+function parseDate(d,t){
+  d=String(d||"").trim();t=String(t||"").trim();if(!d)return null;
+  let s=d+(t?" "+t:"");
+  // dd/mm/yyyy or dd-mm-yyyy (NZ/AU) with optional time and am/pm
+  let m=s.match(/^(\d{1,2})[\/\-.](\d{1,2})[\/\-.](\d{2,4})(?:[ ,T]+(\d{1,2})(?::(\d{2}))?(?::(\d{2}))?\s*([ap]m)?)?/i);
+  if(m){let [,dd,mm,yy,hh="0",mi="0",ss="0",ap]=m;yy=yy.length===2?"20"+yy:yy;hh=+hh;if(ap){ap=ap.toLowerCase();if(ap==="pm"&&hh<12)hh+=12;if(ap==="am"&&hh===12)hh=0}
+    const dt=new Date(+yy,+mm-1,+dd,hh,+mi,+ss);return isNaN(dt)?null:dt}
+  const dt=new Date(s);return isNaN(dt)?null:dt;
+}
+function parseDuration(v){
+  v=String(v||"").trim().toLowerCase();if(!v)return 0;
+  if(/^\d+(\.\d+)?$/.test(v))return Math.round(+v);
+  const hms=v.split(":").map(Number);if(hms.length>=2&&hms.every(n=>!isNaN(n)))return hms.reduce((a,n)=>a*60+n,0);
+  let s=0;const mh=v.match(/(\d+)\s*h/),mm=v.match(/(\d+)\s*m/),ms=v.match(/(\d+)\s*s/);if(mh)s+=+mh[1]*3600;if(mm)s+=+mm[1]*60;if(ms)s+=+ms[1];return s;
+}
+function parseOutcome(v,durSec){
+  v=String(v||"").trim().toLowerCase();
+  if(/voicemail|vm/.test(v))return "voicemail";
+  if(/missed|no answer|noanswer|unanswered|busy|failed|abandon|not answered|ringout|no-answer/.test(v))return "missed";
+  if(/answer|complete|connect|success|yes|true/.test(v))return "answered";
+  return durSec>=20?"answered":"missed";
+}
+function rowsToCalls(rows,map,clientId){
+  const out=[];const skipped=[];
+  for(let i=1;i<rows.length;i++){const r=rows[i];const g=(f)=>map[f]===undefined?"":r[map[f]];
+    const dt=parseDate(g("datetime"),map.time!==undefined&&map.time!==map.datetime?g("time"):"");
+    if(!dt){skipped.push(i+1);continue}
+    const durationSec=parseDuration(g("duration"));
+    const rec=g("recording");const recording=/^https?:/.test(rec)?rec:/yes|true|1/i.test(rec);
+    out.push({id:"c"+uid(),clientId,at:dt.toISOString(),caller:g("caller")||"Unknown",durationSec,outcome:parseOutcome(g("outcome"),durationSec),source:g("source")||"Google Ads",campaign:g("campaign"),keyword:g("keyword"),city:g("city"),recording,adminNote:g("notes"),status:"new",jobValue:0,clientNote:"",callId:g("callId"),raw:r});
+  }
+  return {calls:out,skipped};
+}
+function importSummary(calls){
+  const ans=calls.filter(c=>c.outcome==="answered");const byYm={};for(const c of calls)byYm[ymOf(c.at)]=(byYm[ymOf(c.at)]||0)+1;
+  return {n:calls.length,answered:ans.length,missed:calls.length-ans.length,avg:ans.length?ans.reduce((a,c)=>a+c.durationSec,0)/ans.length:0,recordings:calls.filter(c=>c.recording).length,byYm,first:calls.length?calls.reduce((a,c)=>a.at<c.at?a:c).at:null,last:calls.length?calls.reduce((a,c)=>a.at>c.at?a:c).at:null};
+}
+const SAMPLE_CSV=`Date,Time,Caller,Call Duration,Outcome,Tracking Number,Source,Campaign,Keyword,City,Recording,Notes
+01/09/2026,08:14 AM,021 555 3391,2:41,Answered,09 801 2201,Google Ads,AKL Plumber · Search,emergency plumber auckland,Mt Eden,https://app.nimbata.com/rec/abc123,Blocked drain
+01/09/2026,12:52 PM,027 112 9087,0:00,Missed,09 801 2201,Google Ads,AKL Plumber · Search,plumber near me,Howick,,
+02/09/2026,09:05 AM,022 440 1178,4:12,Answered,09 801 2201,Google Ads,AKL Plumber · Search,hot water cylinder repair,Takapuna,https://app.nimbata.com/rec/abc124,Cylinder leaking
+03/09/2026,16:30,021 760 0042,1:08,Answered,09 801 2201,Google Ads,AKL Plumber · Search,leaking tap repair,Remuera,https://app.nimbata.com/rec/abc125,
+04/09/2026,13:10,027 555 2210,0:00,No answer,09 801 2201,Google Ads,AKL Plumber · Search,burst pipe plumber,Papakura,,`;
+
+/* ═══════════════════════════ demo audio (a stand-in for a Nimbata recording) ═══════════════════════════ */
+let AUDIO_URL=null;
+function demoRecording(){
+  if(AUDIO_URL)return AUDIO_URL;
+  const sr=8000,secs=12,n=sr*secs,buf=new ArrayBuffer(44+n*2),v=new DataView(buf);
+  const w=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i))};
+  w(0,"RIFF");v.setUint32(4,36+n*2,true);w(8,"WAVE");w(12,"fmt ");v.setUint32(16,16,true);v.setUint16(20,1,true);v.setUint16(22,1,true);v.setUint32(24,sr,true);v.setUint32(28,sr*2,true);v.setUint16(32,2,true);v.setUint16(34,16,true);w(36,"data");v.setUint32(40,n*2,true);
+  const r=rng(7);let ph=0;
+  for(let i=0;i<n;i++){const t=i/sr;let s=0;
+    if(t<2.4){const on=(t%1.2)<.4;s=on?(Math.sin(2*Math.PI*425*t)*.35):0} // ring tone
+    else{const env=.5+.5*Math.sin(2*Math.PI*.9*t+Math.sin(t*3));const f=140+40*Math.sin(t*2.1);ph+=2*Math.PI*f/sr;s=(Math.sin(ph)*.5+Math.sin(ph*2)*.25+(r()-.5)*.35)*env*.4;if(Math.floor(t*2)%3===2)s*=.15}
+    v.setInt16(44+i*2,Math.max(-1,Math.min(1,s))*32767,true)}
+  AUDIO_URL=URL.createObjectURL(new Blob([buf],{type:"audio/wav"}));return AUDIO_URL;
+}
+
+/* ═══════════════════════════ charts ═══════════════════════════ */
+function columnChart({labels,values,highlight=-1,gold=[],height=150,valueFmt=(v)=>v,tipFmt}){
+  const W=360,H=height,padL=6,padR=6,padT=18,padB=24;const n=values.length;const max=Math.max(1,...values);
+  const niceMax=(()=>{const p=Math.pow(10,Math.floor(Math.log10(max)));const m=max/p;const s=m<=1?1:m<=2?2:m<=5?5:10;return s*p})();
+  const slot=(W-padL-padR)/n;const bw=Math.min(24,slot*.6);const y=(v)=>padT+(H-padT-padB)*(1-v/niceMax);
+  let s=`<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Column chart">`;
+  for(const g of [0,.5,1]){const yy=y(niceMax*g);s+=`<line class="grid" x1="${padL}" x2="${W-padR}" y1="${yy.toFixed(1)}" y2="${yy.toFixed(1)}"/>`;if(g>0)s+=`<text class="t" x="${W-padR}" y="${(yy-3).toFixed(1)}" text-anchor="end">${valueFmt(niceMax*g)}</text>`}
+  values.forEach((v,i)=>{const x=padL+slot*i+(slot-bw)/2;const top=y(v);const hgt=Math.max(0,H-padB-top);const cls=gold.includes(i)?"bar gold":i===highlight?"bar on":"bar";
+    const tipText=tipFmt?tipFmt(i):`${labels[i]}: ${valueFmt(v)}`;
+    s+=`<rect class="hit" x="${(padL+slot*i).toFixed(1)}" y="${padT}" width="${slot.toFixed(1)}" height="${H-padT-padB}" data-tip="${h(tipText)}" tabindex="0"/>`;
+    s+=`<path class="${cls}" d="M${x.toFixed(1)},${(H-padB).toFixed(1)} v${(-hgt+4).toFixed(1)} a4,4 0 0 1 4,-4 h${(bw-8).toFixed(1)} a4,4 0 0 1 4,4 v${(hgt-4).toFixed(1)} z" style="fill:${gold.includes(i)?"var(--gold)":i===highlight?"var(--blue)":"#C7D3DF"};pointer-events:none"/>`;
+    if(i===highlight||gold.includes(i)||n<=6)s+=`<text class="v" x="${(x+bw/2).toFixed(1)}" y="${(top-5).toFixed(1)}" text-anchor="middle">${valueFmt(v)}</text>`;
+    s+=`<text class="t" x="${(x+bw/2).toFixed(1)}" y="${H-7}" text-anchor="middle">${h(labels[i])}</text>`});
+  return s+"</svg>";
+}
+function bindTips(root){
+  const tip=$("tip");
+  root.querySelectorAll(".hit").forEach(el=>{
+    const show=(e)=>{tip.textContent=el.dataset.tip;tip.classList.remove("hidden");const r=el.getBoundingClientRect();tip.style.left=(r.left+r.width/2)+"px";tip.style.top=(r.top+8)+"px"};
+    const hide=()=>tip.classList.add("hidden");
+    el.addEventListener("pointerenter",show);el.addEventListener("pointermove",show);el.addEventListener("pointerleave",hide);el.addEventListener("focus",show);el.addEventListener("blur",hide);
+  });
+}
+
+/* ═══════════════════════════ router ═══════════════════════════ */
+function go(path){location.hash="#"+path}
+function route(){
+  const user=SESSION.get();
+  const hash=location.hash.replace(/^#/,"")||"/";
+  const parts=hash.split("/").filter(Boolean);
+  const app=$("app");window.scrollTo(0,0);
+  if(!user){document.body.classList.remove("has-tabs");$("tabs").classList.add("hidden");return renderLogin(app)}
+  const isAdmin=user.role==="admin";
+  const seg=parts[0]||(isAdmin?"admin":"home");
+  // routes:  #/home, #/leads/<ym>/<filter>, #/lead/<id>, #/reports, #/report/<ym>, #/account
+  //          #/admin, #/admin/client/<id>, #/admin/upload/<id>/<ym>, #/admin/settings/<id>, #/admin/newclient
+  //          #/as/<clientId>/<any client route>   (admin viewing the portal as that client)
+  let cid=user.clientId,page,args;
+  if(seg==="admin"){page=parts[1]||"admin";args=parts.slice(2)}
+  else if(seg==="as"&&isAdmin){cid=parts[1];page=parts[2]||"home";args=parts.slice(3)}
+  else{page=seg;args=parts.slice(1)}
+  const screens={home:renderHome,leads:renderLeads,lead:renderLead,reports:renderReports,report:renderReport,account:renderAccount,admin:renderAdmin,client:renderAdminClient,upload:renderUpload,settings:renderSettings,newclient:renderSettings};
+  const fn=screens[page]||(seg==="admin"?renderAdmin:renderHome);
+  const ctx={user,cid,isAdmin,viewAs:seg==="as",args,base:seg==="as"?`/as/${cid}`:""};
+  if(seg==="admin"){if(!isAdmin)return go("/home");}
+  else if(!cid||!client(cid))return go(isAdmin?"/admin":"/");
+  renderTabs(ctx,page);
+  fn(app,ctx);
+}
+function renderTabs(ctx,page){
+  const t=$("tabs"),inn=$("tabs-in");
+  const adminPages=["admin","client","upload","settings","newclient"];
+  document.body.classList.add("has-tabs");t.classList.remove("hidden");
+  if(adminPages.includes(page)){
+    inn.innerHTML=`<a href="#/admin" class="${page==="admin"?"on":""}">${ICON.user}Clients</a><a href="#/admin/upload" class="${page==="upload"?"on":""}">${ICON.upload}Upload</a><a href="#" data-logout>${ICON.out}Log out</a>`;
+  }else{
+    const b=ctx.base;const unread=leadsFor(ctx.cid,CUR_YM).filter(x=>x.status==="new").length;
+    inn.innerHTML=`<a href="#${b}/home" class="${page==="home"?"on":""}">${ICON.home}Home</a><a href="#${b}/leads" class="${page==="leads"||page==="lead"?"on":""}">${ICON.leads}Leads${unread?`<span class="bdg">${unread}</span>`:""}</a><a href="#${b}/reports" class="${page==="reports"||page==="report"?"on":""}">${ICON.report}Reports</a><a href="#${b}/account" class="${page==="account"?"on":""}">${ICON.user}${ctx.viewAs?"Admin":"Account"}</a>`;
+  }
+  inn.querySelectorAll("[data-logout]").forEach(a=>a.onclick=(e)=>{e.preventDefault();SESSION.clear();go("/")});
+}
+function topBar({title,sub,back,right,brand}){
+  return `<div class="top"><div class="top-in">${back?`<a class="back" href="#${back}" aria-label="Back">${ICON.back}</a>`:""}${brand?`<div class="brand">${ICON.mark}<span class="nm">Lead<span>Hive</span></span></div>`:`<div class="ttl">${title}${sub?`<small>${sub}</small>`:""}</div>`}${right||""}</div></div>`;
+}
+
+/* ═══════════════════════════ screens: auth ═══════════════════════════ */
+function renderLogin(app){
+  app.innerHTML=`<div class="login"><div class="hd">${ICON.mark}<h1>Lead<span>Hive</span></h1><p>Partner portal</p></div>
+  <div class="pane"><div class="shell" style="padding:0"><h2>Log in</h2><p class="lede mt8">Your leads, calls, recordings and monthly results, all in one place.</p>
+  <form id="login-f"><label class="fld"><span>Email</span><input id="l-email" type="email" autocomplete="username" inputmode="email" required></label>
+  <label class="fld"><span>Password</span><input id="l-pass" type="password" autocomplete="current-password" required></label>
+  <div class="err hidden" id="l-err">That email or password isn't right. Text Joe if you're locked out.</div>
+  <button class="btn primary mt20" type="submit">Log in</button>
+  <p class="small muted mt12" style="text-align:center">Forgot your password? <a href="#" id="l-forgot" style="color:var(--blue);font-weight:600;text-decoration:none">Send me a reset link</a></p></form>
+  <div class="demo"><b>Demo logins (prototype only)</b><br>Client: <code>mike@mikesplumbing.co.nz</code> / <code>demo</code><br>Admin: <code>hello@leadhivenz.com</code> / <code>admin</code></div></div></div></div>`;
+  $("login-f").onsubmit=(e)=>{e.preventDefault();const em=$("l-email").value.trim().toLowerCase(),pw=$("l-pass").value;
+    const u=DB.users.find(x=>x.email===em&&x.password===pw);if(!u){$("l-err").classList.remove("hidden");return}
+    SESSION.set({email:u.email,role:u.role,clientId:u.clientId||null,name:u.name||""});go(u.role==="admin"?"/admin":"/home")};
+  $("l-forgot").onclick=(e)=>{e.preventDefault();toast("Reset link sent (demo)")};
+}
+
+/* ═══════════════════════════ screens: client ═══════════════════════════ */
+function targetChip(st,c){return st.target==="on"?`<span class="chip good"><i></i>On target</span>`:st.target==="above"?`<span class="chip good"><i></i>Above target</span>`:`<span class="chip warn"><i></i>Below target</span>`}
+function statusChip(x){const m={won:["good","Job won"],quoted:["blue","Quoted"],not_lead:["","Not a lead"],spam:["","Spam"]};if(!m[x.status])return "";const [cls,l]=m[x.status];return `<span class="chip ${cls}">${l}${x.status==="won"&&x.jobValue?` · ${money(x.jobValue)}`:""}</span>`}
+function leadRow(x,base){
+  const isCall=x.kind==="call";const missed=isCall&&x.outcome!=="answered";
+  const ic=isCall?(missed?"miss":""):"form";
+  const t1=isCall?x.caller:x.name;
+  const t2=isCall?(missed?`${x.outcome==="voicemail"?"Voicemail":"Missed call"} · ${x.keyword||x.city||"Google Ads"}`:(x.adminNote||x.keyword||x.city||"Google Ads call")):`${x.urgent?"Urgent · ":""}${x.suburb} · ${x.message}`;
+  return `<a class="li" href="#${base}/lead/${x.id}"><div class="ic ${ic}">${isCall?(missed?ICON.missed:ICON.phone):ICON.form}</div><div class="grow"><div class="t1"><span>${h(t1)}</span></div><div class="t2">${x.status!=="new"?statusChip(x):""}<span class="tx">${h(t2)}</span></div></div><div class="meta"><div class="tm">${fmtTime(x.at)}</div><div class="du">${isCall?(missed?"":durShort(x.durationSec)):"Web form"}</div></div>${isCall&&x.recording?`<span class="play">${ICON.play}</span>`:`<span class="chev">${ICON.chev}</span>`}</a>`;
+}
+function renderHome(app,ctx){
+  const c=client(ctx.cid);const months=clientMonths(ctx.cid);
+  // default view: the current month once it has a week of data behind it, otherwise the last published month
+  const lastPub=months.find(m=>m!==CUR_YM);
+  const defYm=(TODAY.getDate()>=8||!lastPub)?(months[0]||CUR_YM):lastPub;
+  const ym=ctx.args[0]&&months.includes(ctx.args[0])?ctx.args[0]:defYm;
+  const st=monthStats(ctx.cid,ym);const prev=monthStats(ctx.cid,ymAdd(ym,-1));const live=ym===CUR_YM&&!(st.month&&st.month.status==="published");
+  const startYm=ymOf(c.started);const allMonths=[];for(let i=5;i>=0;i--){const y=ymAdd(ym,-i);if(y>=startYm)allMonths.push(y)}
+  const series=allMonths.map(y=>monthStats(ctx.cid,y).leads);
+  const delta=(a,b,goodUp=true)=>{if(live||!b)return "";const d=a-b;if(!d)return `<div class="d flat">— vs ${MON[+ymAdd(ym,-1).split("-")[1]-1]}</div>`;const up=d>0;const good=goodUp?up:!up;return `<div class="d ${good?"up":"dn"}">${up?ICON.up:ICON.dn}${Math.abs(d)} vs ${MON[+ymAdd(ym,-1).split("-")[1]-1]}</div>`};
+  const fill=Math.min(100,st.leads/c.targetMax*100);const minTick=c.targetMin/c.targetMax*100;
+  const latestPub=DB.months.filter(m=>m.clientId===ctx.cid&&m.status==="published").sort((a,b)=>a.ym<b.ym?1:-1)[0];
+  const recent=leadsFor(ctx.cid,ym).slice(0,3);
+  app.innerHTML=topBar({brand:true,right:`${ctx.viewAs?`<span class="pill-admin">VIEWING AS</span>`:""}<div class="avatar">${h(c.initials)}</div>`})+`<div class="shell">
+  <div class="row" style="margin:18px 0 12px"><div class="grow"><h1 style="font-size:22px;font-weight:600">Kia ora ${h(c.contact)}</h1><div class="small muted">${h(c.business)} · ${h(c.region)}</div></div>
+  <select id="ym-sel" aria-label="Month" style="font:inherit;font-size:14px;font-weight:600;padding:9px 12px;border-radius:11px;border:1px solid var(--rule);background:var(--card);color:var(--ink)">${months.map(m=>`<option value="${m}" ${m===ym?"selected":""}>${ymLabel(m,false)}${m===CUR_YM&&live?" (so far)":""}</option>`).join("")}</select></div>
+  <div class="hero"><div class="k">${live?"This month so far":ymLabel(ym)}</div><div class="n">${st.leads}<small>leads</small></div><div class="sub">${c.pkg} plan · ${c.targetMin} to ${c.targetMax} leads a month${live?" · calls update at month end":""}</div>
+  <div class="meter"><div class="fill ${st.target!=="below"?"good":""}" style="width:${fill}%"></div><div class="tick" style="left:${minTick}%"></div></div><div class="meter-l"><span>0</span><span>${c.targetMin} = target</span><span>${c.targetMax}</span></div>
+  <div class="mt12">${live?`<span class="chip" style="background:rgba(255,255,255,.14);color:#fff"><i></i>Month in progress</span>`:targetChip(st,c)}${st.wonValue?` <span class="chip gold">${ICON.star}${money(st.wonValue)} in jobs you've tagged won</span>`:""}</div></div>
+  <div class="kpis">
+    <div class="kpi"><div class="l">Phone calls</div><div class="v">${st.calls}</div>${delta(st.calls,prev.calls)}</div>
+    <div class="kpi"><div class="l">Web enquiries</div><div class="v">${st.enq}</div>${delta(st.enq,prev.enq)}</div>
+    <div class="kpi"><div class="l">Answered</div><div class="v">${st.answered}<small>${st.calls?pct(st.answered,st.calls)+"%":""}</small></div>${delta(pct(st.answered,st.calls),prev.calls?pct(prev.answered,prev.calls):0)?delta(pct(st.answered,st.calls),prev.calls?pct(prev.answered,prev.calls):0).replace(/(\d+) vs/,"$1 pts vs"):""}</div>
+    <div class="kpi"><div class="l">Missed calls</div><div class="v">${st.missed}<small>${st.calls?st.missedRate+"%":""}</small></div>${delta(st.missed,prev.missed,false)}</div>
+    <div class="kpi"><div class="l">Average call</div><div class="v">${st.avgDur?dur(st.avgDur):"–"}</div></div>
+    <div class="kpi"><div class="l">${c.showCPL&&!live?"Cost per lead":"Jobs won"}</div><div class="v">${c.showCPL&&!live?(st.leads?money(st.cplFee):"–"):st.won}</div><div class="d flat">${c.showCPL&&!live?`on your ${money(c.fee)} plan`:live?"tagged so far":"tagged by you"}</div></div>
+  </div>
+  ${latestPub?`<div class="sec"><div class="sec-h"><h2>Note from Joe</h2><a href="#${ctx.base}/report/${latestPub.ym}">Full report</a></div><div class="card note"><div class="who"><div class="avatar">J</div><div><b>Joe · LeadHive</b><small>${ymLabel(latestPub.ym)} results · published ${fmtDate(latestPub.publishedAt)}</small></div></div><p>${h(latestPub.summary)}</p></div></div>`:`<div class="sec"><div class="card note"><div class="who"><div class="avatar">J</div><div><b>Joe · LeadHive</b><small>Welcome aboard</small></div></div><p>Your campaign is live. Calls and web enquiries will show up here as they come in, and your first full report lands at the end of the month.</p></div></div>`}
+  <div class="sec"><div class="sec-h"><h2>Leads by month</h2><span class="small muted">calls + web enquiries</span></div><div class="card chart" id="ch1">${columnChart({labels:allMonths.map(y=>MON[+y.split("-")[1]-1]),values:series,highlight:allMonths.length-1,tipFmt:(i)=>`${ymLabel(allMonths[i])}: ${series[i]} leads`})}</div></div>
+  <div class="sec"><div class="sec-h"><h2>${live?"This month":ymLabel(ym,false)} by week</h2></div><div class="card chart" id="ch2">${columnChart({labels:st.weeks.map((_,i)=>"Wk "+(i+1)),values:st.weeks,highlight:-1,gold:[st.weeks.indexOf(Math.max(...st.weeks))],height:130,tipFmt:(i)=>`Week ${i+1}: ${st.weeks[i]} leads`})}</div></div>
+  <div class="sec"><div class="sec-h"><h2>Latest leads</h2><a href="#${ctx.base}/leads/${ym}">See all ${st.leads}</a></div><div class="list">${recent.length?recent.map(x=>leadRow(x,ctx.base)).join(""):`<div class="empty">No leads logged yet this month.</div>`}</div></div>
+  <p class="small muted" style="text-align:center;margin:22px 0 8px">Numbers come from your call tracking line and website form. Spam you tag is left out.</p></div>`;
+  $("ym-sel").onchange=(e)=>go(`${ctx.base}/home/${e.target.value}`);
+  bindTips(app);
+}
+function renderLeads(app,ctx){
+  const c=client(ctx.cid);const months=clientMonths(ctx.cid);
+  const ym=ctx.args[0]&&months.includes(ctx.args[0])?ctx.args[0]:months[0]||CUR_YM;const filter=ctx.args[1]||"all";
+  let items=leadsFor(ctx.cid,ym);
+  const counts={all:items.length,missed:items.filter(x=>x.kind==="call"&&x.outcome!=="answered").length,web:items.filter(x=>x.kind==="enquiry").length,rec:items.filter(x=>x.recording).length,untagged:items.filter(x=>x.status==="new").length,won:items.filter(x=>x.status==="won").length};
+  if(filter==="missed")items=items.filter(x=>x.kind==="call"&&x.outcome!=="answered");else if(filter==="web")items=items.filter(x=>x.kind==="enquiry");else if(filter==="rec")items=items.filter(x=>x.recording);else if(filter==="untagged")items=items.filter(x=>x.status==="new");else if(filter==="won")items=items.filter(x=>x.status==="won");
+  const groups=[];for(const x of items){const d=fmtDay(x.at);const g=groups[groups.length-1];if(g&&g.d===d)g.items.push(x);else groups.push({d,items:[x]})}
+  const chip=(k,l)=>`<a class="f ${filter===k?"on":""}" href="#${ctx.base}/leads/${ym}/${k}">${l} ${counts[k]}</a>`;
+  app.innerHTML=topBar({title:"Leads",sub:`${h(c.business)}`,right:`<select id="ym-sel" aria-label="Month" style="font:inherit;font-size:13.5px;font-weight:600;padding:8px 10px;border-radius:10px;border:1px solid rgba(255,255,255,.25);background:rgba(255,255,255,.1);color:#fff">${months.map(m=>`<option value="${m}" ${m===ym?"selected":""} style="color:#000">${ymLabel(m,false)}</option>`).join("")}</select>`})+`<div class="shell">
+  <div class="chips mt12">${chip("all","All")}${chip("untagged","To tag")}${chip("missed","Missed")}${chip("web","Web forms")}${chip("rec","Recorded")}${chip("won","Won")}</div>
+  ${counts.untagged&&filter==="all"?`<div class="card" style="padding:12px 14px;margin-top:4px;background:var(--gold-bg);border-color:#F3DDA8"><div class="row"><div class="grow"><b style="font-size:14px">Tag what happened with each lead</b><div class="small" style="color:var(--gold-ink);margin-top:2px">Won, quoted, not a lead or spam. It takes a second and it shows your real return.</div></div><a class="btn sm navy" href="#${ctx.base}/leads/${ym}/untagged">Start</a></div></div>`:""}
+  <div class="list mt12">${groups.length?groups.map(g=>`<div class="day">${h(g.d)}</div>${g.items.map(x=>leadRow(x,ctx.base)).join("")}`).join(""):`<div class="empty">Nothing here for ${ymLabel(ym)}.</div>`}</div>
+  <p class="small muted" style="text-align:center;margin:18px 0 8px">Tap a lead to hear the call, see Joe's note or tag the outcome.</p></div>`;
+  $("ym-sel").onchange=(e)=>go(`${ctx.base}/leads/${e.target.value}/${filter}`);
+}
+function renderLead(app,ctx){
+  const x=findLead(ctx.args[0]);if(!x||x.clientId!==ctx.cid)return go(`${ctx.base}/leads`);
+  const c=client(ctx.cid);const isCall=x.kind==="call";const missed=isCall&&x.outcome!=="answered";
+  const tel=(x.caller||x.phone||"").replace(/\s/g,"");
+  const segBtn=(k,l,ic)=>`<button data-st="${k}" class="${x.status===k?"on "+k:""}">${ic}${l}</button>`;
+  app.innerHTML=topBar({title:isCall?(missed?"Missed call":"Phone call"):"Web enquiry",sub:fmtDT(x.at),back:`${ctx.base}/leads/${ymOf(x.at)}`})+`<div class="shell">
+  <div class="card mt16"><div class="row"><div class="grow"><div class="small muted">${isCall?"Caller":"From"}</div><div class="big-num">${h(isCall?x.caller:x.name)}</div>${!isCall?`<div class="mt8 b" style="font-size:16px">${h(x.phone)}</div>`:""}</div>${missed?`<span class="chip bad"><i></i>${x.outcome==="voicemail"?"Voicemail":"Not answered"}</span>`:isCall?`<span class="chip good"><i></i>Answered</span>`:x.urgent?`<span class="chip warn"><i></i>Urgent</span>`:`<span class="chip blue">Planned</span>`}</div>
+  <div class="btn-row mt16"><a class="btn navy" href="tel:${h(tel)}">${ICON.phone}Call back</a><a class="btn ghost" href="sms:${h(tel)}">Text</a></div>
+  <div class="facts">${isCall?`<div><small>Duration</small>${x.durationSec?dur(x.durationSec):"–"}</div><div><small>Source</small>${h(x.source||"Google Ads")}</div><div><small>Search</small>${h(x.keyword||"–")}</div><div><small>Caller location</small>${h(x.city||"–")}</div>`:`<div><small>Suburb</small>${h(x.suburb)}</div><div><small>Timing</small>${x.urgent?"As soon as possible":"Planned job"}</div><div><small>Source</small>Website form</div><div><small>Page</small>${h(x.page||"/")}</div>`}</div></div>
+  ${!isCall?`<div class="card mt12"><div class="small muted b">Their message</div><p class="mt8" style="font-size:15.5px;line-height:1.5">${h(x.message)}</p></div>`:""}
+  ${isCall&&x.recording?`<div class="card mt12"><div class="row"><div class="grow"><b style="font-size:15px">Call recording</b><div class="small muted">Recorded on your tracking line</div></div><a class="small b" style="color:var(--blue);text-decoration:none" href="${typeof x.recording==="string"?h(x.recording):demoRecording()}" download="call-${h(x.caller).replace(/\s/g,"")}.wav">Download</a></div>
+    <div class="player"><button class="play" id="pl-btn" aria-label="Play">${ICON.play}</button><div class="track" id="pl-track"><i id="pl-fill"></i></div><div class="tm" id="pl-tm">0:00 / ${durShort(x.durationSec)}</div></div>
+    <audio id="pl-audio" preload="metadata" src="${typeof x.recording==="string"?h(x.recording):demoRecording()}"></audio>
+    ${typeof x.recording!=="string"?`<p class="small muted mt8">Demo audio. In the live portal this is the real Nimbata recording.</p>`:""}</div>`:""}
+  ${isCall&&missed?`<div class="card mt12" style="background:var(--bad-bg);border-color:#F2C9C9"><b style="font-size:14.5px;color:var(--bad)">This one rang out.</b><p class="small mt8" style="color:#7A2E2E;line-height:1.45">Most people searching for an emergency tradie call the next result if nobody answers. A call back inside 10 minutes recovers a good share of these.</p></div>`:""}
+  ${x.adminNote?`<div class="card note mt12"><div class="who"><div class="avatar">J</div><div><b>Joe's note</b><small>From the call review</small></div></div><p>${h(x.adminNote)}</p></div>`:""}
+  <div class="sec"><div class="sec-h"><h2>What happened with this lead?</h2></div><div class="card">
+    <div class="seg">${segBtn("new","New",ICON.dot)}${segBtn("quoted","Quoted",ICON.quote)}${segBtn("won","Won",ICON.star)}${segBtn("not_lead","Not a lead",ICON.ban)}${segBtn("spam","Spam",ICON.x)}</div>
+    <div id="won-box" class="${x.status==="won"?"":"hidden"}"><label class="fld"><span>Job value (ex GST, roughly)</span><input id="jv" type="number" inputmode="decimal" placeholder="e.g. 450" value="${x.jobValue||""}"></label></div>
+    <label class="fld"><span>Your note (optional)</span><textarea id="cn" placeholder="e.g. Booked for Tuesday, quoted $420">${h(x.clientNote||"")}</textarea></label>
+    <button class="btn primary mt16" id="save-lead">Save</button>
+    <p class="small muted mt12" style="line-height:1.45">Tagging takes a second and it's how we work out your real return. Joe also uses it to cut the searches that bring in the duds.</p></div></div></div>`;
+  let st=x.status;
+  app.querySelectorAll(".seg button").forEach(b=>b.onclick=()=>{st=b.dataset.st;app.querySelectorAll(".seg button").forEach(o=>o.className="");b.className="on "+st;$("won-box").classList.toggle("hidden",st!=="won")});
+  $("save-lead").onclick=()=>{updateLead(x.id,{status:st,jobValue:st==="won"?Number($("jv").value)||0:0,clientNote:$("cn").value.trim()});toast(st==="won"?"Nice one. Tagged as won.":"Saved");setTimeout(()=>go(`${ctx.base}/leads/${ymOf(x.at)}`),500)};
+  const au=$("pl-audio");if(au){const btn=$("pl-btn"),fill=$("pl-fill"),tm=$("pl-tm"),tr=$("pl-track");
+    const total=()=>isFinite(au.duration)&&au.duration?au.duration:x.durationSec;
+    btn.onclick=()=>{au.paused?au.play():au.pause()};
+    au.onplay=()=>btn.innerHTML=ICON.pause;au.onpause=()=>btn.innerHTML=ICON.play;au.onended=()=>{btn.innerHTML=ICON.play;fill.style.width="0"};
+    au.ontimeupdate=()=>{fill.style.width=(au.currentTime/total()*100)+"%";tm.textContent=`${durShort(au.currentTime)} / ${durShort(total())}`};
+    au.onloadedmetadata=()=>tm.textContent=`0:00 / ${durShort(total())}`;
+    tr.onclick=(e)=>{const r=tr.getBoundingClientRect();au.currentTime=(e.clientX-r.left)/r.width*total()}}
+}
+function renderReports(app,ctx){
+  const c=client(ctx.cid);const ms=DB.months.filter(m=>m.clientId===ctx.cid&&m.status==="published").sort((a,b)=>a.ym<b.ym?1:-1);
+  app.innerHTML=topBar({title:"Monthly reports",sub:h(c.business)})+`<div class="shell">
+  <p class="lede" style="margin:16px 0 12px">One report a month, written by Joe. What came in, what it cost per lead, and what's being changed next.</p>
+  ${ms.length?ms.map(m=>{const st=monthStats(ctx.cid,m.ym);return `<a class="card" style="display:block;text-decoration:none;margin-top:10px" href="#${ctx.base}/report/${m.ym}"><div class="row"><div class="grow"><b style="font-size:16px;font-family:var(--head)">${ymLabel(m.ym)}</b><div class="small muted mt8" style="margin-top:3px">${st.leads} leads · ${st.calls} calls · ${st.enq} web · ${st.missedRate}% missed${st.wonValue?` · ${money(st.wonValue)} won`:""}</div></div>${targetChip(st,c)}<span class="chev">${ICON.chev}</span></div></a>`}).join(""):`<div class="card empty">Your first report arrives at the end of your first full month.</div>`}
+  </div>`;
+}
+function renderReport(app,ctx){
+  const c=client(ctx.cid);const ym=ctx.args[0];const m=monthRec(ctx.cid,ym);if(!m||m.status!=="published")return go(`${ctx.base}/reports`);
+  const st=monthStats(ctx.cid,ym);const prev=monthStats(ctx.cid,ymAdd(ym,-1));
+  const kv=(k,v)=>`<div class="rpt-k"><span>${k}</span><b>${v}</b></div>`;
+  app.innerHTML=topBar({title:`${ymLabel(ym)} report`,sub:h(c.business),back:`${ctx.base}/reports`})+`<div class="shell">
+  <div class="hero" style="margin-top:16px"><div class="k">${ymLabel(ym)}</div><div class="n">${st.leads}<small>leads</small></div><div class="sub">${c.pkg} plan · target ${c.targetMin} to ${c.targetMax}</div><div class="mt12">${targetChip(st,c)}${prev.leads?` <span class="chip" style="background:rgba(255,255,255,.14);color:#fff">${st.leads>=prev.leads?"+":""}${st.leads-prev.leads} vs ${ymLabel(ymAdd(ym,-1),false)}</span>`:""}</div></div>
+  <div class="card mt12">${kv("Phone calls",st.calls)}${kv("Answered",`${st.answered} <span class="muted small">(${pct(st.answered,st.calls)}%)</span>`)}${kv("Missed or voicemail",`${st.missed} <span class="muted small">(${st.missedRate}%)</span>`)}${kv("Web enquiries",st.enq)}${kv("Average call length",st.avgDur?dur(st.avgDur):"–")}${st.spam?kv("Spam removed",st.spam):""}${c.showCPL?kv("Cost per lead",`${money(st.cplFee)} <span class="muted small">on ${money(c.fee)}</span>`):""}${c.showAdSpend?kv("Ad spend (Google)",money(st.adSpend)):""}${st.won?kv("Jobs tagged won",`${st.won} · ${money(st.wonValue)}`):""}${st.quoted?kv("Quotes out",st.quoted):""}</div>
+  ${st.wonValue?`<div class="card mt12" style="background:var(--good-bg);border-color:#BFE5CF"><b style="font-size:15px;color:#0F6B3D">${money(st.wonValue)} in won jobs from a ${money(c.fee)} plan</b><p class="small mt8" style="color:#1F5A3C;line-height:1.45">That's ${(st.wonValue/c.fee).toFixed(1)}x, counting only the ${st.won} jobs you tagged. Quotes still out aren't included.</p></div>`:""}
+  <div class="sec"><div class="sec-h"><h2>Leads by week</h2></div><div class="card chart">${columnChart({labels:st.weeks.map((_,i)=>"Wk "+(i+1)),values:st.weeks,gold:[st.weeks.indexOf(Math.max(...st.weeks))],height:130,tipFmt:(i)=>`Week ${i+1}: ${st.weeks[i]} leads`})}</div></div>
+  <div class="sec"><div class="sec-h"><h2>Joe's summary</h2></div><div class="card note"><div class="who"><div class="avatar">J</div><div><b>Joe · LeadHive</b><small>Published ${fmtDate(m.publishedAt)}</small></div></div><p>${h(m.summary)}</p></div></div>
+  <div class="sec"><div class="sec-h"><h2>What I'm changing</h2></div><div class="card">${m.points.map((p,i)=>`<div class="pt"><div class="ix">${i+1}</div><div><b>${h(p.t)}</b><p>${h(p.b)}</p></div></div>`).join("")}</div></div>
+  ${m.pdf?`<a class="btn ghost mt20" href="#" id="pdf">${ICON.dl}Download PDF report</a>`:""}
+  <a class="btn navy mt12" href="#${ctx.base}/leads/${ym}">See every lead from ${ymLabel(ym,false)}</a>
+  <p class="small muted" style="text-align:center;margin:18px 0 8px">Questions? Text Joe, he reads every reply.</p></div>`;
+  const p=$("pdf");if(p)p.onclick=(e)=>{e.preventDefault();toast("PDF download (demo)")};
+  bindTips(app);
+}
+function renderAccount(app,ctx){
+  const c=client(ctx.cid);const user=ctx.user;
+  const next=(()=>{const d=new Date(TODAY);let n=new Date(d.getFullYear(),d.getMonth(),c.billingDay);if(n<=d)n=new Date(d.getFullYear(),d.getMonth()+1,c.billingDay);return n})();
+  app.innerHTML=topBar({title:ctx.viewAs?"Viewing as client":"Account",sub:h(c.business)})+`<div class="shell">
+  ${ctx.viewAs?`<a class="btn navy" style="margin-top:16px" href="#/admin/client/${c.id}">${ICON.back}Back to admin</a>`:""}
+  <div class="card mt16"><div class="row"><div class="avatar" style="width:46px;height:46px;font-size:16px">${h(c.initials)}</div><div class="grow"><b style="font-size:16px;font-family:var(--head)">${h(c.business)}</b><div class="small muted">${h(c.contact)} · ${h(c.niche)} · ${h(c.region)}</div></div></div>
+  <div class="facts"><div><small>Plan</small>${h(c.pkg)}</div><div><small>Monthly fee</small>${money(c.fee)} + GST</div><div><small>Lead target</small>${c.targetMin} to ${c.targetMax} a month</div><div><small>Next invoice</small>${fmtDate(next)}</div><div><small>Partner since</small>${fmtDate(c.started)}</div><div><small>Login</small>${h(user.role==="admin"?c.email:user.email)}</div></div></div>
+  <div class="sec"><div class="sec-h"><h2>Talk to Joe</h2></div><div class="btn-row"><a class="btn navy" href="tel:+64211234567">${ICON.phone}Call</a><a class="btn ghost" href="https://wa.me/64211234567" target="_blank" rel="noopener">WhatsApp</a><a class="btn ghost" href="mailto:hello@leadhivenz.com">Email</a></div></div>
+  <div class="sec"><div class="sec-h"><h2>Put it on your home screen</h2></div><div class="card"><p class="lede">This portal works like an app. On iPhone tap <b>Share</b> then <b>Add to Home Screen</b>. On Android tap the <b>⋮ menu</b> then <b>Add to Home screen</b>. You'll get a LeadHive icon and it opens full-screen.</p></div></div>
+  <div class="sec"><div class="sec-h"><h2>Your lead line</h2></div><div class="card"><p class="lede">Calls from your Google ads come through a LeadHive tracking number that forwards straight to <b>${h(c.phone)}</b>. That's how we count calls and record them. Web enquiries come from your LeadHive landing page and land here the moment they're sent.</p></div></div>
+  ${ctx.viewAs?"":`<button class="btn danger mt20" id="logout">${ICON.out}Log out</button>`}
+  <p class="small muted" style="text-align:center;margin:18px 0 8px">LeadHive ${c.country==="AU"?"AU":"NZ"} · Partner portal v1</p></div>`;
+  const lo=$("logout");if(lo)lo.onclick=()=>{SESSION.clear();go("/")};
+}
+
+/* ═══════════════════════════ screens: admin ═══════════════════════════ */
+function clientStatus(c){
+  const lastPub=DB.months.filter(m=>m.clientId===c.id&&m.status==="published").map(m=>m.ym).sort().pop();
+  const prevYm=ymAdd(CUR_YM,-1);const draft=DB.months.find(m=>m.clientId===c.id&&m.ym===prevYm&&m.status==="draft");
+  if(ymOf(c.started)>=CUR_YM||(ymOf(c.started)===prevYm&&new Date(c.started).getDate()>20))return {cls:"blue",l:"New · first month running"};
+  if(lastPub===prevYm)return {cls:"good",l:`${ymLabel(prevYm,false)} published`};
+  if(draft)return {cls:"warn",l:`${ymLabel(prevYm,false)} draft, not published`};
+  return {cls:"bad",l:`${ymLabel(prevYm,false)} report due`};
+}
+function renderAdmin(app,ctx){
+  const cs=DB.clients.filter(c=>c.active);
+  const due=cs.filter(c=>clientStatus(c).cls==="bad"||clientStatus(c).cls==="warn").length;
+  const live=DB.enquiries.filter(e=>ymOf(e.at)===CUR_YM).length+DB.calls.filter(e=>ymOf(e.at)===CUR_YM).length;
+  app.innerHTML=topBar({brand:true,right:`<span class="pill-admin">ADMIN</span>`})+`<div class="shell">
+  <div class="row" style="margin:18px 0 12px"><div class="grow"><h1 style="font-size:22px;font-weight:600">Partners</h1><div class="small muted">${cs.length} active · ${due} report${due===1?"":"s"} due for ${ymLabel(ymAdd(CUR_YM,-1),false)} · ${live} leads logged so far in ${ymLabel(CUR_YM,false)}</div></div></div>
+  <div class="btn-row"><a class="btn primary" href="#/admin/upload">${ICON.upload}Upload month</a><a class="btn ghost" href="#/admin/newclient">+ New partner</a></div>
+  <div class="list mt16">${cs.map(c=>{const s=clientStatus(c);const st=monthStats(c.id,ymAdd(CUR_YM,-1));return `<a class="li client-li" href="#/admin/client/${c.id}"><div class="ic">${h(c.initials)}</div><div class="grow"><div class="t1"><span>${h(c.business)}</span></div><div class="t2">${h(c.niche)} · ${h(c.region)} ${c.country} · ${h(c.pkg)} ${money(c.fee)}</div><div class="mt8" style="margin-top:5px"><span class="chip ${s.cls}"><i></i>${s.l}</span></div></div><div class="meta"><div class="tm">${st.leads?st.leads+(st.leads===1?" lead":" leads"):""}</div><div class="du muted">${st.leads?ymLabel(ymAdd(CUR_YM,-1),false):""}</div></div><span class="chev">${ICON.chev}</span></a>`}).join("")}</div>
+  <div class="sec"><div class="sec-h"><h2>Month-end routine</h2></div><div class="card"><div class="pt"><div class="ix">1</div><div><b>Export the month from Nimbata</b><p>Call log → filter the client's project and the month → Export CSV.</p></div></div><div class="pt"><div class="ix">2</div><div><b>Send the stats to Claude for the notes</b><p>Upload step 2 has a "Copy summary" button. Paste it to Claude with the Google Ads spend and you get the summary and three "what I'm changing" points back.</p></div></div><div class="pt"><div class="ix">3</div><div><b>Paste, attach the PDF, publish</b><p>The client gets an email saying their results are in, and it's in their portal the moment you hit publish.</p></div></div></div></div>
+  <button class="btn ghost mt20" id="reset" style="color:var(--ink-3)">Reset demo data</button></div>`;
+  $("reset").onclick=()=>{if(confirm("Reset the demo data to the starting state?")){resetDemo();SESSION.set({email:"hello@leadhivenz.com",role:"admin",name:"Joe"});route();toast("Demo reset")}};
+}
+function renderAdminClient(app,ctx){
+  const c=client(ctx.args[0]);if(!c)return go("/admin");
+  const ms=DB.months.filter(m=>m.clientId===c.id).sort((a,b)=>a.ym<b.ym?1:-1);const s=clientStatus(c);
+  const live=leadsFor(c.id,CUR_YM);
+  app.innerHTML=topBar({title:h(c.business),sub:`${h(c.contact)} · ${h(c.pkg)} · ${money(c.fee)}/mo`,back:"/admin"})+`<div class="shell">
+  <div class="mt16"><span class="chip ${s.cls}"><i></i>${s.l}</span> <span class="chip">${c.targetMin}–${c.targetMax} leads</span> <span class="chip">${c.country}</span></div>
+  <div class="btn-row mt12"><a class="btn primary" href="#/admin/upload/${c.id}">${ICON.upload}Upload month</a><a class="btn ghost" href="#/as/${c.id}/home">View as ${h(c.contact)}</a></div>
+  <div class="btn-row mt8" style="margin-top:8px"><a class="btn ghost sm" style="flex:1" href="#/admin/settings/${c.id}">${ICON.cog}Settings &amp; login</a><button class="btn ghost sm" style="flex:1" id="copy-hook">${ICON.copy}Enquiry webhook</button></div>
+  <div class="sec"><div class="sec-h"><h2>Months</h2></div><div class="list">${ms.length?ms.map(m=>{const st=monthStats(c.id,m.ym);return `<a class="li" href="#/admin/upload/${c.id}/${m.ym}"><div class="grow"><div class="t1"><span>${ymLabel(m.ym)}</span>${m.status==="published"?`<span class="chip good">Published</span>`:`<span class="chip warn">Draft</span>`}</div><div class="t2">${st.leads} leads · ${st.calls} calls · ${st.missedRate}% missed · ${st.enq} web${m.adSpend?` · ads ${money(m.adSpend)}${st.leads?` (${money(st.cplAd)}/lead)`:""}`:""}</div></div><span class="chev">${ICON.chev}</span></a>`}).join(""):`<div class="empty">No months uploaded yet.</div>`}</div></div>
+  <div class="sec"><div class="sec-h"><h2>${ymLabel(CUR_YM,false)} so far</h2><a href="#/as/${c.id}/leads/${CUR_YM}">${live.length} leads</a></div><div class="list">${live.length?live.slice(0,4).map(x=>leadRow(x,`/as/${c.id}`)).join(""):`<div class="empty">Nothing logged yet this month. Web enquiries land here live; calls arrive with the CSV (or live via the Nimbata webhook once it's connected).</div>`}</div></div>
+  <div class="sec"><div class="sec-h"><h2>Margin (admin only)</h2></div><div class="card">${ms.filter(m=>m.status==="published").slice(0,3).map(m=>{const st=monthStats(c.id,m.ym);return `<div class="rpt-k"><span>${ymLabel(m.ym,false)}</span><b>${money(c.fee-m.adSpend)} <span class="muted small">of ${money(c.fee)} · ${pct(c.fee-m.adSpend,c.fee)}%</span></b></div>`}).join("")||`<div class="muted small">Nothing published yet.</div>`}<p class="small muted mt8">Clients never see ad spend unless you switch it on in Settings.</p></div></div></div>`;
+  $("copy-hook").onclick=()=>{const txt=`POST https://portal.leadhivenz.com/api/webhooks/enquiry\nx-leadhive-key: ${c.webhookKey}\n{ "name","phone","suburb","issue","isUrgent","page" }`;navigator.clipboard&&navigator.clipboard.writeText(txt).catch(()=>{});toast("Webhook details copied")};
+}
+function renderUpload(app,ctx){
+  const pre=ctx.args[0]?client(ctx.args[0]):null;const preYm=ctx.args[1]||ymAdd(CUR_YM,-1);
+  const existing=pre?monthRec(pre.id,preYm):null;
+  const state={cid:pre?pre.id:"",ym:preYm,calls:[],map:{},headers:[],skipped:[],summary:existing?existing.summary:"",points:existing?existing.points.map(p=>({...p})):[{t:"",b:""},{t:"",b:""},{t:"",b:""}],adSpend:existing?existing.adSpend:"",pdf:existing?existing.pdf:false,fileName:""};
+  const ymOpts=[];for(let i=0;i<8;i++)ymOpts.push(ymAdd(CUR_YM,-i));
+  app.innerHTML=topBar({title:"Upload a month",sub:pre?h(pre.business):"Pick a partner",back:pre?`/admin/client/${pre.id}`:"/admin"})+`<div class="shell">
+  <div class="steps"><i class="on"></i><i id="s2"></i><i id="s3"></i></div>
+  <div class="card"><div class="two"><label class="fld" style="margin-top:0"><span>Partner</span><select id="u-cid">${DB.clients.filter(c=>c.active).map(c=>`<option value="${c.id}" ${state.cid===c.id?"selected":""}>${h(c.business)}</option>`).join("")}</select></label><label class="fld" style="margin-top:0"><span>Month</span><select id="u-ym">${ymOpts.map(y=>`<option value="${y}" ${y===state.ym?"selected":""}>${ymLabel(y)}</option>`).join("")}</select></label></div>
+  ${existing?`<p class="small mt12" style="color:var(--warn);font-weight:600">${ymLabel(existing.ym)} already exists for this partner (${existing.status}). Uploading a CSV replaces that month's calls; notes below are pre-filled.</p>`:""}</div>
+  <div class="sec"><div class="sec-h"><h2>1 · Nimbata call export</h2><button id="u-sample" style="color:var(--blue);font-weight:600;font-size:13px">Use sample CSV</button></div>
+  <label class="drop" id="drop"><b>Drop the CSV here or tap to choose</b>Nimbata → Call log → Export. Columns are matched automatically (date, caller, duration, outcome, recording, keyword…).<input type="file" id="u-file" accept=".csv,text/csv,.txt"></label>
+  <details class="mt8"><summary class="small b" style="cursor:pointer;color:var(--ink-2)">Or paste the CSV text</summary><textarea id="u-paste" class="mt8" style="width:100%;min-height:90px;font:12px ui-monospace,Menlo,monospace;padding:10px;border:1px solid var(--rule);border-radius:10px;background:var(--card)" placeholder="Date,Time,Caller,Call Duration,Outcome,..."></textarea><button class="btn ghost sm mt8" id="u-parse">Parse pasted text</button></details>
+  <div id="u-preview"></div></div>
+  <div class="sec" id="notes-sec"><div class="sec-h"><h2>2 · Notes for the client</h2><button id="u-copy" style="color:var(--blue);font-weight:600;font-size:13px">${ICON.copy} Copy summary for Claude</button></div>
+  <div class="card"><label class="fld" style="margin-top:0"><span>Summary (plain English, like a text to a mate)</span><textarea id="u-sum" placeholder="A steady month. 22 leads, inside the plan. The one thing to work on is...">${h(state.summary)}</textarea></label>
+  ${[0,1,2].map(i=>`<div class="two mt12"><label class="fld" style="margin-top:0;grid-column:1/-1"><span>What I'm changing · ${i+1}</span><input id="u-pt${i}" placeholder="Title, e.g. Missed call follow-up" value="${h(state.points[i]?state.points[i].t:"")}"><textarea id="u-pb${i}" class="mt8" style="min-height:64px" placeholder="One or two sentences.">${h(state.points[i]?state.points[i].b:"")}</textarea></label></div>`).join("")}
+  <div class="two mt12"><label class="fld" style="margin-top:0"><span>Google Ads spend (admin only)</span><input id="u-ad" type="number" inputmode="decimal" placeholder="e.g. 702" value="${state.adSpend||""}"><div class="hint">Never shown to the client unless their toggle is on.</div></label><label class="fld" style="margin-top:0"><span>PDF report (optional)</span><input id="u-pdf" type="file" accept="application/pdf" style="padding:9px"><div class="hint">From the lead-report skill.</div></label></div></div></div>
+  <div class="sec"><div class="sec-h"><h2>3 · Publish</h2></div><div class="card"><div class="switch"><div><b>Email the client when published</b><small>"Your ${ymLabel(state.ym,false)} results are in" with a login link.</small></div><button class="tog on" id="u-mail" aria-label="toggle"></button></div>
+  <div class="btn-row mt12"><button class="btn ghost" id="u-draft">Save draft</button><button class="btn primary" id="u-pub">Publish to client</button></div><p class="small muted mt12" id="u-msg"></p></div></div></div>`;
+  const prev=$("u-preview");
+  const renderPreview=()=>{
+    if(!state.headers.length){prev.innerHTML="";$("s2").classList.remove("on");return}
+    const sm=importSummary(state.calls);const other=Object.keys(sm.byYm).filter(y=>y!==state.ym);
+    const fields=[["datetime","Date / time"],["time","Time"],["caller","Caller"],["duration","Duration"],["outcome","Outcome"],["recording","Recording"],["keyword","Keyword"],["campaign","Campaign"],["city","City"],["notes","Notes"],["callId","Call ID"],["source","Source"]];
+    prev.innerHTML=`<div class="card mt12"><div class="row"><div class="grow"><b style="font-size:15px">${state.fileName||"Pasted CSV"}</b><div class="small muted">${state.headers.length} columns · ${state.calls.length} calls parsed${state.skipped.length?` · ${state.skipped.length} rows skipped (no date)`:""}</div></div><span class="chip ${other.length?"warn":"good"}">${other.length?"Check months":"Looks good"}</span></div>
+    ${other.length?`<p class="small mt8" style="color:var(--warn);font-weight:600">${other.map(y=>`${sm.byYm[y]} call${sm.byYm[y]===1?"":"s"} dated ${ymLabel(y,false)}`).join(", ")} in this file. Only ${ymLabel(state.ym,false)} rows will be imported.</p>`:""}
+    <div class="kpis" style="margin-top:12px"><div class="kpi"><div class="l">Calls</div><div class="v">${sm.n}</div></div><div class="kpi"><div class="l">Missed</div><div class="v">${sm.missed}<small>${pct(sm.missed,sm.n)}%</small></div></div><div class="kpi"><div class="l">Avg answered</div><div class="v">${dur(sm.avg)}</div></div><div class="kpi"><div class="l">Recordings</div><div class="v">${sm.recordings}</div></div></div>
+    <details class="mt12"><summary class="small b" style="cursor:pointer;color:var(--ink-2)">Column mapping</summary><div class="map mt8">${fields.map(([f,l])=>`<div class="${state.map[f]!==undefined?"ok":""}"><span>${l}</span><span>${state.map[f]!==undefined?h(state.headers[state.map[f]]):"not found"}</span></div>`).join("")}</div></details>
+    <details class="mt8"><summary class="small b" style="cursor:pointer;color:var(--ink-2)">First rows</summary><div class="tbl-wrap mt8"><table class="tbl"><tr><th>When</th><th>Caller</th><th class="r">Dur</th><th>Outcome</th><th>Rec</th></tr>${state.calls.slice(0,6).map(c=>`<tr><td>${fmtDate(c.at)} ${fmtTime(c.at)}</td><td>${h(c.caller)}</td><td class="r">${durShort(c.durationSec)}</td><td>${c.outcome}</td><td>${c.recording?"✓":""}</td></tr>`).join("")}</table></div></details></div>`;
+    $("s2").classList.add("on");
+  };
+  const ingest=(text,name)=>{const rows=parseCSV(text);if(rows.length<2){toast("Couldn't read that file");return}state.headers=rows[0];state.map=mapColumns(rows[0]);const r=rowsToCalls(rows,state.map,state.cid);state.calls=r.calls;state.skipped=r.skipped;state.fileName=name||"";renderPreview();toast(`${state.calls.length} calls parsed`)};
+  $("u-cid").onchange=(e)=>{state.cid=e.target.value;go(`/admin/upload/${state.cid}/${state.ym}`)};
+  $("u-ym").onchange=(e)=>{state.ym=e.target.value;go(`/admin/upload/${state.cid}/${state.ym}`)};
+  $("u-file").onchange=(e)=>{const f=e.target.files[0];if(!f)return;f.text().then(t=>ingest(t,f.name))};
+  const drop=$("drop");["dragenter","dragover"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.add("on")}));["dragleave","drop"].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();drop.classList.remove("on")}));drop.addEventListener("drop",e=>{const f=e.dataTransfer.files[0];if(f)f.text().then(t=>ingest(t,f.name))});
+  $("u-parse").onclick=()=>ingest($("u-paste").value,"Pasted CSV");
+  $("u-sample").onclick=()=>{$("u-paste").value=SAMPLE_CSV;ingest(SAMPLE_CSV,"nimbata-sample.csv")};
+  $("u-pdf").onchange=(e)=>{state.pdf=!!e.target.files[0]};
+  $("u-mail").onclick=(e)=>e.currentTarget.classList.toggle("on");
+  $("u-copy").onclick=()=>{const c=client(state.cid);const sm=importSummary(state.calls.filter(x=>ymOf(x.at)===state.ym));const enq=DB.enquiries.filter(x=>x.clientId===state.cid&&ymOf(x.at)===state.ym).length;const ad=$("u-ad").value;
+    const txt=`Lead report notes for ${c.business} (${c.contact}), ${c.niche}, ${c.region}. ${ymLabel(state.ym)}. Plan ${c.pkg} ${money(c.fee)}/mo, target ${c.targetMin}-${c.targetMax}.\nCalls ${sm.n}, missed ${sm.missed} (${pct(sm.missed,sm.n)}%), avg answered ${dur(sm.avg)}, web enquiries ${enq}, total leads ${sm.n+enq}${ad?`, ad spend $${ad}`:""}.\nTop keywords: ${[...new Set(state.calls.map(x=>x.keyword).filter(Boolean))].slice(0,4).join(", ")||"n/a"}.\nWrite the client summary (2-3 sentences, plain English) and three "what I'm changing" points with a title and one or two sentences each.`;
+    (navigator.clipboard?navigator.clipboard.writeText(txt):Promise.reject()).then(()=>toast("Copied. Paste it to Claude."),()=>{prompt("Copy this:",txt)})};
+  const collect=()=>({summary:$("u-sum").value.trim(),points:[0,1,2].map(i=>({t:$("u-pt"+i).value.trim(),b:$("u-pb"+i).value.trim()})).filter(p=>p.t||p.b),adSpend:Number($("u-ad").value)||0});
+  const commit=(status)=>{
+    const c=client(state.cid);const n=collect();
+    if(status==="published"&&!n.summary){toast("Add a summary before publishing");$("u-sum").focus();return}
+    if(state.calls.length){DB.calls=DB.calls.filter(x=>!(x.clientId===state.cid&&ymOf(x.at)===state.ym));DB.calls.push(...state.calls.filter(x=>ymOf(x.at)===state.ym))}
+    let m=monthRec(state.cid,state.ym);if(!m){m={id:"m"+uid(),clientId:state.cid,ym:state.ym,status:"draft",adSpend:0,summary:"",points:[],pdf:false,publishedAt:null};DB.months.push(m)}
+    Object.assign(m,{status,adSpend:n.adSpend,summary:n.summary,points:n.points,pdf:state.pdf||m.pdf,publishedAt:status==="published"?new Date().toISOString():m.publishedAt});save();
+    $("s3").classList.add("on");
+    if(status==="published"){toast(`Published to ${c.contact}${$("u-mail").classList.contains("on")?" · email sent":""}`);setTimeout(()=>go(`/admin/client/${state.cid}`),700)}else toast("Draft saved");
+  };
+  $("u-draft").onclick=()=>commit("draft");$("u-pub").onclick=()=>commit("published");
+}
+function renderSettings(app,ctx){
+  const isNew=!ctx.args[0];const c=isNew?{id:"",business:"",initials:"",contact:"",email:"",phone:"",niche:"Emergency plumber",region:"",country:"NZ",pkg:"Starter",fee:1500,targetMin:15,targetMax:25,started:CUR_YM+"-01",billingDay:1,showAdSpend:false,showCPL:true,webhookKey:"lh_"+uid()+uid(),active:true}:client(ctx.args[0]);
+  if(!c)return go("/admin");
+  const u=DB.users.find(x=>x.clientId===c.id);
+  const f=(id,l,v,type="text",extra="")=>`<label class="fld"><span>${l}</span><input id="${id}" type="${type}" value="${h(v)}" ${extra}></label>`;
+  app.innerHTML=topBar({title:isNew?"New partner":"Settings",sub:isNew?"Creates their login too":h(c.business),back:isNew?"/admin":`/admin/client/${c.id}`})+`<div class="shell">
+  <div class="card mt16"><h2 style="font-size:16px;font-weight:600">Business</h2>${f("s-biz","Business name",c.business)}<div class="two">${f("s-contact","Contact first name",c.contact)}${f("s-init","Initials (avatar)",c.initials)}</div><div class="two">${f("s-phone","Mobile (number Nimbata forwards to)",c.phone,"tel")}${f("s-email","Email (their login)",c.email,"email")}</div>
+  <div class="two"><label class="fld"><span>Niche</span><select id="s-niche">${["Emergency plumber","Emergency electrician","Handyman","Locksmith","Roofer","Drainlayer","Other"].map(n=>`<option ${c.niche===n?"selected":""}>${n}</option>`).join("")}</select></label>${f("s-region","Region",c.region)}</div>
+  <div class="two"><label class="fld"><span>Country</span><select id="s-country"><option ${c.country==="NZ"?"selected":""}>NZ</option><option ${c.country==="AU"?"selected":""}>AU</option></select></label>${f("s-started","Start date",c.started,"date")}</div></div>
+  <div class="card mt12"><h2 style="font-size:16px;font-weight:600">Plan</h2><div class="two"><label class="fld"><span>Package</span><select id="s-pkg">${["Starter","Growth","Dominator","Starter (trial)","Custom"].map(n=>`<option ${c.pkg===n?"selected":""}>${n}</option>`).join("")}</select></label>${f("s-fee","Monthly fee (ex GST)",c.fee,"number")}</div><div class="two">${f("s-tmin","Lead target min",c.targetMin,"number")}${f("s-tmax","Lead target max",c.targetMax,"number")}</div>${f("s-bill","Billing day of month",c.billingDay,"number","min=1 max=28")}
+  <div class="mt12"><div class="switch"><div><b>Show cost per lead</b><small>Worked out from their fee, not your ad spend: ${money(c.fee)} ÷ leads.</small></div><button class="tog ${c.showCPL?"on":""}" id="s-cpl"></button></div><div class="switch"><div><b>Show Google Ads spend</b><small>Off by default. Turning this on reveals your margin.</small></div><button class="tog ${c.showAdSpend?"on":""}" id="s-ads"></button></div></div></div>
+  <div class="card mt12"><h2 style="font-size:16px;font-weight:600">Login</h2><p class="small muted mt8">They log in with their email. Set a password here and send it to them, or let them use "forgot password" on the login screen.</p>${f("s-pass","Set password",u?u.password:"","text",'placeholder="e.g. Plumbing2026"')}<div class="btn-row mt12"><button class="btn ghost sm" style="flex:1" id="s-sendlogin">${ICON.copy}Copy login message</button></div></div>
+  <div class="card mt12"><h2 style="font-size:16px;font-weight:600">Website enquiries</h2><p class="small muted mt8">Add this to the landing page's enquiry route and every form submission lands in their portal instantly.</p><pre class="mt8" style="font:11.5px ui-monospace,Menlo,monospace;background:var(--paper);padding:10px;border-radius:10px;overflow-x:auto;white-space:pre">POST https://portal.leadhivenz.com/api/webhooks/enquiry
+x-leadhive-key: ${h(c.webhookKey)}
+{ "name", "phone", "suburb", "issue", "isUrgent", "page" }</pre></div>
+  <button class="btn primary mt16" id="s-save">${isNew?"Create partner + login":"Save settings"}</button>
+  ${isNew?"":`<button class="btn danger mt12" id="s-off">Deactivate partner</button>`}
+  <div style="height:20px"></div></div>`;
+  $("s-cpl").onclick=(e)=>e.currentTarget.classList.toggle("on");$("s-ads").onclick=(e)=>e.currentTarget.classList.toggle("on");
+  const read=()=>({business:$("s-biz").value.trim(),contact:$("s-contact").value.trim(),initials:($("s-init").value.trim()||$("s-biz").value.trim().split(/\s+/).map(w=>w[0]).join("").slice(0,2)).toUpperCase(),phone:$("s-phone").value.trim(),email:$("s-email").value.trim().toLowerCase(),niche:$("s-niche").value,region:$("s-region").value.trim(),country:$("s-country").value,started:$("s-started").value,pkg:$("s-pkg").value,fee:Number($("s-fee").value)||0,targetMin:Number($("s-tmin").value)||0,targetMax:Number($("s-tmax").value)||0,billingDay:Number($("s-bill").value)||1,showCPL:$("s-cpl").classList.contains("on"),showAdSpend:$("s-ads").classList.contains("on")});
+  $("s-save").onclick=()=>{const v=read();if(!v.business||!v.email){toast("Business name and email are needed");return}
+    let id=c.id;if(isNew){id=v.business.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")||uid();DB.clients.push({...c,...v,id})}else Object.assign(c,v);
+    const pw=$("s-pass").value.trim();let user=DB.users.find(x=>x.clientId===id);if(!user){user={email:v.email,password:pw||"welcome",role:"client",clientId:id};DB.users.push(user)}else{user.email=v.email;if(pw)user.password=pw}
+    save();toast(isNew?"Partner created":"Saved");setTimeout(()=>go(`/admin/client/${id}`),500)};
+  $("s-sendlogin").onclick=()=>{const v=read();const pw=$("s-pass").value.trim()||"(set a password first)";const txt=`Hey ${v.contact}, your LeadHive portal is live.\n\nLog in: https://portal.leadhivenz.com\nEmail: ${v.email}\nPassword: ${pw}\n\nYou'll see every call and web enquiry, listen to recordings, and get my monthly notes there. Add it to your home screen and it works like an app. Tag each lead as won/quoted/not a lead when you get a sec, it shows your real return.\n\nJoe`;(navigator.clipboard?navigator.clipboard.writeText(txt):Promise.reject()).then(()=>toast("Login message copied"),()=>prompt("Copy this:",txt))};
+  const off=$("s-off");if(off)off.onclick=()=>{if(confirm(`Deactivate ${c.business}? Their login stops working; data is kept.`)){c.active=false;save();go("/admin")}};
+}
+
+/* ═══════════════════════════ boot ═══════════════════════════ */
+load();
+window.addEventListener("hashchange",route);
+route();
+if(location.search.includes("dev")){const d=document.createElement("div");d.className="dev";d.innerHTML='preview <a href="#/home">home</a><a href="#/leads">leads</a><a href="#/reports">reports</a><a href="#/admin">admin</a>';document.body.appendChild(d)}
+</script>
+</body>
+</html>
