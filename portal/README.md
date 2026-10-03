@@ -130,9 +130,12 @@ estimate (the CSV "Value" column, or the partner's average job value from Settin
 partner overwrites it with the real number. Ongoing keeps the lead in play (the Won/Lost
 buttons stay on it until it lands). The home screen and report then show
 *estimated value of leads* vs *confirmed won* and the partner's return on their own numbers
-("4.4x"). Lead detail has the full set: New / Ongoing / Won / Lost / Not a lead / Spam.
-Use the return in every renewal and upsell conversation, feed "not a lead" and "spam" back
-into negative keywords, and make tagging a two-minute ritual on the monthly check-in call.
+("4.4x"). Lead detail has New / Ongoing / Won / Lost. **"Not a lead" and "Spam" are admin-only** (set
+from the admin box on a lead): partners never get a button that argues for a refund, and the
+database refuses the value from a partner login.
+Use the return in every renewal and upsell conversation, feed your own "not a lead" and
+"spam" flags back into negative keywords, and make tagging a two-minute ritual on the
+monthly check-in call.
 
 ## Changing things later
 

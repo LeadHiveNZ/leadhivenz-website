@@ -204,6 +204,10 @@ create or replace function public.guard_partner_update() returns trigger
 language plpgsql security definer set search_path = public as $$
 begin
   if public.is_admin() then return new; end if;
+  -- "not a lead" and "spam" are LeadHive's call, never the partner's (it would hand them a refund argument)
+  if new.client_status in ('not_lead','spam') and new.client_status is distinct from old.client_status then
+    raise exception 'Only LeadHive can mark a lead as not a lead or spam';
+  end if;
   if (to_jsonb(new) - 'client_status' - 'job_value' - 'client_note')
      is distinct from
      (to_jsonb(old) - 'client_status' - 'job_value' - 'client_note') then

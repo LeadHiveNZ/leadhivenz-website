@@ -98,8 +98,8 @@
     const plan = [[m4, 16, 2], [m3, 19, 3], [m2, 24, 3], [m1, 18, 4]];
     for (const [ym, nc, ne] of plan) { calls = calls.concat(genCalls(r, mike, ym, nc, { missRate: 0.2 })); enquiries = enquiries.concat(genEnquiries(r, mike, ym, ne, {})); }
     const pick = (c, ym) => calls.filter((x) => x.client_id === c.id && x.ym === ym);
-    forceOutcomes(pick(mike, m1), 2, 2, true, NZ); applyTags(pick(mike, m1), [["won", 1850], ["lost"], ["won", 3200], ["not_lead"], ["ongoing"], ["won", 420], ["lost"], ["won", 280], ["ongoing"]]);
-    forceOutcomes(pick(mike, m2), 4, 2, false, NZ); applyTags(pick(mike, m2), [["won", 650], ["won", 2400], ["lost"], ["won", 380], ["not_lead"], ["won", 1200], ["lost"], ["won", 540], ["ongoing"], ["won", 900]]);
+    forceOutcomes(pick(mike, m1), 2, 2, true, NZ); applyTags(pick(mike, m1), [["won", 1850], ["lost"], ["won", 3200], ["ongoing"], ["ongoing"], ["won", 420], ["lost"], ["won", 280], ["ongoing"]]);
+    forceOutcomes(pick(mike, m2), 4, 2, false, NZ); applyTags(pick(mike, m2), [["won", 650], ["won", 2400], ["lost"], ["won", 380], ["ongoing"], ["won", 1200], ["lost"], ["won", 540], ["ongoing"], ["won", 900]]);
     forceOutcomes(pick(mike, m3), 3, 1, false, NZ); applyTags(pick(mike, m3), [["won", 420], ["ongoing"], ["won", 1600], ["won", 260]]);
     forceOutcomes(pick(mike, m4), 2, 0, false, NZ);
     // this month so far
@@ -112,7 +112,7 @@
     enquiries = enquiries.concat(liveEnq);
 
     for (const [ym, nc, ne] of [[m2, 26, 4], [m1, 31, 5]]) { calls = calls.concat(genCalls(r, bay, ym, nc, { missRate: 0.12 })); enquiries = enquiries.concat(genEnquiries(r, bay, ym, ne, {})); }
-    forceOutcomes(pick(bay, m1), 3, 1, false, AU); const bs = [["won", 2900], ["won", 640], ["ongoing"], ["won", 4200], ["not_lead"], ["won", 380], ["ongoing"], ["won", 1150], ["ongoing"], ["won", 760]]; bs.spam = true; applyTags(pick(bay, m1), bs);
+    forceOutcomes(pick(bay, m1), 3, 1, false, AU); const bs = [["won", 2900], ["won", 640], ["ongoing"], ["won", 4200], ["ongoing"], ["won", 380], ["ongoing"], ["won", 1150], ["ongoing"], ["won", 760]]; applyTags(pick(bay, m1), bs);
     forceOutcomes(pick(bay, m2), 4, 1, false, AU); applyTags(pick(bay, m2), [["won", 1800], ["ongoing"], ["won", 520], ["won", 3100], ["ongoing"], ["won", 690]]);
     // Brian's first call since launch
     const [ly, lm] = m1.split("-").map(Number);
