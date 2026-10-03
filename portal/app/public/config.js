@@ -5,6 +5,7 @@ window.LEADHIVE_CONFIG = {
   supabaseUrl: "",
   supabaseAnonKey: "",
   portalUrl: "https://portal.leadhivenz.com",
+  // logo: "/logo.png", logoSmall: "/logo-small.png",   // override if you swap the artwork
   adminEmail: "hello@leadhivenz.com",
   joe: {
     name: "Joe",

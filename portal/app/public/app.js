@@ -16,6 +16,7 @@ if (!DEMO && !window.supabase) { // the Supabase library didn't load: never fall
 const PORTAL_URL = CFG.portalUrl || location.origin;
 const JOE = Object.assign({ name: "Joe", phone: "", whatsapp: "", email: "hello@leadhivenz.com" }, CFG.joe || {});
 const ADMIN_EMAIL = (CFG.adminEmail || "hello@leadhivenz.com").toLowerCase();
+const LOGO = CFG.logo || "/logo.png", LOGO_SMALL = CFG.logoSmall || "/logo-small.png";
 
 /* ═══════════════════════════ utilities ═══════════════════════════ */
 const $ = (id) => document.getElementById(id);
@@ -384,7 +385,7 @@ function skeleton() { app().innerHTML = `<div class="shell" style="padding-top:4
 function hideTabs() { document.body.classList.remove("has-tabs"); $("tabs").classList.add("hidden"); }
 function topBar({ title, sub, back, right, brand }) {
   const demo = DEMO ? `<div class="banner">Demo data${CONFIGURED ? "" : " · add your Supabase keys to config.js to go live"}${DEMO && CONFIGURED ? ` · <a href="${h(location.pathname)}">leave demo</a>` : ""}</div>` : "";
-  return `<div class="top"><div class="top-in">${back ? `<a class="back" href="#${back}" aria-label="Back">${ICON.back}</a>` : ""}${brand ? `<div class="brand">${ICON.mark}<span class="nm">Lead<span>Hive</span></span></div>` : `<div class="ttl">${title}${sub ? `<small>${sub}</small>` : ""}</div>`}${right || ""}</div>${demo}</div>`;
+  return `<div class="top"><div class="top-in">${back ? `<a class="back" href="#${back}" aria-label="Back">${ICON.back}</a>` : ""}${brand ? `<div class="brand"><img class="logo" src="${LOGO_SMALL}" alt="LeadHive"></div>` : `<div class="ttl">${title}${sub ? `<small>${sub}</small>` : ""}</div>`}${right || ""}</div>${demo}</div>`;
 }
 async function route() {
   const token = ++routeToken;
@@ -434,7 +435,7 @@ function renderTabs(ctx, page) {
 
 /* ═══════════════════════════ screens: auth ═══════════════════════════ */
 function loginShell(inner) {
-  return `<div class="login"><div class="hd">${ICON.mark}<h1>Lead<span>Hive</span></h1><p>Partner portal</p></div><div class="pane"><div>${inner}</div></div></div>`;
+  return `<div class="login"><div class="hd"><img class="logo" src="${LOGO}" alt="LeadHive"><p>Partner portal</p></div><div class="pane"><div>${inner}</div></div></div>`;
 }
 function renderLogin(notice) {
   app().innerHTML = loginShell(`<h2>Log in</h2><p class="lede mt8">Your leads, calls, recordings and monthly results, all in one place.</p>

@@ -40,6 +40,7 @@ exports.handler = async (event) => {
 
   const html = `
     <div style="font-family:Inter,Arial,sans-serif;color:#0F1A2E;max-width:560px">
+      <img src="${esc(portal)}/logo-email.png" alt="LeadHive" width="120" style="display:block;width:120px;height:auto;margin:0 0 14px">
       <p>Hey ${esc(c.contact_name)},</p>
       <p>Your <strong>${esc(month)}</strong> results are in the portal.</p>
       <table cellpadding="0" cellspacing="0" style="border-collapse:collapse;margin:14px 0">
