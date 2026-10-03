@@ -46,7 +46,7 @@ h1,h2,h3,.head{font-family:var(--head);letter-spacing:-.3px}
 .lnk{color:var(--blue);font-weight:600;text-decoration:none}
 
 /* top bar */
-.top{position:sticky;top:0;z-index:30;background:var(--navy);color:#fff;padding-top:env(safe-area-inset-top)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;background:var(--navy);color:#fff;padding-top:env(safe-area-inset-top)}
 .top-in{max-width:var(--shell);margin:0 auto;padding:12px 18px;display:flex;align-items:center;gap:12px;min-height:58px}
 .top .back{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;margin-left:-8px;color:#fff}
 .top .back:active{background:rgba(255,255,255,.12)}

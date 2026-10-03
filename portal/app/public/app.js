@@ -53,7 +53,12 @@ const fmtDay = (d) => { const t = new Date(); const td = ymdOf(t), yd = ymdOf(ne
 const fmtDT = (d) => `${fmtDay(d)}, ${fmtTime(d)}`;
 const fmtDate = (d) => new Date(d).toLocaleDateString("en-NZ", { timeZone: TZ, day: "numeric", month: "short", year: "numeric" });
 function toast(m, bad) { const t = $("toast"); t.textContent = m; t.className = "toast on" + (bad ? " bad" : ""); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("on"), bad ? 4000 : 2200); }
-const copyText = (txt, okMsg) => (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => toast(okMsg || "Copied"), () => prompt("Copy this:", txt));
+const copyText = (txt, okMsg) => (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => toast(okMsg || "Copied"), () => {
+  try { const ta = document.createElement("textarea"); ta.value = txt; ta.style.cssText = "position:fixed;left:-9999px;top:0"; document.body.appendChild(ta); ta.select(); const ok = document.execCommand("copy"); ta.remove(); toast(ok ? (okMsg || "Copied") : "Couldn't copy on this device", !ok); } catch (e) { toast("Couldn't copy on this device", true); }
+});
+const lsGet = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
+const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+const lsDel = (k) => { try { localStorage.removeItem(k); } catch (e) {} };
 
 const ICON = {
   phone: '<svg class="ico" viewBox="0 0 24 24"><path d="M6.6 10.8a15.1 15.1 0 006.6 6.6l2.2-2.2a1 1 0 011-.24 11.4 11.4 0 003.6.58 1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1 11.4 11.4 0 00.57 3.6 1 1 0 01-.25 1z"/></svg>',
@@ -158,10 +163,10 @@ function makeSupabaseApi() {
 /* ═══════════════════════════ API: demo (local data) ═══════════════════════════ */
 function makeDemoApi() {
   const KEY = "lh-portal-demo-v2";
-  let D = null; try { D = JSON.parse(localStorage.getItem(KEY)); } catch (e) {}
+  let D = null; try { D = JSON.parse(lsGet(KEY)); } catch (e) {}
   if (!D || !D.clients) { D = window.LEADHIVE_DEMO.build(new Date()); persist(); }
-  function persist() { try { localStorage.setItem(KEY, JSON.stringify(D)); } catch (e) {} }
-  let session = null; try { session = JSON.parse(localStorage.getItem(KEY + ":s")); } catch (e) {}
+  function persist() { lsSet(KEY, JSON.stringify(D)); }
+  let session = null; try { session = JSON.parse(lsGet(KEY + ":s")); } catch (e) {}
   const listeners = [];
   const meSync = () => { if (!session) return null; const u = D.users.find((x) => x.id === session.user.id); return u ? { id: u.id, email: u.email, role: u.role, client_id: u.client_id } : null; };
   const visibleMonth = (me, m) => me.role === "admin" || (m.client_id === me.client_id && m.status === "published");
@@ -169,9 +174,9 @@ function makeDemoApi() {
     kind: "demo",
     async session() { return session; },
     onAuth(cb) { listeners.push(cb); },
-    async signIn(email, password) { await sleep(250); const u = D.users.find((x) => x.email === email.toLowerCase() && x.password === password); if (!u) throw new Error("Invalid login credentials"); session = { user: { id: u.id, email: u.email } }; localStorage.setItem(KEY + ":s", JSON.stringify(session)); },
+    async signIn(email, password) { await sleep(250); const u = D.users.find((x) => x.email === email.toLowerCase() && x.password === password); if (!u) throw new Error("Invalid login credentials"); session = { user: { id: u.id, email: u.email } }; lsSet(KEY + ":s", JSON.stringify(session)); },
     async signUp() { throw new Error("Sign-up is switched off in demo mode. Use the demo logins below."); },
-    async signOut() { session = null; localStorage.removeItem(KEY + ":s"); listeners.forEach((cb) => cb("SIGNED_OUT")); },
+    async signOut() { session = null; lsDel(KEY + ":s"); listeners.forEach((cb) => cb("SIGNED_OUT")); },
     async resetPassword() { await sleep(200); },
     async updatePassword() { await sleep(200); },
     async me() { return meSync(); },
@@ -203,7 +208,7 @@ function makeDemoApi() {
     async signedUrl(bucket) { return bucket === "recordings" ? demoRecording() : "data:application/pdf;base64,JVBERi0xLjQKJSBkZW1vCg=="; },
     async createLogin(client_id, email, password) { await sleep(300); let u = D.users.find((x) => x.email === email.toLowerCase()); if (u) { if (password) u.password = password; u.client_id = client_id; } else { if (!password) throw new Error("A password is needed to create a new login"); D.users.push({ id: uid(), email: email.toLowerCase(), password, role: "client", client_id }); } persist(); return { ok: true }; },
     async publishEmail() { await sleep(300); return { ok: true, demo: true }; },
-    resetDemo() { localStorage.removeItem(KEY); D = window.LEADHIVE_DEMO.build(new Date()); persist(); },
+    resetDemo() { lsDel(KEY); D = window.LEADHIVE_DEMO.build(new Date()); persist(); },
   };
 }
 
