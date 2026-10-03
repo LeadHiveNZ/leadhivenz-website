@@ -125,11 +125,12 @@ is one small Lovable message per landing page; do it when you next touch the pag
 
 ## Won / Lost tagging = the ROI engine
 
-Every lead row has **Won** and **Lost** buttons. Won opens a value box prefilled with your
+Every lead row has **Won**, **Lost** and **Ongoing** buttons. Won opens a value box prefilled with your
 estimate (the CSV "Value" column, or the partner's average job value from Settings); the
-partner overwrites it with the real number. The home screen and report then show
+partner overwrites it with the real number. Ongoing keeps the lead in play (the Won/Lost
+buttons stay on it until it lands). The home screen and report then show
 *estimated value of leads* vs *confirmed won* and the partner's return on their own numbers
-("4.4x"). Lead detail has the full set: New / Quoted / Won / Lost / Not a lead / Spam.
+("4.4x"). Lead detail has the full set: New / Ongoing / Won / Lost / Not a lead / Spam.
 Use the return in every renewal and upsell conversation, feed "not a lead" and "spam" back
 into negative keywords, and make tagging a two-minute ritual on the monthly check-in call.
 

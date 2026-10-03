@@ -256,9 +256,9 @@ function monthStats(c, ym) {
   const leads = all.length - spam;
   const won = all.filter((x) => x.client_status === "won");
   const wonValue = won.reduce((a, x) => a + (Number(x.job_value) || 0), 0);
-  const quoted = all.filter((x) => x.client_status === "quoted").length;
+  const quoted = all.filter((x) => x.client_status === "quoted" || x.client_status === "ongoing").length; // "ongoing" in the UI
   const lost = all.filter((x) => x.client_status === "lost").length;
-  const untagged = all.filter((x) => x.client_status === "new" || x.client_status === "quoted").length;
+  const untagged = all.filter((x) => x.client_status === "new").length;
   const estTotal = all.filter((x) => x.client_status !== "spam" && x.client_status !== "not_lead").reduce((a, x) => a + estimateFor(x, c), 0);
   const nWeeks = Math.ceil(daysIn(ym) / 7); const weeks = new Array(nWeeks).fill(0);
   for (const x of all) if (x.client_status !== "spam") weeks[Math.min(nWeeks, weekOf(x.called_at || x.received_at)) - 1]++;
@@ -495,17 +495,18 @@ function renderNoPortal() {
 
 /* ═══════════════════════════ screens: partner ═══════════════════════════ */
 const targetChip = (st) => st.target === "on" ? `<span class="chip good"><i></i>On target</span>` : st.target === "above" ? `<span class="chip good"><i></i>Above target</span>` : `<span class="chip warn"><i></i>Below target</span>`;
-function statusChip(x) { const m = { won: ["good", "Job won"], lost: ["", "Lost"], quoted: ["blue", "Quoted"], not_lead: ["", "Not a lead"], spam: ["", "Spam"] }; if (!m[x.client_status]) return ""; const [cls, l] = m[x.client_status]; return `<span class="chip ${cls}">${l}${x.client_status === "won" && x.job_value ? ` · ${money(x.job_value)}` : ""}</span>`; }
+function statusChip(x) { const m = { won: ["good", "Job won"], lost: ["", "Lost"], ongoing: ["blue", "Ongoing"], quoted: ["blue", "Ongoing"], not_lead: ["", "Not a lead"], spam: ["", "Spam"] }; if (!m[x.client_status]) return ""; const [cls, l] = m[x.client_status]; return `<span class="chip ${cls}">${l}${x.client_status === "won" && x.job_value ? ` · ${money(x.job_value)}` : ""}</span>`; }
 function leadRow(x, base, c) {
   const isCall = x.kind === "call"; const missed = isCall && x.outcome !== "answered"; const ic = isCall ? (missed ? "miss" : "") : "form";
-  const canTag = c && (x.client_status === "new" || x.client_status === "quoted") && !(isCall && missed && x.outcome === "missed" && false);
+  const isOngoing = x.client_status === "ongoing" || x.client_status === "quoted";
+  const canTag = c && (x.client_status === "new" || isOngoing);
   const est = c ? estimateFor(x, c) : 0;
   const t1 = isCall ? x.caller_number : x.name || x.phone;
   const t2 = isCall ? (missed ? `${x.outcome === "voicemail" ? "Voicemail" : "Missed call"} · ${x.keyword || x.city || "Google Ads"}` : x.admin_note || x.keyword || x.city || "Google Ads call") : `${x.is_urgent ? "Urgent · " : ""}${x.suburb ? x.suburb + " · " : ""}${x.message}`;
   const hasRec = isCall && (x.recording_url || x.recording_path);
   const row = `<a class="li" href="#${base}/lead/${x.id}"><div class="ic ${ic}">${isCall ? (missed ? ICON.missed : ICON.phone) : ICON.form}</div><div class="grow"><div class="t1"><span>${h(t1)}</span></div><div class="t2">${x.client_status !== "new" ? statusChip(x) : ""}<span class="tx">${h(t2)}</span></div></div><div class="meta"><div class="tm">${fmtTime(x.at)}</div><div class="du">${isCall ? (missed ? "" : durShort(x.duration_sec)) : "Web form"}</div></div>${hasRec ? `<span class="play">${ICON.play}</span>` : `<span class="chev">${ICON.chev}</span>`}</a>`;
   if (!canTag) return `<div class="lw">${row}</div>`;
-  return `<div class="lw">${row}<div class="tagstrip" data-id="${x.id}" data-kind="${x.kind}" data-est="${est}"><span class="est">${est ? `Est. ${money(est)}` : "Did you get it?"}</span><button class="tg won" data-act="won">Won</button><button class="tg lost" data-act="lost">Lost</button>
+  return `<div class="lw">${row}<div class="tagstrip" data-id="${x.id}" data-kind="${x.kind}" data-est="${est}"><span class="est">${est ? `Est. ${money(est)}` : "Did you get it?"}</span><button class="tg won" data-act="won">Won</button><button class="tg lost" data-act="lost">Lost</button>${isOngoing ? "" : `<button class="tg ongoing" data-act="ongoing">Ongoing</button>`}
     <div class="valrow hidden"><span class="cur">$</span><input type="number" inputmode="decimal" min="0" step="10" value="${est || ""}" aria-label="Job value" placeholder="job value"><button class="tg save" data-act="save">Save</button><button class="tg cancel" data-act="cancel" aria-label="Cancel">${ICON.x}</button><span class="hint">Your real number, ex GST. Rough is fine.</span></div></div></div>`;
 }
 // one handler per list: Won → value box (prefilled with the estimate) → Save; Lost saves straight away
@@ -513,13 +514,14 @@ function bindTagStrips(root, afterSave) {
   root.addEventListener("click", async (e) => {
     const btn = e.target.closest("[data-act]"); if (!btn) return; const strip = btn.closest(".tagstrip"); if (!strip) return;
     e.preventDefault(); const act = btn.dataset.act; const val = strip.querySelector(".valrow"); const input = strip.querySelector("input");
-    if (act === "won") { val.classList.remove("hidden"); strip.querySelector(".tg.won").classList.add("hidden"); strip.querySelector(".tg.lost").classList.add("hidden"); input.focus(); input.select(); return; }
-    if (act === "cancel") { val.classList.add("hidden"); strip.querySelector(".tg.won").classList.remove("hidden"); strip.querySelector(".tg.lost").classList.remove("hidden"); return; }
+    const mainBtns = strip.querySelectorAll(".tg.won, .tg.lost, .tg.ongoing");
+    if (act === "won") { val.classList.remove("hidden"); mainBtns.forEach((b) => b.classList.add("hidden")); input.focus(); input.select(); return; }
+    if (act === "cancel") { val.classList.add("hidden"); mainBtns.forEach((b) => b.classList.remove("hidden")); return; }
     const kind = strip.dataset.kind, id = strip.dataset.id;
-    const patch = act === "save" ? { client_status: "won", job_value: Math.max(0, Number(input.value) || 0) } : { client_status: "lost", job_value: 0 };
+    const patch = act === "save" ? { client_status: "won", job_value: Math.max(0, Number(input.value) || 0) } : act === "ongoing" ? { client_status: "ongoing", job_value: 0 } : { client_status: "lost", job_value: 0 };
     strip.querySelectorAll("button").forEach((b) => b.setAttribute("disabled", ""));
     try { await api.updateLead(kind, id, patch); const rec = kind === "call" ? DB.calls.find((r) => r.id === id) : DB.enquiries.find((r) => r.id === id); if (rec) Object.assign(rec, patch);
-      toast(act === "save" ? `Nice one. ${money(patch.job_value)} won.` : "Tagged as lost"); afterSave && afterSave(); }
+      toast(act === "save" ? `Nice one. ${money(patch.job_value)} won.` : act === "ongoing" ? "Marked ongoing. Come back when it lands." : "Tagged as lost"); afterSave && afterSave(); }
     catch (ex) { toast(ex.message, true); strip.querySelectorAll("button").forEach((b) => b.removeAttribute("disabled")); }
   });
 }
@@ -569,15 +571,15 @@ function renderLeads(ctx) {
   const c = ctx.client; const months = clientMonths(c.id); const cur = CUR_YM();
   const ym = ctx.args[0] && months.includes(ctx.args[0]) ? ctx.args[0] : months[0] || cur; const filter = ctx.args[1] || "all";
   let items = leadsFor(c.id, ym);
-  const isUntagged = (x) => x.client_status === "new" || x.client_status === "quoted";
-  const counts = { all: items.length, missed: items.filter((x) => x.kind === "call" && x.outcome !== "answered").length, web: items.filter((x) => x.kind === "enquiry").length, rec: items.filter((x) => x.recording_url || x.recording_path).length, untagged: items.filter(isUntagged).length, won: items.filter((x) => x.client_status === "won").length, lost: items.filter((x) => x.client_status === "lost").length };
-  if (filter === "missed") items = items.filter((x) => x.kind === "call" && x.outcome !== "answered"); else if (filter === "web") items = items.filter((x) => x.kind === "enquiry"); else if (filter === "rec") items = items.filter((x) => x.recording_url || x.recording_path); else if (filter === "untagged") items = items.filter(isUntagged); else if (filter === "won") items = items.filter((x) => x.client_status === "won"); else if (filter === "lost") items = items.filter((x) => x.client_status === "lost");
+  const isUntagged = (x) => x.client_status === "new"; const isOngoing = (x) => x.client_status === "ongoing" || x.client_status === "quoted";
+  const counts = { all: items.length, missed: items.filter((x) => x.kind === "call" && x.outcome !== "answered").length, web: items.filter((x) => x.kind === "enquiry").length, rec: items.filter((x) => x.recording_url || x.recording_path).length, untagged: items.filter(isUntagged).length, ongoing: items.filter(isOngoing).length, won: items.filter((x) => x.client_status === "won").length, lost: items.filter((x) => x.client_status === "lost").length };
+  if (filter === "missed") items = items.filter((x) => x.kind === "call" && x.outcome !== "answered"); else if (filter === "web") items = items.filter((x) => x.kind === "enquiry"); else if (filter === "rec") items = items.filter((x) => x.recording_url || x.recording_path); else if (filter === "untagged") items = items.filter(isUntagged); else if (filter === "ongoing") items = items.filter(isOngoing); else if (filter === "won") items = items.filter((x) => x.client_status === "won"); else if (filter === "lost") items = items.filter((x) => x.client_status === "lost");
   const wonSum = leadsFor(c.id, ym).filter((x) => x.client_status === "won").reduce((a, x) => a + (Number(x.job_value) || 0), 0);
   const groups = []; for (const x of items) { const d = fmtDay(x.at); const g = groups[groups.length - 1]; if (g && g.d === d) g.items.push(x); else groups.push({ d, items: [x] }); }
   const chip = (k, l) => `<a class="f ${filter === k ? "on" : ""}" href="#${ctx.base}/leads/${ym}/${k}">${l} ${counts[k]}</a>`;
   app().innerHTML = topBar({ title: "Leads", sub: h(c.business_name), right: monthSelect("ym-sel", months.length ? months : [ym], ym, ym === cur) }) + `<div class="shell">
-  <div class="chips mt12">${chip("all", "All")}${chip("untagged", "To tag")}${chip("won", "Won")}${chip("lost", "Lost")}${chip("missed", "Missed")}${chip("web", "Web forms")}${chip("rec", "Recorded")}</div>
-  ${counts.untagged && filter === "all" ? `<div class="card" style="padding:12px 14px;margin-top:4px;background:var(--gold-bg);border-color:#F3DDA8"><div class="row"><div class="grow"><b style="font-size:14px">Did you get the job? Tap Won or Lost on each lead.</b><div class="small" style="color:var(--gold-ink);margin-top:2px">Won shows our estimate. Put your real number in and it works out your actual return.</div></div><a class="btn sm navy" href="#${ctx.base}/leads/${ym}/untagged">Start</a></div></div>` : ""}
+  <div class="chips mt12">${chip("all", "All")}${chip("untagged", "To tag")}${chip("ongoing", "Ongoing")}${chip("won", "Won")}${chip("lost", "Lost")}${chip("missed", "Missed")}${chip("web", "Web forms")}${chip("rec", "Recorded")}</div>
+  ${counts.untagged && filter === "all" ? `<div class="card" style="padding:12px 14px;margin-top:4px;background:var(--gold-bg);border-color:#F3DDA8"><div class="row"><div class="grow"><b style="font-size:14px">Did you get the job? Tap Won, Lost or Ongoing on each lead.</b><div class="small" style="color:var(--gold-ink);margin-top:2px">Won shows our estimate. Put your real number in and it works out your actual return.</div></div><a class="btn sm navy" href="#${ctx.base}/leads/${ym}/untagged">Start</a></div></div>` : ""}
   ${filter === "won" && wonSum ? `<div class="card mt12" style="padding:12px 14px;background:var(--good-bg);border-color:#BFE5CF"><b style="color:#0F6B3D">${money(wonSum)} confirmed won in ${ymLabel(ym, false)}</b><div class="small" style="color:#1F5A3C;margin-top:2px">From ${counts.won} job${counts.won === 1 ? "" : "s"} on a ${money(c.monthly_fee)} plan.</div></div>` : ""}
   <div class="list mt12" id="lead-list">${groups.length ? groups.map((g) => `<div class="day">${h(g.d)}</div>${g.items.map((x) => leadRow(x, ctx.base, c)).join("")}`).join("") : emptyState(filter === "all" ? `Nothing here for ${ymLabel(ym, false)} yet` : "Nothing in this filter", filter === "all" ? "Calls and web enquiries show up here as they come in." : "")}</div>
   <p class="small muted center" style="margin:18px 0 8px">Tap a lead to hear the call, read ${h(JOE.name)}'s note or change a tag.</p></div>`;
@@ -588,6 +590,7 @@ async function renderLead(ctx) {
   const x = findLead(ctx.args[0]); if (!x || x.client_id !== ctx.cid) return go(`${ctx.base}/leads`);
   const isCall = x.kind === "call"; const missed = isCall && x.outcome !== "answered";
   const tel = (isCall ? x.caller_number : x.phone || "").replace(/\s/g, "");
+  if (x.client_status === "quoted") x.client_status = "ongoing"; // legacy value shows as Ongoing
   const segBtn = (k, l, ic) => `<button data-st="${k}" class="${x.client_status === k ? "on " + k : ""}">${ic}${l}</button>`;
   const hasRec = isCall && (x.recording_url || x.recording_path);
   const c = ctx.client; const est = estimateFor(x, c);
@@ -602,7 +605,7 @@ async function renderLead(ctx) {
   ${isCall && missed ? `<div class="card mt12" style="background:var(--bad-bg);border-color:#F2C9C9"><b style="font-size:14.5px;color:var(--bad)">This one rang out.</b><p class="small mt8" style="color:#7A2E2E;line-height:1.45">Most people searching for an emergency tradie call the next result if nobody answers. A call back inside 10 minutes recovers a good share of these.</p></div>` : ""}
   ${x.admin_note ? `<div class="card note mt12"><div class="who"><div class="avatar">${h(JOE.name[0])}</div><div><b>${h(JOE.name)}'s note</b><small>From the call review</small></div></div><p>${h(x.admin_note)}</p></div>` : ""}
   <div class="sec"><div class="sec-h"><h2>What happened with this lead?</h2></div><div class="card">
-    <div class="seg six">${segBtn("new", "New", ICON.dot)}${segBtn("quoted", "Quoted", ICON.quote)}${segBtn("won", "Won", ICON.star)}${segBtn("lost", "Lost", ICON.dn)}${segBtn("not_lead", "Not a lead", ICON.ban)}${segBtn("spam", "Spam", ICON.x)}</div>
+    <div class="seg six">${segBtn("new", "New", ICON.dot)}${segBtn("ongoing", "Ongoing", ICON.quote)}${segBtn("won", "Won", ICON.star)}${segBtn("lost", "Lost", ICON.dn)}${segBtn("not_lead", "Not a lead", ICON.ban)}${segBtn("spam", "Spam", ICON.x)}</div>
     ${est ? `<div class="est-line"><span>${h(JOE.name)}'s estimate for this job</span><b>${money(est)}</b></div>` : ""}
     <div id="won-box" class="${x.client_status === "won" ? "" : "hidden"}"><label class="fld"><span>What it was actually worth (ex GST, rough is fine)</span><input id="jv" type="number" inputmode="decimal" placeholder="e.g. ${est || 450}" value="${x.job_value || ""}"></label></div>
     <label class="fld"><span>Your note (optional)</span><textarea id="cn" placeholder="e.g. Booked for Tuesday, quoted $420">${h(x.client_note || "")}</textarea></label>
@@ -644,7 +647,7 @@ function renderReport(ctx) {
   const kv = (k, v) => `<div class="rpt-k"><span>${k}</span><b>${v}</b></div>`;
   app().innerHTML = topBar({ title: `${ymLabel(ym)} report`, sub: h(c.business_name), back: `${ctx.base}/reports` }) + `<div class="shell">
   <div class="hero" style="margin-top:16px"><div class="k">${ymLabel(ym)}${st.wonValue ? " · your return" : ""}</div>${st.wonValue ? `<div class="n ret">${(st.wonValue / (Number(c.monthly_fee) || 1)).toFixed(1)}x</div><div class="sub">${money(st.wonValue)} confirmed won from your ${money(c.monthly_fee)} plan · ${st.leads} leads</div>` : `<div class="n">${st.leads}<small>leads</small></div><div class="sub">${h(c.package_name)} plan · target ${c.lead_target_min} to ${c.lead_target_max}</div>`}<div class="mt12">${targetChip(st)}${prev.leads ? ` <span class="chip white">${st.leads >= prev.leads ? "+" : ""}${st.leads - prev.leads} leads vs ${ymLabel(ymAdd(ym, -1), false)}</span>` : ""}</div></div>
-  <div class="card mt12">${kv("Phone calls", st.calls)}${kv("Answered", `${st.answered} <span class="muted small">(${pct(st.answered, st.calls)}%)</span>`)}${kv("Missed or voicemail", `${st.missed} <span class="muted small">(${st.missedRate}%)</span>`)}${kv("Web enquiries", st.enq)}${kv("Average call length", st.avgDur ? dur(st.avgDur) : "–")}${st.spam ? kv("Spam removed", st.spam) : ""}${c.show_cost_per_lead ? kv("Cost per lead", `${money(st.cplFee)} <span class="muted small">on ${money(c.monthly_fee)}</span>`) : ""}${c.show_ad_spend && st.adSpend != null ? kv("Ad spend (Google)", money(st.adSpend)) : ""}${kv("Estimated value of leads", money(st.estTotal))}${st.won ? kv("Jobs you tagged won", `${st.won} · ${money(st.wonValue)}`) : ""}${st.lost ? kv("Tagged lost", st.lost) : ""}${st.quoted ? kv("Quotes out", st.quoted) : ""}${st.untagged ? kv("Still to tag", st.untagged) : ""}</div>
+  <div class="card mt12">${kv("Phone calls", st.calls)}${kv("Answered", `${st.answered} <span class="muted small">(${pct(st.answered, st.calls)}%)</span>`)}${kv("Missed or voicemail", `${st.missed} <span class="muted small">(${st.missedRate}%)</span>`)}${kv("Web enquiries", st.enq)}${kv("Average call length", st.avgDur ? dur(st.avgDur) : "–")}${st.spam ? kv("Spam removed", st.spam) : ""}${c.show_cost_per_lead ? kv("Cost per lead", `${money(st.cplFee)} <span class="muted small">on ${money(c.monthly_fee)}</span>`) : ""}${c.show_ad_spend && st.adSpend != null ? kv("Ad spend (Google)", money(st.adSpend)) : ""}${kv("Estimated value of leads", money(st.estTotal))}${st.won ? kv("Jobs you tagged won", `${st.won} · ${money(st.wonValue)}`) : ""}${st.lost ? kv("Tagged lost", st.lost) : ""}${st.quoted ? kv("Ongoing", st.quoted) : ""}${st.untagged ? kv("Still to tag", st.untagged) : ""}</div>
   ${st.wonValue ? `<div class="card mt12" style="background:var(--good-bg);border-color:#BFE5CF"><b style="font-size:15px;color:#0F6B3D">${money(st.wonValue)} confirmed won from a ${money(c.monthly_fee)} plan</b><p class="small mt8" style="color:#1F5A3C;line-height:1.45">That's ${(st.wonValue / (Number(c.monthly_fee) || 1)).toFixed(1)}x on your own numbers, from the ${st.won} job${st.won === 1 ? "" : "s"} you tagged won.${st.untagged ? ` ${st.untagged} lead${st.untagged === 1 ? " is" : "s are"} still untagged.` : ""}</p></div>` : `<div class="card mt12" style="background:var(--gold-bg);border-color:#F3DDA8"><b style="font-size:15px;color:var(--gold-ink)">${money(st.estTotal)} of estimated work in these leads</b><p class="small mt8" style="color:var(--gold-ink);line-height:1.45">Tap Won or Lost on each lead and put your real numbers in. The report then shows your actual return, not our estimate.</p></div>`}
   <div class="sec"><div class="sec-h"><h2>Leads by week</h2></div><div class="card chart">${columnChart({ labels: st.weeks.map((_, i) => "Wk " + (i + 1)), values: st.weeks, gold: st.leads ? [st.weeks.indexOf(Math.max(...st.weeks))] : [], height: 130, tipFmt: (i) => `Week ${i + 1}: ${st.weeks[i]} leads` })}</div></div>
   <div class="sec"><div class="sec-h"><h2>${h(JOE.name)}'s summary</h2></div><div class="card note"><div class="who"><div class="avatar">${h(JOE.name[0])}</div><div><b>${h(JOE.name)} · LeadHive</b><small>Published ${fmtDate(m.published_at)}</small></div></div><p>${h(m.summary)}</p></div></div>

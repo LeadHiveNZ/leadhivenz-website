@@ -147,7 +147,7 @@ create table if not exists public.calls (
   nimbata_call_id text,
   admin_note      text not null default '',
   estimated_value numeric,         -- Joe's estimate for this job (from the CSV "Value" column or typed in)
-  client_status   text not null default 'new' check (client_status in ('new','quoted','won','lost','not_lead','spam')),
+  client_status   text not null default 'new' check (client_status in ('new','ongoing','quoted','won','lost','not_lead','spam')),
   job_value       numeric not null default 0 check (job_value >= 0),   -- the partner's real number
   client_note     text not null default '',
   raw             jsonb,
@@ -155,7 +155,7 @@ create table if not exists public.calls (
 );
 alter table public.calls add column if not exists estimated_value numeric;
 alter table public.calls drop constraint if exists calls_client_status_check;
-alter table public.calls add constraint calls_client_status_check check (client_status in ('new','quoted','won','lost','not_lead','spam'));
+alter table public.calls add constraint calls_client_status_check check (client_status in ('new','ongoing','quoted','won','lost','not_lead','spam'));
 create index if not exists calls_client_ym on public.calls (client_id, ym);
 create unique index if not exists calls_client_nimbata on public.calls (client_id, nimbata_call_id) where nimbata_call_id is not null;
 
@@ -174,7 +174,7 @@ create table if not exists public.enquiries (
   source        text not null default 'website',
   admin_note    text not null default '',
   estimated_value numeric,
-  client_status text not null default 'new' check (client_status in ('new','quoted','won','lost','not_lead','spam')),
+  client_status text not null default 'new' check (client_status in ('new','ongoing','quoted','won','lost','not_lead','spam')),
   job_value     numeric not null default 0 check (job_value >= 0),
   client_note   text not null default '',
   created_at    timestamptz not null default now()
@@ -182,7 +182,7 @@ create table if not exists public.enquiries (
 alter table public.enquiries add column if not exists admin_note text not null default '';
 alter table public.enquiries add column if not exists estimated_value numeric;
 alter table public.enquiries drop constraint if exists enquiries_client_status_check;
-alter table public.enquiries add constraint enquiries_client_status_check check (client_status in ('new','quoted','won','lost','not_lead','spam'));
+alter table public.enquiries add constraint enquiries_client_status_check check (client_status in ('new','ongoing','quoted','won','lost','not_lead','spam'));
 create index if not exists enquiries_client_ym on public.enquiries (client_id, ym);
 
 create or replace function public.set_enquiry_ym() returns trigger
