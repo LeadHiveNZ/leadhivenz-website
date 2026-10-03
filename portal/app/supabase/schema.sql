@@ -26,9 +26,11 @@ create table if not exists public.clients (
   billing_day        int not null default 1 check (billing_day between 1 and 28),
   show_cost_per_lead boolean not null default true,
   show_ad_spend      boolean not null default false,
+  avg_job_value      numeric not null default 450,   -- Joe's estimate of a typical job, used when a lead has no estimate of its own
   active             boolean not null default true,
   created_at         timestamptz not null default now()
 );
+alter table public.clients add column if not exists avg_job_value numeric not null default 450;
 
 -- Admin-only secrets (the enquiry webhook key). Kept out of `clients` so a partner can never read it.
 create table if not exists public.client_secrets (
@@ -144,12 +146,16 @@ create table if not exists public.calls (
   recording_path  text,            -- or a file in the `recordings` bucket: <client_id>/<file>
   nimbata_call_id text,
   admin_note      text not null default '',
-  client_status   text not null default 'new' check (client_status in ('new','quoted','won','not_lead','spam')),
-  job_value       numeric not null default 0 check (job_value >= 0),
+  estimated_value numeric,         -- Joe's estimate for this job (from the CSV "Value" column or typed in)
+  client_status   text not null default 'new' check (client_status in ('new','quoted','won','lost','not_lead','spam')),
+  job_value       numeric not null default 0 check (job_value >= 0),   -- the partner's real number
   client_note     text not null default '',
   raw             jsonb,
   created_at      timestamptz not null default now()
 );
+alter table public.calls add column if not exists estimated_value numeric;
+alter table public.calls drop constraint if exists calls_client_status_check;
+alter table public.calls add constraint calls_client_status_check check (client_status in ('new','quoted','won','lost','not_lead','spam'));
 create index if not exists calls_client_ym on public.calls (client_id, ym);
 create unique index if not exists calls_client_nimbata on public.calls (client_id, nimbata_call_id) where nimbata_call_id is not null;
 
@@ -167,12 +173,16 @@ create table if not exists public.enquiries (
   page          text,
   source        text not null default 'website',
   admin_note    text not null default '',
-  client_status text not null default 'new' check (client_status in ('new','quoted','won','not_lead','spam')),
+  estimated_value numeric,
+  client_status text not null default 'new' check (client_status in ('new','quoted','won','lost','not_lead','spam')),
   job_value     numeric not null default 0 check (job_value >= 0),
   client_note   text not null default '',
   created_at    timestamptz not null default now()
 );
 alter table public.enquiries add column if not exists admin_note text not null default '';
+alter table public.enquiries add column if not exists estimated_value numeric;
+alter table public.enquiries drop constraint if exists enquiries_client_status_check;
+alter table public.enquiries add constraint enquiries_client_status_check check (client_status in ('new','quoted','won','lost','not_lead','spam'));
 create index if not exists enquiries_client_ym on public.enquiries (client_id, ym);
 
 create or replace function public.set_enquiry_ym() returns trigger
@@ -335,6 +345,7 @@ begin
              nullif(r->>'recording_url', '')                 as recording_url,
              nullif(r->>'nimbata_call_id', '')               as nimbata_call_id,
              coalesce(r->>'admin_note', '')                  as admin_note,
+             nullif(r->>'estimated_value', '')::numeric      as estimated_value,
              r->'raw'                                        as raw
       from jsonb_array_elements(p_rows) r
     ) x
@@ -343,10 +354,10 @@ begin
   delete from public.calls where client_id = p_client and ym = p_ym;
 
   insert into public.calls (client_id, ym, called_at, caller_number, duration_sec, outcome, tracking_number, source,
-                            campaign, keyword, city, recording_url, nimbata_call_id, admin_note, raw,
+                            campaign, keyword, city, recording_url, nimbata_call_id, admin_note, estimated_value, raw,
                             client_status, job_value, client_note)
   select p_client, p_ym, n.called_at, n.caller_number, n.duration_sec, n.outcome, n.tracking_number, n.source,
-         n.campaign, n.keyword, n.city, n.recording_url, n.nimbata_call_id, n.admin_note, n.raw,
+         n.campaign, n.keyword, n.city, n.recording_url, n.nimbata_call_id, n.admin_note, n.estimated_value, n.raw,
          coalesce(o.client_status, 'new'), coalesce(o.job_value, 0), coalesce(o.client_note, '')
   from _new n
   left join lateral (

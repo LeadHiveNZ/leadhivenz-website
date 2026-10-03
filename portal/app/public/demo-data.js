@@ -44,7 +44,8 @@
       const day = 1 + Math.floor(r() * days), hr = 7 + Math.floor(r() * 12), mi = Math.floor(r() * 60);
       const rr = r(); const outcome = rr < opts.missRate ? "missed" : rr < opts.missRate + 0.06 ? "voicemail" : "answered";
       const duration_sec = outcome === "answered" ? 45 + Math.floor(r() * 400) : outcome === "voicemail" ? 20 + Math.floor(r() * 40) : 0;
-      out.push({ id: uuid(r), client_id: c.id, ym, called_at: zonedToUtc(y, m, day, hr, mi, 0, c.timezone).toISOString(), caller_number: au ? auMobile(r) : nzMobile(r), duration_sec, outcome,
+      const ests = au ? [320, 480, 750, 1200, 2900] : [280, 350, 450, 650, 900, 1800];
+      out.push({ id: uuid(r), client_id: c.id, ym, called_at: zonedToUtc(y, m, day, hr, mi, 0, c.timezone).toISOString(), caller_number: au ? auMobile(r) : nzMobile(r), duration_sec, outcome, estimated_value: r() < 0.6 ? ests[Math.floor(r() * ests.length)] : null,
         tracking_number: au ? "07 5600 1122" : "09 801 2201", source: "Google Ads", campaign: au ? "GC Electrician · Search" : "AKL Plumber · Search", keyword: kw[Math.floor(r() * kw.length)],
         city: subs[Math.floor(r() * subs.length)], recording_url: outcome === "answered" ? "demo" : null, recording_path: null, nimbata_call_id: "nb" + (++idc),
         admin_note: outcome === "answered" && r() < 0.6 ? notes[Math.floor(r() * notes.length)] : "", client_status: "new", job_value: 0, client_note: "", raw: null });
@@ -57,7 +58,7 @@
     for (let i = 0; i < n; i++) {
       const day = 1 + Math.floor(r() * days);
       out.push({ id: uuid(r), client_id: c.id, ym, received_at: zonedToUtc(y, m, day, 8 + Math.floor(r() * 11), Math.floor(r() * 60), 0, c.timezone).toISOString(), name: NAMES[Math.floor(r() * NAMES.length)],
-        phone: au ? auMobile(r) : nzMobile(r), suburb: subs[Math.floor(r() * subs.length)], message: msgs[Math.floor(r() * msgs.length)], is_urgent: r() < 0.5, page: "/", source: "website", client_status: "new", job_value: 0, client_note: "" });
+        phone: au ? auMobile(r) : nzMobile(r), suburb: subs[Math.floor(r() * subs.length)], message: msgs[Math.floor(r() * msgs.length)], is_urgent: r() < 0.5, page: "/", source: "website", estimated_value: null, client_status: "new", job_value: 0, client_note: "" });
     }
     return out.sort((a, b) => (a.received_at < b.received_at ? -1 : 1));
   }
@@ -86,9 +87,9 @@
     const MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
     const label = (ym) => MONTHS[+ym.split("-")[1] - 1];
     const clients = [
-      { id: "11111111-1111-4111-a111-111111111111", business_name: "Mike's Plumbing", initials: "MP", contact_name: "Mike", email: "demo@leadhivenz.com", phone: "021 555 0192", niche: "Emergency plumber", region: "Auckland", country: "NZ", timezone: NZ, package_name: "Starter", monthly_fee: 1500, lead_target_min: 15, lead_target_max: 25, started_on: m4 + "-01", billing_day: 1, show_cost_per_lead: true, show_ad_spend: false, active: true },
-      { id: "22222222-2222-4222-a222-222222222222", business_name: "Bayside Electrical", initials: "BE", contact_name: "Sam", email: "sam@baysideelectrical.com.au", phone: "0412 338 901", niche: "Emergency electrician", region: "Gold Coast", country: "AU", timezone: AU, package_name: "Growth", monthly_fee: 2200, lead_target_min: 25, lead_target_max: 35, started_on: m2 + "-01", billing_day: 1, show_cost_per_lead: true, show_ad_spend: false, active: true },
-      { id: "33333333-3333-4333-a333-333333333333", business_name: "Northland Building Maintenance", initials: "NH", contact_name: "Brian", email: "nbm.br001@gmail.com", phone: "022 322 1137", niche: "Handyman", region: "Northland", country: "NZ", timezone: NZ, package_name: "Starter (trial)", monthly_fee: 1500, lead_target_min: 15, lead_target_max: 25, started_on: m1 + "-28", billing_day: 28, show_cost_per_lead: true, show_ad_spend: false, active: true },
+      { id: "11111111-1111-4111-a111-111111111111", business_name: "Mike's Plumbing", initials: "MP", contact_name: "Mike", email: "demo@leadhivenz.com", phone: "021 555 0192", niche: "Emergency plumber", region: "Auckland", country: "NZ", timezone: NZ, package_name: "Starter", monthly_fee: 1500, lead_target_min: 15, lead_target_max: 25, started_on: m4 + "-01", billing_day: 1, show_cost_per_lead: true, show_ad_spend: false, avg_job_value: 450, active: true },
+      { id: "22222222-2222-4222-a222-222222222222", business_name: "Bayside Electrical", initials: "BE", contact_name: "Sam", email: "sam@baysideelectrical.com.au", phone: "0412 338 901", niche: "Emergency electrician", region: "Gold Coast", country: "AU", timezone: AU, package_name: "Growth", monthly_fee: 2200, lead_target_min: 25, lead_target_max: 35, started_on: m2 + "-01", billing_day: 1, show_cost_per_lead: true, show_ad_spend: false, avg_job_value: 520, active: true },
+      { id: "33333333-3333-4333-a333-333333333333", business_name: "Northland Building Maintenance", initials: "NH", contact_name: "Brian", email: "nbm.br001@gmail.com", phone: "022 322 1137", niche: "Handyman", region: "Northland", country: "NZ", timezone: NZ, package_name: "Starter (trial)", monthly_fee: 1500, lead_target_min: 15, lead_target_max: 25, started_on: m1 + "-28", billing_day: 28, show_cost_per_lead: true, show_ad_spend: false, avg_job_value: 380, active: true },
     ];
     const [mike, bay, nth] = clients;
     let calls = [], enquiries = [], months = [], secrets = {};
@@ -97,8 +98,8 @@
     const plan = [[m4, 16, 2], [m3, 19, 3], [m2, 24, 3], [m1, 18, 4]];
     for (const [ym, nc, ne] of plan) { calls = calls.concat(genCalls(r, mike, ym, nc, { missRate: 0.2 })); enquiries = enquiries.concat(genEnquiries(r, mike, ym, ne, {})); }
     const pick = (c, ym) => calls.filter((x) => x.client_id === c.id && x.ym === ym);
-    forceOutcomes(pick(mike, m1), 2, 2, true, NZ); applyTags(pick(mike, m1), [["won", 1850], ["quoted"], ["won", 3200], ["not_lead"], ["quoted"], ["won", 420], ["quoted"], ["won", 280], ["quoted"]]);
-    forceOutcomes(pick(mike, m2), 4, 2, false, NZ); applyTags(pick(mike, m2), [["won", 650], ["won", 2400], ["quoted"], ["won", 380], ["not_lead"], ["won", 1200], ["quoted"], ["won", 540], ["quoted"], ["won", 900]]);
+    forceOutcomes(pick(mike, m1), 2, 2, true, NZ); applyTags(pick(mike, m1), [["won", 1850], ["lost"], ["won", 3200], ["not_lead"], ["quoted"], ["won", 420], ["lost"], ["won", 280], ["quoted"]]);
+    forceOutcomes(pick(mike, m2), 4, 2, false, NZ); applyTags(pick(mike, m2), [["won", 650], ["won", 2400], ["lost"], ["won", 380], ["not_lead"], ["won", 1200], ["lost"], ["won", 540], ["quoted"], ["won", 900]]);
     forceOutcomes(pick(mike, m3), 3, 1, false, NZ); applyTags(pick(mike, m3), [["won", 420], ["quoted"], ["won", 1600], ["won", 260]]);
     forceOutcomes(pick(mike, m4), 2, 0, false, NZ);
     // this month so far
@@ -115,7 +116,7 @@
     forceOutcomes(pick(bay, m2), 4, 1, false, AU); applyTags(pick(bay, m2), [["won", 1800], ["quoted"], ["won", 520], ["won", 3100], ["quoted"], ["won", 690]]);
     // Brian's first call since launch
     const [ly, lm] = m1.split("-").map(Number);
-    calls.push({ id: uuid(r), client_id: nth.id, ym: m1, called_at: zonedToUtc(ly, lm, 30, 14, 5, 0, NZ).toISOString(), caller_number: "021 884 0022", duration_sec: 168, outcome: "answered", tracking_number: "09 801 3300", source: "Google Ads", campaign: "Northland Handyman · Search", keyword: "deck builder whangarei", city: "Whangārei", recording_url: "demo", recording_path: null, nimbata_call_id: "nb9001", admin_note: "Deck rebuild, Kamo. Wants a quote next week.", client_status: "new", job_value: 0, client_note: "", raw: null });
+    calls.push({ id: uuid(r), client_id: nth.id, ym: m1, called_at: zonedToUtc(ly, lm, 30, 14, 5, 0, NZ).toISOString(), caller_number: "021 884 0022", duration_sec: 168, outcome: "answered", estimated_value: 6500, tracking_number: "09 801 3300", source: "Google Ads", campaign: "Northland Handyman · Search", keyword: "deck builder whangarei", city: "Whangārei", recording_url: "demo", recording_path: null, nimbata_call_id: "nb9001", admin_note: "Deck rebuild, Kamo. Wants a quote next week.", client_status: "new", job_value: 0, client_note: "", raw: null });
 
     const mk = (c, ym, status, ad_spend, summary, points) => ({ id: uuid(r), client_id: c.id, ym, status, summary, points, pdf_path: null, published_at: status === "published" ? zonedToUtc(+ymAdd(ym, 1).split("-")[0], +ymAdd(ym, 1).split("-")[1], 2, 18, 0, 0, c.timezone).toISOString() : null, ad_spend });
     months.push(mk(mike, m4, "published", 612, "First month in and we're already inside the target range. The campaign is still learning, so expect leads to climb from here as Google works out which searches turn into calls for you.",

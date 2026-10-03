@@ -16,7 +16,8 @@ if (!DEMO && !window.supabase) { // the Supabase library didn't load: never fall
 const PORTAL_URL = CFG.portalUrl || location.origin;
 const JOE = Object.assign({ name: "Joe", phone: "", whatsapp: "", email: "hello@leadhivenz.com" }, CFG.joe || {});
 const ADMIN_EMAIL = (CFG.adminEmail || "hello@leadhivenz.com").toLowerCase();
-const LOGO = CFG.logo || "/logo.png", LOGO_SMALL = CFG.logoSmall || "/logo-small.png";
+const LOGO = CFG.logo || "/logo.png", LOGO_SMALL = CFG.logoSmall || "/logo-small.png", LOGO_BEE = CFG.logoBee || "/logo-bee.png";
+const emptyState = (title, body) => `<div class="empty"><img src="${LOGO_BEE}" alt=""><b>${title}</b>${body}</div>`;
 
 /* ═══════════════════════════ utilities ═══════════════════════════ */
 const $ = (id) => document.getElementById(id);
@@ -200,7 +201,7 @@ function makeDemoApi() {
       D.calls = D.calls.filter((c) => !(c.client_id === cid && c.ym === ym));
       for (const r of rows) {
         const o = old.find((x) => (r.nimbata_call_id && x.nimbata_call_id === r.nimbata_call_id) || (Math.abs(new Date(x.called_at) - new Date(r.called_at)) < 120000 && digits(x.caller_number) === digits(r.caller_number)));
-        D.calls.push({ id: uid(), client_id: cid, ym, recording_path: null, admin_note: "", ...r, client_status: o ? o.client_status : "new", job_value: o ? o.job_value : 0, client_note: o ? o.client_note : "" });
+        D.calls.push({ id: uid(), client_id: cid, ym, recording_path: null, admin_note: "", estimated_value: null, ...r, client_status: o ? o.client_status : "new", job_value: o ? o.job_value : 0, client_note: o ? o.client_note : "" });
       }
       persist(); return rows.length;
     },
@@ -242,6 +243,7 @@ function leadsFor(cid, ym) {
   const items = [...DB.calls.filter((x) => x.client_id === cid).map((x) => ({ ...x, kind: "call", at: x.called_at })), ...DB.enquiries.filter((x) => x.client_id === cid).map((x) => ({ ...x, kind: "enquiry", at: x.received_at }))];
   return items.filter((x) => !ym || x.ym === ym).sort((a, b) => (a.at < b.at ? 1 : -1));
 }
+const estimateFor = (x, c) => (x.estimated_value != null && x.estimated_value !== "" ? Number(x.estimated_value) : Number((c || {}).avg_job_value) || 0);
 function findLead(id) { const c = DB.calls.find((x) => x.id === id); if (c) return { ...c, kind: "call", at: c.called_at }; const e = DB.enquiries.find((x) => x.id === id); return e ? { ...e, kind: "enquiry", at: e.received_at } : null; }
 function monthStats(c, ym) {
   const cid = c.id;
@@ -255,12 +257,15 @@ function monthStats(c, ym) {
   const won = all.filter((x) => x.client_status === "won");
   const wonValue = won.reduce((a, x) => a + (Number(x.job_value) || 0), 0);
   const quoted = all.filter((x) => x.client_status === "quoted").length;
+  const lost = all.filter((x) => x.client_status === "lost").length;
+  const untagged = all.filter((x) => x.client_status === "new" || x.client_status === "quoted").length;
+  const estTotal = all.filter((x) => x.client_status !== "spam" && x.client_status !== "not_lead").reduce((a, x) => a + estimateFor(x, c), 0);
   const nWeeks = Math.ceil(daysIn(ym) / 7); const weeks = new Array(nWeeks).fill(0);
   for (const x of all) if (x.client_status !== "spam") weeks[Math.min(nWeeks, weekOf(x.called_at || x.received_at)) - 1]++;
   const avgDur = answered.length ? answered.reduce((a, x) => a + (Number(x.duration_sec) || 0), 0) / answered.length : 0;
   const m = monthRec(cid, ym);
   const fee = Number(c.monthly_fee) || 0;
-  return { ym, calls: calls.length, enq: enq.length, answered: answered.length, missed: missed.length, missedRate: pct(missed.length, calls.length), leads, won: won.length, wonValue, quoted, weeks, avgDur, spam,
+  return { ym, calls: calls.length, enq: enq.length, answered: answered.length, missed: missed.length, missedRate: pct(missed.length, calls.length), leads, won: won.length, wonValue, quoted, lost, untagged, estTotal, weeks, avgDur, spam,
     cplFee: leads ? fee / leads : 0, adSpend: m && m.ad_spend != null ? Number(m.ad_spend) : null, cplAd: m && m.ad_spend && leads ? Number(m.ad_spend) / leads : 0, month: m,
     target: leads >= c.lead_target_min ? (leads > c.lead_target_max ? "above" : "on") : "below" };
 }
@@ -299,6 +304,7 @@ const COLS = {
   callId: ["callid", "id", "uuid", "calluuid", "sid"],
   notes: ["notes", "note", "comment", "comments", "agentnotes"],
   tracking: ["trackingnumber", "tracking", "dialednumber", "tonumber", "number"],
+  value: ["value", "leadvalue", "estimatedvalue", "estimate", "jobvalue", "revenue", "amount"],
 };
 function mapColumns(headers) {
   const nh = headers.map(norm); const map = {}; const used = new Set();
@@ -338,7 +344,7 @@ function rowsToCalls(rows, map) {
     if (!dt) { skipped.push(i + 1); continue; }
     const duration_sec = parseDuration(g("duration")); const rec = g("recording");
     const raw = {}; headers.forEach((hd, ix) => { if (hd && r[ix] !== undefined && r[ix] !== "") raw[hd] = r[ix]; });
-    out.push({ called_at: dt.date.toISOString(), ym: dt.ym, caller_number: g("caller") || "Unknown", duration_sec, outcome: parseOutcome(g("outcome"), duration_sec), tracking_number: g("tracking") || null, source: g("source") || "Google Ads", campaign: g("campaign") || null, keyword: g("keyword") || null, city: g("city") || null, recording_url: /^https?:/i.test(rec) ? rec : null, nimbata_call_id: g("callId") || null, admin_note: g("notes") || "", raw });
+    out.push({ called_at: dt.date.toISOString(), ym: dt.ym, caller_number: g("caller") || "Unknown", duration_sec, outcome: parseOutcome(g("outcome"), duration_sec), tracking_number: g("tracking") || null, source: g("source") || "Google Ads", campaign: g("campaign") || null, keyword: g("keyword") || null, city: g("city") || null, recording_url: /^https?:/i.test(rec) ? rec : null, nimbata_call_id: g("callId") || null, admin_note: g("notes") || "", estimated_value: (() => { const v = parseFloat(String(g("value")).replace(/[^0-9.]/g, "")); return isFinite(v) && v > 0 ? v : null; })(), raw });
   }
   return { calls: out, skipped };
 }
@@ -385,7 +391,7 @@ function skeleton() { app().innerHTML = `<div class="shell" style="padding-top:4
 function hideTabs() { document.body.classList.remove("has-tabs"); $("tabs").classList.add("hidden"); }
 function topBar({ title, sub, back, right, brand }) {
   const demo = DEMO ? `<div class="banner">Demo data${CONFIGURED ? "" : " · add your Supabase keys to config.js to go live"}${DEMO && CONFIGURED ? ` · <a href="${h(location.pathname)}">leave demo</a>` : ""}</div>` : "";
-  return `<div class="top"><div class="top-in">${back ? `<a class="back" href="#${back}" aria-label="Back">${ICON.back}</a>` : ""}${brand ? `<div class="brand"><img class="logo" src="${LOGO_SMALL}" alt="LeadHive"></div>` : `<div class="ttl">${title}${sub ? `<small>${sub}</small>` : ""}</div>`}${right || ""}</div>${demo}</div>`;
+  return `<div class="top"><div class="top-in">${back ? `<a class="back" href="#${back}" aria-label="Back">${ICON.back}</a>` : ""}${brand ? `<div class="brand"><img class="logo" src="${LOGO_BEE}" alt=""><span class="nm">Lead<span>Hive</span></span></div>` : `<div class="ttl">${title}${sub ? `<small>${sub}</small>` : ""}</div>`}${right || ""}</div>${demo}</div>`;
 }
 async function route() {
   const token = ++routeToken;
@@ -489,14 +495,35 @@ function renderNoPortal() {
 
 /* ═══════════════════════════ screens: partner ═══════════════════════════ */
 const targetChip = (st) => st.target === "on" ? `<span class="chip good"><i></i>On target</span>` : st.target === "above" ? `<span class="chip good"><i></i>Above target</span>` : `<span class="chip warn"><i></i>Below target</span>`;
-function statusChip(x) { const m = { won: ["good", "Job won"], quoted: ["blue", "Quoted"], not_lead: ["", "Not a lead"], spam: ["", "Spam"] }; if (!m[x.client_status]) return ""; const [cls, l] = m[x.client_status]; return `<span class="chip ${cls}">${l}${x.client_status === "won" && x.job_value ? ` · ${money(x.job_value)}` : ""}</span>`; }
-function leadRow(x, base) {
+function statusChip(x) { const m = { won: ["good", "Job won"], lost: ["", "Lost"], quoted: ["blue", "Quoted"], not_lead: ["", "Not a lead"], spam: ["", "Spam"] }; if (!m[x.client_status]) return ""; const [cls, l] = m[x.client_status]; return `<span class="chip ${cls}">${l}${x.client_status === "won" && x.job_value ? ` · ${money(x.job_value)}` : ""}</span>`; }
+function leadRow(x, base, c) {
   const isCall = x.kind === "call"; const missed = isCall && x.outcome !== "answered"; const ic = isCall ? (missed ? "miss" : "") : "form";
+  const canTag = c && (x.client_status === "new" || x.client_status === "quoted") && !(isCall && missed && x.outcome === "missed" && false);
+  const est = c ? estimateFor(x, c) : 0;
   const t1 = isCall ? x.caller_number : x.name || x.phone;
   const t2 = isCall ? (missed ? `${x.outcome === "voicemail" ? "Voicemail" : "Missed call"} · ${x.keyword || x.city || "Google Ads"}` : x.admin_note || x.keyword || x.city || "Google Ads call") : `${x.is_urgent ? "Urgent · " : ""}${x.suburb ? x.suburb + " · " : ""}${x.message}`;
   const hasRec = isCall && (x.recording_url || x.recording_path);
-  return `<a class="li" href="#${base}/lead/${x.id}"><div class="ic ${ic}">${isCall ? (missed ? ICON.missed : ICON.phone) : ICON.form}</div><div class="grow"><div class="t1"><span>${h(t1)}</span></div><div class="t2">${x.client_status !== "new" ? statusChip(x) : ""}<span class="tx">${h(t2)}</span></div></div><div class="meta"><div class="tm">${fmtTime(x.at)}</div><div class="du">${isCall ? (missed ? "" : durShort(x.duration_sec)) : "Web form"}</div></div>${hasRec ? `<span class="play">${ICON.play}</span>` : `<span class="chev">${ICON.chev}</span>`}</a>`;
+  const row = `<a class="li" href="#${base}/lead/${x.id}"><div class="ic ${ic}">${isCall ? (missed ? ICON.missed : ICON.phone) : ICON.form}</div><div class="grow"><div class="t1"><span>${h(t1)}</span></div><div class="t2">${x.client_status !== "new" ? statusChip(x) : ""}<span class="tx">${h(t2)}</span></div></div><div class="meta"><div class="tm">${fmtTime(x.at)}</div><div class="du">${isCall ? (missed ? "" : durShort(x.duration_sec)) : "Web form"}</div></div>${hasRec ? `<span class="play">${ICON.play}</span>` : `<span class="chev">${ICON.chev}</span>`}</a>`;
+  if (!canTag) return `<div class="lw">${row}</div>`;
+  return `<div class="lw">${row}<div class="tagstrip" data-id="${x.id}" data-kind="${x.kind}" data-est="${est}"><span class="est">${est ? `Est. ${money(est)}` : "Did you get it?"}</span><button class="tg won" data-act="won">Won</button><button class="tg lost" data-act="lost">Lost</button>
+    <div class="valrow hidden"><span class="cur">$</span><input type="number" inputmode="decimal" min="0" step="10" value="${est || ""}" aria-label="Job value" placeholder="job value"><button class="tg save" data-act="save">Save</button><button class="tg cancel" data-act="cancel" aria-label="Cancel">${ICON.x}</button><span class="hint">Your real number, ex GST. Rough is fine.</span></div></div></div>`;
 }
+// one handler per list: Won → value box (prefilled with the estimate) → Save; Lost saves straight away
+function bindTagStrips(root, afterSave) {
+  root.addEventListener("click", async (e) => {
+    const btn = e.target.closest("[data-act]"); if (!btn) return; const strip = btn.closest(".tagstrip"); if (!strip) return;
+    e.preventDefault(); const act = btn.dataset.act; const val = strip.querySelector(".valrow"); const input = strip.querySelector("input");
+    if (act === "won") { val.classList.remove("hidden"); strip.querySelector(".tg.won").classList.add("hidden"); strip.querySelector(".tg.lost").classList.add("hidden"); input.focus(); input.select(); return; }
+    if (act === "cancel") { val.classList.add("hidden"); strip.querySelector(".tg.won").classList.remove("hidden"); strip.querySelector(".tg.lost").classList.remove("hidden"); return; }
+    const kind = strip.dataset.kind, id = strip.dataset.id;
+    const patch = act === "save" ? { client_status: "won", job_value: Math.max(0, Number(input.value) || 0) } : { client_status: "lost", job_value: 0 };
+    strip.querySelectorAll("button").forEach((b) => b.setAttribute("disabled", ""));
+    try { await api.updateLead(kind, id, patch); const rec = kind === "call" ? DB.calls.find((r) => r.id === id) : DB.enquiries.find((r) => r.id === id); if (rec) Object.assign(rec, patch);
+      toast(act === "save" ? `Nice one. ${money(patch.job_value)} won.` : "Tagged as lost"); afterSave && afterSave(); }
+    catch (ex) { toast(ex.message, true); strip.querySelectorAll("button").forEach((b) => b.removeAttribute("disabled")); }
+  });
+}
+async function rerenderKeepScroll() { const y = window.scrollY; await route(); window.scrollTo(0, y); }
 function monthSelect(id, months, ym, live) { const cur = CUR_YM(); return `<select id="${id}" aria-label="Month">${months.map((m) => `<option value="${m}" ${m === ym ? "selected" : ""}>${ymLabel(m, false)}${m === cur && live ? " (so far)" : ""}</option>`).join("")}</select>`; }
 function renderHome(ctx) {
   const c = ctx.client; const months = clientMonths(c.id); const cur = CUR_YM();
@@ -519,7 +546,8 @@ function renderHome(ctx) {
   <select id="ym-sel" aria-label="Month" style="font:inherit;font-size:14px;font-weight:600;padding:9px 12px;border-radius:11px;border:1px solid var(--rule);background:var(--card);color:var(--ink)">${months.map((m) => `<option value="${m}" ${m === ym ? "selected" : ""}>${ymLabel(m, false)}${m === cur && live ? " (so far)" : ""}</option>`).join("") || `<option>${ymLabel(ym, false)}</option>`}</select></div>
   <div class="hero"><div class="k">${live ? "This month so far" : ymLabel(ym)}</div><div class="n">${st.leads}<small>leads</small></div><div class="sub">${h(c.package_name)} plan · ${c.lead_target_min} to ${c.lead_target_max} leads a month${live ? " · calls update at month end" : ""}</div>
   <div class="meter"><div class="fill ${st.target !== "below" ? "good" : ""}" style="width:${fill}%"></div><div class="tick" style="left:${minTick}%"></div></div><div class="meter-l"><span>0</span><span>${c.lead_target_min} = target</span><span>${c.lead_target_max}</span></div>
-  <div class="mt12">${live ? `<span class="chip white"><i></i>Month in progress</span>` : targetChip(st)}${st.wonValue ? ` <span class="chip gold">${ICON.star}${money(st.wonValue)} in jobs you've tagged won</span>` : ""}</div></div>
+  <div class="mt12">${live ? `<span class="chip white"><i></i>Month in progress</span>` : targetChip(st)}${st.untagged && !live ? ` <span class="chip white">${st.untagged} to tag</span>` : ""}</div>
+  ${st.leads ? `<div class="stat"><div><small>Est. value of leads</small><b>${money(st.estTotal)}</b></div><div><small>Confirmed won</small><b>${st.wonValue ? money(st.wonValue) : "–"}</b></div><div><small>Your return</small><b>${st.wonValue ? (st.wonValue / (Number(c.monthly_fee) || 1)).toFixed(1) + "x" : "–"}</b></div></div>` : ""}</div>
   <div class="kpis">
     <div class="kpi"><div class="l">Phone calls</div><div class="v">${st.calls}</div>${delta(st.calls, prev.calls)}</div>
     <div class="kpi"><div class="l">Web enquiries</div><div class="v">${st.enq}</div>${delta(st.enq, prev.enq)}</div>
@@ -532,25 +560,29 @@ function renderHome(ctx) {
     : `<div class="sec"><div class="card note"><div class="who"><div class="avatar">${h(JOE.name[0])}</div><div><b>${h(JOE.name)} · LeadHive</b><small>Welcome aboard</small></div></div><p>Your campaign is live. Calls and web enquiries will show up here as they come in, and your first full report lands at the end of the month.</p></div></div>`}
   <div class="sec"><div class="sec-h"><h2>Leads by month</h2><span class="small muted">calls + web enquiries</span></div><div class="card chart">${columnChart({ labels: allMonths.map((y) => MON[+y.split("-")[1] - 1]), values: series, highlight: allMonths.length - 1, tipFmt: (i) => `${ymLabel(allMonths[i])}: ${series[i]} leads` })}</div></div>
   <div class="sec"><div class="sec-h"><h2>${live ? "This month" : ymLabel(ym, false)} by week</h2></div><div class="card chart">${columnChart({ labels: st.weeks.map((_, i) => "Wk " + (i + 1)), values: st.weeks, gold: st.leads ? [st.weeks.indexOf(Math.max(...st.weeks))] : [], height: 130, tipFmt: (i) => `Week ${i + 1}: ${st.weeks[i]} leads` })}</div></div>
-  <div class="sec"><div class="sec-h"><h2>Latest leads</h2><a href="#${ctx.base}/leads/${ym}">See all ${st.leads}</a></div><div class="list">${recent.length ? recent.map((x) => leadRow(x, ctx.base)).join("") : `<div class="empty">No leads logged yet this month.</div>`}</div></div>
+  <div class="sec"><div class="sec-h"><h2>Latest leads</h2><a href="#${ctx.base}/leads/${ym}">See all ${st.leads}</a></div><div class="list" id="recent-list">${recent.length ? recent.map((x) => leadRow(x, ctx.base, c)).join("") : emptyState(live ? "Your campaign is live" : "Nothing logged this month", live ? "The first calls and web enquiries land here." : "")}</div>${st.untagged ? `<p class="small muted mt8">${st.untagged} lead${st.untagged === 1 ? "" : "s"} still to tag · <a class="lnk" href="#${ctx.base}/leads/${ym}/untagged">tag them</a></p>` : ""}</div>
   <p class="small muted center" style="margin:22px 0 8px">Numbers come from your call tracking line and website form. Spam you tag is left out.</p></div>`;
   $("ym-sel").onchange = (e) => go(`${ctx.base}/home/${e.target.value}`);
-  bindTips(app());
+  bindTips(app()); bindTagStrips($("recent-list"), rerenderKeepScroll);
 }
 function renderLeads(ctx) {
   const c = ctx.client; const months = clientMonths(c.id); const cur = CUR_YM();
   const ym = ctx.args[0] && months.includes(ctx.args[0]) ? ctx.args[0] : months[0] || cur; const filter = ctx.args[1] || "all";
   let items = leadsFor(c.id, ym);
-  const counts = { all: items.length, missed: items.filter((x) => x.kind === "call" && x.outcome !== "answered").length, web: items.filter((x) => x.kind === "enquiry").length, rec: items.filter((x) => x.recording_url || x.recording_path).length, untagged: items.filter((x) => x.client_status === "new").length, won: items.filter((x) => x.client_status === "won").length };
-  if (filter === "missed") items = items.filter((x) => x.kind === "call" && x.outcome !== "answered"); else if (filter === "web") items = items.filter((x) => x.kind === "enquiry"); else if (filter === "rec") items = items.filter((x) => x.recording_url || x.recording_path); else if (filter === "untagged") items = items.filter((x) => x.client_status === "new"); else if (filter === "won") items = items.filter((x) => x.client_status === "won");
+  const isUntagged = (x) => x.client_status === "new" || x.client_status === "quoted";
+  const counts = { all: items.length, missed: items.filter((x) => x.kind === "call" && x.outcome !== "answered").length, web: items.filter((x) => x.kind === "enquiry").length, rec: items.filter((x) => x.recording_url || x.recording_path).length, untagged: items.filter(isUntagged).length, won: items.filter((x) => x.client_status === "won").length, lost: items.filter((x) => x.client_status === "lost").length };
+  if (filter === "missed") items = items.filter((x) => x.kind === "call" && x.outcome !== "answered"); else if (filter === "web") items = items.filter((x) => x.kind === "enquiry"); else if (filter === "rec") items = items.filter((x) => x.recording_url || x.recording_path); else if (filter === "untagged") items = items.filter(isUntagged); else if (filter === "won") items = items.filter((x) => x.client_status === "won"); else if (filter === "lost") items = items.filter((x) => x.client_status === "lost");
+  const wonSum = leadsFor(c.id, ym).filter((x) => x.client_status === "won").reduce((a, x) => a + (Number(x.job_value) || 0), 0);
   const groups = []; for (const x of items) { const d = fmtDay(x.at); const g = groups[groups.length - 1]; if (g && g.d === d) g.items.push(x); else groups.push({ d, items: [x] }); }
   const chip = (k, l) => `<a class="f ${filter === k ? "on" : ""}" href="#${ctx.base}/leads/${ym}/${k}">${l} ${counts[k]}</a>`;
   app().innerHTML = topBar({ title: "Leads", sub: h(c.business_name), right: monthSelect("ym-sel", months.length ? months : [ym], ym, ym === cur) }) + `<div class="shell">
-  <div class="chips mt12">${chip("all", "All")}${chip("untagged", "To tag")}${chip("missed", "Missed")}${chip("web", "Web forms")}${chip("rec", "Recorded")}${chip("won", "Won")}</div>
-  ${counts.untagged && filter === "all" ? `<div class="card" style="padding:12px 14px;margin-top:4px;background:var(--gold-bg);border-color:#F3DDA8"><div class="row"><div class="grow"><b style="font-size:14px">Tag what happened with each lead</b><div class="small" style="color:var(--gold-ink);margin-top:2px">Won, quoted, not a lead or spam. It takes a second and it shows your real return.</div></div><a class="btn sm navy" href="#${ctx.base}/leads/${ym}/untagged">Start</a></div></div>` : ""}
-  <div class="list mt12">${groups.length ? groups.map((g) => `<div class="day">${h(g.d)}</div>${g.items.map((x) => leadRow(x, ctx.base)).join("")}`).join("") : `<div class="empty">Nothing here for ${ymLabel(ym)}.</div>`}</div>
-  <p class="small muted center" style="margin:18px 0 8px">Tap a lead to hear the call, see ${h(JOE.name)}'s note or tag the outcome.</p></div>`;
+  <div class="chips mt12">${chip("all", "All")}${chip("untagged", "To tag")}${chip("won", "Won")}${chip("lost", "Lost")}${chip("missed", "Missed")}${chip("web", "Web forms")}${chip("rec", "Recorded")}</div>
+  ${counts.untagged && filter === "all" ? `<div class="card" style="padding:12px 14px;margin-top:4px;background:var(--gold-bg);border-color:#F3DDA8"><div class="row"><div class="grow"><b style="font-size:14px">Did you get the job? Tap Won or Lost on each lead.</b><div class="small" style="color:var(--gold-ink);margin-top:2px">Won shows our estimate. Put your real number in and it works out your actual return.</div></div><a class="btn sm navy" href="#${ctx.base}/leads/${ym}/untagged">Start</a></div></div>` : ""}
+  ${filter === "won" && wonSum ? `<div class="card mt12" style="padding:12px 14px;background:var(--good-bg);border-color:#BFE5CF"><b style="color:#0F6B3D">${money(wonSum)} confirmed won in ${ymLabel(ym, false)}</b><div class="small" style="color:#1F5A3C;margin-top:2px">From ${counts.won} job${counts.won === 1 ? "" : "s"} on a ${money(c.monthly_fee)} plan.</div></div>` : ""}
+  <div class="list mt12" id="lead-list">${groups.length ? groups.map((g) => `<div class="day">${h(g.d)}</div>${g.items.map((x) => leadRow(x, ctx.base, c)).join("")}`).join("") : emptyState(filter === "all" ? `Nothing here for ${ymLabel(ym, false)} yet` : "Nothing in this filter", filter === "all" ? "Calls and web enquiries show up here as they come in." : "")}</div>
+  <p class="small muted center" style="margin:18px 0 8px">Tap a lead to hear the call, read ${h(JOE.name)}'s note or change a tag.</p></div>`;
   $("ym-sel").onchange = (e) => go(`${ctx.base}/leads/${e.target.value}/${filter}`);
+  bindTagStrips($("lead-list"), rerenderKeepScroll);
 }
 async function renderLead(ctx) {
   const x = findLead(ctx.args[0]); if (!x || x.client_id !== ctx.cid) return go(`${ctx.base}/leads`);
@@ -558,6 +590,7 @@ async function renderLead(ctx) {
   const tel = (isCall ? x.caller_number : x.phone || "").replace(/\s/g, "");
   const segBtn = (k, l, ic) => `<button data-st="${k}" class="${x.client_status === k ? "on " + k : ""}">${ic}${l}</button>`;
   const hasRec = isCall && (x.recording_url || x.recording_path);
+  const c = ctx.client; const est = estimateFor(x, c);
   app().innerHTML = topBar({ title: isCall ? (missed ? "Missed call" : "Phone call") : "Web enquiry", sub: fmtDT(x.at), back: `${ctx.base}/leads/${x.ym}` }) + `<div class="shell">
   <div class="card mt16"><div class="row"><div class="grow"><div class="small muted">${isCall ? "Caller" : "From"}</div><div class="big-num">${h(isCall ? x.caller_number : x.name || x.phone)}</div>${!isCall && x.name ? `<div class="mt8 b" style="font-size:16px">${h(x.phone)}</div>` : ""}</div>${missed ? `<span class="chip bad"><i></i>${x.outcome === "voicemail" ? "Voicemail" : "Not answered"}</span>` : isCall ? `<span class="chip good"><i></i>Answered</span>` : x.is_urgent ? `<span class="chip warn"><i></i>Urgent</span>` : `<span class="chip blue">Planned</span>`}</div>
   ${tel ? `<div class="btn-row mt16"><a class="btn navy" href="tel:${h(tel)}">${ICON.phone}Call back</a><a class="btn ghost" href="sms:${h(tel)}">Text</a></div>` : ""}
@@ -569,21 +602,23 @@ async function renderLead(ctx) {
   ${isCall && missed ? `<div class="card mt12" style="background:var(--bad-bg);border-color:#F2C9C9"><b style="font-size:14.5px;color:var(--bad)">This one rang out.</b><p class="small mt8" style="color:#7A2E2E;line-height:1.45">Most people searching for an emergency tradie call the next result if nobody answers. A call back inside 10 minutes recovers a good share of these.</p></div>` : ""}
   ${x.admin_note ? `<div class="card note mt12"><div class="who"><div class="avatar">${h(JOE.name[0])}</div><div><b>${h(JOE.name)}'s note</b><small>From the call review</small></div></div><p>${h(x.admin_note)}</p></div>` : ""}
   <div class="sec"><div class="sec-h"><h2>What happened with this lead?</h2></div><div class="card">
-    <div class="seg">${segBtn("new", "New", ICON.dot)}${segBtn("quoted", "Quoted", ICON.quote)}${segBtn("won", "Won", ICON.star)}${segBtn("not_lead", "Not a lead", ICON.ban)}${segBtn("spam", "Spam", ICON.x)}</div>
-    <div id="won-box" class="${x.client_status === "won" ? "" : "hidden"}"><label class="fld"><span>Job value (ex GST, roughly)</span><input id="jv" type="number" inputmode="decimal" placeholder="e.g. 450" value="${x.job_value || ""}"></label></div>
+    <div class="seg six">${segBtn("new", "New", ICON.dot)}${segBtn("quoted", "Quoted", ICON.quote)}${segBtn("won", "Won", ICON.star)}${segBtn("lost", "Lost", ICON.dn)}${segBtn("not_lead", "Not a lead", ICON.ban)}${segBtn("spam", "Spam", ICON.x)}</div>
+    ${est ? `<div class="est-line"><span>${h(JOE.name)}'s estimate for this job</span><b>${money(est)}</b></div>` : ""}
+    <div id="won-box" class="${x.client_status === "won" ? "" : "hidden"}"><label class="fld"><span>What it was actually worth (ex GST, rough is fine)</span><input id="jv" type="number" inputmode="decimal" placeholder="e.g. ${est || 450}" value="${x.job_value || ""}"></label></div>
     <label class="fld"><span>Your note (optional)</span><textarea id="cn" placeholder="e.g. Booked for Tuesday, quoted $420">${h(x.client_note || "")}</textarea></label>
     <button class="btn primary mt16" id="save-lead">Save</button>
     <p class="small muted mt12" style="line-height:1.45">Tagging takes a second and it's how we work out your real return. ${h(JOE.name)} also uses it to cut the searches that bring in the duds.</p></div></div>
   ${ctx.isAdmin ? `<div class="sec"><div class="sec-h"><h2>Admin</h2></div><div class="card"><label class="fld" style="margin-top:0"><span>${h(JOE.name)}'s note (shown to the partner)</span><textarea id="an" placeholder="What the call was about">${h(x.admin_note || "")}</textarea></label>
+    <label class="fld"><span>Estimated job value ($)</span><input id="ev" type="number" inputmode="decimal" value="${x.estimated_value != null ? x.estimated_value : ""}" placeholder="blank = partner's average ${money(c.avg_job_value)}"></label>
     ${isCall ? `<label class="fld"><span>Attach a recording (mp3/m4a/wav)</span><input id="rec-file" type="file" accept="audio/*"><div class="hint">Use this when the Nimbata link needs a login. The file is private to this partner.</div></label>` : ""}
     <button class="btn navy mt12" id="save-admin">Save admin changes</button></div></div>` : ""}
   </div>`;
   let st = x.client_status;
-  app().querySelectorAll(".seg button").forEach((b) => (b.onclick = () => { st = b.dataset.st; app().querySelectorAll(".seg button").forEach((o) => (o.className = "")); b.className = "on " + st; $("won-box").classList.toggle("hidden", st !== "won"); }));
+  app().querySelectorAll(".seg button").forEach((b) => (b.onclick = () => { st = b.dataset.st; app().querySelectorAll(".seg button").forEach((o) => (o.className = "")); b.className = "on " + st; $("won-box").classList.toggle("hidden", st !== "won"); if (st === "won" && !$("jv").value && est) $("jv").value = est; }));
   $("save-lead").onclick = async () => { const patch = { client_status: st, job_value: st === "won" ? Number($("jv").value) || 0 : 0, client_note: $("cn").value.trim() };
     try { $("save-lead").setAttribute("disabled", ""); await api.updateLead(x.kind, x.id, patch); Object.assign(x.kind === "call" ? DB.calls.find((r) => r.id === x.id) : DB.enquiries.find((r) => r.id === x.id), patch); toast(st === "won" ? "Nice one. Tagged as won." : "Saved"); setTimeout(() => go(`${ctx.base}/leads/${x.ym}`), 450); }
     catch (ex) { toast(ex.message, true); $("save-lead").removeAttribute("disabled"); } };
-  const sa = $("save-admin"); if (sa) sa.onclick = async () => { try { sa.setAttribute("disabled", ""); const patch = { admin_note: $("an").value.trim() }; const f = $("rec-file") && $("rec-file").files[0]; if (f) { patch.recording_path = await api.uploadRecording(x.client_id, x.id, f); } await api.updateLead(x.kind, x.id, patch); Object.assign(x.kind === "call" ? DB.calls.find((r) => r.id === x.id) : DB.enquiries.find((r) => r.id === x.id), patch); toast("Saved"); route(); } catch (ex) { toast(ex.message, true); sa.removeAttribute("disabled"); } };
+  const sa = $("save-admin"); if (sa) sa.onclick = async () => { try { sa.setAttribute("disabled", ""); const patch = { admin_note: $("an").value.trim(), estimated_value: $("ev").value === "" ? null : Number($("ev").value) || 0 }; const f = $("rec-file") && $("rec-file").files[0]; if (f) { patch.recording_path = await api.uploadRecording(x.client_id, x.id, f); } await api.updateLead(x.kind, x.id, patch); Object.assign(x.kind === "call" ? DB.calls.find((r) => r.id === x.id) : DB.enquiries.find((r) => r.id === x.id), patch); toast("Saved"); route(); } catch (ex) { toast(ex.message, true); sa.removeAttribute("disabled"); } };
   if (hasRec) {
     const au = $("pl-audio"), btn = $("pl-btn"), fill = $("pl-fill"), tm = $("pl-tm"), tr = $("pl-track"), dl = $("rec-dl"), msg = $("rec-msg");
     let src = null;
@@ -601,16 +636,16 @@ function renderReports(ctx) {
   const c = ctx.client; const ms = DB.months.filter((m) => m.client_id === c.id && m.status === "published").sort((a, b) => (a.ym < b.ym ? 1 : -1));
   app().innerHTML = topBar({ title: "Monthly reports", sub: h(c.business_name) }) + `<div class="shell">
   <p class="lede" style="margin:16px 0 12px">One report a month, written by ${h(JOE.name)}. What came in, what it cost per lead, and what's being changed next.</p>
-  ${ms.length ? ms.map((m) => { const st = monthStats(c, m.ym); return `<a class="card" style="display:block;text-decoration:none;margin-top:10px" href="#${ctx.base}/report/${m.ym}"><div class="row"><div class="grow"><b style="font-size:16px;font-family:var(--head)">${ymLabel(m.ym)}</b><div class="small muted" style="margin-top:3px">${st.leads} leads · ${st.calls} calls · ${st.enq} web · ${st.missedRate}% missed${st.wonValue ? ` · ${money(st.wonValue)} won` : ""}</div></div>${targetChip(st)}<span class="chev">${ICON.chev}</span></div></a>`; }).join("") : `<div class="card empty">Your first report arrives at the end of your first full month.</div>`}</div>`;
+  ${ms.length ? ms.map((m) => { const st = monthStats(c, m.ym); return `<a class="card" style="display:block;text-decoration:none;margin-top:10px" href="#${ctx.base}/report/${m.ym}"><div class="row"><div class="grow"><b style="font-size:16px;font-family:var(--head)">${ymLabel(m.ym)}</b><div class="small muted" style="margin-top:3px">${st.leads} leads · ${st.calls} calls · ${st.enq} web · ${st.missedRate}% missed${st.wonValue ? ` · ${money(st.wonValue)} won` : ""}</div></div>${targetChip(st)}<span class="chev">${ICON.chev}</span></div></a>`; }).join("") : `<div class="card" style="padding:0">${emptyState("Your first report is on its way", "It lands at the end of your first full month.")}</div>`}</div>`;
 }
 function renderReport(ctx) {
   const c = ctx.client; const ym = ctx.args[0]; const m = monthRec(c.id, ym); if (!m || m.status !== "published") return go(`${ctx.base}/reports`);
   const st = monthStats(c, ym); const prev = monthStats(c, ymAdd(ym, -1));
   const kv = (k, v) => `<div class="rpt-k"><span>${k}</span><b>${v}</b></div>`;
   app().innerHTML = topBar({ title: `${ymLabel(ym)} report`, sub: h(c.business_name), back: `${ctx.base}/reports` }) + `<div class="shell">
-  <div class="hero" style="margin-top:16px"><div class="k">${ymLabel(ym)}</div><div class="n">${st.leads}<small>leads</small></div><div class="sub">${h(c.package_name)} plan · target ${c.lead_target_min} to ${c.lead_target_max}</div><div class="mt12">${targetChip(st)}${prev.leads ? ` <span class="chip white">${st.leads >= prev.leads ? "+" : ""}${st.leads - prev.leads} vs ${ymLabel(ymAdd(ym, -1), false)}</span>` : ""}</div></div>
-  <div class="card mt12">${kv("Phone calls", st.calls)}${kv("Answered", `${st.answered} <span class="muted small">(${pct(st.answered, st.calls)}%)</span>`)}${kv("Missed or voicemail", `${st.missed} <span class="muted small">(${st.missedRate}%)</span>`)}${kv("Web enquiries", st.enq)}${kv("Average call length", st.avgDur ? dur(st.avgDur) : "–")}${st.spam ? kv("Spam removed", st.spam) : ""}${c.show_cost_per_lead ? kv("Cost per lead", `${money(st.cplFee)} <span class="muted small">on ${money(c.monthly_fee)}</span>`) : ""}${c.show_ad_spend && st.adSpend != null ? kv("Ad spend (Google)", money(st.adSpend)) : ""}${st.won ? kv("Jobs tagged won", `${st.won} · ${money(st.wonValue)}`) : ""}${st.quoted ? kv("Quotes out", st.quoted) : ""}</div>
-  ${st.wonValue ? `<div class="card mt12" style="background:var(--good-bg);border-color:#BFE5CF"><b style="font-size:15px;color:#0F6B3D">${money(st.wonValue)} in won jobs from a ${money(c.monthly_fee)} plan</b><p class="small mt8" style="color:#1F5A3C;line-height:1.45">That's ${(st.wonValue / (Number(c.monthly_fee) || 1)).toFixed(1)}x, counting only the ${st.won} job${st.won === 1 ? "" : "s"} you tagged. Quotes still out aren't included.</p></div>` : ""}
+  <div class="hero" style="margin-top:16px"><div class="k">${ymLabel(ym)}${st.wonValue ? " · your return" : ""}</div>${st.wonValue ? `<div class="n ret">${(st.wonValue / (Number(c.monthly_fee) || 1)).toFixed(1)}x</div><div class="sub">${money(st.wonValue)} confirmed won from your ${money(c.monthly_fee)} plan · ${st.leads} leads</div>` : `<div class="n">${st.leads}<small>leads</small></div><div class="sub">${h(c.package_name)} plan · target ${c.lead_target_min} to ${c.lead_target_max}</div>`}<div class="mt12">${targetChip(st)}${prev.leads ? ` <span class="chip white">${st.leads >= prev.leads ? "+" : ""}${st.leads - prev.leads} leads vs ${ymLabel(ymAdd(ym, -1), false)}</span>` : ""}</div></div>
+  <div class="card mt12">${kv("Phone calls", st.calls)}${kv("Answered", `${st.answered} <span class="muted small">(${pct(st.answered, st.calls)}%)</span>`)}${kv("Missed or voicemail", `${st.missed} <span class="muted small">(${st.missedRate}%)</span>`)}${kv("Web enquiries", st.enq)}${kv("Average call length", st.avgDur ? dur(st.avgDur) : "–")}${st.spam ? kv("Spam removed", st.spam) : ""}${c.show_cost_per_lead ? kv("Cost per lead", `${money(st.cplFee)} <span class="muted small">on ${money(c.monthly_fee)}</span>`) : ""}${c.show_ad_spend && st.adSpend != null ? kv("Ad spend (Google)", money(st.adSpend)) : ""}${kv("Estimated value of leads", money(st.estTotal))}${st.won ? kv("Jobs you tagged won", `${st.won} · ${money(st.wonValue)}`) : ""}${st.lost ? kv("Tagged lost", st.lost) : ""}${st.quoted ? kv("Quotes out", st.quoted) : ""}${st.untagged ? kv("Still to tag", st.untagged) : ""}</div>
+  ${st.wonValue ? `<div class="card mt12" style="background:var(--good-bg);border-color:#BFE5CF"><b style="font-size:15px;color:#0F6B3D">${money(st.wonValue)} confirmed won from a ${money(c.monthly_fee)} plan</b><p class="small mt8" style="color:#1F5A3C;line-height:1.45">That's ${(st.wonValue / (Number(c.monthly_fee) || 1)).toFixed(1)}x on your own numbers, from the ${st.won} job${st.won === 1 ? "" : "s"} you tagged won.${st.untagged ? ` ${st.untagged} lead${st.untagged === 1 ? " is" : "s are"} still untagged.` : ""}</p></div>` : `<div class="card mt12" style="background:var(--gold-bg);border-color:#F3DDA8"><b style="font-size:15px;color:var(--gold-ink)">${money(st.estTotal)} of estimated work in these leads</b><p class="small mt8" style="color:var(--gold-ink);line-height:1.45">Tap Won or Lost on each lead and put your real numbers in. The report then shows your actual return, not our estimate.</p></div>`}
   <div class="sec"><div class="sec-h"><h2>Leads by week</h2></div><div class="card chart">${columnChart({ labels: st.weeks.map((_, i) => "Wk " + (i + 1)), values: st.weeks, gold: st.leads ? [st.weeks.indexOf(Math.max(...st.weeks))] : [], height: 130, tipFmt: (i) => `Week ${i + 1}: ${st.weeks[i]} leads` })}</div></div>
   <div class="sec"><div class="sec-h"><h2>${h(JOE.name)}'s summary</h2></div><div class="card note"><div class="who"><div class="avatar">${h(JOE.name[0])}</div><div><b>${h(JOE.name)} · LeadHive</b><small>Published ${fmtDate(m.published_at)}</small></div></div><p>${h(m.summary)}</p></div></div>
   ${m.points && m.points.length ? `<div class="sec"><div class="sec-h"><h2>What I'm changing</h2></div><div class="card">${m.points.map((p, i) => `<div class="pt"><div class="ix">${i + 1}</div><div><b>${h(p.title)}</b><p>${h(p.body)}</p></div></div>`).join("")}</div></div>` : ""}
@@ -668,7 +703,7 @@ function renderAdminClient(ctx) {
   <div class="btn-row mt12"><a class="btn primary" href="#/admin/upload/${c.id}">${ICON.upload}Upload month</a><a class="btn ghost" href="#/as/${c.id}/home">View as ${h(c.contact_name || "partner")}</a></div>
   <div class="btn-row" style="margin-top:8px"><a class="btn ghost sm" style="flex:1" href="#/admin/settings/${c.id}">${ICON.cog}Settings &amp; login</a><button class="btn ghost sm" style="flex:1" id="copy-hook">${ICON.copy}Enquiry webhook</button></div>
   <div class="sec"><div class="sec-h"><h2>Months</h2></div><div class="list">${ms.length ? ms.map((m) => { const st = monthStats(c, m.ym); return `<a class="li" href="#/admin/upload/${c.id}/${m.ym}"><div class="grow"><div class="t1"><span>${ymLabel(m.ym)}</span>${m.status === "published" ? `<span class="chip good">Published</span>` : `<span class="chip warn">Draft</span>`}</div><div class="t2"><span class="tx">${st.leads} leads · ${st.calls} calls · ${st.missedRate}% missed · ${st.enq} web${st.adSpend ? ` · ads ${money(st.adSpend)}${st.leads ? ` (${money(st.cplAd)}/lead)` : ""}` : ""}</span></div></div><span class="chev">${ICON.chev}</span></a>`; }).join("") : `<div class="empty">No months uploaded yet.</div>`}</div></div>
-  <div class="sec"><div class="sec-h"><h2>${ymLabel(cur, false)} so far</h2><a href="#/as/${c.id}/leads/${cur}">${live.length} lead${live.length === 1 ? "" : "s"}</a></div><div class="list">${live.length ? live.slice(0, 4).map((x) => leadRow(x, `/as/${c.id}`)).join("") : `<div class="empty">Nothing logged yet this month. Web enquiries land here live once the webhook is on the landing page; calls arrive with the CSV.</div>`}</div></div>
+  <div class="sec"><div class="sec-h"><h2>${ymLabel(cur, false)} so far</h2><a href="#/as/${c.id}/leads/${cur}">${live.length} lead${live.length === 1 ? "" : "s"}</a></div><div class="list">${live.length ? live.slice(0, 4).map((x) => leadRow(x, `/as/${c.id}`, null)).join("") : `<div class="empty">Nothing logged yet this month. Web enquiries land here live once the webhook is on the landing page; calls arrive with the CSV.</div>`}</div></div>
   <div class="sec"><div class="sec-h"><h2>Margin (admin only)</h2></div><div class="card">${ms.filter((m) => m.status === "published").slice(0, 3).map((m) => { const ad = Number(m.ad_spend) || 0; const fee = Number(c.monthly_fee) || 0; return `<div class="rpt-k"><span>${ymLabel(m.ym, false)}</span><b>${money(fee - ad)} <span class="muted small">of ${money(fee)} · ${pct(fee - ad, fee)}%</span></b></div>`; }).join("") || `<div class="muted small">Nothing published yet.</div>`}<p class="small muted mt8">Partners never see ad spend unless you switch it on in Settings.</p></div></div></div>`;
   $("copy-hook").onclick = async () => { try { const key = DB.keys[c.id] || (DB.keys[c.id] = await api.getWebhookKey(c.id)); copyText(`POST ${PORTAL_URL}/api/enquiry\nx-leadhive-key: ${key}\n{ "name", "phone", "suburb", "issue", "isUrgent", "page" }`, "Webhook details copied"); } catch (e) { toast(e.message, true); } };
 }
@@ -744,7 +779,7 @@ function renderUpload(ctx) {
 }
 async function renderSettings(ctx) {
   const isNew = !ctx.args[0]; const cur = CUR_YM();
-  const c = isNew ? { id: "", business_name: "", initials: "", contact_name: "", email: "", phone: "", niche: "Emergency plumber", region: "", country: "NZ", timezone: "Pacific/Auckland", package_name: "Starter", monthly_fee: 1500, lead_target_min: 15, lead_target_max: 25, started_on: cur + "-01", billing_day: 1, show_cost_per_lead: true, show_ad_spend: false, active: true } : client(ctx.args[0]);
+  const c = isNew ? { id: "", business_name: "", initials: "", contact_name: "", email: "", phone: "", niche: "Emergency plumber", region: "", country: "NZ", timezone: "Pacific/Auckland", package_name: "Starter", monthly_fee: 1500, lead_target_min: 15, lead_target_max: 25, started_on: cur + "-01", billing_day: 1, show_cost_per_lead: true, show_ad_spend: false, avg_job_value: 450, active: true } : client(ctx.args[0]);
   if (!c) return go("/admin");
   const f = (id, l, v, type = "text", extra = "") => `<label class="fld"><span>${l}</span><input id="${id}" type="${type}" value="${h(v ?? "")}" ${extra}></label>`;
   app().innerHTML = topBar({ title: isNew ? "New partner" : "Settings", sub: isNew ? "Creates their login too" : h(c.business_name), back: isNew ? "/admin" : `/admin/client/${c.id}` }) + `<div class="shell">
@@ -752,7 +787,7 @@ async function renderSettings(ctx) {
   <div class="two"><label class="fld"><span>Niche</span><select id="s-niche">${["Emergency plumber", "Emergency electrician", "Handyman", "Locksmith", "Roofer", "Drainlayer", "Builder", "Other"].map((n) => `<option ${c.niche === n ? "selected" : ""}>${n}</option>`).join("")}</select></label>${f("s-region", "Region", c.region)}</div>
   <div class="two"><label class="fld"><span>Country</span><select id="s-country"><option ${c.country === "NZ" ? "selected" : ""}>NZ</option><option ${c.country === "AU" ? "selected" : ""}>AU</option></select></label><label class="fld"><span>Time zone</span><select id="s-tz">${TZ_OPTIONS.map((t) => `<option ${(c.timezone || TZ_FOR[c.country]) === t ? "selected" : ""}>${t}</option>`).join("")}</select></label></div>
   ${f("s-started", "Start date", c.started_on, "date")}</div>
-  <div class="card mt12"><h2 style="font-size:16px;font-weight:600">Plan</h2><div class="two"><label class="fld"><span>Package</span><select id="s-pkg">${["Starter", "Growth", "Dominator", "Starter (trial)", "Custom"].map((n) => `<option ${c.package_name === n ? "selected" : ""}>${n}</option>`).join("")}</select></label>${f("s-fee", "Monthly fee (ex GST)", c.monthly_fee, "number")}</div><div class="two">${f("s-tmin", "Lead target min", c.lead_target_min, "number")}${f("s-tmax", "Lead target max", c.lead_target_max, "number")}</div>${f("s-bill", "Billing day of month", c.billing_day, "number", 'min="1" max="28"')}
+  <div class="card mt12"><h2 style="font-size:16px;font-weight:600">Plan</h2><div class="two"><label class="fld"><span>Package</span><select id="s-pkg">${["Starter", "Growth", "Dominator", "Starter (trial)", "Custom"].map((n) => `<option ${c.package_name === n ? "selected" : ""}>${n}</option>`).join("")}</select></label>${f("s-fee", "Monthly fee (ex GST)", c.monthly_fee, "number")}</div><div class="two">${f("s-tmin", "Lead target min", c.lead_target_min, "number")}${f("s-tmax", "Lead target max", c.lead_target_max, "number")}</div><div class="two">${f("s-bill", "Billing day of month", c.billing_day, "number", 'min="1" max="28"')}${f("s-avg", "Average job value (your estimate)", c.avg_job_value, "number")}</div><p class="small muted mt8">Shown as "Est." on every lead that has no estimate of its own. A CSV "Value" column sets per-lead estimates.</p>
   <div class="mt12"><div class="switch"><div><b>Show cost per lead</b><small>Worked out from their fee, not your ad spend: ${money(c.monthly_fee)} ÷ leads.</small></div><button class="tog ${c.show_cost_per_lead ? "on" : ""}" id="s-cpl"></button></div><div class="switch"><div><b>Show Google Ads spend</b><small>Off by default. Turning this on reveals your margin.</small></div><button class="tog ${c.show_ad_spend ? "on" : ""}" id="s-ads"></button></div></div></div>
   <div class="card mt12"><h2 style="font-size:16px;font-weight:600">Login</h2><p class="small muted mt8">They log in with the email above. Set a password here and send it to them, or let them use "Set up your login" on the login screen with that email.</p>${f("s-pass", isNew ? "Password for their login" : "Set or reset their password", "", "text", 'placeholder="e.g. Plumbing2026" autocomplete="off"')}<div class="btn-row mt12"><button class="btn ghost sm" style="flex:1" id="s-sendlogin">${ICON.copy}Copy login message</button></div></div>
   ${isNew ? "" : `<div class="card mt12"><h2 style="font-size:16px;font-weight:600">Website enquiries</h2><p class="small muted mt8">Add this to the landing page's enquiry route and every form submission lands in their portal instantly.</p><pre class="code mt8" id="hook">loading…</pre></div>`}
@@ -761,7 +796,7 @@ async function renderSettings(ctx) {
   <div style="height:20px"></div></div>`;
   $("s-cpl").onclick = (e) => e.currentTarget.classList.toggle("on"); $("s-ads").onclick = (e) => e.currentTarget.classList.toggle("on");
   $("s-country").onchange = (e) => { $("s-tz").value = TZ_FOR[e.target.value] || "Pacific/Auckland"; };
-  const read = () => ({ business_name: $("s-biz").value.trim(), contact_name: $("s-contact").value.trim(), initials: ($("s-init").value.trim() || $("s-biz").value.trim().split(/\s+/).map((w) => w[0] || "").join("").slice(0, 2)).toUpperCase(), phone: $("s-phone").value.trim(), email: $("s-email").value.trim().toLowerCase() || null, niche: $("s-niche").value, region: $("s-region").value.trim(), country: $("s-country").value, timezone: $("s-tz").value, started_on: $("s-started").value || cur + "-01", package_name: $("s-pkg").value, monthly_fee: Number($("s-fee").value) || 0, lead_target_min: Number($("s-tmin").value) || 0, lead_target_max: Number($("s-tmax").value) || 0, billing_day: Math.min(28, Math.max(1, Number($("s-bill").value) || 1)), show_cost_per_lead: $("s-cpl").classList.contains("on"), show_ad_spend: $("s-ads").classList.contains("on") });
+  const read = () => ({ business_name: $("s-biz").value.trim(), contact_name: $("s-contact").value.trim(), initials: ($("s-init").value.trim() || $("s-biz").value.trim().split(/\s+/).map((w) => w[0] || "").join("").slice(0, 2)).toUpperCase(), phone: $("s-phone").value.trim(), email: $("s-email").value.trim().toLowerCase() || null, niche: $("s-niche").value, region: $("s-region").value.trim(), country: $("s-country").value, timezone: $("s-tz").value, started_on: $("s-started").value || cur + "-01", package_name: $("s-pkg").value, monthly_fee: Number($("s-fee").value) || 0, lead_target_min: Number($("s-tmin").value) || 0, lead_target_max: Number($("s-tmax").value) || 0, billing_day: Math.min(28, Math.max(1, Number($("s-bill").value) || 1)), avg_job_value: Number($("s-avg").value) || 0, show_cost_per_lead: $("s-cpl").classList.contains("on"), show_ad_spend: $("s-ads").classList.contains("on") });
   $("s-save").onclick = async () => { const v = read(); if (!v.business_name) { toast("Business name is needed", true); return; }
     const btn = $("s-save"); btn.setAttribute("disabled", "");
     try { const saved = await api.upsertClient(isNew ? v : { id: c.id, ...v });

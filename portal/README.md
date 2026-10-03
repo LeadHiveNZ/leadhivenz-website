@@ -102,6 +102,7 @@ Headers are matched loosely (case and spaces ignored). Dates are read in the par
 | Duration   | Call Duration, Duration, Talk time                             | seconds, m:ss, h:mm:ss or "2m 34s"        |
 | Outcome    | Outcome, Status, Disposition                                   | answered / missed / voicemail; if missing, answered when ≥ 20s |
 | Recording  | Recording, Recording URL                                       | a link; if Nimbata links need a login, attach the file on the lead instead |
+| Value      | Value, Lead Value, Estimate, Job Value                         | your estimate for that job, shown as "Est." on the lead |
 | Optional   | Tracking Number, Source, Campaign, Keyword, City, Call ID, Notes | kept in `raw`                           |
 
 Only rows dated in the selected month are imported.
@@ -122,12 +123,15 @@ await fetch("https://portal.leadhivenz.com/api/enquiry", {
 and set `LEADHIVE_PORTAL_KEY` in that Lovable project's secrets to the partner's key. (That edit
 is one small Lovable message per landing page; do it when you next touch the page.)
 
-## Outcome tagging = the ROI engine
+## Won / Lost tagging = the ROI engine
 
-Partners tag each lead New / Quoted / Won (+ job value) / Not a lead / Spam. The portal then
-shows "$5,750 in won jobs from a $1,500 plan · 3.8x". Use it in every renewal and upsell
-conversation, and feed "not a lead" / "spam" back into negative keywords. Make tagging a
-two-minute ritual on your monthly check-in call or it won't happen.
+Every lead row has **Won** and **Lost** buttons. Won opens a value box prefilled with your
+estimate (the CSV "Value" column, or the partner's average job value from Settings); the
+partner overwrites it with the real number. The home screen and report then show
+*estimated value of leads* vs *confirmed won* and the partner's return on their own numbers
+("4.4x"). Lead detail has the full set: New / Quoted / Won / Lost / Not a lead / Spam.
+Use the return in every renewal and upsell conversation, feed "not a lead" and "spam" back
+into negative keywords, and make tagging a two-minute ritual on the monthly check-in call.
 
 ## Changing things later
 
