@@ -24,7 +24,15 @@ const emptyState = (title, body) => `<div class="empty"><img src="${LOGO_BEE}" a
 /* ═══════════════════════════ utilities ═══════════════════════════ */
 const $ = (id) => document.getElementById(id);
 const NET_RE = /failed to fetch|networkerror|load failed|network request failed|fetch failed/i;
-const netMsg = (m) => (NET_RE.test(String(m || "")) ? "Can't reach the portal right now. Check your signal and try again." : String(m || "Something went wrong"));
+// Swap the browser's raw network error for plain words, but keep whatever came before it
+// ("Saved · login not created: …") so the real step that failed stays visible.
+const netMsg = (m) => {
+  m = String(m || "Something went wrong");
+  if (!NET_RE.test(m)) return m;
+  const rest = m.replace(/(TypeError:\s*)?(failed to fetch|networkerror[^.]*|load failed|network request failed|fetch failed)\.?/gi, "").replace(/[\s:·-]+$/, "").trim();
+  const tip = location.protocol === "http:" && !/^(localhost|127\.)/.test(location.hostname) ? " Open the https:// address and try again." : " Check your signal and try again.";
+  return rest ? `${rest}: couldn't reach the server.${tip}` : `Can't reach the portal right now.${tip}`;
+};
 const h = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[c]));
 const money = (n, dp = 0) => "$" + Number(n || 0).toLocaleString("en-NZ", { minimumFractionDigits: dp, maximumFractionDigits: dp });
 const pct = (a, b) => (b ? Math.round((a / b) * 100) : 0);
