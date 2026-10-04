@@ -6,6 +6,12 @@
   publish = "public"
   command = "echo 'static site, nothing to build'"
 
+# Netlify fails a build when an env var's value also appears in the code. These three are
+# public on purpose (config.js gives the URLs to every browser), so skip them in the scan.
+# SUPABASE_SERVICE_ROLE_KEY and RESEND_API_KEY are still scanned and must never be committed.
+[build.environment]
+  SECRETS_SCAN_OMIT_KEYS = "SUPABASE_URL,PORTAL_URL,RESEND_FROM_EMAIL"
+
 [functions]
   directory = "netlify/functions"
   node_bundler = "esbuild"
