@@ -28,9 +28,15 @@ create table if not exists public.clients (
   show_ad_spend      boolean not null default false,
   avg_job_value      numeric not null default 450,   -- Joe's estimate of a typical job, used when a lead has no estimate of its own
   active             boolean not null default true,
+  churned_on         date,
+  churn_reason       text,                           -- price, capacity, quality, in_house, seasonal, other
+  churn_note         text not null default '',
   created_at         timestamptz not null default now()
 );
 alter table public.clients add column if not exists avg_job_value numeric not null default 450;
+alter table public.clients add column if not exists churned_on date;
+alter table public.clients add column if not exists churn_reason text;
+alter table public.clients add column if not exists churn_note text not null default '';
 
 -- Admin-only secrets (the enquiry webhook key). Kept out of `clients` so a partner can never read it.
 create table if not exists public.client_secrets (
@@ -50,12 +56,22 @@ create trigger clients_ensure_secret after insert on public.clients
 
 -- ───────────────────────────── profiles ────────────────────────────────────
 create table if not exists public.profiles (
-  id         uuid primary key references auth.users(id) on delete cascade,
-  email      text,
-  role       text not null default 'client' check (role in ('admin','client')),
-  client_id  uuid references public.clients(id) on delete set null,
-  created_at timestamptz not null default now()
+  id           uuid primary key references auth.users(id) on delete cascade,
+  email        text,
+  role         text not null default 'client' check (role in ('admin','client')),
+  client_id    uuid references public.clients(id) on delete set null,
+  last_seen_at timestamptz,
+  created_at   timestamptz not null default now()
 );
+alter table public.profiles add column if not exists last_seen_at timestamptz;
+
+-- partners call this when the portal opens; admin sees "last opened" per partner
+create or replace function public.touch_seen() returns void
+language sql security definer set search_path = public as $$
+  update public.profiles set last_seen_at = now() where id = auth.uid();
+$$;
+revoke all on function public.touch_seen() from public;
+grant execute on function public.touch_seen() to authenticated;
 
 -- helpers used by the policies (security definer so they never recurse into RLS)
 create or replace function public.is_admin() returns boolean

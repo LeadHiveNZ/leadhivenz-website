@@ -141,6 +141,16 @@ Use the return in every renewal and upsell conversation, feed your own "not a le
 "spam" flags back into negative keywords, and make tagging a two-minute ritual on the
 monthly check-in call.
 
+## When a partner leaves
+
+Admin → partner → Settings → **Partner is leaving…** → pick a reason (price, capacity, lead
+quality, in-house, seasonal, other) and a note → **Pause their portal**. Their login shows a
+"paused" screen, their enquiry webhook stops accepting, and everything (calls, recordings,
+tags, reports) is kept. They move to **Past partners** at the bottom of the admin list with
+the reason. Open them and tap **Reactivate partner** to switch it all back on in one tap.
+The admin list also shows when each partner last opened the portal; two weeks without
+opening it is your early warning.
+
 ## Changing things later
 
 - Joe's phone / WhatsApp / email: `app/public/config.js`.
