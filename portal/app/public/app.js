@@ -166,6 +166,7 @@ function makeSupabaseApi() {
     },
     async updateLead(kind, id, patch) { await q(sb.from(kind === "call" ? "calls" : "enquiries").update(patch).eq("id", id)); },
     async upsertClient(c) { const row = { ...c }; if (!row.id) delete row.id; return q(sb.from("clients").upsert(row).select().single()); },
+    async updateClient(cid, patch) { return q(sb.from("clients").update(patch).eq("id", cid).select().single()); },
     async deactivateClient(cid, reason, note, day) { await q(sb.from("clients").update({ active: false, churned_on: day || new Date().toISOString().slice(0, 10), churn_reason: reason || null, churn_note: note || "" }).eq("id", cid)); },
     async getWebhookKey(cid) { const r = await q(sb.from("client_secrets").select("webhook_key").eq("client_id", cid).maybeSingle()); return r ? r.webhook_key : ""; },
     async regionHistory(cid) { const rows = await q(sb.rpc("region_history", { p_client: cid })); return (rows || []).map((r) => ({ ym: r.ym, leads: num(r.leads), calls: num(r.calls), answered: num(r.answered), enquiries: num(r.enquiries), est_value: num(r.est_value) })); },
@@ -217,6 +218,7 @@ function makeDemoApi() {
     async loadMonths(cid) { const me = meSync(); return D.months.filter((m) => (!cid || m.client_id === cid) && visibleMonth(me, m)).map((m) => { const c = D.clients.find((x) => x.id === m.client_id); return { ...m, points: m.points || [], ad_spend: me.role === "admin" || (c && c.show_ad_spend) ? m.ad_spend : undefined }; }); },
     async loadClientData(cid) { await sleep(120); const me = meSync(); if (me.role !== "admin" && cid !== me.client_id) throw new Error("Not allowed"); return { months: await this.loadMonths(cid), calls: D.calls.filter((c) => c.client_id === cid).map((c) => ({ ...c })).sort((a, b) => (a.called_at < b.called_at ? 1 : -1)), enquiries: D.enquiries.filter((e) => e.client_id === cid).map((e) => ({ ...e })).sort((a, b) => (a.received_at < b.received_at ? 1 : -1)) }; },
     async updateLead(kind, id, patch) { const x = (kind === "call" ? D.calls : D.enquiries).find((r) => r.id === id); if (!x) throw new Error("Lead not found"); const me = meSync(); if (me.role !== "admin") { const allowed = ["client_status", "job_value", "client_note"]; for (const k of Object.keys(patch)) if (!allowed.includes(k)) throw new Error("Partners can only change the lead outcome, job value and note"); if (["not_lead", "spam"].includes(patch.client_status) && patch.client_status !== x.client_status) throw new Error("Only LeadHive can mark a lead as not a lead or spam"); } Object.assign(x, patch); persist(); },
+    async updateClient(cid, patch) { const row = D.clients.find((x) => x.id === cid); if (!row) throw new Error("Partner not found"); Object.assign(row, patch); persist(); return { ...row }; },
     async upsertClient(c) { let row = D.clients.find((x) => x.id === c.id); if (!row) { row = { ...c, id: c.id || uid(), active: true }; D.clients.push(row); D.secrets[row.id] = "lh_demo_" + (row.initials || "xx").toLowerCase() + "_" + uid().replace(/-/g, "").slice(0, 16); } else Object.assign(row, c); persist(); return { ...row }; },
     async deactivateClient(cid, reason, note, day) { const c = D.clients.find((x) => x.id === cid); if (c) { c.active = false; c.churned_on = day || new Date().toISOString().slice(0, 10); c.churn_reason = reason || null; c.churn_note = note || ""; } persist(); },
     async reactivateClient(cid) { const c = D.clients.find((x) => x.id === cid); if (c) { c.active = true; c.churned_on = null; c.churn_reason = null; c.churn_note = ""; } persist(); },
@@ -305,6 +307,17 @@ function leadsFor(cid, ym) {
 }
 const estimateFor = (x, c) => (x.estimated_value != null && x.estimated_value !== "" ? Number(x.estimated_value) : Number((c || {}).avg_job_value) || 0);
 function findLead(id) { const c = DB.calls.find((x) => x.id === id); if (c) return { ...c, kind: "call", at: c.called_at }; const e = DB.enquiries.find((x) => x.id === id); return e ? { ...e, kind: "enquiry", at: e.received_at } : null; }
+// A plain-English summary written from the month's numbers, used for backfilled reports.
+// Facts the partner can act on; never ad spend or cost per lead.
+function autoSummary(c, ym) {
+  const st = monthStats(c, ym); const mon = MONTHS[+String(ym).split("-")[1] - 1]; const s = [];
+  if (!st.leads) return `No leads came through in ${mon}.`;
+  s.push(`${st.leads} lead${st.leads === 1 ? "" : "s"} in ${mon}: ${st.calls} call${st.calls === 1 ? "" : "s"}${st.enq ? ` and ${st.enq} web enquir${st.enq === 1 ? "y" : "ies"}` : ""}.`);
+  if (st.calls) s.push(st.missed ? `${pct(st.answered, st.calls)}% of calls were answered. ${st.missed} went to voicemail or were missed, and calling those back fast is the easiest extra work there is.` : "Every call was answered, which is what turns leads into jobs.");
+  const top = Math.max(0, ...(st.weeks || [])); if (top > 0 && st.weeks.filter((w) => w === top).length === 1) s.push(`The busiest week was week ${st.weeks.indexOf(top) + 1} with ${top} lead${top === 1 ? "" : "s"}.`);
+  if (st.estTotal) s.push(`At your average job, that's about ${money(st.estTotal)} of work in these leads.`);
+  return s.join(" ");
+}
 function monthStats(c, ym) {
   const cid = c.id;
   const calls = DB.calls.filter((x) => x.client_id === cid && x.ym === ym);
@@ -624,9 +637,9 @@ function renderHome(ctx) {
   const st = monthStats(c, ym); const prev = monthStats(c, ymAdd(ym, -1));
   const live = ym === cur && !(st.month && st.month.status === "published");
   const hist = DB.history[c.id] || []; const histMap = {}; hist.forEach((r) => (histMap[r.ym] = r));
-  const startYm = String(c.started_on || "").slice(0, 7) || ymAdd(cur, -5); const allMonths = []; for (let i = 5; i >= 0; i--) { const y = ymAdd(ym, -i); if (y >= startYm || histMap[y]) allMonths.push(y); }
+  const startYm = String(c.started_on || "").slice(0, 7) || ymAdd(cur, -5); const own = new Set(months); const allMonths = []; for (let i = 5; i >= 0; i--) { const y = ymAdd(ym, -i); if (y >= startYm || histMap[y] || own.has(y)) allMonths.push(y); }
   if (!allMonths.length) allMonths.push(ym);
-  const isHist = (y) => y < startYm && !!histMap[y];
+  const isHist = (y) => y < startYm && !!histMap[y] && !own.has(y);
   const series = allMonths.map((y) => (isHist(y) ? histMap[y].leads : monthStats(c, y).leads));
   const histAvg = hist.length ? Math.round(hist.reduce((a, r) => a + r.leads, 0) / hist.length) : 0;
   const prevLab = MON[+ymAdd(ym, -1).split("-")[1] - 1];
@@ -745,11 +758,11 @@ function renderReport(ctx) {
   <div class="card mt12">${kv("Phone calls", st.calls)}${kv("Answered", `${st.answered} <span class="muted small">(${pct(st.answered, st.calls)}%)</span>`)}${kv("Missed or voicemail", `${st.missed} <span class="muted small">(${st.missedRate}%)</span>`)}${kv("Web enquiries", st.enq)}${kv("Average call length", st.avgDur ? dur(st.avgDur) : "–")}${st.spam && ctx.isAdmin ? kv("Spam removed (admin only)", st.spam) : ""}${c.show_ad_spend && st.adSpend != null ? kv("Ad spend (Google)", money(st.adSpend)) : ""}${kv("Estimated value of leads", money(st.estTotal))}${st.won ? kv("Jobs you tagged won", `${st.won} · ${money(st.wonValue)}`) : ""}${st.lost ? kv("Tagged lost", st.lost) : ""}${st.quoted ? kv("Ongoing", st.quoted) : ""}${st.untagged ? kv("Still to tag", st.untagged) : ""}</div>
   ${st.wonValue ? `<div class="card mt12" style="background:var(--good-bg);border-color:#BFE5CF"><b style="font-size:15px;color:#0F6B3D">${money(st.wonValue)} confirmed won from a ${money(c.monthly_fee)} plan</b><p class="small mt8" style="color:#1F5A3C;line-height:1.45">That's ${(st.wonValue / (Number(c.monthly_fee) || 1)).toFixed(1)}x on your own numbers, from the ${st.won} job${st.won === 1 ? "" : "s"} you tagged won.${st.untagged ? ` ${st.untagged} lead${st.untagged === 1 ? " is" : "s are"} still untagged.` : ""}</p></div>` : `<div class="card mt12" style="background:var(--gold-bg);border-color:#F3DDA8"><b style="font-size:15px;color:var(--gold-ink)">${money(st.estTotal)} of estimated work in these leads</b><p class="small mt8" style="color:var(--gold-ink);line-height:1.45">Tap Won or Lost on each lead and put your real numbers in. The report then shows your actual return, not our estimate.</p></div>`}
   <div class="sec"><div class="sec-h"><h2>Leads by week</h2></div><div class="card chart">${columnChart({ labels: st.weeks.map((_, i) => "Wk " + (i + 1)), values: st.weeks, gold: st.leads ? [st.weeks.indexOf(Math.max(...st.weeks))] : [], height: 130, tipFmt: (i) => `Week ${i + 1}: ${st.weeks[i]} leads` })}</div></div>
-  <div class="sec"><div class="sec-h"><h2>${h(JOE.name)}'s summary</h2></div><div class="card note"><div class="who"><div class="avatar">${h(JOE.name[0])}</div><div><b>${h(JOE.name)} · LeadHive</b><small>Published ${fmtDate(m.published_at)}</small></div></div><p>${h(m.summary)}</p></div></div>
+  ${m.summary ? `<div class="sec"><div class="sec-h"><h2>${h(JOE.name)}'s summary</h2></div><div class="card note"><div class="who"><div class="avatar">${h(JOE.name[0])}</div><div><b>${h(JOE.name)} · LeadHive</b><small>Published ${fmtDate(m.published_at)}</small></div></div><p>${h(m.summary)}</p></div></div>` : ""}
   ${m.points && m.points.length ? `<div class="sec"><div class="sec-h"><h2>What I'm changing</h2></div><div class="card">${m.points.map((p, i) => `<div class="pt"><div class="ix">${i + 1}</div><div><b>${h(p.title)}</b><p>${h(p.body)}</p></div></div>`).join("")}</div></div>` : ""}
   ${m.pdf_path ? `<a class="btn ghost mt20" href="#" id="pdf">${ICON.dl}Download PDF report</a>` : ""}
   <a class="btn navy mt12" href="#${ctx.base}/leads/${ym}">See every lead from ${ymLabel(ym, false)}</a>
-  <p class="small muted center" style="margin:18px 0 8px">Questions? Text ${h(JOE.name)}, he reads every reply.</p></div>`;
+  <p class="small muted center" style="margin:18px 0 8px">Questions? Text ${h(JOE.name)}. Every reply gets read.</p></div>`;
   const p = $("pdf"); if (p) p.onclick = async (e) => { e.preventDefault(); try { const url = await api.signedUrl("reports", m.pdf_path); window.open(url, "_blank", "noopener"); } catch (ex) { toast(ex.message, true); } };
   bindTips(app());
 }
@@ -821,7 +834,8 @@ function renderUpload(ctx) {
   const pts = existing && existing.points ? existing.points : [];
   app().innerHTML = topBar({ title: "Upload a month", sub: pre ? h(pre.business_name) : "Pick a partner", back: pre ? `/admin/client/${pre.id}` : "/admin" }) + `<div class="shell">
   <div class="steps"><i class="on"></i><i id="s2"></i><i id="s3"></i></div>
-  <div class="card"><div class="two"><label class="fld" style="margin-top:0"><span>Partner</span><select id="u-cid">${DB.clients.filter((c) => c.active || c.id === state.cid).map((c) => `<option value="${c.id}" ${state.cid === c.id ? "selected" : ""}>${h(c.business_name)}${c.active ? "" : " (past partner)"}</option>`).join("")}</select></label><label class="fld" style="margin-top:0"><span>Month</span><select id="u-ym">${ymOpts.map((y) => `<option value="${y}" ${y === state.ym ? "selected" : ""}>${ymLabel(y)}</option>`).join("")}</select></label></div>
+  <div class="card"><div class="two"><label class="fld" style="margin-top:0"><span>Partner</span><select id="u-cid">${DB.clients.filter((c) => c.active || c.id === state.cid).map((c) => `<option value="${c.id}" ${state.cid === c.id ? "selected" : ""}>${h(c.business_name)}${c.active ? "" : " (past partner)"}</option>`).join("")}</select></label><label class="fld" style="margin-top:0"><span>Month (for the notes below)</span><select id="u-ym">${ymOpts.map((y) => `<option value="${y}" ${y === state.ym ? "selected" : ""}>${ymLabel(y)}</option>`).join("")}</select></label></div>
+  ${client(state.cid) ? `<label class="fld"><span>Start date (their first day of leads)</span><input id="u-start" type="date" value="${h(client(state.cid).started_on || "")}"><div class="hint">Saved as you change it. Anything before this date is left out on upload.</div></label>` : ""}
   ${existing ? `<p class="small mt12" style="color:var(--ink-2)">${ymLabel(existing.ym)} already has data (${existing.status}). Upload as often as you like: new calls are added, calls already here are refreshed, and the partner's tags are kept. Notes below are pre-filled.</p>` : ""}</div>
   <div class="sec"><div class="sec-h"><h2>1 · Nimbata call export</h2><button id="u-sample">Use sample CSV</button></div>
   <label class="drop" id="drop"><b>Drop the CSV here or tap to choose</b>Nimbata → Call log → Export. Columns are matched automatically (date, caller, duration, outcome, recording, AI summary, value, keyword…).<input type="file" id="u-file" accept=".csv,text/csv,.txt,.tsv"></label>
@@ -832,6 +846,8 @@ function renderUpload(ctx) {
   <div class="sec-h" style="margin-top:16px"><h2 style="font-size:14.5px">Web enquiries CSV (optional)</h2></div>
   <label class="drop" id="drop-enq" style="padding:14px 16px"><b style="font-size:14px">Drop an enquiries file here</b>For enquiries that came in by email before the landing page was connected. Columns: Date, Name, Phone, Suburb, Message, Urgent, Page. Every month in the file is imported.<input type="file" id="u-enqfile" accept=".csv,text/csv,.txt,.tsv"></label>
   <div id="u-enqpreview"></div>
+  <div id="u-startnote"></div>
+  <div id="u-backfill"></div>
   <p class="small muted mt8">No CSV? You can still publish the notes on their own, or just save the ad spend.</p></div>
   <div class="sec"><div class="sec-h"><h2>2 · Notes for the partner</h2><button id="u-copy">${ICON.copy} Copy summary for Claude</button></div>
   <div class="card"><label class="fld" style="margin-top:0"><span>Summary (plain English, like a text to a mate)</span><textarea id="u-sum" placeholder="A steady month. 22 leads, inside the plan. The one thing to work on is...">${h(existing ? existing.summary : "")}</textarea></label>
@@ -854,13 +870,41 @@ function renderUpload(ctx) {
     <details class="mt8"><summary>First rows</summary><div class="tbl-wrap mt8"><table class="tbl"><tr><th>When</th><th>Caller</th><th class="r">Dur</th><th>Outcome</th><th>Rec</th></tr>${state.calls.slice(0, 6).map((c) => `<tr><td>${fmtDate(c.called_at)} ${fmtTime(c.called_at)}</td><td>${h(c.caller_number)}</td><td class="r">${durShort(c.duration_sec)}</td><td>${c.outcome}</td><td>${c.recording_url ? "✓" : ""}</td></tr>`).join("")}</table></div></details></div>`;
     $("s2").classList.add("on");
   };
-  const ingest = (text, name) => { const rows = parseCSV(text); if (rows.length < 2) { toast("Couldn't read that file", true); return; } state.headers = rows[0]; state.map = mapColumns(rows[0]); const r = rowsToCalls(rows, state.map); state.calls = r.calls; state.skipped = r.skipped; state.fileName = name || ""; renderPreview(); toast(`${state.calls.length} calls parsed`); };
+  // ---- start date: what's in range, the note, and the one-tap fix ----
+  const startMs = () => { const c = client(state.cid); const sd = String((c && c.started_on) || ""); if (!/^\d{4}-\d{2}-\d{2}$/.test(sd)) return null; const [y, m, d] = sd.split("-").map(Number); return zonedToUtc(y, m, d, 0, 0, 0, tzOf(c)); };
+  const leaveOutPre = () => !!($("u-pre") && $("u-pre").classList.contains("on"));
+  const inRange = (iso) => { const t = startMs(); return t == null || !leaveOutPre() || new Date(iso).getTime() >= t; };
+  const useCalls = () => state.calls.filter((x) => inRange(x.called_at));
+  const useEnq = () => state.enquiries.filter((x) => inRange(x.received_at));
+  const setStart = async (day) => { const c = client(state.cid); if (!c || !/^\d{4}-\d{2}-\d{2}$/.test(day)) return; try { const saved = await api.updateClient(c.id, { started_on: day }); c.started_on = (saved && saved.started_on) || day; if ($("u-start")) $("u-start").value = c.started_on; toast(`Start date set to ${fmtCal(c.started_on)}`); renderStartNote(); } catch (ex) { toast(ex.message, true); } };
+  const renderStartNote = () => {
+    const el = $("u-startnote"); const c = client(state.cid); const t = startMs(); if (!el) return;
+    const times = [...state.calls.map((x) => x.called_at), ...state.enquiries.map((x) => x.received_at)].map((x) => new Date(x).getTime()).sort((a, b) => a - b);
+    const pre = t == null ? 0 : times.filter((x) => x < t).length;
+    if (!c || !pre) { el.innerHTML = ""; renderBackfill(); return; }
+    const allBefore = pre === times.length; const firstDay = ymdOf(new Date(times[0]), tzOf(c)); const who = c.contact_name ? `${h(c.contact_name)}'s` : "their";
+    el.innerHTML = `<div class="card mt8" style="background:var(--gold-bg);border-color:#F3DDA8;padding:12px 14px"><b style="font-size:14px;color:var(--gold-ink)">${allBefore ? `Everything uploaded is from before ${who} start date (${fmtCal(c.started_on)})` : `${pre} lead${pre === 1 ? " is" : "s are"} from before ${who} start date (${fmtCal(c.started_on)})`}</b><p class="small mt8" style="color:var(--gold-ink);line-height:1.45">${allBefore ? "If they started earlier, set the start date to their first lead and the months line up." : "Those are most likely the previous partner's, so they're left out. Switch it off to keep them."}</p><button class="btn ghost sm mt8" type="button" id="u-fixstart">Start from ${fmtCal(firstDay)}, the first lead</button><label class="switch" style="margin-top:8px;border-top:0;padding:6px 0 0"><div><b style="font-size:13px">Leave out leads from before the start date</b></div><button type="button" class="tog ${allBefore ? "" : "on"}" id="u-pre" aria-label="toggle"></button></label></div>`;
+    $("u-pre").onclick = (e) => { e.currentTarget.classList.toggle("on"); renderBackfill(); };
+    $("u-fixstart").onclick = () => setStart(firstDay);
+    renderBackfill();
+  };
+  // ---- one button: import everything and publish a report for each finished month ----
+  const renderBackfill = () => {
+    const el = $("u-backfill"); const c = client(state.cid); if (!el) return; if (!c) { el.innerHTML = ""; return; }
+    const curYm = CUR_YM(); const by = {}; useCalls().forEach((x) => (by[x.ym] = (by[x.ym] || 0) + 1)); useEnq().forEach((x) => (by[x.ym] = (by[x.ym] || 0) + 1));
+    const yms = Object.keys(by).filter((y) => y < curYm).sort();
+    if (!(yms.length >= 2 || (yms.length === 1 && yms[0] !== state.ym))) { el.innerHTML = ""; return; }
+    const done = yms.filter((y) => { const m = monthRec(c.id, y); return m && m.status === "published" && m.summary; }); const todo = yms.filter((y) => !done.includes(y));
+    el.innerHTML = `<div class="card mt12" style="border:1.5px solid var(--blue);background:var(--card)"><b style="font-size:15px">Create a report for every month</b><p class="small mt8" style="color:var(--ink-2);line-height:1.5">${yms.map((y) => `${ymLabel(y, false)} (${by[y]} lead${by[y] === 1 ? "" : "s"})`).join(" · ")}.</p><p class="small mt8" style="color:var(--ink-2);line-height:1.5">Each month gets its own published report: leads, calls, web enquiries, a week-by-week split and a summary written from the numbers, so ${h(c.contact_name || "the partner")} can look back through them.${todo.includes(state.ym) ? ` ${ymLabel(state.ym, false)} uses your notes below if you've written them.` : ""}${done.length ? ` ${done.map((y) => ymLabel(y, false)).join(", ")} already ${done.length === 1 ? "has a report" : "have reports"} and won't change.` : ""} ${ymLabel(curYm, false)} stays as "this month so far". No emails are sent.</p><button class="btn primary mt12" type="button" id="u-backfill-go" ${todo.length ? "" : "disabled"}>${todo.length ? `Import and create ${todo.length} report${todo.length === 1 ? "" : "s"}` : "Every month already has a report"}</button></div>`;
+    const b = $("u-backfill-go"); if (b) b.onclick = () => backfill(todo);
+  };
+  const ingest = (text, name) => { const rows = parseCSV(text); if (rows.length < 2) { toast("Couldn't read that file", true); return; } state.headers = rows[0]; state.map = mapColumns(rows[0]); const r = rowsToCalls(rows, state.map); state.calls = r.calls; state.skipped = r.skipped; state.fileName = name || ""; renderPreview(); renderStartNote(); toast(`${state.calls.length} calls parsed`); };
   $("u-cid").onchange = (e) => go(`/admin/upload/${e.target.value}/${state.ym}`);
   $("u-ym").onchange = (e) => go(`/admin/upload/${state.cid}/${e.target.value}`);
   $("u-file").onchange = (e) => { const f = e.target.files[0]; if (!f) return; f.text().then((t) => ingest(t, f.name)); };
   const enqPrev = $("u-enqpreview");
   const ingestEnq = (text, name) => { const rows = parseCSV(text); if (rows.length < 2) { toast("Couldn't read that file", true); return; } const map = mapEnqColumns(rows[0]); const r = rowsToEnquiries(rows, map); state.enquiries = r.enquiries; state.enqSkipped = r.skipped; state.enqFile = name || ""; const by = {}; r.enquiries.forEach((x) => (by[x.ym] = (by[x.ym] || 0) + 1));
-    enqPrev.innerHTML = `<div class="card mt8" style="padding:12px 14px"><div class="row"><div class="grow"><b style="font-size:14px">${h(state.enqFile)}</b><div class="small muted">${r.enquiries.length} enquiries${r.skipped.length ? ` · ${r.skipped.length} rows skipped (no date)` : ""} · ${Object.keys(by).sort().map((y) => `${ymLabel(y, false)} ${by[y]}`).join(" · ")}</div></div><span class="chip ${map.phone !== undefined && map.datetime !== undefined ? "good" : "warn"}">${map.phone !== undefined && map.datetime !== undefined ? "Looks good" : "Check columns"}</span></div></div>`; toast(`${r.enquiries.length} enquiries parsed`); };
+    enqPrev.innerHTML = `<div class="card mt8" style="padding:12px 14px"><div class="row"><div class="grow"><b style="font-size:14px">${h(state.enqFile)}</b><div class="small muted">${r.enquiries.length} enquiries${r.skipped.length ? ` · ${r.skipped.length} rows skipped (no date)` : ""} · ${Object.keys(by).sort().map((y) => `${ymLabel(y, false)} ${by[y]}`).join(" · ")}</div></div><span class="chip ${map.phone !== undefined && map.datetime !== undefined ? "good" : "warn"}">${map.phone !== undefined && map.datetime !== undefined ? "Looks good" : "Check columns"}</span></div></div>`; renderStartNote(); toast(`${r.enquiries.length} enquiries parsed`); };
   $("u-enqfile").onchange = (e) => { const f = e.target.files[0]; if (!f) return; f.text().then((t) => ingestEnq(t, f.name)); };
   const dropE = $("drop-enq"); ["dragenter", "dragover"].forEach((ev) => dropE.addEventListener(ev, (e) => { e.preventDefault(); dropE.classList.add("on"); })); ["dragleave", "drop"].forEach((ev) => dropE.addEventListener(ev, (e) => { e.preventDefault(); dropE.classList.remove("on"); })); dropE.addEventListener("drop", (e) => { const f = e.dataTransfer.files[0]; if (f) f.text().then((t) => ingestEnq(t, f.name)); });
   const drop = $("drop"); ["dragenter", "dragover"].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add("on"); })); ["dragleave", "drop"].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove("on"); })); drop.addEventListener("drop", (e) => { const f = e.dataTransfer.files[0]; if (f) f.text().then((t) => ingest(t, f.name)); });
@@ -870,12 +914,42 @@ function renderUpload(ctx) {
   $("u-mail").onclick = (e) => e.currentTarget.classList.toggle("on");
   $("u-replace").onclick = (e) => e.currentTarget.classList.toggle("on");
   $("u-all").onclick = (e) => e.currentTarget.classList.toggle("on");
+  const us = $("u-start"); if (us) us.onchange = (e) => setStart(e.target.value);
   $("u-copy").onclick = () => { const c = client(state.cid); const inMonth = state.calls.filter((x) => x.ym === state.ym); const sm = importSummary(inMonth.length ? inMonth : DB.calls.filter((x) => x.client_id === state.cid && x.ym === state.ym).map((x) => ({ ...x, recording_url: x.recording_url }))); const enq = DB.enquiries.filter((x) => x.client_id === state.cid && x.ym === state.ym).length; const ad = $("u-ad").value;
     const kws = [...new Set((inMonth.length ? inMonth : DB.calls.filter((x) => x.client_id === state.cid && x.ym === state.ym)).map((x) => x.keyword).filter(Boolean))].slice(0, 5);
     const src = inMonth.length ? inMonth : DB.calls.filter((x) => x.client_id === state.cid && x.ym === state.ym);
     const sums = src.filter((x) => x.summary).slice(0, 15).map((x) => `- ${fmtDate(x.called_at)}: ${String(x.summary).slice(0, 160)}`);
     copyText(`Lead report notes for ${c.business_name} (${c.contact_name}), ${c.niche}, ${c.region}. ${ymLabel(state.ym)}. Plan ${c.package_name} ${money(c.monthly_fee)}/mo, target ${c.lead_target_min}-${c.lead_target_max}.\nCalls ${sm.n}, missed ${sm.missed} (${pct(sm.missed, sm.n)}%), avg answered ${dur(sm.avg)}, web enquiries ${enq}, total leads ${sm.n + enq}${ad ? `, ad spend $${ad}` : ""}.\nTop keywords: ${kws.join(", ") || "n/a"}.${sums.length ? `\nCall summaries:\n${sums.join("\n")}` : ""}\nWrite the client summary (2-3 sentences, plain English, like a text to a mate) and three "what I'm changing" points with a title and one or two sentences each.`, "Copied. Paste it to Claude."); };
   const collect = () => ({ summary: $("u-sum").value.trim(), points: [0, 1, 2].map((i) => ({ title: $("u-pt" + i).value.trim(), body: $("u-pb" + i).value.trim() })).filter((p) => p.title || p.body), adSpend: $("u-ad").value === "" ? null : Number($("u-ad").value) || 0 });
+  const importData = async (allMonths, msg) => {
+    const calls = useCalls(); const enq = useEnq(); let note = "";
+    const groups = {}; (allMonths ? calls : calls.filter((x) => x.ym === state.ym)).forEach((x) => { const { ym, ...r } = x; (groups[ym] ||= []).push(r); });
+    const yms = Object.keys(groups).sort(); let tIns = 0, tUpd = 0;
+    for (const y of yms) { msg.textContent = `Importing ${groups[y].length} calls for ${ymLabel(y, false)}…`; const r = $("u-replace").classList.contains("on") ? await api.replaceMonthCalls(state.cid, y, groups[y]) : await api.mergeMonthCalls(state.cid, y, groups[y]); tIns += r.inserted; tUpd += r.updated; }
+    if (yms.length) note = yms.length > 1 ? ` · ${yms.length} months: ${tIns} calls new, ${tUpd} refreshed` : ` · ${tIns} new, ${tUpd} refreshed`;
+    if (enq.length) { msg.textContent = `Importing ${enq.length} enquiries…`; const r = await api.mergeEnquiries(state.cid, enq.map(({ ym, ...e }) => e)); note += ` · ${r.inserted} enquiries new, ${r.updated} refreshed`; }
+    const left = state.calls.length - calls.length + state.enquiries.length - enq.length; if (left) note += ` · ${left} from before the start date left out`;
+    return note;
+  };
+  const backfill = async (todo) => {
+    const c = client(state.cid); const msg = $("u-msg"); const n = collect(); const btns = ["u-backfill-go", "u-draft", "u-pub"].map((id) => $(id)).filter(Boolean);
+    btns.forEach((b) => b.setAttribute("disabled", ""));
+    try {
+      const importNote = await importData(true, msg);
+      await ensureClient(state.cid, true); await refreshAdmin();
+      const made = [];
+      for (const y of todo) {
+        msg.textContent = `Creating the ${ymLabel(y)} report…`;
+        const old = monthRec(c.id, y); const mine = y === state.ym && n.summary;
+        const month = await api.upsertMonth({ client_id: c.id, ym: y, status: "published", summary: mine ? n.summary : autoSummary(c, y), points: mine ? n.points : (old && old.points) || [], published_at: new Date().toISOString() });
+        if (y === state.ym && n.adSpend != null) await api.setAdSpend(month.id, n.adSpend);
+        made.push(y);
+      }
+      await refreshAdmin(); $("s3").classList.add("on");
+      toast(`${made.length} report${made.length === 1 ? "" : "s"} created: ${made.map((y) => MON[+y.split("-")[1] - 1]).join(", ")}${importNote}`);
+      setTimeout(() => go(`/admin/client/${state.cid}`), 900);
+    } catch (ex) { msg.textContent = ""; toast(ex.message, true); btns.forEach((b) => b.removeAttribute("disabled")); }
+  };
   const commit = async (status) => {
     const c = client(state.cid); const n = collect(); const msg = $("u-msg");
     if (!c) { toast("Add a partner first", true); return; }
@@ -889,14 +963,8 @@ function renderUpload(ctx) {
       if (state.pdf) { msg.textContent = "Uploading PDF…"; row.pdf_path = await api.uploadPdf(state.cid, state.ym, state.pdf); }
       const month = await api.upsertMonth(row);
       if (n.adSpend != null) await api.setAdSpend(month.id, n.adSpend);
-      const inMonth = state.calls.filter((x) => x.ym === state.ym).map(({ ym, ...r }) => r);
-      let importNote = "";
       const allMonths = !$("u-allwrap").classList.contains("hidden") && $("u-all").classList.contains("on");
-      const groups = {}; (allMonths ? state.calls : state.calls.filter((x) => x.ym === state.ym)).forEach((x) => { const { ym, ...r } = x; (groups[ym] ||= []).push(r); });
-      const yms = Object.keys(groups).sort(); let tIns = 0, tUpd = 0;
-      for (const y of yms) { msg.textContent = `Importing ${groups[y].length} calls for ${ymLabel(y, false)}…`; const r = $("u-replace").classList.contains("on") ? await api.replaceMonthCalls(state.cid, y, groups[y]) : await api.mergeMonthCalls(state.cid, y, groups[y]); tIns += r.inserted; tUpd += r.updated; }
-      if (yms.length) importNote = yms.length > 1 ? ` · ${yms.length} months: ${tIns} calls new, ${tUpd} refreshed` : ` · ${tIns} new, ${tUpd} refreshed`;
-      if (state.enquiries.length) { msg.textContent = `Importing ${state.enquiries.length} enquiries…`; const r = await api.mergeEnquiries(state.cid, state.enquiries.map(({ ym, ...e }) => e)); importNote += ` · ${r.inserted} enquiries new, ${r.updated} refreshed`; }
+      const importNote = await importData(allMonths, msg);
       await ensureClient(state.cid, true); await refreshAdmin();
       $("s3").classList.add("on");
       let mailNote = "";
@@ -909,14 +977,14 @@ function renderUpload(ctx) {
 }
 async function renderSettings(ctx) {
   const isNew = !ctx.args[0]; const cur = CUR_YM();
-  const c = isNew ? { id: "", business_name: "", initials: "", contact_name: "", email: "", phone: "", niche: "Emergency plumber", region: "", country: "NZ", timezone: "Pacific/Auckland", package_name: "Starter", monthly_fee: 1500, lead_target_min: 15, lead_target_max: 25, started_on: cur + "-01", billing_day: 1, show_cost_per_lead: true, show_ad_spend: false, avg_job_value: 450, active: true } : client(ctx.args[0]);
+  const c = isNew ? { id: "", business_name: "", initials: "", contact_name: "", email: "", phone: "", niche: "Emergency plumber", region: "", country: "NZ", timezone: "Pacific/Auckland", package_name: "Starter", monthly_fee: 1500, lead_target_min: 15, lead_target_max: 25, started_on: ymdOf(new Date()), billing_day: 1, show_cost_per_lead: true, show_ad_spend: false, avg_job_value: 450, active: true } : client(ctx.args[0]);
   if (!c) return go("/admin");
   const f = (id, l, v, type = "text", extra = "") => `<label class="fld"><span>${l}</span><input id="${id}" type="${type}" value="${h(v ?? "")}" ${extra}></label>`;
   app().innerHTML = topBar({ title: isNew ? "New partner" : "Settings", sub: isNew ? "Creates their login too" : h(c.business_name), back: isNew ? "/admin" : `/admin/client/${c.id}` }) + `<div class="shell">
   <div class="card mt16"><h2 style="font-size:16px;font-weight:600">Business</h2>${f("s-biz", "Business name", c.business_name)}<div class="two">${f("s-contact", "Contact first name", c.contact_name)}${f("s-init", "Initials (avatar)", c.initials)}</div><div class="two">${f("s-phone", "Mobile (number Nimbata forwards to)", c.phone, "tel")}${f("s-email", "Email (their login)", c.email, "email")}</div>
   <div class="two"><label class="fld"><span>Niche</span><select id="s-niche">${["Emergency plumber", "Emergency electrician", "Handyman", "Locksmith", "Roofer", "Drainlayer", "Builder", "Other"].map((n) => `<option ${c.niche === n ? "selected" : ""}>${n}</option>`).join("")}</select></label>${f("s-region", "Region", c.region)}</div>
   <div class="two"><label class="fld"><span>Country</span><select id="s-country"><option ${c.country === "NZ" ? "selected" : ""}>NZ</option><option ${c.country === "AU" ? "selected" : ""}>AU</option></select></label><label class="fld"><span>Time zone</span><select id="s-tz">${TZ_OPTIONS.map((t) => `<option ${(c.timezone || TZ_FOR[c.country]) === t ? "selected" : ""}>${t}</option>`).join("")}</select></label></div>
-  ${f("s-started", "Start date", c.started_on, "date")}</div>
+  ${f("s-started", "Start date (their first day of leads)", c.started_on, "date")}<p class="small muted" style="margin-top:6px">Reports start from this month, and on upload anything before this date is left out, so a previous partner's calls never land here.</p></div>
   <div class="card mt12"><h2 style="font-size:16px;font-weight:600">Plan</h2><div class="two"><label class="fld"><span>Package</span><select id="s-pkg">${["Starter", "Growth", "Dominator", "Starter (trial)", "Custom"].map((n) => `<option ${c.package_name === n ? "selected" : ""}>${n}</option>`).join("")}</select></label>${f("s-fee", "Monthly fee (ex GST)", c.monthly_fee, "number")}</div><div class="two">${f("s-tmin", "Lead target min", c.lead_target_min, "number")}${f("s-tmax", "Lead target max", c.lead_target_max, "number")}</div><div class="two">${f("s-bill", "Billing day of month", c.billing_day, "number", 'min="1" max="28"')}${f("s-avg", "Average job value (your estimate)", c.avg_job_value, "number")}</div><p class="small muted mt8">Shown as "Est." on every lead that has no estimate of its own. A CSV "Value" column sets per-lead estimates.</p>
   <div class="mt12"><div class="switch"><div><b>Show Google Ads spend</b><small>Off by default. Turning this on reveals your margin.</small></div><button class="tog ${c.show_ad_spend ? "on" : ""}" id="s-ads"></button></div></div></div>
   ${isNew && DB.clients.some((x) => !x.active) ? `<div class="card mt12"><h2 style="font-size:16px;font-weight:600">Replacing a past partner?</h2><p class="small muted mt8">Pick who they're taking over from and the landing page's enquiry connection moves to the new partner, so the page needs no change. Region, trade and plan are copied in to save typing.</p><label class="fld"><span>Takes over from</span><select id="s-takeover"><option value="">Nobody, brand new region</option>${DB.clients.filter((x) => !x.active).map((x) => `<option value="${x.id}">${h(x.business_name)} · ${h(x.region)}</option>`).join("")}</select></label></div>` : ""}
@@ -940,7 +1008,7 @@ async function renderSettings(ctx) {
       const from = $("s-takeover") && $("s-takeover").value; if (from) { try { await api.transferWebhook(from, saved.id); DB.keys = {}; } catch (ex) { toast("Partner saved, but the enquiry connection didn't move: " + ex.message, true); } }
       const pw = $("s-pass").value.trim(); let note = "";
       if (pw || (isNew && v.email)) { if (!v.email) note = " · no email, so no login yet"; else if (!pw) note = " · no password set, they can use Set up your login"; else { try { await api.createLogin(saved.id, v.email, pw); note = " · login ready"; } catch (ex) { note = " · login not created: " + ex.message; } } }
-      DB.history = {}; await refreshAdmin(); toast((isNew ? "Partner created" : "Saved") + note, /not created/.test(note)); setTimeout(() => go(`/admin/client/${saved.id}`), 600); }
+      DB.history = {}; await refreshAdmin(); toast((isNew ? "Partner created" : "Saved") + note + (isNew ? " · now drop in their data" : ""), /not created/.test(note)); setTimeout(() => go(isNew ? `/admin/upload/${saved.id}` : `/admin/client/${saved.id}`), 600); }
     catch (ex) { toast(ex.message, true); btn.removeAttribute("disabled"); } };
   $("s-sendlogin").onclick = () => { const v = read(); const pw = $("s-pass").value.trim() || "(set a password first)"; copyText(`Hey ${v.contact_name}, your LeadHive portal is live.\n\nLog in: ${PORTAL_URL}\nEmail: ${v.email || "(add their email)"}\nPassword: ${pw}\n\nYou'll see every call and web enquiry, listen to recordings, and get my monthly notes there. Add it to your home screen and it works like an app. When a job lands, tap Won on that lead and put in what it was worth. Ongoing or Lost for the rest. Takes seconds and it shows your real return.\n\n${JOE.name}`, "Login message copied"); };
   const off = $("s-off"); if (off) off.onclick = () => { $("off-box").classList.toggle("hidden"); $("off-box").scrollIntoView({ behavior: "smooth", block: "center" }); };

@@ -115,9 +115,19 @@ Headers are matched loosely (case and spaces ignored). Dates are read in the par
 
 A file that spans several months is split automatically ("Import every month in this file"
 is on by default when more than one month is detected). A partner who has been running for
-five months can be loaded from one export. Notes and ad spend still apply to the month picked
-at the top; add the other months' notes afterwards from the partner's page ("Calls only · add
-notes").
+five months can be loaded from one export.
+
+**Backdating a new partner in one go.** Creating a partner takes you straight to their upload
+screen. Drop their Nimbata export (and web-enquiries CSV) covering every month so far and a
+**Create a report for every month** card appears: one tap imports everything and publishes a
+report for each finished month (leads, calls, web enquiries, week-by-week split, and a summary
+written from the numbers). The month picked at the top uses your notes if you wrote them; the
+current month stays as "this month so far"; months that already have a report are left alone;
+no emails go out. Edit any month's notes afterwards from the partner's page.
+
+**Start date.** Set it on the new-partner form or right on the upload screen. Anything before it
+is left out on upload, so a previous partner's calls never land on the new one. If everything in
+the file is earlier than the start date, the upload screen offers to start from the first lead.
 
 ### Web enquiries by CSV
 
