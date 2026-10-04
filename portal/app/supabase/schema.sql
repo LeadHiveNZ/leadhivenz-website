@@ -482,6 +482,61 @@ revoke all on function public.merge_month_calls(uuid, text, jsonb) from public;
 grant execute on function public.merge_month_calls(uuid, text, jsonb) to authenticated;
 
 
+
+-- ───────────────────────────── admin RPC: merge web enquiries from a CSV ───────────
+-- For enquiries that arrived by email before the landing page webhook was connected. Matches on
+-- phone digits + time (within 10 minutes) so re-uploads are safe; partner tags are kept.
+create or replace function public.merge_enquiries(p_client uuid, p_rows jsonb)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare n_ins int := 0; n_upd int := 0;
+begin
+  if not public.is_admin() then raise exception 'admin only'; end if;
+  drop table if exists _enq;
+  create temp table _enq on commit drop as
+    select distinct on (received_at, phone) *
+    from (
+      select (r->>'received_at')::timestamptz        as received_at,
+             coalesce(r->>'name', '')                as name,
+             coalesce(r->>'phone', '')               as phone,
+             coalesce(r->>'suburb', '')              as suburb,
+             coalesce(r->>'message', '')             as message,
+             coalesce((r->>'is_urgent')::boolean, false) as is_urgent,
+             nullif(r->>'page', '')                  as page,
+             coalesce(nullif(r->>'source',''), 'website') as source,
+             nullif(r->>'estimated_value', '')::numeric as estimated_value
+      from jsonb_array_elements(p_rows) r
+    ) x order by received_at, phone;
+
+  with matched as (
+    select e.id as enq_id, n.* from _enq n
+    join lateral (
+      select id from public.enquiries e
+      where e.client_id = p_client
+        and regexp_replace(e.phone, '\D', '', 'g') = regexp_replace(n.phone, '\D', '', 'g')
+        and abs(extract(epoch from (e.received_at - n.received_at))) < 600
+      limit 1) e on true
+  ), upd as (
+    update public.enquiries e set name = case when m.name <> '' then m.name else e.name end, suburb = case when m.suburb <> '' then m.suburb else e.suburb end,
+      message = case when m.message <> '' then m.message else e.message end, is_urgent = m.is_urgent or e.is_urgent, page = coalesce(m.page, e.page),
+      estimated_value = coalesce(m.estimated_value, e.estimated_value)
+    from matched m where e.id = m.enq_id returning e.id
+  ) select count(*) into n_upd from upd;
+
+  with ins as (
+    insert into public.enquiries (client_id, received_at, name, phone, suburb, message, is_urgent, page, source, estimated_value)
+    select p_client, n.received_at, n.name, n.phone, n.suburb, n.message, n.is_urgent, n.page, n.source, n.estimated_value
+    from _enq n
+    where not exists (
+      select 1 from public.enquiries e where e.client_id = p_client
+        and regexp_replace(e.phone, '\D', '', 'g') = regexp_replace(n.phone, '\D', '', 'g')
+        and abs(extract(epoch from (e.received_at - n.received_at))) < 600)
+    returning id
+  ) select count(*) into n_ins from ins;
+  return jsonb_build_object('inserted', n_ins, 'updated', n_upd);
+end $$;
+revoke all on function public.merge_enquiries(uuid, jsonb) from public;
+grant execute on function public.merge_enquiries(uuid, jsonb) to authenticated;
+
 -- ───────────────────────────── region history (aggregates only) ────────────────
 -- A partner who replaced someone in a region can see the region's monthly numbers from before
 -- they joined: leads, calls, answered, enquiries and estimated value. Never callers, recordings,

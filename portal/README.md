@@ -111,7 +111,18 @@ Headers are matched loosely (case and spaces ignored). Dates are read in the par
 | Value      | Value, Lead Value, Estimate, Job Value                         | your estimate for that job, shown as "Est." on the lead |
 | Optional   | Tracking Number, Source, Campaign, Keyword, City, Call ID, Notes | kept in `raw`                           |
 
-Only rows dated in the selected month are imported.
+A file that spans several months is split automatically ("Import every month in this file"
+is on by default when more than one month is detected). A partner who has been running for
+five months can be loaded from one export. Notes and ad spend still apply to the month picked
+at the top; add the other months' notes afterwards from the partner's page ("Calls only · add
+notes").
+
+### Web enquiries by CSV
+
+Until a landing page has the webhook, its enquiries arrive as emails. Drop a CSV with
+`Date, Name, Phone, Suburb, Message, Urgent, Page` into the second zone on the upload screen;
+every month in it is imported and re-uploads are matched on phone + time. Claude can screen
+the enquiry emails in hello@leadhivenz.com and produce that CSV per partner.
 
 ## Website enquiries land live
 

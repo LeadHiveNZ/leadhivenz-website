@@ -165,6 +165,7 @@ function makeSupabaseApi() {
     async setAdSpend(month_id, ad_spend) { await q(sb.from("month_private").upsert({ month_id, ad_spend })); },
     async replaceMonthCalls(cid, ym, rows) { const n = await q(sb.rpc("replace_month_calls", { p_client: cid, p_ym: ym, p_rows: rows })); return { inserted: Number(n) || 0, updated: 0, replaced: true }; },
     async mergeMonthCalls(cid, ym, rows) { const r = await q(sb.rpc("merge_month_calls", { p_client: cid, p_ym: ym, p_rows: rows })); return { inserted: Number(r && r.inserted) || 0, updated: Number(r && r.updated) || 0 }; },
+    async mergeEnquiries(cid, rows) { const r = await q(sb.rpc("merge_enquiries", { p_client: cid, p_rows: rows })); return { inserted: Number(r && r.inserted) || 0, updated: Number(r && r.updated) || 0 }; },
     async uploadPdf(cid, ym, file) { const path = `${cid}/${ym}.pdf`; const { error } = await sb.storage.from("reports").upload(path, file, { upsert: true, contentType: "application/pdf" }); if (error) throw error; return path; },
     async uploadRecording(cid, callId, file) { const ext = (file.name.split(".").pop() || "mp3").toLowerCase(); const path = `${cid}/${callId}.${ext}`; const { error } = await sb.storage.from("recordings").upload(path, file, { upsert: true, contentType: file.type || "audio/mpeg" }); if (error) throw error; return path; },
     async signedUrl(bucket, path) { const { data, error } = await sb.storage.from(bucket).createSignedUrl(path, 3600); if (error) throw error; return data.signedUrl; },
@@ -239,6 +240,15 @@ function makeDemoApi() {
       }
       persist(); return { inserted, updated };
     },
+    async mergeEnquiries(cid, rows) {
+      const digits = (s) => String(s || "").replace(/\D/g, ""); let inserted = 0, updated = 0; const c = D.clients.find((x) => x.id === cid);
+      for (const r of rows) {
+        const o = D.enquiries.find((x) => x.client_id === cid && digits(x.phone) === digits(r.phone) && Math.abs(new Date(x.received_at) - new Date(r.received_at)) < 600000);
+        if (o) { Object.assign(o, { name: r.name || o.name, suburb: r.suburb || o.suburb, message: r.message || o.message, is_urgent: r.is_urgent || o.is_urgent, page: r.page || o.page }); updated++; }
+        else { const p = window.LEADHIVE_DEMO.tzParts(new Date(r.received_at).getTime(), (c && c.timezone) || "Pacific/Auckland"); D.enquiries.push({ id: uid(), client_id: cid, ym: `${p.year}-${p.month}`, received_at: r.received_at, name: r.name || "", phone: r.phone || "", suburb: r.suburb || "", message: r.message || "", is_urgent: !!r.is_urgent, page: r.page || null, source: r.source || "website", estimated_value: r.estimated_value ?? null, client_status: "new", job_value: 0, client_note: "" }); inserted++; }
+      }
+      persist(); return { inserted, updated };
+    },
     async uploadPdf(cid, ym) { await sleep(300); return `${cid}/${ym}.pdf`; },
     async uploadRecording(cid, callId) { await sleep(300); return `${cid}/${callId}.mp3`; },
     async signedUrl(bucket) { return bucket === "recordings" ? demoRecording() : "data:application/pdf;base64,JVBERi0xLjQKJSBkZW1vCg=="; },
@@ -305,9 +315,9 @@ function monthStats(c, ym) {
     cplFee: leads ? fee / leads : 0, adSpend: m && m.ad_spend != null ? Number(m.ad_spend) : null, cplAd: m && m.ad_spend && leads ? Number(m.ad_spend) / leads : 0, month: m,
     target: leads >= c.lead_target_min ? (leads > c.lead_target_max ? "above" : "on") : "below" };
 }
-function clientMonths(cid) {
+function clientMonths(cid) { // every month the partner has data for (published notes or not), newest first
   const set = new Set(DB.months.filter((m) => m.client_id === cid && m.status === "published").map((m) => m.ym));
-  const cur = CUR_YM(); for (const x of DB.calls) if (x.client_id === cid && x.ym === cur) set.add(cur); for (const x of DB.enquiries) if (x.client_id === cid && x.ym === cur) set.add(cur);
+  for (const x of DB.calls) if (x.client_id === cid && x.ym) set.add(x.ym); for (const x of DB.enquiries) if (x.client_id === cid && x.ym) set.add(x.ym);
   return [...set].sort().reverse();
 }
 const countFor = (cid, ym) => DB.counts.find((r) => r.client_id === cid && r.ym === ym) || { calls: 0, answered: 0, enquiries: 0, leads: 0, won: 0, won_value: 0 };
@@ -373,6 +383,34 @@ function parseOutcome(v, durSec) {
   if (/missed|no answer|noanswer|unanswered|busy|failed|abandon|not answered|ringout|no-answer/.test(v)) return "missed";
   if (/answer|complete|connect|success|yes|true/.test(v)) return "answered";
   return durSec >= 20 ? "answered" : "missed";
+}
+const ENQ_COLS = {
+  datetime: ["datetime", "receivedat", "received", "date", "timestamp", "sent", "submitted"],
+  time: ["time"],
+  name: ["name", "fullname", "customer", "contact"],
+  phone: ["phone", "mobile", "number", "tel", "telephone"],
+  suburb: ["suburb", "area", "location", "city", "town"],
+  message: ["message", "issue", "job", "details", "enquiry", "description", "notes"],
+  urgent: ["urgent", "isurgent", "timing", "urgency", "priority"],
+  page: ["page", "url", "source page", "landingpage"],
+  value: ["value", "estimate", "estimatedvalue", "jobvalue"],
+};
+function mapEnqColumns(headers) {
+  const nh = headers.map(norm); const map = {}; const used = new Set();
+  for (const [field, aliases] of Object.entries(ENQ_COLS)) {
+    for (const a of aliases) { const ix = nh.findIndex((x, i) => x === norm(a) && !used.has(i)); if (ix >= 0) { map[field] = ix; used.add(ix); break; } }
+    if (map[field] === undefined) for (const a of aliases) { const ix = nh.findIndex((x, i) => x.includes(norm(a)) && !used.has(i)); if (ix >= 0) { map[field] = ix; used.add(ix); break; } }
+  }
+  return map;
+}
+function rowsToEnquiries(rows, map) {
+  const out = []; const skipped = [];
+  for (let i = 1; i < rows.length; i++) { const r = rows[i]; const g = (f) => (map[f] === undefined ? "" : String(r[map[f]] ?? "").trim());
+    const dt = parseDate(g("datetime"), map.time !== undefined && map.time !== map.datetime ? g("time") : ""); if (!dt) { skipped.push(i + 1); continue; }
+    const urg = g("urgent").toLowerCase(); const v = parseFloat(String(g("value")).replace(/[^0-9.]/g, ""));
+    out.push({ received_at: dt.date.toISOString(), ym: dt.ym, name: g("name"), phone: g("phone"), suburb: g("suburb"), message: g("message").slice(0, 3000), is_urgent: /yes|true|1|urgent|asap|soon as possible|today/.test(urg), page: g("page") || null, source: "website", estimated_value: isFinite(v) && v > 0 ? v : null });
+  }
+  return { enquiries: out, skipped };
 }
 function rowsToCalls(rows, map) {
   const headers = rows[0]; const out = []; const skipped = [];
@@ -745,16 +783,18 @@ function renderAdmin() {
 function renderAdminClient(ctx) {
   const c = client(ctx.args[0]); if (!c) return go("/admin");
   TZ = tzOf(c);
-  const ms = DB.months.filter((m) => m.client_id === c.id).sort((a, b) => (a.ym < b.ym ? 1 : -1)); const s = clientStatus(c); const cur = CUR_YM();
+  const s = clientStatus(c); const cur = CUR_YM();
+  const noteYms = new Set(DB.months.filter((m) => m.client_id === c.id).map((m) => m.ym)); const dataYms = new Set([...DB.calls, ...DB.enquiries].filter((x) => x.client_id === c.id && x.ym && x.ym !== cur).map((x) => x.ym));
+  const ms = [...new Set([...noteYms, ...dataYms])].sort().reverse().map((ym) => DB.months.find((m) => m.client_id === c.id && m.ym === ym) || { ym, client_id: c.id, status: "none", ad_spend: null });
   const live = leadsFor(c.id, cur);
   app().innerHTML = topBar({ title: h(c.business_name), sub: `${h(c.contact_name)} · ${h(c.package_name)} · ${money(c.monthly_fee)}/mo`, back: "/admin" }) + `<div class="shell">
   ${c.active ? "" : `<div class="card mt16" style="background:var(--bad-bg);border-color:#F2C9C9"><b style="color:var(--bad)">Past partner · left ${c.churned_on ? fmtDate(c.churned_on + "T12:00:00Z") : "–"}${c.churn_reason ? " · " + h(CHURN_REASONS[c.churn_reason] || c.churn_reason) : ""}</b>${c.churn_note ? `<p class="small mt8" style="color:#7A2E2E">${h(c.churn_note)}</p>` : ""}<p class="small mt8" style="color:#7A2E2E">Their login is paused and their webhook is off. Everything is kept for a win-back.</p><button class="btn navy mt12" id="react">Reactivate partner</button></div>`}
   <div class="mt16"><span class="chip ${s.cls}"><i></i>${s.l}</span> <span class="chip">${c.lead_target_min}–${c.lead_target_max} leads</span> <span class="chip">${h(c.country)}</span>${c.predecessor_id && client(c.predecessor_id) ? ` <span class="chip blue">Took over from ${h(client(c.predecessor_id).business_name)}</span>` : ""} <span class="chip ${DB.seen[c.id] && (Date.now() - new Date(DB.seen[c.id])) / 864e5 < 14 ? "" : "warn"}">${agoText(DB.seen[c.id])}</span></div>
   <div class="btn-row mt12"><a class="btn primary" href="#/admin/upload/${c.id}">${ICON.upload}Upload month</a><a class="btn ghost" href="#/as/${c.id}/home">View as ${h(c.contact_name || "partner")}</a></div>
   <div class="btn-row" style="margin-top:8px"><a class="btn ghost sm" style="flex:1" href="#/admin/settings/${c.id}">${ICON.cog}Settings &amp; login</a><button class="btn ghost sm" style="flex:1" id="copy-hook">${ICON.copy}Enquiry webhook</button></div>
-  <div class="sec"><div class="sec-h"><h2>Months</h2></div><div class="list">${ms.length ? ms.map((m) => { const st = monthStats(c, m.ym); return `<a class="li" href="#/admin/upload/${c.id}/${m.ym}"><div class="grow"><div class="t1"><span>${ymLabel(m.ym)}</span>${m.status === "published" ? `<span class="chip good">Published</span>` : `<span class="chip warn">Draft</span>`}</div><div class="t2"><span class="tx">${st.leads} leads · ${st.calls} calls · ${st.missedRate}% missed · ${st.enq} web${st.adSpend ? ` · ads ${money(st.adSpend)}${st.leads ? ` (${money(st.cplAd)}/lead)` : ""}` : ""}</span></div></div><span class="chev">${ICON.chev}</span></a>`; }).join("") : `<div class="empty">No months uploaded yet.</div>`}</div></div>
+  <div class="sec"><div class="sec-h"><h2>Months</h2></div><div class="list">${ms.length ? ms.map((m) => { const st = monthStats(c, m.ym); return `<a class="li" href="#/admin/upload/${c.id}/${m.ym}"><div class="grow"><div class="t1"><span>${ymLabel(m.ym)}</span>${m.status === "published" ? `<span class="chip good">Published</span>` : m.status === "draft" ? `<span class="chip warn">Draft</span>` : `<span class="chip">Calls only · add notes</span>`}</div><div class="t2"><span class="tx">${st.leads} leads · ${st.calls} calls · ${st.missedRate}% missed · ${st.enq} web${st.adSpend ? ` · ads ${money(st.adSpend)}${st.leads ? ` (${money(st.cplAd)}/lead)` : ""}` : ""}</span></div></div><span class="chev">${ICON.chev}</span></a>`; }).join("") : `<div class="empty">No months uploaded yet.</div>`}</div></div>
   <div class="sec"><div class="sec-h"><h2>${ymLabel(cur, false)} so far</h2><a href="#/as/${c.id}/leads/${cur}">${live.length} lead${live.length === 1 ? "" : "s"}</a></div><div class="list">${live.length ? live.slice(0, 4).map((x) => leadRow(x, `/as/${c.id}`, null)).join("") : `<div class="empty">Nothing logged yet this month. Web enquiries land here live once the webhook is on the landing page; calls arrive with the CSV.</div>`}</div></div>
-  <div class="sec"><div class="sec-h"><h2>Margin (admin only)</h2></div><div class="card">${ms.filter((m) => m.status === "published").slice(0, 3).map((m) => { const ad = Number(m.ad_spend) || 0; const fee = Number(c.monthly_fee) || 0; return `<div class="rpt-k"><span>${ymLabel(m.ym, false)}</span><b>${money(fee - ad)} <span class="muted small">of ${money(fee)} · ${pct(fee - ad, fee)}%</span></b></div>`; }).join("") || `<div class="muted small">Nothing published yet.</div>`}<p class="small muted mt8">Partners never see ad spend unless you switch it on in Settings.</p></div></div></div>`;
+  <div class="sec"><div class="sec-h"><h2>Margin (admin only)</h2></div><div class="card">${ms.filter((m) => m.status === "published" && m.ad_spend != null).slice(0, 3).map((m) => { const ad = Number(m.ad_spend) || 0; const fee = Number(c.monthly_fee) || 0; return `<div class="rpt-k"><span>${ymLabel(m.ym, false)}</span><b>${money(fee - ad)} <span class="muted small">of ${money(fee)} · ${pct(fee - ad, fee)}%</span></b></div>`; }).join("") || `<div class="muted small">Nothing published yet.</div>`}<p class="small muted mt8">Partners never see ad spend unless you switch it on in Settings.</p></div></div></div>`;
   $("copy-hook").onclick = async () => { try { const key = DB.keys[c.id] || (DB.keys[c.id] = await api.getWebhookKey(c.id)); copyText(`POST ${PORTAL_URL}/api/enquiry\nx-leadhive-key: ${key}\n{ "name", "phone", "suburb", "issue", "isUrgent", "page" }`, "Webhook details copied"); } catch (e) { toast(e.message, true); } };
   const ra = $("react"); if (ra) ra.onclick = async () => { try { ra.setAttribute("disabled", ""); await api.reactivateClient(c.id); Object.assign(c, { active: true, churned_on: null, churn_reason: null, churn_note: "" }); toast(`${c.business_name} is back`); route(); } catch (e) { toast(e.message, true); ra.removeAttribute("disabled"); } };
 }
@@ -762,7 +802,7 @@ function renderUpload(ctx) {
   const pre = ctx.args[0] ? client(ctx.args[0]) : null; const cur = CUR_YM(); const preYm = ctx.args[1] || ymAdd(cur, -1);
   if (pre) TZ = tzOf(pre);
   const existing = pre ? monthRec(pre.id, preYm) : null;
-  const state = { cid: pre ? pre.id : (DB.clients.find((c) => c.active) || {}).id || "", ym: preYm, calls: [], map: {}, headers: [], skipped: [], fileName: "", pdf: null };
+  const state = { cid: pre ? pre.id : (DB.clients.find((c) => c.active) || {}).id || "", ym: preYm, calls: [], map: {}, headers: [], skipped: [], fileName: "", pdf: null, enquiries: [], enqSkipped: [], enqFile: "" };
   const ymOpts = []; for (let i = 0; i < 12; i++) ymOpts.push(ymAdd(cur, -i));
   const pts = existing && existing.points ? existing.points : [];
   app().innerHTML = topBar({ title: "Upload a month", sub: pre ? h(pre.business_name) : "Pick a partner", back: pre ? `/admin/client/${pre.id}` : "/admin" }) + `<div class="shell">
@@ -773,7 +813,11 @@ function renderUpload(ctx) {
   <label class="drop" id="drop"><b>Drop the CSV here or tap to choose</b>Nimbata → Call log → Export. Columns are matched automatically (date, caller, duration, outcome, recording, AI summary, value, keyword…).<input type="file" id="u-file" accept=".csv,text/csv,.txt,.tsv"></label>
   <details class="mt8"><summary>Or paste the CSV text</summary><textarea id="u-paste" class="mt8" style="width:100%;min-height:90px;font:12px ui-monospace,Menlo,monospace;padding:10px;border:1px solid var(--rule);border-radius:10px;background:var(--card)" placeholder="Date,Time,Caller,Call Duration,Outcome,..."></textarea><button class="btn ghost sm mt8" id="u-parse">Parse pasted text</button></details>
   <div id="u-preview"></div>
-  <label class="switch" style="margin-top:10px;border-top:0;padding:8px 0 0"><div><b style="font-size:13.5px">Replace the month instead of adding to it</b><small>Only tick this if the file is the complete month and you want calls that aren't in it removed. Tags are still kept on matching calls.</small></div><button type="button" class="tog" id="u-replace" aria-label="toggle"></button></label>
+  <label class="switch hidden" id="u-allwrap" style="margin-top:10px;border-top:0;padding:8px 0 0"><div><b style="font-size:13.5px">Import every month in this file</b><small id="u-allhint">The file covers more than one month. Each call goes to its own month automatically.</small></div><button type="button" class="tog on" id="u-all" aria-label="toggle"></button></label>
+  <label class="switch" style="margin-top:10px;border-top:0;padding:8px 0 0"><div><b style="font-size:13.5px">Replace instead of adding</b><small>Only tick this if the file is complete and you want calls that aren't in it removed. Tags are still kept on matching calls.</small></div><button type="button" class="tog" id="u-replace" aria-label="toggle"></button></label>
+  <div class="sec-h" style="margin-top:16px"><h2 style="font-size:14.5px">Web enquiries CSV (optional)</h2></div>
+  <label class="drop" id="drop-enq" style="padding:14px 16px"><b style="font-size:14px">Drop an enquiries file here</b>For enquiries that came in by email before the landing page was connected. Columns: Date, Name, Phone, Suburb, Message, Urgent, Page. Every month in the file is imported.<input type="file" id="u-enqfile" accept=".csv,text/csv,.txt,.tsv"></label>
+  <div id="u-enqpreview"></div>
   <p class="small muted mt8">No CSV? You can still publish the notes on their own, or just save the ad spend.</p></div>
   <div class="sec"><div class="sec-h"><h2>2 · Notes for the partner</h2><button id="u-copy">${ICON.copy} Copy summary for Claude</button></div>
   <div class="card"><label class="fld" style="margin-top:0"><span>Summary (plain English, like a text to a mate)</span><textarea id="u-sum" placeholder="A steady month. 22 leads, inside the plan. The one thing to work on is...">${h(existing ? existing.summary : "")}</textarea></label>
@@ -786,8 +830,11 @@ function renderUpload(ctx) {
     if (!state.headers.length) { prev.innerHTML = ""; $("s2").classList.remove("on"); return; }
     const sm = importSummary(state.calls); const other = Object.keys(sm.byYm).filter((y) => y !== state.ym); const inMonth = state.calls.filter((c) => c.ym === state.ym).length;
     const fields = [["datetime", "Date / time"], ["time", "Time"], ["caller", "Caller"], ["duration", "Duration"], ["outcome", "Outcome"], ["recording", "Recording"], ["summary", "AI summary"], ["value", "Estimate"], ["keyword", "Keyword"], ["campaign", "Campaign"], ["city", "City"], ["notes", "Notes"], ["callId", "Call ID"], ["source", "Source"]];
-    prev.innerHTML = `<div class="card mt12"><div class="row"><div class="grow"><b style="font-size:15px">${h(state.fileName || "Pasted CSV")}</b><div class="small muted">${state.headers.length} columns · ${state.calls.length} calls parsed${state.skipped.length ? ` · ${state.skipped.length} rows skipped (no date)` : ""}</div></div><span class="chip ${other.length ? "warn" : "good"}">${other.length ? "Check months" : "Looks good"}</span></div>
-    ${other.length ? `<p class="small mt8" style="color:var(--warn);font-weight:600">${other.map((y) => `${sm.byYm[y]} call${sm.byYm[y] === 1 ? "" : "s"} dated ${ymLabel(y, false)}`).join(", ")} in this file. Only the ${inMonth} ${ymLabel(state.ym, false)} rows will be imported.</p>` : ""}
+    const months = Object.keys(sm.byYm).sort();
+    $("u-allwrap").classList.toggle("hidden", months.length < 2);
+    if (months.length >= 2) $("u-allhint").textContent = `${months.length} months in this file: ${months.map((y) => `${ymLabel(y, false)} (${sm.byYm[y]})`).join(", ")}. Each call goes to its own month. Notes below are for ${ymLabel(state.ym, false)} only.`;
+    prev.innerHTML = `<div class="card mt12"><div class="row"><div class="grow"><b style="font-size:15px">${h(state.fileName || "Pasted CSV")}</b><div class="small muted">${state.headers.length} columns · ${state.calls.length} calls parsed${state.skipped.length ? ` · ${state.skipped.length} rows skipped (no date)` : ""}</div></div><span class="chip ${months.length > 1 ? "blue" : "good"}">${months.length > 1 ? `${months.length} months` : "Looks good"}</span></div>
+    ${other.length ? `<p class="small mt8" style="color:var(--ink-2)">${months.map((y) => `${ymLabel(y, false)}: ${sm.byYm[y]}`).join(" · ")}. With "Import every month" on, all of them load; off, only the ${inMonth} ${ymLabel(state.ym, false)} rows do.</p>` : ""}
     <div class="kpis" style="margin-top:12px"><div class="kpi"><div class="l">Calls</div><div class="v">${sm.n}</div></div><div class="kpi"><div class="l">Missed</div><div class="v">${sm.missed}<small>${pct(sm.missed, sm.n)}%</small></div></div><div class="kpi"><div class="l">Avg answered</div><div class="v">${dur(sm.avg)}</div></div><div class="kpi"><div class="l">Recordings</div><div class="v">${sm.recordings}</div></div></div>
     <details class="mt12"><summary>Column mapping</summary><div class="map mt8">${fields.map(([f, l]) => `<div class="${state.map[f] !== undefined ? "ok" : ""}"><span>${l}</span><span>${state.map[f] !== undefined ? h(state.headers[state.map[f]]) : "not found"}</span></div>`).join("")}</div></details>
     <details class="mt8"><summary>First rows</summary><div class="tbl-wrap mt8"><table class="tbl"><tr><th>When</th><th>Caller</th><th class="r">Dur</th><th>Outcome</th><th>Rec</th></tr>${state.calls.slice(0, 6).map((c) => `<tr><td>${fmtDate(c.called_at)} ${fmtTime(c.called_at)}</td><td>${h(c.caller_number)}</td><td class="r">${durShort(c.duration_sec)}</td><td>${c.outcome}</td><td>${c.recording_url ? "✓" : ""}</td></tr>`).join("")}</table></div></details></div>`;
@@ -797,12 +844,18 @@ function renderUpload(ctx) {
   $("u-cid").onchange = (e) => go(`/admin/upload/${e.target.value}/${state.ym}`);
   $("u-ym").onchange = (e) => go(`/admin/upload/${state.cid}/${e.target.value}`);
   $("u-file").onchange = (e) => { const f = e.target.files[0]; if (!f) return; f.text().then((t) => ingest(t, f.name)); };
+  const enqPrev = $("u-enqpreview");
+  const ingestEnq = (text, name) => { const rows = parseCSV(text); if (rows.length < 2) { toast("Couldn't read that file", true); return; } const map = mapEnqColumns(rows[0]); const r = rowsToEnquiries(rows, map); state.enquiries = r.enquiries; state.enqSkipped = r.skipped; state.enqFile = name || ""; const by = {}; r.enquiries.forEach((x) => (by[x.ym] = (by[x.ym] || 0) + 1));
+    enqPrev.innerHTML = `<div class="card mt8" style="padding:12px 14px"><div class="row"><div class="grow"><b style="font-size:14px">${h(state.enqFile)}</b><div class="small muted">${r.enquiries.length} enquiries${r.skipped.length ? ` · ${r.skipped.length} rows skipped (no date)` : ""} · ${Object.keys(by).sort().map((y) => `${ymLabel(y, false)} ${by[y]}`).join(" · ")}</div></div><span class="chip ${map.phone !== undefined && map.datetime !== undefined ? "good" : "warn"}">${map.phone !== undefined && map.datetime !== undefined ? "Looks good" : "Check columns"}</span></div></div>`; toast(`${r.enquiries.length} enquiries parsed`); };
+  $("u-enqfile").onchange = (e) => { const f = e.target.files[0]; if (!f) return; f.text().then((t) => ingestEnq(t, f.name)); };
+  const dropE = $("drop-enq"); ["dragenter", "dragover"].forEach((ev) => dropE.addEventListener(ev, (e) => { e.preventDefault(); dropE.classList.add("on"); })); ["dragleave", "drop"].forEach((ev) => dropE.addEventListener(ev, (e) => { e.preventDefault(); dropE.classList.remove("on"); })); dropE.addEventListener("drop", (e) => { const f = e.dataTransfer.files[0]; if (f) f.text().then((t) => ingestEnq(t, f.name)); });
   const drop = $("drop"); ["dragenter", "dragover"].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add("on"); })); ["dragleave", "drop"].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove("on"); })); drop.addEventListener("drop", (e) => { const f = e.dataTransfer.files[0]; if (f) f.text().then((t) => ingest(t, f.name)); });
   $("u-parse").onclick = () => ingest($("u-paste").value, "Pasted CSV");
   $("u-sample").onclick = () => { const [y, m] = state.ym.split("-"); const csv = SAMPLE_CSV.replace(/\{M\}/g, m).replace(/\{Y\}/g, y); $("u-paste").value = csv; $("u-paste").closest("details").open = true; ingest(csv, "nimbata-sample.csv"); };
   $("u-pdf").onchange = (e) => (state.pdf = e.target.files[0] || null);
   $("u-mail").onclick = (e) => e.currentTarget.classList.toggle("on");
   $("u-replace").onclick = (e) => e.currentTarget.classList.toggle("on");
+  $("u-all").onclick = (e) => e.currentTarget.classList.toggle("on");
   $("u-copy").onclick = () => { const c = client(state.cid); const inMonth = state.calls.filter((x) => x.ym === state.ym); const sm = importSummary(inMonth.length ? inMonth : DB.calls.filter((x) => x.client_id === state.cid && x.ym === state.ym).map((x) => ({ ...x, recording_url: x.recording_url }))); const enq = DB.enquiries.filter((x) => x.client_id === state.cid && x.ym === state.ym).length; const ad = $("u-ad").value;
     const kws = [...new Set((inMonth.length ? inMonth : DB.calls.filter((x) => x.client_id === state.cid && x.ym === state.ym)).map((x) => x.keyword).filter(Boolean))].slice(0, 5);
     const src = inMonth.length ? inMonth : DB.calls.filter((x) => x.client_id === state.cid && x.ym === state.ym);
@@ -824,7 +877,12 @@ function renderUpload(ctx) {
       if (n.adSpend != null) await api.setAdSpend(month.id, n.adSpend);
       const inMonth = state.calls.filter((x) => x.ym === state.ym).map(({ ym, ...r }) => r);
       let importNote = "";
-      if (inMonth.length) { msg.textContent = `Importing ${inMonth.length} calls…`; const r = $("u-replace").classList.contains("on") ? await api.replaceMonthCalls(state.cid, state.ym, inMonth) : await api.mergeMonthCalls(state.cid, state.ym, inMonth); importNote = r.replaced ? ` · ${r.inserted} calls loaded` : ` · ${r.inserted} new, ${r.updated} refreshed`; }
+      const allMonths = !$("u-allwrap").classList.contains("hidden") && $("u-all").classList.contains("on");
+      const groups = {}; (allMonths ? state.calls : state.calls.filter((x) => x.ym === state.ym)).forEach((x) => { const { ym, ...r } = x; (groups[ym] ||= []).push(r); });
+      const yms = Object.keys(groups).sort(); let tIns = 0, tUpd = 0;
+      for (const y of yms) { msg.textContent = `Importing ${groups[y].length} calls for ${ymLabel(y, false)}…`; const r = $("u-replace").classList.contains("on") ? await api.replaceMonthCalls(state.cid, y, groups[y]) : await api.mergeMonthCalls(state.cid, y, groups[y]); tIns += r.inserted; tUpd += r.updated; }
+      if (yms.length) importNote = yms.length > 1 ? ` · ${yms.length} months: ${tIns} calls new, ${tUpd} refreshed` : ` · ${tIns} new, ${tUpd} refreshed`;
+      if (state.enquiries.length) { msg.textContent = `Importing ${state.enquiries.length} enquiries…`; const r = await api.mergeEnquiries(state.cid, state.enquiries.map(({ ym, ...e }) => e)); importNote += ` · ${r.inserted} enquiries new, ${r.updated} refreshed`; }
       await ensureClient(state.cid, true); await refreshAdmin();
       $("s3").classList.add("on");
       let mailNote = "";
