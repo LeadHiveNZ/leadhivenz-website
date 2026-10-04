@@ -34,8 +34,8 @@ Demo mode never touches the real database, so it's safe to show prospects on the
 3. Optional: paste `app/supabase/seed-demo.sql` → Run, for the demo partner.
 4. Authentication → Providers → Email → turn **off** "Confirm email" (partners log in straight
    away with the password you set them).
-5. Authentication → URL configuration → Site URL `https://portal.leadhivenz.com`, and add
-   `https://portal.leadhivenz.com/*` (and your `*.netlify.app` URL) to Redirect URLs.
+5. Authentication → URL configuration → Site URL = the portal's address (the `*.netlify.app` one,
+   or `https://portal.leadhivenz.com` once connected), and add `<that address>/*` to Redirect URLs.
 6. Project Settings → API: copy the **Project URL** and the **anon public** key into
    `app/public/config.js`. Copy the **service_role** key for Netlify (step 2). Never put the
    service_role key in config.js or send it anywhere.
@@ -49,8 +49,10 @@ Demo mode never touches the real database, so it's safe to show prospects on the
    - `SUPABASE_SERVICE_ROLE_KEY` = the service_role key
    - `RESEND_API_KEY` = your Resend key (for the "your results are in" email)
    - `RESEND_FROM_EMAIL` = `LeadHive <hello@leadhivenz.com>` (once the domain is verified in Resend)
-   - `PORTAL_URL` = `https://portal.leadhivenz.com`
-4. Deploy, then Domain settings → add `portal.leadhivenz.com` (CNAME to the Netlify site).
+   - `PORTAL_URL` (optional) = the portal's address; links otherwise follow the address the portal is open on
+4. Deploy. Optional: Site configuration → Change site name (e.g. `leadhive-portal.netlify.app`), or
+   Domain management → add `portal.leadhivenz.com`, which needs the TXT + CNAME records Netlify shows,
+   added where leadhivenz.com's DNS lives (Squarespace → Domains). The portal works either way.
 
 ### 3. You become the admin
 Open the portal → "First time here? Set up your login" → sign up as **hello@leadhivenz.com**.

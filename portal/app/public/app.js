@@ -13,9 +13,9 @@ if (!DEMO && !window.supabase) { // the Supabase library didn't load: never fall
   document.getElementById("app").innerHTML = '<div class="shell" style="padding-top:60px"><div class="card"><b>Couldn\'t load the portal</b><p class="lede" style="margin-top:8px">The connection dropped while loading. Check your signal and pull down to refresh.</p><button class="btn navy" style="margin-top:16px" onclick="location.reload()">Refresh</button></div></div>';
   throw new Error("supabase-js not loaded");
 }
-// On the temporary *.netlify.app address (or locally), links point back at the address in use, so login
-// messages and reset links work before portal.leadhivenz.com is connected. Both addresses keep working after.
-const PORTAL_URL = /\.netlify\.app$|^localhost$|^127\./.test(location.hostname) ? location.origin : (CFG.portalUrl || location.origin);
+// Links in login messages, reset emails and the webhook address use the address the portal is open on,
+// unless config.js pins one (portalUrl).
+const PORTAL_URL = (CFG.portalUrl || location.origin).replace(/\/$/, "");
 const JOE = Object.assign({ name: "Joe", phone: "", whatsapp: "", email: "hello@leadhivenz.com" }, CFG.joe || {});
 const ADMIN_EMAIL = (CFG.adminEmail || "hello@leadhivenz.com").toLowerCase();
 const LOGO = CFG.logo || "/logo.png", LOGO_SMALL = CFG.logoSmall || "/logo-small.png", LOGO_BEE = CFG.logoBee || "/logo-bee.png";

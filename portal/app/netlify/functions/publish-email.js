@@ -20,7 +20,9 @@ exports.handler = async (event) => {
   const { data: c } = await sb.from("clients").select("business_name, contact_name, email").eq("id", body.client_id).maybeSingle();
   if (!c || !c.email) return json(404, { error: "Partner has no email on file" });
 
-  const portal = process.env.PORTAL_URL || "https://portal.leadhivenz.com";
+  // The address Joe is using right now (he publishes from the portal), else PORTAL_URL, else Netlify's own site URL.
+  const origin = /^https:\/\/[a-z0-9.-]+$/i.test(event.headers.origin || "") ? event.headers.origin : "";
+  const portal = (origin || process.env.PORTAL_URL || process.env.URL || "").replace(/\/$/, "");
   const month = monthLabel(body.ym);
   const leads = Number(body.leads || 0), calls = Number(body.calls || 0), enq = Number(body.enquiries || 0);
   const missed = body.missed_rate != null ? `${Number(body.missed_rate)}% of calls missed` : "";
