@@ -165,6 +165,16 @@ change to it. Then: set the new partner's mobile, email and password, create the
 in Nimbata change the tracking number's forwarding to the new mobile. Next upload, pick the
 new partner. The old partner's history stays on their own record under Past partners.
 
+**Already set up the new partner before adding the old one?** Add the old partner afterwards:
+1. **+ New partner** with their business name, region, plan and real start date. Leave email and
+   password empty, so no login is created.
+2. **Upload month** on their page and drop the Nimbata export for their dates only (filter the
+   export to the day they finished), plus their web-enquiries CSV. Save without emailing.
+3. Settings → **Partner is leaving…** → reason, **Last day with LeadHive** (their real end date) →
+   Pause. They move to Past partners.
+4. Open the current partner → Settings → **Took over from** → pick the old partner → Save. This only
+   links the history; it doesn't move the enquiry webhook.
+
 The new partner sees the region's track record as **totals only**: leads, calls, web
 enquiries and answer rate per month from before they joined (lighter bars on their chart, and
 a "before you" list under Reports). They never see the previous partner's callers,
