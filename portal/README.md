@@ -197,6 +197,11 @@ quality, in-house, seasonal, other) and a note → **Pause their portal**. Their
 "paused" screen, their enquiry webhook stops accepting, and everything (calls, recordings,
 tags, reports) is kept. They move to **Past partners** at the bottom of the admin list with
 the reason. Open them and tap **Reactivate partner** to switch it all back on in one tap.
+**Deleting instead** (test records, or a partner set up wrong): Settings → *Delete this partner
+permanently…* → type the business name. Removes their calls, recordings, enquiries, reports and
+ad spend for good. Their login stays but is unlinked, and re-links if you create a partner with
+the same email. For a real departure, pause instead so the history survives.
+
 The admin list also shows when each partner last opened the portal; two weeks without
 opening it is your early warning.
 
