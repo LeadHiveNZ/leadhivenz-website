@@ -180,6 +180,18 @@ the reason. Open them and tap **Reactivate partner** to switch it all back on in
 The admin list also shows when each partner last opened the portal; two weeks without
 opening it is your early warning.
 
+## If something goes wrong
+
+- **Supabase SQL editor says "syntax error" partway through the schema**: the paste was cut short.
+  Copy the file from its Raw view (or GitHub's "Copy raw file" button), not by highlighting it.
+- **Netlify build fails with "Secrets scanning found secrets"**: `netlify.toml` already lists the
+  public values in `SECRETS_SCAN_OMIT_KEYS`; never commit the service role or Resend API key.
+- **"login not created: couldn't reach the server"** on an `http://` address: open the
+  `https://` address. Netlify redirects server calls to https and the browser blocks that redirect.
+- **"login not created: Admin login required"**: in Netlify, `SUPABASE_URL` must be exactly
+  `https://<project>.supabase.co` (no `/rest/v1/`) and `SUPABASE_SERVICE_ROLE_KEY` must be the
+  service_role key. Trigger a new deploy after changing either.
+
 ## Changing things later
 
 - Joe's phone / WhatsApp / email: `app/public/config.js`.
