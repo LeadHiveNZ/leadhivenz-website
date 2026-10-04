@@ -31,8 +31,10 @@ create table if not exists public.clients (
   churned_on         date,
   churn_reason       text,                           -- price, capacity, quality, in_house, seasonal, other
   churn_note         text not null default '',
+  predecessor_id     uuid references public.clients(id) on delete set null,  -- the partner this one replaced in the region
   created_at         timestamptz not null default now()
 );
+alter table public.clients add column if not exists predecessor_id uuid references public.clients(id) on delete set null;
 alter table public.clients add column if not exists avg_job_value numeric not null default 450;
 alter table public.clients add column if not exists churned_on date;
 alter table public.clients add column if not exists churn_reason text;
@@ -478,6 +480,43 @@ begin
 end $$;
 revoke all on function public.merge_month_calls(uuid, text, jsonb) from public;
 grant execute on function public.merge_month_calls(uuid, text, jsonb) to authenticated;
+
+
+-- ───────────────────────────── region history (aggregates only) ────────────────
+-- A partner who replaced someone in a region can see the region's monthly numbers from before
+-- they joined: leads, calls, answered, enquiries and estimated value. Never callers, recordings,
+-- summaries, tags or job values. Admin may pass any client id.
+create or replace function public.region_history(p_client uuid default null)
+returns table (ym text, leads bigint, calls bigint, answered bigint, enquiries bigint, est_value numeric)
+language plpgsql stable security definer set search_path = public as $$
+declare v_client uuid;
+begin
+  v_client := case when public.is_admin() and p_client is not null then p_client else public.my_client_id() end;
+  if v_client is null then return; end if;
+  return query
+  with recursive chain as (
+    select c.id, c.predecessor_id, 1 as depth from public.clients c where c.id = v_client
+    union all
+    select c.id, c.predecessor_id, chain.depth + 1 from public.clients c join chain on c.id = chain.predecessor_id where chain.depth < 6
+  ),
+  preds as (select id from chain where id <> v_client),
+  x as (
+    select cl.client_id, cl.ym, 'call'::text as kind, cl.outcome, cl.client_status, cl.estimated_value from public.calls cl
+    union all
+    select e.client_id, e.ym, 'enquiry'::text, 'answered'::text, e.client_status, e.estimated_value from public.enquiries e
+  )
+  select x.ym,
+         count(*) filter (where x.client_status <> 'spam')                       as leads,
+         count(*) filter (where x.kind = 'call')                                  as calls,
+         count(*) filter (where x.kind = 'call' and x.outcome = 'answered')       as answered,
+         count(*) filter (where x.kind = 'enquiry')                               as enquiries,
+         coalesce(sum(coalesce(x.estimated_value, c.avg_job_value)) filter (where x.client_status not in ('spam','not_lead')), 0) as est_value
+  from x join preds p on p.id = x.client_id join public.clients c on c.id = x.client_id
+  where x.ym is not null
+  group by x.ym order by x.ym;
+end $$;
+revoke all on function public.region_history(uuid) from public;
+grant execute on function public.region_history(uuid) to authenticated;
 
 -- ───────────────────────────── storage ─────────────────────────────────────
 insert into storage.buckets (id, name, public)

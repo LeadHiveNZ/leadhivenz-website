@@ -152,6 +152,11 @@ change to it. Then: set the new partner's mobile, email and password, create the
 in Nimbata change the tracking number's forwarding to the new mobile. Next upload, pick the
 new partner. The old partner's history stays on their own record under Past partners.
 
+The new partner sees the region's track record as **totals only**: leads, calls, web
+enquiries and answer rate per month from before they joined (lighter bars on their chart, and
+a "before you" list under Reports). They never see the previous partner's callers,
+recordings, summaries, tags or job values; that stays private to the old partner's record.
+
 ## When a partner leaves
 
 Admin → partner → Settings → **Partner is leaving…** → pick a reason (price, capacity, lead

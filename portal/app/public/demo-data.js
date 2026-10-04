@@ -94,7 +94,8 @@
       { id: "22222222-2222-4222-a222-222222222222", business_name: "Bayside Electrical", initials: "BE", contact_name: "Sam", email: "sam@baysideelectrical.com.au", phone: "0412 338 901", niche: "Emergency electrician", region: "Gold Coast", country: "AU", timezone: AU, package_name: "Growth", monthly_fee: 2200, lead_target_min: 25, lead_target_max: 35, started_on: m2 + "-01", billing_day: 1, show_ad_spend: false, avg_job_value: 520, active: true },
       { id: "33333333-3333-4333-a333-333333333333", business_name: "Northland Building Maintenance", initials: "NH", contact_name: "Brian", email: "nbm.br001@gmail.com", phone: "022 322 1137", niche: "Handyman", region: "Northland", country: "NZ", timezone: NZ, package_name: "Starter (trial)", monthly_fee: 1500, lead_target_min: 15, lead_target_max: 25, started_on: m1 + "-28", billing_day: 28, show_ad_spend: false, avg_job_value: 380, active: true },
     ];
-    const [mike, bay, nth] = clients;
+    clients.push({ id: "44444444-4444-4444-a444-444444444444", business_name: "Surfside Electrical", initials: "SE", contact_name: "Rob", email: "rob@surfside.com.au", phone: "0411 222 333", niche: "Emergency electrician", region: "Gold Coast", country: "AU", timezone: AU, package_name: "Growth", monthly_fee: 2200, lead_target_min: 25, lead_target_max: 35, started_on: m4 + "-01", billing_day: 1, show_ad_spend: false, avg_job_value: 520, active: false, churned_on: m2 + "-01", churn_reason: "capacity", churn_note: "Took on a big commercial contract, no room for domestic work.", predecessor_id: null });
+    const [mike, bay, nth, surf] = clients; bay.predecessor_id = surf.id;
     let calls = [], enquiries = [], months = [], secrets = {};
     clients.forEach((c) => (secrets[c.id] = "lh_demo_" + c.initials.toLowerCase() + "_0123456789abcdef"));
 
@@ -115,6 +116,8 @@
     enquiries = enquiries.concat(liveEnq);
 
     for (const [ym, nc, ne] of [[m2, 26, 4], [m1, 31, 5]]) { calls = calls.concat(genCalls(r, bay, ym, nc, { missRate: 0.12 })); enquiries = enquiries.concat(genEnquiries(r, bay, ym, ne, {})); }
+    for (const [ym, nc, ne] of [[m4, 24, 3], [m3, 29, 4]]) { calls = calls.concat(genCalls(r, surf, ym, nc, { missRate: 0.18 })); enquiries = enquiries.concat(genEnquiries(r, surf, ym, ne, {})); }
+    forceOutcomes(pick(surf, m4), 4, 1, false, AU); forceOutcomes(pick(surf, m3), 5, 1, false, AU); applyTags(pick(surf, m3), [["won", 900], ["won", 2100], ["lost"]]);
     forceOutcomes(pick(bay, m1), 3, 1, false, AU); const bs = [["won", 2900], ["won", 640], ["ongoing"], ["won", 4200], ["ongoing"], ["won", 380], ["ongoing"], ["won", 1150], ["ongoing"], ["won", 760]]; applyTags(pick(bay, m1), bs);
     forceOutcomes(pick(bay, m2), 4, 1, false, AU); applyTags(pick(bay, m2), [["won", 1800], ["ongoing"], ["won", 520], ["won", 3100], ["ongoing"], ["won", 690]]);
     // Brian's first call since launch

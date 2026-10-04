@@ -154,6 +154,7 @@ function makeSupabaseApi() {
     async upsertClient(c) { const row = { ...c }; if (!row.id) delete row.id; return q(sb.from("clients").upsert(row).select().single()); },
     async deactivateClient(cid, reason, note) { await q(sb.from("clients").update({ active: false, churned_on: new Date().toISOString().slice(0, 10), churn_reason: reason || null, churn_note: note || "" }).eq("id", cid)); },
     async getWebhookKey(cid) { const r = await q(sb.from("client_secrets").select("webhook_key").eq("client_id", cid).maybeSingle()); return r ? r.webhook_key : ""; },
+    async regionHistory(cid) { const rows = await q(sb.rpc("region_history", { p_client: cid })); return (rows || []).map((r) => ({ ym: r.ym, leads: num(r.leads), calls: num(r.calls), answered: num(r.answered), enquiries: num(r.enquiries), est_value: num(r.est_value) })); },
     async transferWebhook(fromId, toId) { // the new partner takes the old partner's key, so the landing page keeps working untouched
       const old = await q(sb.from("client_secrets").select("webhook_key").eq("client_id", fromId).maybeSingle()); if (!old) return;
       await q(sb.from("client_secrets").delete().eq("client_id", toId));
@@ -208,6 +209,16 @@ function makeDemoApi() {
     async loadLastSeen() { const m = { ...(D.seen || {}) }; const days = (n) => new Date(Date.now() - n * 864e5).toISOString(); if (!m[D.clients[0].id]) m[D.clients[0].id] = days(2); if (D.clients[1] && !m[D.clients[1].id]) m[D.clients[1].id] = days(19); return m; },
     async getWebhookKey(cid) { return D.secrets[cid] || ""; },
     async transferWebhook(fromId, toId) { if (!D.secrets[fromId]) return; D.secrets[toId] = D.secrets[fromId]; D.secrets[fromId] = "lh_demo_" + uid().replace(/-/g, "").slice(0, 20); persist(); },
+    async regionHistory(cid) {
+      const me = meSync(); if (me.role !== "admin" && cid !== me.client_id) throw new Error("Not allowed");
+      const preds = []; let cur = D.clients.find((c) => c.id === cid); let guard = 0;
+      while (cur && cur.predecessor_id && guard++ < 6) { preds.push(cur.predecessor_id); cur = D.clients.find((c) => c.id === cur.predecessor_id); }
+      if (!preds.length) return [];
+      const map = {}; const cl = (id) => D.clients.find((c) => c.id === id) || {};
+      const add = (x, kind) => { if (!preds.includes(x.client_id) || !x.ym) return; const o = (map[x.ym] ||= { ym: x.ym, leads: 0, calls: 0, answered: 0, enquiries: 0, est_value: 0 }); if (x.client_status !== "spam") o.leads++; if (kind === "call") { o.calls++; if (x.outcome === "answered") o.answered++; } else o.enquiries++; if (!["spam", "not_lead"].includes(x.client_status)) o.est_value += x.estimated_value != null ? Number(x.estimated_value) : Number(cl(x.client_id).avg_job_value) || 0; };
+      D.calls.forEach((c) => add(c, "call")); D.enquiries.forEach((e) => add(e, "enq"));
+      return Object.values(map).sort((a, b) => (a.ym < b.ym ? -1 : 1));
+    },
     async upsertMonth(m) { let row = D.months.find((x) => x.client_id === m.client_id && x.ym === m.ym); if (!row) { row = { id: uid(), ad_spend: 0, pdf_path: null, published_at: null, ...m }; D.months.push(row); } else Object.assign(row, m); persist(); return { ...row }; },
     async setAdSpend(month_id, ad_spend) { const m = D.months.find((x) => x.id === month_id); if (m) m.ad_spend = ad_spend; persist(); },
     async replaceMonthCalls(cid, ym, rows) {
@@ -240,8 +251,8 @@ function makeDemoApi() {
 const api = DEMO ? makeDemoApi() : makeSupabaseApi();
 
 /* ═══════════════════════════ cache + loaders ═══════════════════════════ */
-const DB = { me: null, clients: [], months: [], calls: [], enquiries: [], counts: [], loaded: {}, keys: {}, seen: {} };
-function resetDB() { DB.me = null; DB.clients = []; DB.months = []; DB.calls = []; DB.enquiries = []; DB.counts = []; DB.loaded = {}; DB.keys = {}; DB.seen = {}; }
+const DB = { me: null, clients: [], months: [], calls: [], enquiries: [], counts: [], loaded: {}, keys: {}, seen: {}, history: {} };
+function resetDB() { DB.me = null; DB.clients = []; DB.months = []; DB.calls = []; DB.enquiries = []; DB.counts = []; DB.loaded = {}; DB.keys = {}; DB.seen = {}; DB.history = {}; }
 async function loadBase() {
   DB.me = await api.me();
   if (!DB.me) return;
@@ -255,6 +266,7 @@ async function ensureClient(cid, force) {
   DB.months = DB.months.filter((m) => m.client_id !== cid).concat(d.months);
   DB.calls = DB.calls.filter((x) => x.client_id !== cid).concat(d.calls);
   DB.enquiries = DB.enquiries.filter((x) => x.client_id !== cid).concat(d.enquiries);
+  const c = client(cid); DB.history[cid] = c && c.predecessor_id ? await api.regionHistory(cid).catch(() => []) : [];
   DB.loaded[cid] = true;
 }
 async function refreshAdmin() { if (DB.me && DB.me.role === "admin") { const [counts, months] = await Promise.all([api.loadCounts(), api.loadMonths()]); DB.counts = counts; DB.months = months; } }
@@ -385,14 +397,14 @@ const SAMPLE_CSV = `Date,Time,Caller,Call Duration,Outcome,Tracking Number,Sourc
 04/{M}/{Y},13:10,027 555 2210,0:00,No answer,09 801 2201,Google Ads,AKL Plumber · Search,burst pipe plumber,Papakura,,c-1005,,`;
 
 /* ═══════════════════════════ charts ═══════════════════════════ */
-function columnChart({ labels, values, highlight = -1, gold = [], height = 150, valueFmt = (v) => v, tipFmt }) {
+function columnChart({ labels, values, highlight = -1, gold = [], faint = [], height = 150, valueFmt = (v) => v, tipFmt }) {
   const W = 360, H = height, padL = 6, padR = 6, padT = 18, padB = 24; const n = values.length || 1; const max = Math.max(1, ...values);
   const niceMax = (() => { const p = Math.pow(10, Math.floor(Math.log10(max))); const m = max / p; const s = m <= 1 ? 1 : m <= 2 ? 2 : m <= 5 ? 5 : 10; return s * p; })();
   const slot = (W - padL - padR) / n; const bw = Math.min(24, slot * 0.6); const y = (v) => padT + (H - padT - padB) * (1 - v / niceMax);
   let s = `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Column chart">`;
   for (const g of [0, 0.5, 1]) { const yy = y(niceMax * g); s += `<line class="grid" x1="${padL}" x2="${W - padR}" y1="${yy.toFixed(1)}" y2="${yy.toFixed(1)}"/>`; if (g > 0) s += `<text class="t" x="${W - padR}" y="${(yy - 3).toFixed(1)}" text-anchor="end">${valueFmt(niceMax * g)}</text>`; }
   values.forEach((v, i) => { const x = padL + slot * i + (slot - bw) / 2; const top = y(v); const hgt = Math.max(0, H - padB - top);
-    const fill = gold.includes(i) ? "var(--gold)" : i === highlight ? "var(--blue)" : "#C7D3DF"; const tipText = tipFmt ? tipFmt(i) : `${labels[i]}: ${valueFmt(v)}`;
+    const fill = gold.includes(i) ? "var(--gold)" : i === highlight ? "var(--blue)" : faint.includes(i) ? "#E6EBF1" : "#C7D3DF"; const tipText = tipFmt ? tipFmt(i) : `${labels[i]}: ${valueFmt(v)}`;
     s += `<rect class="hit" x="${(padL + slot * i).toFixed(1)}" y="${padT}" width="${slot.toFixed(1)}" height="${H - padT - padB}" data-tip="${h(tipText)}" tabindex="0"/>`;
     if (hgt > 0) s += `<path d="M${x.toFixed(1)},${(H - padB).toFixed(1)} v${(-hgt + 4).toFixed(1)} a4,4 0 0 1 4,-4 h${(bw - 8).toFixed(1)} a4,4 0 0 1 4,4 v${(hgt - 4).toFixed(1)} z" style="fill:${fill};pointer-events:none"/>`;
     if (i === highlight || gold.includes(i) || n <= 6) s += `<text class="v" x="${(x + bw / 2).toFixed(1)}" y="${(top - 5).toFixed(1)}" text-anchor="middle">${valueFmt(v)}</text>`;
@@ -559,9 +571,12 @@ function renderHome(ctx) {
   const ym = ctx.args[0] && months.includes(ctx.args[0]) ? ctx.args[0] : defYm;
   const st = monthStats(c, ym); const prev = monthStats(c, ymAdd(ym, -1));
   const live = ym === cur && !(st.month && st.month.status === "published");
-  const startYm = String(c.started_on || "").slice(0, 7) || ymAdd(cur, -5); const allMonths = []; for (let i = 5; i >= 0; i--) { const y = ymAdd(ym, -i); if (y >= startYm) allMonths.push(y); }
+  const hist = DB.history[c.id] || []; const histMap = {}; hist.forEach((r) => (histMap[r.ym] = r));
+  const startYm = String(c.started_on || "").slice(0, 7) || ymAdd(cur, -5); const allMonths = []; for (let i = 5; i >= 0; i--) { const y = ymAdd(ym, -i); if (y >= startYm || histMap[y]) allMonths.push(y); }
   if (!allMonths.length) allMonths.push(ym);
-  const series = allMonths.map((y) => monthStats(c, y).leads);
+  const isHist = (y) => y < startYm && !!histMap[y];
+  const series = allMonths.map((y) => (isHist(y) ? histMap[y].leads : monthStats(c, y).leads));
+  const histAvg = hist.length ? Math.round(hist.reduce((a, r) => a + r.leads, 0) / hist.length) : 0;
   const prevLab = MON[+ymAdd(ym, -1).split("-")[1] - 1];
   const delta = (a, b, goodUp = true, unit = "") => { if (live || !b) return ""; const d = a - b; if (!d) return `<div class="d flat">— vs ${prevLab}</div>`; const up = d > 0; const good = goodUp ? up : !up; return `<div class="d ${good ? "up" : "dn"}">${up ? ICON.up : ICON.dn}${Math.abs(d)}${unit} vs ${prevLab}</div>`; };
   const fill = Math.min(100, (st.leads / c.lead_target_max) * 100); const minTick = (c.lead_target_min / c.lead_target_max) * 100;
@@ -584,7 +599,7 @@ function renderHome(ctx) {
   </div>
   ${latestPub ? `<div class="sec"><div class="sec-h"><h2>Note from ${h(JOE.name)}</h2><a href="#${ctx.base}/report/${latestPub.ym}">Full report</a></div><div class="card note"><div class="who"><div class="avatar">${h(JOE.name[0])}</div><div><b>${h(JOE.name)} · LeadHive</b><small>${ymLabel(latestPub.ym)} results · published ${fmtDate(latestPub.published_at)}</small></div></div><p>${h(latestPub.summary)}</p></div></div>`
     : `<div class="sec"><div class="card note"><div class="who"><div class="avatar">${h(JOE.name[0])}</div><div><b>${h(JOE.name)} · LeadHive</b><small>Welcome aboard</small></div></div><p>Your campaign is live. Calls and web enquiries will show up here as they come in, and your first full report lands at the end of the month.</p></div></div>`}
-  <div class="sec"><div class="sec-h"><h2>Leads by month</h2><span class="small muted">calls + web enquiries</span></div><div class="card chart">${columnChart({ labels: allMonths.map((y) => MON[+y.split("-")[1] - 1]), values: series, highlight: allMonths.length - 1, tipFmt: (i) => `${ymLabel(allMonths[i])}: ${series[i]} leads` })}</div></div>
+  <div class="sec"><div class="sec-h"><h2>Leads by month</h2><span class="small muted">calls + web enquiries</span></div><div class="card chart">${columnChart({ labels: allMonths.map((y) => MON[+y.split("-")[1] - 1]), values: series, highlight: allMonths.length - 1, faint: allMonths.map((y, i) => (isHist(y) ? i : -1)).filter((i) => i >= 0), tipFmt: (i) => `${ymLabel(allMonths[i])}: ${series[i]} leads${isHist(allMonths[i]) ? " (previous partner)" : ""}` })}${hist.length ? `<p class="small muted mt8" style="line-height:1.45">Lighter bars are ${h(c.region)} before you joined: the previous partner averaged <b>${histAvg} leads a month</b> on this campaign. Their calls and details stay private to them.</p>` : ""}</div></div>
   <div class="sec"><div class="sec-h"><h2>${live ? "This month" : ymLabel(ym, false)} by week</h2></div><div class="card chart">${columnChart({ labels: st.weeks.map((_, i) => "Wk " + (i + 1)), values: st.weeks, gold: st.leads ? [st.weeks.indexOf(Math.max(...st.weeks))] : [], height: 130, tipFmt: (i) => `Week ${i + 1}: ${st.weeks[i]} leads` })}</div></div>
   <div class="sec"><div class="sec-h"><h2>Latest leads</h2><a href="#${ctx.base}/leads/${ym}">See all ${st.leads}</a></div><div class="list" id="recent-list">${recent.length ? recent.map((x) => leadRow(x, ctx.base, c)).join("") : emptyState(live ? "Your campaign is live" : "Nothing logged this month", live ? "The first calls and web enquiries land here." : "")}</div>${st.untagged ? `<p class="small muted mt8">${st.untagged} lead${st.untagged === 1 ? "" : "s"} still to tag · <a class="lnk" href="#${ctx.base}/leads/${ym}/untagged">tag them</a></p>` : ""}</div>
   <p class="small muted center" style="margin:22px 0 8px">Numbers come from your call tracking line and your website form.</p></div>`;
@@ -666,7 +681,8 @@ function renderReports(ctx) {
   const c = ctx.client; const ms = DB.months.filter((m) => m.client_id === c.id && m.status === "published").sort((a, b) => (a.ym < b.ym ? 1 : -1));
   app().innerHTML = topBar({ title: "Monthly reports", sub: h(c.business_name) }) + `<div class="shell">
   <p class="lede" style="margin:16px 0 12px">One report a month, written by ${h(JOE.name)}. What came in, what it cost per lead, and what's being changed next.</p>
-  ${ms.length ? ms.map((m) => { const st = monthStats(c, m.ym); return `<a class="card" style="display:block;text-decoration:none;margin-top:10px" href="#${ctx.base}/report/${m.ym}"><div class="row"><div class="grow"><b style="font-size:16px;font-family:var(--head)">${ymLabel(m.ym)}</b><div class="small muted" style="margin-top:3px">${st.leads} leads · ${st.calls} calls · ${st.enq} web · ${st.missedRate}% missed${st.wonValue ? ` · ${money(st.wonValue)} won` : ""}</div></div>${targetChip(st)}<span class="chev">${ICON.chev}</span></div></a>`; }).join("") : `<div class="card" style="padding:0">${emptyState("Your first report is on its way", "It lands at the end of your first full month.")}</div>`}</div>`;
+  ${ms.length ? ms.map((m) => { const st = monthStats(c, m.ym); return `<a class="card" style="display:block;text-decoration:none;margin-top:10px" href="#${ctx.base}/report/${m.ym}"><div class="row"><div class="grow"><b style="font-size:16px;font-family:var(--head)">${ymLabel(m.ym)}</b><div class="small muted" style="margin-top:3px">${st.leads} leads · ${st.calls} calls · ${st.enq} web · ${st.missedRate}% missed${st.wonValue ? ` · ${money(st.wonValue)} won` : ""}</div></div>${targetChip(st)}<span class="chev">${ICON.chev}</span></div></a>`; }).join("") : `<div class="card" style="padding:0">${emptyState("Your first report is on its way", "It lands at the end of your first full month.")}</div>`}
+  ${(DB.history[c.id] || []).length ? `<div class="sec"><div class="sec-h"><h2>${h(c.region)} before you</h2><span class="small muted">previous partner</span></div><div class="card">${[...DB.history[c.id]].reverse().map((r) => `<div class="rpt-k"><span>${ymLabel(r.ym, false)}</span><b>${r.leads} leads <span class="muted small">· ${r.calls} calls · ${r.enquiries} web · ${pct(r.answered, r.calls)}% answered</span></b></div>`).join("")}<p class="small muted mt8" style="line-height:1.45">The same campaign, number and landing page you're on now. Only the totals are shown; the previous partner's calls stay theirs.</p></div></div>` : ""}</div>`;
 }
 function renderReport(ctx) {
   const c = ctx.client; const ym = ctx.args[0]; const m = monthRec(c.id, ym); if (!m || m.status !== "published") return go(`${ctx.base}/reports`);
@@ -733,7 +749,7 @@ function renderAdminClient(ctx) {
   const live = leadsFor(c.id, cur);
   app().innerHTML = topBar({ title: h(c.business_name), sub: `${h(c.contact_name)} · ${h(c.package_name)} · ${money(c.monthly_fee)}/mo`, back: "/admin" }) + `<div class="shell">
   ${c.active ? "" : `<div class="card mt16" style="background:var(--bad-bg);border-color:#F2C9C9"><b style="color:var(--bad)">Past partner · left ${c.churned_on ? fmtDate(c.churned_on + "T12:00:00Z") : "–"}${c.churn_reason ? " · " + h(CHURN_REASONS[c.churn_reason] || c.churn_reason) : ""}</b>${c.churn_note ? `<p class="small mt8" style="color:#7A2E2E">${h(c.churn_note)}</p>` : ""}<p class="small mt8" style="color:#7A2E2E">Their login is paused and their webhook is off. Everything is kept for a win-back.</p><button class="btn navy mt12" id="react">Reactivate partner</button></div>`}
-  <div class="mt16"><span class="chip ${s.cls}"><i></i>${s.l}</span> <span class="chip">${c.lead_target_min}–${c.lead_target_max} leads</span> <span class="chip">${h(c.country)}</span> <span class="chip ${DB.seen[c.id] && (Date.now() - new Date(DB.seen[c.id])) / 864e5 < 14 ? "" : "warn"}">${agoText(DB.seen[c.id])}</span></div>
+  <div class="mt16"><span class="chip ${s.cls}"><i></i>${s.l}</span> <span class="chip">${c.lead_target_min}–${c.lead_target_max} leads</span> <span class="chip">${h(c.country)}</span>${c.predecessor_id && client(c.predecessor_id) ? ` <span class="chip blue">Took over from ${h(client(c.predecessor_id).business_name)}</span>` : ""} <span class="chip ${DB.seen[c.id] && (Date.now() - new Date(DB.seen[c.id])) / 864e5 < 14 ? "" : "warn"}">${agoText(DB.seen[c.id])}</span></div>
   <div class="btn-row mt12"><a class="btn primary" href="#/admin/upload/${c.id}">${ICON.upload}Upload month</a><a class="btn ghost" href="#/as/${c.id}/home">View as ${h(c.contact_name || "partner")}</a></div>
   <div class="btn-row" style="margin-top:8px"><a class="btn ghost sm" style="flex:1" href="#/admin/settings/${c.id}">${ICON.cog}Settings &amp; login</a><button class="btn ghost sm" style="flex:1" id="copy-hook">${ICON.copy}Enquiry webhook</button></div>
   <div class="sec"><div class="sec-h"><h2>Months</h2></div><div class="list">${ms.length ? ms.map((m) => { const st = monthStats(c, m.ym); return `<a class="li" href="#/admin/upload/${c.id}/${m.ym}"><div class="grow"><div class="t1"><span>${ymLabel(m.ym)}</span>${m.status === "published" ? `<span class="chip good">Published</span>` : `<span class="chip warn">Draft</span>`}</div><div class="t2"><span class="tx">${st.leads} leads · ${st.calls} calls · ${st.missedRate}% missed · ${st.enq} web${st.adSpend ? ` · ads ${money(st.adSpend)}${st.leads ? ` (${money(st.cplAd)}/lead)` : ""}` : ""}</span></div></div><span class="chev">${ICON.chev}</span></a>`; }).join("") : `<div class="empty">No months uploaded yet.</div>`}</div></div>
@@ -844,7 +860,8 @@ async function renderSettings(ctx) {
   const read = () => ({ business_name: $("s-biz").value.trim(), contact_name: $("s-contact").value.trim(), initials: ($("s-init").value.trim() || $("s-biz").value.trim().split(/\s+/).map((w) => w[0] || "").join("").slice(0, 2)).toUpperCase(), phone: $("s-phone").value.trim(), email: $("s-email").value.trim().toLowerCase() || null, niche: $("s-niche").value, region: $("s-region").value.trim(), country: $("s-country").value, timezone: $("s-tz").value, started_on: $("s-started").value || cur + "-01", package_name: $("s-pkg").value, monthly_fee: Number($("s-fee").value) || 0, lead_target_min: Number($("s-tmin").value) || 0, lead_target_max: Number($("s-tmax").value) || 0, billing_day: Math.min(28, Math.max(1, Number($("s-bill").value) || 1)), avg_job_value: Number($("s-avg").value) || 0, show_ad_spend: $("s-ads").classList.contains("on") });
   $("s-save").onclick = async () => { const v = read(); if (!v.business_name) { toast("Business name is needed", true); return; }
     const btn = $("s-save"); btn.setAttribute("disabled", "");
-    try { const saved = await api.upsertClient(isNew ? v : { id: c.id, ...v });
+    try { const takeover = $("s-takeover") && $("s-takeover").value; if (isNew && takeover) v.predecessor_id = takeover;
+      const saved = await api.upsertClient(isNew ? v : { id: c.id, ...v });
       const ix = DB.clients.findIndex((x) => x.id === saved.id); if (ix >= 0) DB.clients[ix] = saved; else DB.clients.push(saved);
       const from = $("s-takeover") && $("s-takeover").value; if (from) { try { await api.transferWebhook(from, saved.id); DB.keys = {}; } catch (ex) { toast("Partner saved, but the enquiry connection didn't move: " + ex.message, true); } }
       const pw = $("s-pass").value.trim(); let note = "";
