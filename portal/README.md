@@ -72,8 +72,11 @@ Admin → + New partner → fill in the business, plan and their email, type a p
 4. Paste them in, type the ad spend (admin only), attach the PDF from the lead-report skill if
    you made one, **Publish to partner**. They get an email and it's live in their portal.
 
-Re-uploading a month replaces its calls but keeps the partner's tags (matched by Nimbata call
-id, or caller + time). Drafts are invisible to partners.
+Upload as often as you like (weekly, fortnightly, month end): each upload **adds** calls that
+aren't in the portal yet and **refreshes** the ones that are, matched by Nimbata call id or
+caller + time, and never touches the partner's tags. Mid-month, tap **Save draft**: the calls
+show up for the partner straight away under "this month so far", the notes stay hidden until
+you publish. Tick "Replace the month" only when you want calls that aren't in the file removed.
 
 ## Who sees what
 

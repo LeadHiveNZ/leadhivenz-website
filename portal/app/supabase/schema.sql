@@ -319,9 +319,10 @@ create or replace view public.v_lead_counts with (security_invoker = true) as
   from c full outer join e on c.client_id = e.client_id and c.ym = e.ym;
 grant select on public.v_lead_counts to authenticated;
 
--- ───────────────────────────── admin RPC: import a month of calls ──────────
--- Replaces the month's calls with the parsed CSV rows, carrying over any tags the partner
--- already put on calls that match (same Nimbata call id, or same caller within 2 minutes).
+-- ───────────────────────────── admin RPC: replace a month of calls (opt-in) ───────
+-- Wipes the month's calls and loads the file instead, carrying over partner tags on calls that
+-- match (same Nimbata call id, or same caller within 2 minutes). Used only when the admin ticks
+-- "replace" on the upload screen; the default is merge_month_calls below.
 create or replace function public.replace_month_calls(p_client uuid, p_ym text, p_rows jsonb)
 returns int language plpgsql security definer set search_path = public as $$
 declare n int;
@@ -378,6 +379,84 @@ begin
 end $$;
 revoke all on function public.replace_month_calls(uuid, text, jsonb) from public;
 grant execute on function public.replace_month_calls(uuid, text, jsonb) to authenticated;
+
+
+-- ───────────────────────────── admin RPC: merge a CSV into a month (the default) ──────────
+-- Adds calls that aren't in the portal yet and refreshes the admin fields on ones that are
+-- (matched by Nimbata call id, or same caller within 2 minutes). Partner tags are never touched,
+-- and calls missing from the file are left alone, so fortnightly or overlapping uploads are safe.
+create or replace function public.merge_month_calls(p_client uuid, p_ym text, p_rows jsonb)
+returns jsonb language plpgsql security definer set search_path = public as $$
+declare n_upd int := 0; n_ins int := 0;
+begin
+  if not public.is_admin() then raise exception 'admin only'; end if;
+  drop table if exists _new;
+  create temp table _new on commit drop as
+    select distinct on (called_at, caller_number) *
+    from (
+      select (r->>'called_at')::timestamptz                 as called_at,
+             coalesce(r->>'caller_number', '')               as caller_number,
+             coalesce((r->>'duration_sec')::int, 0)          as duration_sec,
+             coalesce(nullif(r->>'outcome',''), 'answered')  as outcome,
+             r->>'tracking_number'                           as tracking_number,
+             r->>'source'                                    as source,
+             r->>'campaign'                                  as campaign,
+             r->>'keyword'                                   as keyword,
+             r->>'city'                                      as city,
+             nullif(r->>'recording_url', '')                 as recording_url,
+             nullif(r->>'nimbata_call_id', '')               as nimbata_call_id,
+             coalesce(r->>'admin_note', '')                  as admin_note,
+             nullif(r->>'estimated_value', '')::numeric      as estimated_value,
+             r->'raw'                                        as raw
+      from jsonb_array_elements(p_rows) r
+    ) x
+    order by called_at, caller_number, nimbata_call_id;
+
+  -- refresh existing matches
+  with matched as (
+    select c.id as call_id, n.*
+    from _new n
+    join lateral (
+      select id from public.calls c
+      where c.client_id = p_client and c.ym = p_ym
+        and ((n.nimbata_call_id is not null and c.nimbata_call_id = n.nimbata_call_id)
+             or (abs(extract(epoch from (c.called_at - n.called_at))) < 120
+                 and regexp_replace(c.caller_number, '\D', '', 'g') = regexp_replace(n.caller_number, '\D', '', 'g')))
+      limit 1
+    ) c on true
+  ), upd as (
+    update public.calls c set
+      duration_sec = m.duration_sec, outcome = m.outcome,
+      tracking_number = coalesce(m.tracking_number, c.tracking_number), source = coalesce(m.source, c.source),
+      campaign = coalesce(m.campaign, c.campaign), keyword = coalesce(m.keyword, c.keyword), city = coalesce(m.city, c.city),
+      recording_url = coalesce(m.recording_url, c.recording_url), nimbata_call_id = coalesce(c.nimbata_call_id, m.nimbata_call_id),
+      admin_note = case when m.admin_note <> '' then m.admin_note else c.admin_note end,
+      estimated_value = coalesce(m.estimated_value, c.estimated_value), raw = coalesce(m.raw, c.raw)
+    from matched m where c.id = m.call_id
+    returning c.id
+  ) select count(*) into n_upd from upd;
+
+  -- add the rest
+  with ins as (
+    insert into public.calls (client_id, ym, called_at, caller_number, duration_sec, outcome, tracking_number, source,
+                              campaign, keyword, city, recording_url, nimbata_call_id, admin_note, estimated_value, raw)
+    select p_client, p_ym, n.called_at, n.caller_number, n.duration_sec, n.outcome, n.tracking_number, n.source,
+           n.campaign, n.keyword, n.city, n.recording_url, n.nimbata_call_id, n.admin_note, n.estimated_value, n.raw
+    from _new n
+    where not exists (
+      select 1 from public.calls c
+      where c.client_id = p_client and c.ym = p_ym
+        and ((n.nimbata_call_id is not null and c.nimbata_call_id = n.nimbata_call_id)
+             or (abs(extract(epoch from (c.called_at - n.called_at))) < 120
+                 and regexp_replace(c.caller_number, '\D', '', 'g') = regexp_replace(n.caller_number, '\D', '', 'g'))))
+    on conflict (client_id, nimbata_call_id) where nimbata_call_id is not null do nothing
+    returning id
+  ) select count(*) into n_ins from ins;
+
+  return jsonb_build_object('inserted', n_ins, 'updated', n_upd);
+end $$;
+revoke all on function public.merge_month_calls(uuid, text, jsonb) from public;
+grant execute on function public.merge_month_calls(uuid, text, jsonb) to authenticated;
 
 -- ───────────────────────────── storage ─────────────────────────────────────
 insert into storage.buckets (id, name, public)

@@ -153,7 +153,8 @@ function makeSupabaseApi() {
     async getWebhookKey(cid) { const r = await q(sb.from("client_secrets").select("webhook_key").eq("client_id", cid).maybeSingle()); return r ? r.webhook_key : ""; },
     async upsertMonth(m) { return q(sb.from("months").upsert(m, { onConflict: "client_id,ym" }).select().single()); },
     async setAdSpend(month_id, ad_spend) { await q(sb.from("month_private").upsert({ month_id, ad_spend })); },
-    async replaceMonthCalls(cid, ym, rows) { return q(sb.rpc("replace_month_calls", { p_client: cid, p_ym: ym, p_rows: rows })); },
+    async replaceMonthCalls(cid, ym, rows) { const n = await q(sb.rpc("replace_month_calls", { p_client: cid, p_ym: ym, p_rows: rows })); return { inserted: Number(n) || 0, updated: 0, replaced: true }; },
+    async mergeMonthCalls(cid, ym, rows) { const r = await q(sb.rpc("merge_month_calls", { p_client: cid, p_ym: ym, p_rows: rows })); return { inserted: Number(r && r.inserted) || 0, updated: Number(r && r.updated) || 0 }; },
     async uploadPdf(cid, ym, file) { const path = `${cid}/${ym}.pdf`; const { error } = await sb.storage.from("reports").upload(path, file, { upsert: true, contentType: "application/pdf" }); if (error) throw error; return path; },
     async uploadRecording(cid, callId, file) { const ext = (file.name.split(".").pop() || "mp3").toLowerCase(); const path = `${cid}/${callId}.${ext}`; const { error } = await sb.storage.from("recordings").upload(path, file, { upsert: true, contentType: file.type || "audio/mpeg" }); if (error) throw error; return path; },
     async signedUrl(bucket, path) { const { data, error } = await sb.storage.from(bucket).createSignedUrl(path, 3600); if (error) throw error; return data.signedUrl; },
@@ -203,7 +204,16 @@ function makeDemoApi() {
         const o = old.find((x) => (r.nimbata_call_id && x.nimbata_call_id === r.nimbata_call_id) || (Math.abs(new Date(x.called_at) - new Date(r.called_at)) < 120000 && digits(x.caller_number) === digits(r.caller_number)));
         D.calls.push({ id: uid(), client_id: cid, ym, recording_path: null, admin_note: "", estimated_value: null, ...r, client_status: o ? o.client_status : "new", job_value: o ? o.job_value : 0, client_note: o ? o.client_note : "" });
       }
-      persist(); return rows.length;
+      persist(); return { inserted: rows.length, updated: 0, replaced: true };
+    },
+    async mergeMonthCalls(cid, ym, rows) {
+      const digits = (s) => String(s || "").replace(/\D/g, ""); let inserted = 0, updated = 0;
+      for (const r of rows) {
+        const o = D.calls.find((x) => x.client_id === cid && x.ym === ym && ((r.nimbata_call_id && x.nimbata_call_id === r.nimbata_call_id) || (Math.abs(new Date(x.called_at) - new Date(r.called_at)) < 120000 && digits(x.caller_number) === digits(r.caller_number))));
+        if (o) { Object.assign(o, { duration_sec: r.duration_sec, outcome: r.outcome, keyword: r.keyword || o.keyword, campaign: r.campaign || o.campaign, city: r.city || o.city, recording_url: r.recording_url || o.recording_url, nimbata_call_id: o.nimbata_call_id || r.nimbata_call_id, admin_note: r.admin_note || o.admin_note, estimated_value: r.estimated_value != null ? r.estimated_value : o.estimated_value }); updated++; }
+        else { D.calls.push({ id: uid(), client_id: cid, ym, recording_path: null, admin_note: "", estimated_value: null, ...r, client_status: "new", job_value: 0, client_note: "" }); inserted++; }
+      }
+      persist(); return { inserted, updated };
     },
     async uploadPdf(cid, ym) { await sleep(300); return `${cid}/${ym}.pdf`; },
     async uploadRecording(cid, callId) { await sleep(300); return `${cid}/${callId}.mp3`; },
@@ -694,7 +704,7 @@ function renderAdmin() {
   <div class="row" style="margin:18px 0 12px"><div class="grow"><h1 style="font-size:22px;font-weight:600">Partners</h1><div class="small muted">${cs.length} active · ${due} report${due === 1 ? "" : "s"} due for ${ymLabel(prevYm, false)} · ${live} lead${live === 1 ? "" : "s"} logged so far in ${ymLabel(cur, false)}</div></div></div>
   <div class="btn-row"><a class="btn primary" href="#/admin/upload">${ICON.upload}Upload month</a><a class="btn ghost" href="#/admin/newclient">+ New partner</a></div>
   <div class="list mt16">${cs.length ? cs.map((c) => { const s = clientStatus(c); const k = countFor(c.id, prevYm); return `<a class="li client-li" href="#/admin/client/${c.id}"><div class="ic">${h(c.initials || "")}</div><div class="grow"><div class="t1"><span>${h(c.business_name)}</span></div><div class="t2"><span class="tx">${h(c.niche)} · ${h(c.region)} ${h(c.country)} · ${h(c.package_name)} ${money(c.monthly_fee)}</span></div><div style="margin-top:5px"><span class="chip ${s.cls}"><i></i>${s.l}</span></div></div><div class="meta"><div class="tm">${k.leads ? k.leads + (k.leads === 1 ? " lead" : " leads") : ""}</div><div class="du muted">${k.leads ? ymLabel(prevYm, false) : ""}</div></div><span class="chev">${ICON.chev}</span></a>`; }).join("") : `<div class="empty">No partners yet. Add your first one.</div>`}</div>
-  <div class="sec"><div class="sec-h"><h2>Month-end routine</h2></div><div class="card"><div class="pt"><div class="ix">1</div><div><b>Export the month from Nimbata</b><p>Call log → filter the partner's project and the month → Export CSV.</p></div></div><div class="pt"><div class="ix">2</div><div><b>Send the stats to Claude for the notes</b><p>Upload step 2 has a "Copy summary" button. Paste it to Claude with the Google Ads spend and you get the summary and three "what I'm changing" points back.</p></div></div><div class="pt"><div class="ix">3</div><div><b>Paste, attach the PDF, publish</b><p>The partner gets an email saying their results are in, and it's in their portal the moment you hit publish.</p></div></div></div></div>
+  <div class="sec"><div class="sec-h"><h2>Month-end routine</h2></div><div class="card"><div class="pt"><div class="ix">1</div><div><b>Export from Nimbata, as often as you like</b><p>Call log → filter the partner's project and the month → Export CSV. Fortnightly is fine: uploads add new calls and refresh existing ones, nothing gets wiped.</p></div></div><div class="pt"><div class="ix">2</div><div><b>Send the stats to Claude for the notes</b><p>Upload step 2 has a "Copy summary" button. Paste it to Claude with the Google Ads spend and you get the summary and three "what I'm changing" points back.</p></div></div><div class="pt"><div class="ix">3</div><div><b>Paste, attach the PDF, publish</b><p>The partner gets an email saying their results are in, and it's in their portal the moment you hit publish.</p></div></div></div></div>
   ${DEMO ? `<button class="btn ghost mt20" id="reset" style="color:var(--ink-3)">Reset demo data</button>` : ""}</div>`;
   const r = $("reset"); if (r) r.onclick = () => { if (confirm("Reset the demo data to the starting state?")) { api.resetDemo(); resetDB(); route(); toast("Demo reset"); } };
 }
@@ -722,11 +732,12 @@ function renderUpload(ctx) {
   app().innerHTML = topBar({ title: "Upload a month", sub: pre ? h(pre.business_name) : "Pick a partner", back: pre ? `/admin/client/${pre.id}` : "/admin" }) + `<div class="shell">
   <div class="steps"><i class="on"></i><i id="s2"></i><i id="s3"></i></div>
   <div class="card"><div class="two"><label class="fld" style="margin-top:0"><span>Partner</span><select id="u-cid">${DB.clients.filter((c) => c.active).map((c) => `<option value="${c.id}" ${state.cid === c.id ? "selected" : ""}>${h(c.business_name)}</option>`).join("")}</select></label><label class="fld" style="margin-top:0"><span>Month</span><select id="u-ym">${ymOpts.map((y) => `<option value="${y}" ${y === state.ym ? "selected" : ""}>${ymLabel(y)}</option>`).join("")}</select></label></div>
-  ${existing ? `<p class="small mt12" style="color:var(--warn);font-weight:600">${ymLabel(existing.ym)} already exists for this partner (${existing.status}). Uploading a CSV replaces that month's calls (partner tags are kept); notes below are pre-filled.</p>` : ""}</div>
+  ${existing ? `<p class="small mt12" style="color:var(--ink-2)">${ymLabel(existing.ym)} already has data (${existing.status}). Upload as often as you like: new calls are added, calls already here are refreshed, and the partner's tags are kept. Notes below are pre-filled.</p>` : ""}</div>
   <div class="sec"><div class="sec-h"><h2>1 · Nimbata call export</h2><button id="u-sample">Use sample CSV</button></div>
   <label class="drop" id="drop"><b>Drop the CSV here or tap to choose</b>Nimbata → Call log → Export. Columns are matched automatically (date, caller, duration, outcome, recording, keyword…).<input type="file" id="u-file" accept=".csv,text/csv,.txt,.tsv"></label>
   <details class="mt8"><summary>Or paste the CSV text</summary><textarea id="u-paste" class="mt8" style="width:100%;min-height:90px;font:12px ui-monospace,Menlo,monospace;padding:10px;border:1px solid var(--rule);border-radius:10px;background:var(--card)" placeholder="Date,Time,Caller,Call Duration,Outcome,..."></textarea><button class="btn ghost sm mt8" id="u-parse">Parse pasted text</button></details>
   <div id="u-preview"></div>
+  <label class="switch" style="margin-top:10px;border-top:0;padding:8px 0 0"><div><b style="font-size:13.5px">Replace the month instead of adding to it</b><small>Only tick this if the file is the complete month and you want calls that aren't in it removed. Tags are still kept on matching calls.</small></div><button type="button" class="tog" id="u-replace" aria-label="toggle"></button></label>
   <p class="small muted mt8">No CSV? You can still publish the notes on their own, or just save the ad spend.</p></div>
   <div class="sec"><div class="sec-h"><h2>2 · Notes for the partner</h2><button id="u-copy">${ICON.copy} Copy summary for Claude</button></div>
   <div class="card"><label class="fld" style="margin-top:0"><span>Summary (plain English, like a text to a mate)</span><textarea id="u-sum" placeholder="A steady month. 22 leads, inside the plan. The one thing to work on is...">${h(existing ? existing.summary : "")}</textarea></label>
@@ -755,6 +766,7 @@ function renderUpload(ctx) {
   $("u-sample").onclick = () => { const [y, m] = state.ym.split("-"); const csv = SAMPLE_CSV.replace(/\{M\}/g, m).replace(/\{Y\}/g, y); $("u-paste").value = csv; $("u-paste").closest("details").open = true; ingest(csv, "nimbata-sample.csv"); };
   $("u-pdf").onchange = (e) => (state.pdf = e.target.files[0] || null);
   $("u-mail").onclick = (e) => e.currentTarget.classList.toggle("on");
+  $("u-replace").onclick = (e) => e.currentTarget.classList.toggle("on");
   $("u-copy").onclick = () => { const c = client(state.cid); const inMonth = state.calls.filter((x) => x.ym === state.ym); const sm = importSummary(inMonth.length ? inMonth : DB.calls.filter((x) => x.client_id === state.cid && x.ym === state.ym).map((x) => ({ ...x, recording_url: x.recording_url }))); const enq = DB.enquiries.filter((x) => x.client_id === state.cid && x.ym === state.ym).length; const ad = $("u-ad").value;
     const kws = [...new Set((inMonth.length ? inMonth : DB.calls.filter((x) => x.client_id === state.cid && x.ym === state.ym)).map((x) => x.keyword).filter(Boolean))].slice(0, 5);
     copyText(`Lead report notes for ${c.business_name} (${c.contact_name}), ${c.niche}, ${c.region}. ${ymLabel(state.ym)}. Plan ${c.package_name} ${money(c.monthly_fee)}/mo, target ${c.lead_target_min}-${c.lead_target_max}.\nCalls ${sm.n}, missed ${sm.missed} (${pct(sm.missed, sm.n)}%), avg answered ${dur(sm.avg)}, web enquiries ${enq}, total leads ${sm.n + enq}${ad ? `, ad spend $${ad}` : ""}.\nTop keywords: ${kws.join(", ") || "n/a"}.\nWrite the client summary (2-3 sentences, plain English, like a text to a mate) and three "what I'm changing" points with a title and one or two sentences each.`, "Copied. Paste it to Claude."); };
@@ -771,12 +783,13 @@ function renderUpload(ctx) {
       const month = await api.upsertMonth(row);
       if (n.adSpend != null) await api.setAdSpend(month.id, n.adSpend);
       const inMonth = state.calls.filter((x) => x.ym === state.ym).map(({ ym, ...r }) => r);
-      if (inMonth.length) { msg.textContent = `Importing ${inMonth.length} calls…`; await api.replaceMonthCalls(state.cid, state.ym, inMonth); }
+      let importNote = "";
+      if (inMonth.length) { msg.textContent = `Importing ${inMonth.length} calls…`; const r = $("u-replace").classList.contains("on") ? await api.replaceMonthCalls(state.cid, state.ym, inMonth) : await api.mergeMonthCalls(state.cid, state.ym, inMonth); importNote = r.replaced ? ` · ${r.inserted} calls loaded` : ` · ${r.inserted} new, ${r.updated} refreshed`; }
       await ensureClient(state.cid, true); await refreshAdmin();
       $("s3").classList.add("on");
       let mailNote = "";
       if (status === "published" && $("u-mail").classList.contains("on")) { msg.textContent = "Sending email…"; const st = monthStats(c, state.ym); try { const r = await api.publishEmail({ client_id: state.cid, ym: state.ym, leads: st.leads, calls: st.calls, enquiries: st.enq, missed_rate: st.missedRate, won_value: st.wonValue }); mailNote = r.demo ? " · email skipped (demo)" : " · email sent"; } catch (ex) { mailNote = " · email not sent: " + ex.message; } }
-      toast(status === "published" ? `Published to ${c.contact_name}${mailNote}` : "Draft saved", /not sent/.test(mailNote));
+      toast(status === "published" ? `Published to ${c.contact_name}${importNote}${mailNote}` : `Saved${importNote}`, /not sent/.test(mailNote));
       setTimeout(() => go(`/admin/client/${state.cid}`), 700);
     } catch (ex) { msg.textContent = ""; toast(ex.message, true); $("u-draft").removeAttribute("disabled"); $("u-pub").removeAttribute("disabled"); }
   };
