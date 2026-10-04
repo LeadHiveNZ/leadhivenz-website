@@ -90,7 +90,9 @@ you publish. Tick "Replace the month" only when you want calls that aren't in th
 | Admin    |                                                                              | partners list, upload month, settings & login, margin per month, enquiry webhook key |
 
 Partners never see Google Ads spend unless the per-partner toggle is on (it lives in an
-admin-only table). Cost per lead shown to partners is **fee ÷ leads**, never ad spend.
+admin-only table), and they never see a cost per lead at all: the portal shows them the
+value of their leads, what they've confirmed won, and their return, nothing that invites a
+price conversation.
 Partners can only change the outcome, job value and note on their own leads (enforced in the
 database, not just the UI). Recordings and PDFs are private files served by short-lived links.
 
@@ -140,6 +142,15 @@ database refuses the value from a partner login.
 Use the return in every renewal and upsell conversation, feed your own "not a lead" and
 "spam" flags back into negative keywords, and make tagging a two-minute ritual on the
 monthly check-in call.
+
+## Replacing a partner in a region
+
+Sign the new one, then Admin → **+ New partner** → in "Replacing a past partner?" pick who
+they take over from. Their region, trade and plan are copied in, and the old partner's
+enquiry connection moves across, so the landing page keeps posting enquiries without any
+change to it. Then: set the new partner's mobile, email and password, create the login, and
+in Nimbata change the tracking number's forwarding to the new mobile. Next upload, pick the
+new partner. The old partner's history stays on their own record under Past partners.
 
 ## When a partner leaves
 

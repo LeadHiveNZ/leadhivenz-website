@@ -24,7 +24,7 @@ create table if not exists public.clients (
   lead_target_max    int not null default 25,
   started_on         date not null default current_date,
   billing_day        int not null default 1 check (billing_day between 1 and 28),
-  show_cost_per_lead boolean not null default true,
+  show_cost_per_lead boolean not null default false,   -- retired: partners never see cost per lead
   show_ad_spend      boolean not null default false,
   avg_job_value      numeric not null default 450,   -- Joe's estimate of a typical job, used when a lead has no estimate of its own
   active             boolean not null default true,
