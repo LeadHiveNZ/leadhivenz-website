@@ -19,7 +19,7 @@ for (const m of D.months.filter((x) => x.client_id === mike.id)) {
   lines.push(`insert into public.month_private (month_id, ad_spend) values (${q(m.id)}, ${m.ad_spend || 0});`);
 }
 for (const c of D.calls.filter((x) => x.client_id === mike.id)) {
-  lines.push(`insert into public.calls (client_id, ym, called_at, caller_number, duration_sec, outcome, tracking_number, source, campaign, keyword, city, recording_url, nimbata_call_id, admin_note, estimated_value, client_status, job_value, client_note) values (${[c.client_id, c.ym, c.called_at, c.caller_number, c.duration_sec, c.outcome, c.tracking_number, c.source, c.campaign, c.keyword, c.city, null, c.nimbata_call_id, c.admin_note, c.estimated_value, c.client_status, c.job_value, c.client_note].map(q).join(", ")});`);
+  lines.push(`insert into public.calls (client_id, ym, called_at, caller_number, duration_sec, outcome, tracking_number, source, campaign, keyword, city, recording_url, nimbata_call_id, admin_note, summary, estimated_value, client_status, job_value, client_note) values (${[c.client_id, c.ym, c.called_at, c.caller_number, c.duration_sec, c.outcome, c.tracking_number, c.source, c.campaign, c.keyword, c.city, null, c.nimbata_call_id, c.admin_note, c.summary || "", c.estimated_value, c.client_status, c.job_value, c.client_note].map(q).join(", ")});`);
 }
 for (const e of D.enquiries.filter((x) => x.client_id === mike.id)) {
   lines.push(`insert into public.enquiries (client_id, ym, received_at, name, phone, suburb, message, is_urgent, page, source, client_status, job_value, client_note) values (${[e.client_id, e.ym, e.received_at, e.name, e.phone, e.suburb, e.message, e.is_urgent, e.page, e.source, e.client_status, e.job_value, e.client_note].map(q).join(", ")});`);

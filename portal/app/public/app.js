@@ -210,7 +210,7 @@ function makeDemoApi() {
       const digits = (s) => String(s || "").replace(/\D/g, ""); let inserted = 0, updated = 0;
       for (const r of rows) {
         const o = D.calls.find((x) => x.client_id === cid && x.ym === ym && ((r.nimbata_call_id && x.nimbata_call_id === r.nimbata_call_id) || (Math.abs(new Date(x.called_at) - new Date(r.called_at)) < 120000 && digits(x.caller_number) === digits(r.caller_number))));
-        if (o) { Object.assign(o, { duration_sec: r.duration_sec, outcome: r.outcome, keyword: r.keyword || o.keyword, campaign: r.campaign || o.campaign, city: r.city || o.city, recording_url: r.recording_url || o.recording_url, nimbata_call_id: o.nimbata_call_id || r.nimbata_call_id, admin_note: r.admin_note || o.admin_note, estimated_value: r.estimated_value != null ? r.estimated_value : o.estimated_value }); updated++; }
+        if (o) { Object.assign(o, { duration_sec: r.duration_sec, outcome: r.outcome, keyword: r.keyword || o.keyword, campaign: r.campaign || o.campaign, city: r.city || o.city, recording_url: r.recording_url || o.recording_url, nimbata_call_id: o.nimbata_call_id || r.nimbata_call_id, admin_note: r.admin_note || o.admin_note, summary: r.summary || o.summary, estimated_value: r.estimated_value != null ? r.estimated_value : o.estimated_value }); updated++; }
         else { D.calls.push({ id: uid(), client_id: cid, ym, recording_path: null, admin_note: "", estimated_value: null, ...r, client_status: "new", job_value: 0, client_note: "" }); inserted++; }
       }
       persist(); return { inserted, updated };
@@ -312,7 +312,8 @@ const COLS = {
   keyword: ["keyword", "searchterm", "term", "searchkeyword"],
   city: ["city", "callercity", "location", "town"],
   callId: ["callid", "id", "uuid", "calluuid", "sid"],
-  notes: ["notes", "note", "comment", "comments", "agentnotes"],
+  summary: ["summary", "aisummary", "callsummary", "aicallsummary", "conversationsummary", "transcriptsummary", "ainotes", "aidescription", "description"],
+  notes: ["notes", "note", "comment", "comments", "agentnotes", "joesnote"],
   tracking: ["trackingnumber", "tracking", "dialednumber", "tonumber", "number"],
   value: ["value", "leadvalue", "estimatedvalue", "estimate", "jobvalue", "revenue", "amount"],
 };
@@ -354,7 +355,7 @@ function rowsToCalls(rows, map) {
     if (!dt) { skipped.push(i + 1); continue; }
     const duration_sec = parseDuration(g("duration")); const rec = g("recording");
     const raw = {}; headers.forEach((hd, ix) => { if (hd && r[ix] !== undefined && r[ix] !== "") raw[hd] = r[ix]; });
-    out.push({ called_at: dt.date.toISOString(), ym: dt.ym, caller_number: g("caller") || "Unknown", duration_sec, outcome: parseOutcome(g("outcome"), duration_sec), tracking_number: g("tracking") || null, source: g("source") || "Google Ads", campaign: g("campaign") || null, keyword: g("keyword") || null, city: g("city") || null, recording_url: /^https?:/i.test(rec) ? rec : null, nimbata_call_id: g("callId") || null, admin_note: g("notes") || "", estimated_value: (() => { const v = parseFloat(String(g("value")).replace(/[^0-9.]/g, "")); return isFinite(v) && v > 0 ? v : null; })(), raw });
+    out.push({ called_at: dt.date.toISOString(), ym: dt.ym, caller_number: g("caller") || "Unknown", duration_sec, outcome: parseOutcome(g("outcome"), duration_sec), tracking_number: g("tracking") || null, source: g("source") || "Google Ads", campaign: g("campaign") || null, keyword: g("keyword") || null, city: g("city") || null, recording_url: /^https?:/i.test(rec) ? rec : null, nimbata_call_id: g("callId") || null, admin_note: g("notes") || "", summary: g("summary").replace(/\s+/g, " ").slice(0, 700), estimated_value: (() => { const v = parseFloat(String(g("value")).replace(/[^0-9.]/g, "")); return isFinite(v) && v > 0 ? v : null; })(), raw });
   }
   return { calls: out, skipped };
 }
@@ -362,12 +363,12 @@ function importSummary(calls) {
   const ans = calls.filter((c) => c.outcome === "answered"); const byYm = {}; for (const c of calls) byYm[c.ym] = (byYm[c.ym] || 0) + 1;
   return { n: calls.length, answered: ans.length, missed: calls.length - ans.length, avg: ans.length ? ans.reduce((a, c) => a + c.duration_sec, 0) / ans.length : 0, recordings: calls.filter((c) => c.recording_url).length, byYm };
 }
-const SAMPLE_CSV = `Date,Time,Caller,Call Duration,Outcome,Tracking Number,Source,Campaign,Keyword,City,Recording,Call ID,Notes
-01/{M}/{Y},08:14 AM,021 555 3391,2:41,Answered,09 801 2201,Google Ads,AKL Plumber · Search,emergency plumber auckland,Mt Eden,https://app.nimbata.com/rec/abc123,c-1001,Blocked drain
-01/{M}/{Y},12:52 PM,027 112 9087,0:00,Missed,09 801 2201,Google Ads,AKL Plumber · Search,plumber near me,Howick,,c-1002,
-02/{M}/{Y},09:05 AM,022 440 1178,4:12,Answered,09 801 2201,Google Ads,AKL Plumber · Search,hot water cylinder repair,Takapuna,https://app.nimbata.com/rec/abc124,c-1003,Cylinder leaking
-03/{M}/{Y},16:30,021 760 0042,1:08,Answered,09 801 2201,Google Ads,AKL Plumber · Search,leaking tap repair,Remuera,,c-1004,
-04/{M}/{Y},13:10,027 555 2210,0:00,No answer,09 801 2201,Google Ads,AKL Plumber · Search,burst pipe plumber,Papakura,,c-1005,`;
+const SAMPLE_CSV = `Date,Time,Caller,Call Duration,Outcome,Tracking Number,Source,Campaign,Keyword,City,Recording,Call ID,Value,Summary
+01/{M}/{Y},08:14 AM,021 555 3391,2:41,Answered,09 801 2201,Google Ads,AKL Plumber · Search,emergency plumber auckland,Mt Eden,https://app.nimbata.com/rec/abc123,c-1001,350,"Caller has a blocked kitchen drain, water backing up into the sink. Wants someone today. Agreed to a visit this afternoon, callout fee explained."
+01/{M}/{Y},12:52 PM,027 112 9087,0:00,Missed,09 801 2201,Google Ads,AKL Plumber · Search,plumber near me,Howick,,c-1002,,
+02/{M}/{Y},09:05 AM,022 440 1178,4:12,Answered,09 801 2201,Google Ads,AKL Plumber · Search,hot water cylinder repair,Takapuna,https://app.nimbata.com/rec/abc124,c-1003,1800,"Hot water cylinder leaking from the base, no hot water since this morning. Landlord calling for a tenant. Asked for a replacement quote, booked an inspection tomorrow 9am."
+03/{M}/{Y},16:30,021 760 0042,1:08,Answered,09 801 2201,Google Ads,AKL Plumber · Search,leaking tap repair,Remuera,,c-1004,180,"Dripping kitchen mixer tap. Not urgent, happy to wait for next week. Address and best time taken."
+04/{M}/{Y},13:10,027 555 2210,0:00,No answer,09 801 2201,Google Ads,AKL Plumber · Search,burst pipe plumber,Papakura,,c-1005,,`;
 
 /* ═══════════════════════════ charts ═══════════════════════════ */
 function columnChart({ labels, values, highlight = -1, gold = [], height = 150, valueFmt = (v) => v, tipFmt }) {
@@ -512,7 +513,7 @@ function leadRow(x, base, c) {
   const canTag = c && (x.client_status === "new" || isOngoing);
   const est = c ? estimateFor(x, c) : 0;
   const t1 = isCall ? x.caller_number : x.name || x.phone;
-  const t2 = isCall ? (missed ? `${x.outcome === "voicemail" ? "Voicemail" : "Missed call"} · ${x.keyword || x.city || "Google Ads"}` : x.admin_note || x.keyword || x.city || "Google Ads call") : `${x.is_urgent ? "Urgent · " : ""}${x.suburb ? x.suburb + " · " : ""}${x.message}`;
+  const t2 = isCall ? (missed ? `${x.outcome === "voicemail" ? "Voicemail" : "Missed call"} · ${x.keyword || x.city || "Google Ads"}` : x.summary || x.admin_note || x.keyword || x.city || "Google Ads call") : `${x.is_urgent ? "Urgent · " : ""}${x.suburb ? x.suburb + " · " : ""}${x.message}`;
   const hasRec = isCall && (x.recording_url || x.recording_path);
   const row = `<a class="li" href="#${base}/lead/${x.id}"><div class="ic ${ic}">${isCall ? (missed ? ICON.missed : ICON.phone) : ICON.form}</div><div class="grow"><div class="t1"><span>${h(t1)}</span></div><div class="t2">${x.client_status !== "new" ? statusChip(x) : ""}<span class="tx">${h(t2)}</span></div></div><div class="meta"><div class="tm">${fmtTime(x.at)}</div><div class="du">${isCall ? (missed ? "" : durShort(x.duration_sec)) : "Web form"}</div></div>${hasRec ? `<span class="play">${ICON.play}</span>` : `<span class="chev">${ICON.chev}</span>`}</a>`;
   if (!canTag) return `<div class="lw">${row}</div>`;
@@ -613,6 +614,7 @@ async function renderLead(ctx) {
     <div class="player"><button class="play" id="pl-btn" aria-label="Play">${ICON.play}</button><div class="track" id="pl-track"><i id="pl-fill"></i></div><div class="tm" id="pl-tm">0:00 / ${durShort(x.duration_sec)}</div></div>
     <audio id="pl-audio" preload="metadata"></audio><p class="small muted mt8 hidden" id="rec-msg"></p></div>` : ""}
   ${isCall && missed ? `<div class="card mt12" style="background:var(--bad-bg);border-color:#F2C9C9"><b style="font-size:14.5px;color:var(--bad)">This one rang out.</b><p class="small mt8" style="color:#7A2E2E;line-height:1.45">Most people searching for an emergency tradie call the next result if nobody answers. A call back inside 10 minutes recovers a good share of these.</p></div>` : ""}
+  ${x.summary ? `<div class="card mt12"><div class="small muted b">Call summary</div><p class="mt8" style="font-size:15px;line-height:1.5">${h(x.summary)}</p></div>` : ""}
   ${x.admin_note ? `<div class="card note mt12"><div class="who"><div class="avatar">${h(JOE.name[0])}</div><div><b>${h(JOE.name)}'s note</b><small>From the call review</small></div></div><p>${h(x.admin_note)}</p></div>` : ""}
   <div class="sec"><div class="sec-h"><h2>What happened with this lead?</h2></div><div class="card">
     <div class="seg four">${segBtn("new", "New", ICON.dot)}${segBtn("ongoing", "Ongoing", ICON.quote)}${segBtn("won", "Won", ICON.star)}${segBtn("lost", "Lost", ICON.dn)}</div>
@@ -734,7 +736,7 @@ function renderUpload(ctx) {
   <div class="card"><div class="two"><label class="fld" style="margin-top:0"><span>Partner</span><select id="u-cid">${DB.clients.filter((c) => c.active).map((c) => `<option value="${c.id}" ${state.cid === c.id ? "selected" : ""}>${h(c.business_name)}</option>`).join("")}</select></label><label class="fld" style="margin-top:0"><span>Month</span><select id="u-ym">${ymOpts.map((y) => `<option value="${y}" ${y === state.ym ? "selected" : ""}>${ymLabel(y)}</option>`).join("")}</select></label></div>
   ${existing ? `<p class="small mt12" style="color:var(--ink-2)">${ymLabel(existing.ym)} already has data (${existing.status}). Upload as often as you like: new calls are added, calls already here are refreshed, and the partner's tags are kept. Notes below are pre-filled.</p>` : ""}</div>
   <div class="sec"><div class="sec-h"><h2>1 · Nimbata call export</h2><button id="u-sample">Use sample CSV</button></div>
-  <label class="drop" id="drop"><b>Drop the CSV here or tap to choose</b>Nimbata → Call log → Export. Columns are matched automatically (date, caller, duration, outcome, recording, keyword…).<input type="file" id="u-file" accept=".csv,text/csv,.txt,.tsv"></label>
+  <label class="drop" id="drop"><b>Drop the CSV here or tap to choose</b>Nimbata → Call log → Export. Columns are matched automatically (date, caller, duration, outcome, recording, AI summary, value, keyword…).<input type="file" id="u-file" accept=".csv,text/csv,.txt,.tsv"></label>
   <details class="mt8"><summary>Or paste the CSV text</summary><textarea id="u-paste" class="mt8" style="width:100%;min-height:90px;font:12px ui-monospace,Menlo,monospace;padding:10px;border:1px solid var(--rule);border-radius:10px;background:var(--card)" placeholder="Date,Time,Caller,Call Duration,Outcome,..."></textarea><button class="btn ghost sm mt8" id="u-parse">Parse pasted text</button></details>
   <div id="u-preview"></div>
   <label class="switch" style="margin-top:10px;border-top:0;padding:8px 0 0"><div><b style="font-size:13.5px">Replace the month instead of adding to it</b><small>Only tick this if the file is the complete month and you want calls that aren't in it removed. Tags are still kept on matching calls.</small></div><button type="button" class="tog" id="u-replace" aria-label="toggle"></button></label>
@@ -744,12 +746,12 @@ function renderUpload(ctx) {
   ${[0, 1, 2].map((i) => `<label class="fld"><span>What I'm changing · ${i + 1}</span><input id="u-pt${i}" placeholder="Title, e.g. Missed call follow-up" value="${h(pts[i] ? pts[i].title : "")}"><textarea id="u-pb${i}" class="mt8" style="min-height:64px" placeholder="One or two sentences.">${h(pts[i] ? pts[i].body : "")}</textarea></label>`).join("")}
   <div class="two mt12"><label class="fld" style="margin-top:0"><span>Google Ads spend (admin only)</span><input id="u-ad" type="number" inputmode="decimal" placeholder="e.g. 702" value="${existing && existing.ad_spend != null ? existing.ad_spend : ""}"><div class="hint">Never shown to the partner unless their toggle is on.</div></label><label class="fld" style="margin-top:0"><span>PDF report (optional)</span><input id="u-pdf" type="file" accept="application/pdf"><div class="hint">${existing && existing.pdf_path ? "A PDF is already attached; choose a file to replace it." : "From the lead-report skill."}</div></label></div></div></div>
   <div class="sec"><div class="sec-h"><h2>3 · Publish</h2></div><div class="card"><div class="switch"><div><b>Email the partner when published</b><small>"Your ${ymLabel(state.ym, false)} results are in" with a login link.</small></div><button class="tog on" id="u-mail" aria-label="toggle"></button></div>
-  <div class="btn-row mt12"><button class="btn ghost" id="u-draft">Save draft</button><button class="btn primary" id="u-pub">Publish to partner</button></div><p class="small muted mt12" id="u-msg"></p></div></div></div>`;
+  <div class="btn-row mt12"><button class="btn ghost" id="u-draft">${existing && existing.status === "published" ? "Save (no email)" : "Save draft"}</button><button class="btn primary" id="u-pub">${existing && existing.status === "published" ? "Publish again" : "Publish to partner"}</button></div><p class="small muted mt12" id="u-msg">${existing && existing.status === "published" ? "This month is already live for the partner. Save keeps it live and skips the email; Publish again re-sends it." : ""}</p></div></div></div>`;
   const prev = $("u-preview");
   const renderPreview = () => {
     if (!state.headers.length) { prev.innerHTML = ""; $("s2").classList.remove("on"); return; }
     const sm = importSummary(state.calls); const other = Object.keys(sm.byYm).filter((y) => y !== state.ym); const inMonth = state.calls.filter((c) => c.ym === state.ym).length;
-    const fields = [["datetime", "Date / time"], ["time", "Time"], ["caller", "Caller"], ["duration", "Duration"], ["outcome", "Outcome"], ["recording", "Recording"], ["keyword", "Keyword"], ["campaign", "Campaign"], ["city", "City"], ["notes", "Notes"], ["callId", "Call ID"], ["source", "Source"]];
+    const fields = [["datetime", "Date / time"], ["time", "Time"], ["caller", "Caller"], ["duration", "Duration"], ["outcome", "Outcome"], ["recording", "Recording"], ["summary", "AI summary"], ["value", "Estimate"], ["keyword", "Keyword"], ["campaign", "Campaign"], ["city", "City"], ["notes", "Notes"], ["callId", "Call ID"], ["source", "Source"]];
     prev.innerHTML = `<div class="card mt12"><div class="row"><div class="grow"><b style="font-size:15px">${h(state.fileName || "Pasted CSV")}</b><div class="small muted">${state.headers.length} columns · ${state.calls.length} calls parsed${state.skipped.length ? ` · ${state.skipped.length} rows skipped (no date)` : ""}</div></div><span class="chip ${other.length ? "warn" : "good"}">${other.length ? "Check months" : "Looks good"}</span></div>
     ${other.length ? `<p class="small mt8" style="color:var(--warn);font-weight:600">${other.map((y) => `${sm.byYm[y]} call${sm.byYm[y] === 1 ? "" : "s"} dated ${ymLabel(y, false)}`).join(", ")} in this file. Only the ${inMonth} ${ymLabel(state.ym, false)} rows will be imported.</p>` : ""}
     <div class="kpis" style="margin-top:12px"><div class="kpi"><div class="l">Calls</div><div class="v">${sm.n}</div></div><div class="kpi"><div class="l">Missed</div><div class="v">${sm.missed}<small>${pct(sm.missed, sm.n)}%</small></div></div><div class="kpi"><div class="l">Avg answered</div><div class="v">${dur(sm.avg)}</div></div><div class="kpi"><div class="l">Recordings</div><div class="v">${sm.recordings}</div></div></div>
@@ -769,16 +771,20 @@ function renderUpload(ctx) {
   $("u-replace").onclick = (e) => e.currentTarget.classList.toggle("on");
   $("u-copy").onclick = () => { const c = client(state.cid); const inMonth = state.calls.filter((x) => x.ym === state.ym); const sm = importSummary(inMonth.length ? inMonth : DB.calls.filter((x) => x.client_id === state.cid && x.ym === state.ym).map((x) => ({ ...x, recording_url: x.recording_url }))); const enq = DB.enquiries.filter((x) => x.client_id === state.cid && x.ym === state.ym).length; const ad = $("u-ad").value;
     const kws = [...new Set((inMonth.length ? inMonth : DB.calls.filter((x) => x.client_id === state.cid && x.ym === state.ym)).map((x) => x.keyword).filter(Boolean))].slice(0, 5);
-    copyText(`Lead report notes for ${c.business_name} (${c.contact_name}), ${c.niche}, ${c.region}. ${ymLabel(state.ym)}. Plan ${c.package_name} ${money(c.monthly_fee)}/mo, target ${c.lead_target_min}-${c.lead_target_max}.\nCalls ${sm.n}, missed ${sm.missed} (${pct(sm.missed, sm.n)}%), avg answered ${dur(sm.avg)}, web enquiries ${enq}, total leads ${sm.n + enq}${ad ? `, ad spend $${ad}` : ""}.\nTop keywords: ${kws.join(", ") || "n/a"}.\nWrite the client summary (2-3 sentences, plain English, like a text to a mate) and three "what I'm changing" points with a title and one or two sentences each.`, "Copied. Paste it to Claude."); };
+    const src = inMonth.length ? inMonth : DB.calls.filter((x) => x.client_id === state.cid && x.ym === state.ym);
+    const sums = src.filter((x) => x.summary).slice(0, 15).map((x) => `- ${fmtDate(x.called_at)}: ${String(x.summary).slice(0, 160)}`);
+    copyText(`Lead report notes for ${c.business_name} (${c.contact_name}), ${c.niche}, ${c.region}. ${ymLabel(state.ym)}. Plan ${c.package_name} ${money(c.monthly_fee)}/mo, target ${c.lead_target_min}-${c.lead_target_max}.\nCalls ${sm.n}, missed ${sm.missed} (${pct(sm.missed, sm.n)}%), avg answered ${dur(sm.avg)}, web enquiries ${enq}, total leads ${sm.n + enq}${ad ? `, ad spend $${ad}` : ""}.\nTop keywords: ${kws.join(", ") || "n/a"}.${sums.length ? `\nCall summaries:\n${sums.join("\n")}` : ""}\nWrite the client summary (2-3 sentences, plain English, like a text to a mate) and three "what I'm changing" points with a title and one or two sentences each.`, "Copied. Paste it to Claude."); };
   const collect = () => ({ summary: $("u-sum").value.trim(), points: [0, 1, 2].map((i) => ({ title: $("u-pt" + i).value.trim(), body: $("u-pb" + i).value.trim() })).filter((p) => p.title || p.body), adSpend: $("u-ad").value === "" ? null : Number($("u-ad").value) || 0 });
   const commit = async (status) => {
     const c = client(state.cid); const n = collect(); const msg = $("u-msg");
     if (!c) { toast("Add a partner first", true); return; }
     if (status === "published" && !n.summary) { toast("Add a summary before publishing", true); $("u-sum").focus(); return; }
+    const wasPublished = !!(existing && existing.status === "published"); const clicked = status;
+    if (status === "draft" && wasPublished) status = "published"; // never unpublish by saving
     $("u-draft").setAttribute("disabled", ""); $("u-pub").setAttribute("disabled", ""); msg.textContent = "Saving…";
     try {
       const row = { client_id: state.cid, ym: state.ym, status, summary: n.summary, points: n.points };
-      if (status === "published") row.published_at = new Date().toISOString();
+      if (clicked === "published") row.published_at = new Date().toISOString();
       if (state.pdf) { msg.textContent = "Uploading PDF…"; row.pdf_path = await api.uploadPdf(state.cid, state.ym, state.pdf); }
       const month = await api.upsertMonth(row);
       if (n.adSpend != null) await api.setAdSpend(month.id, n.adSpend);
@@ -788,8 +794,8 @@ function renderUpload(ctx) {
       await ensureClient(state.cid, true); await refreshAdmin();
       $("s3").classList.add("on");
       let mailNote = "";
-      if (status === "published" && $("u-mail").classList.contains("on")) { msg.textContent = "Sending email…"; const st = monthStats(c, state.ym); try { const r = await api.publishEmail({ client_id: state.cid, ym: state.ym, leads: st.leads, calls: st.calls, enquiries: st.enq, missed_rate: st.missedRate, won_value: st.wonValue }); mailNote = r.demo ? " · email skipped (demo)" : " · email sent"; } catch (ex) { mailNote = " · email not sent: " + ex.message; } }
-      toast(status === "published" ? `Published to ${c.contact_name}${importNote}${mailNote}` : `Saved${importNote}`, /not sent/.test(mailNote));
+      if (clicked === "published" && $("u-mail").classList.contains("on")) { msg.textContent = "Sending email…"; const st = monthStats(c, state.ym); try { const r = await api.publishEmail({ client_id: state.cid, ym: state.ym, leads: st.leads, calls: st.calls, enquiries: st.enq, missed_rate: st.missedRate, won_value: st.wonValue }); mailNote = r.demo ? " · email skipped (demo)" : " · email sent"; } catch (ex) { mailNote = " · email not sent: " + ex.message; } }
+      toast(clicked === "published" ? `Published to ${c.contact_name}${importNote}${mailNote}` : `Saved${importNote}`, /not sent/.test(mailNote));
       setTimeout(() => go(`/admin/client/${state.cid}`), 700);
     } catch (ex) { msg.textContent = ""; toast(ex.message, true); $("u-draft").removeAttribute("disabled"); $("u-pub").removeAttribute("disabled"); }
   };

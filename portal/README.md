@@ -105,6 +105,7 @@ Headers are matched loosely (case and spaces ignored). Dates are read in the par
 | Duration   | Call Duration, Duration, Talk time                             | seconds, m:ss, h:mm:ss or "2m 34s"        |
 | Outcome    | Outcome, Status, Disposition                                   | answered / missed / voicemail; if missing, answered when ≥ 20s |
 | Recording  | Recording, Recording URL                                       | a link; if Nimbata links need a login, attach the file on the lead instead |
+| Summary    | Summary, AI Summary, Call Summary, Description                 | the AI call summary; shown to the partner on the lead and as the one-liner in the list |
 | Value      | Value, Lead Value, Estimate, Job Value                         | your estimate for that job, shown as "Est." on the lead |
 | Optional   | Tracking Number, Source, Campaign, Keyword, City, Call ID, Notes | kept in `raw`                           |
 

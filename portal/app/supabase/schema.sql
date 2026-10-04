@@ -146,6 +146,7 @@ create table if not exists public.calls (
   recording_path  text,            -- or a file in the `recordings` bucket: <client_id>/<file>
   nimbata_call_id text,
   admin_note      text not null default '',
+  summary         text not null default '',   -- AI call summary from the CSV ("Summary" column), shown to the partner
   estimated_value numeric,         -- Joe's estimate for this job (from the CSV "Value" column or typed in)
   client_status   text not null default 'new' check (client_status in ('new','ongoing','quoted','won','lost','not_lead','spam')),
   job_value       numeric not null default 0 check (job_value >= 0),   -- the partner's real number
@@ -154,6 +155,7 @@ create table if not exists public.calls (
   created_at      timestamptz not null default now()
 );
 alter table public.calls add column if not exists estimated_value numeric;
+alter table public.calls add column if not exists summary text not null default '';
 alter table public.calls drop constraint if exists calls_client_status_check;
 alter table public.calls add constraint calls_client_status_check check (client_status in ('new','ongoing','quoted','won','lost','not_lead','spam'));
 create index if not exists calls_client_ym on public.calls (client_id, ym);
@@ -350,6 +352,7 @@ begin
              nullif(r->>'recording_url', '')                 as recording_url,
              nullif(r->>'nimbata_call_id', '')               as nimbata_call_id,
              coalesce(r->>'admin_note', '')                  as admin_note,
+             coalesce(r->>'summary', '')                     as summary,
              nullif(r->>'estimated_value', '')::numeric      as estimated_value,
              r->'raw'                                        as raw
       from jsonb_array_elements(p_rows) r
@@ -359,10 +362,10 @@ begin
   delete from public.calls where client_id = p_client and ym = p_ym;
 
   insert into public.calls (client_id, ym, called_at, caller_number, duration_sec, outcome, tracking_number, source,
-                            campaign, keyword, city, recording_url, nimbata_call_id, admin_note, estimated_value, raw,
+                            campaign, keyword, city, recording_url, nimbata_call_id, admin_note, summary, estimated_value, raw,
                             client_status, job_value, client_note)
   select p_client, p_ym, n.called_at, n.caller_number, n.duration_sec, n.outcome, n.tracking_number, n.source,
-         n.campaign, n.keyword, n.city, n.recording_url, n.nimbata_call_id, n.admin_note, n.estimated_value, n.raw,
+         n.campaign, n.keyword, n.city, n.recording_url, n.nimbata_call_id, n.admin_note, n.summary, n.estimated_value, n.raw,
          coalesce(o.client_status, 'new'), coalesce(o.job_value, 0), coalesce(o.client_note, '')
   from _new n
   left join lateral (
@@ -406,6 +409,7 @@ begin
              nullif(r->>'recording_url', '')                 as recording_url,
              nullif(r->>'nimbata_call_id', '')               as nimbata_call_id,
              coalesce(r->>'admin_note', '')                  as admin_note,
+             coalesce(r->>'summary', '')                     as summary,
              nullif(r->>'estimated_value', '')::numeric      as estimated_value,
              r->'raw'                                        as raw
       from jsonb_array_elements(p_rows) r
@@ -431,6 +435,7 @@ begin
       campaign = coalesce(m.campaign, c.campaign), keyword = coalesce(m.keyword, c.keyword), city = coalesce(m.city, c.city),
       recording_url = coalesce(m.recording_url, c.recording_url), nimbata_call_id = coalesce(c.nimbata_call_id, m.nimbata_call_id),
       admin_note = case when m.admin_note <> '' then m.admin_note else c.admin_note end,
+      summary = case when m.summary <> '' then m.summary else c.summary end,
       estimated_value = coalesce(m.estimated_value, c.estimated_value), raw = coalesce(m.raw, c.raw)
     from matched m where c.id = m.call_id
     returning c.id
@@ -439,9 +444,9 @@ begin
   -- add the rest
   with ins as (
     insert into public.calls (client_id, ym, called_at, caller_number, duration_sec, outcome, tracking_number, source,
-                              campaign, keyword, city, recording_url, nimbata_call_id, admin_note, estimated_value, raw)
+                              campaign, keyword, city, recording_url, nimbata_call_id, admin_note, summary, estimated_value, raw)
     select p_client, p_ym, n.called_at, n.caller_number, n.duration_sec, n.outcome, n.tracking_number, n.source,
-           n.campaign, n.keyword, n.city, n.recording_url, n.nimbata_call_id, n.admin_note, n.estimated_value, n.raw
+           n.campaign, n.keyword, n.city, n.recording_url, n.nimbata_call_id, n.admin_note, n.summary, n.estimated_value, n.raw
     from _new n
     where not exists (
       select 1 from public.calls c

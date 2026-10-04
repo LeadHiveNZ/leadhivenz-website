@@ -22,6 +22,8 @@
   const KW_EL = ["emergency electrician gold coast", "electrician near me", "power outage electrician", "switchboard upgrade", "ceiling fan installation", "smoke alarm installer"];
   const SUB_AK = ["Mt Eden", "Ponsonby", "Howick", "Takapuna", "Manukau", "Henderson", "Glenfield", "Remuera", "Papakura", "Botany", "Onehunga", "Albany"];
   const SUB_GC = ["Southport", "Robina", "Burleigh Heads", "Nerang", "Coomera", "Helensvale", "Varsity Lakes", "Palm Beach"];
+  const SUM_PL = ["Caller has a blocked kitchen drain, water backing up into the sink. Wants someone today. Visit agreed for this afternoon, callout fee explained.", "Hot water cylinder leaking from the base, no hot water since this morning. Landlord calling for a tenant. Asked for a replacement quote, inspection booked.", "Burst pipe under the house, water running since last night. Mains turned off on the call. Emergency visit arranged within the hour.", "Toilet cistern keeps running. Asked for a rough price, happy with the range given, will confirm a time by text.", "Dripping kitchen tap. Not urgent, next week is fine. Address and best time taken.", "New dishwasher to plumb in after a kitchen reno. Wants a quote, photos to be sent through.", "Low water pressure across the whole house since the weekend. Visit booked for tomorrow morning.", "Gas hob disconnect and reconnect for a kitchen renovation. Needs a certified gasfitter, date pencilled in."];
+  const SUM_EL = ["Half the house lost power after the storm. Switchboard tripping. Urgent visit arranged for today.", "Switchboard upgrade for a 1970s home with ceramic fuses. Wants a quote, site visit booked.", "Smoke alarms for a rental, needs a compliance certificate. Price range given, booked for Thursday.", "Three ceiling fans to install, fans already purchased. Flexible on timing, quote sent by text.", "Outdoor power point for a new spa pool. Needs an RCD, quote requested.", "Flickering lights in the kitchen, possibly a loose neutral. Visit booked."];
   const NOTES_PL = ["Blocked kitchen drain, wanted same day.", "Hot water cylinder leaking, landlord calling for tenant.", "Burst pipe under house, urgent.", "Toilet cistern running, asked for a price.", "Tap dripping, flexible on timing.", "New dishwasher install, quote request.", "Water pressure drop, whole house.", "Gas hob disconnect for kitchen reno."];
   const NOTES_EL = ["Half the house lost power, urgent.", "Switchboard upgrade quote for a 1970s home.", "Smoke alarms for rental compliance.", "Ceiling fans x3, flexible.", "Outdoor power point for a spa.", "Flickering lights in kitchen."];
   const NAMES = ["Sarah M.", "Dave Henderson", "Priya K.", "Tom Walker", "Aroha N.", "Chris B.", "Mel Tui", "Jordan P.", "Liam O'Connor", "Hine R."];
@@ -45,7 +47,8 @@
       const rr = r(); const outcome = rr < opts.missRate ? "missed" : rr < opts.missRate + 0.06 ? "voicemail" : "answered";
       const duration_sec = outcome === "answered" ? 45 + Math.floor(r() * 400) : outcome === "voicemail" ? 20 + Math.floor(r() * 40) : 0;
       const ests = au ? [320, 480, 750, 1200, 2900] : [280, 350, 450, 650, 900, 1800];
-      out.push({ id: uuid(r), client_id: c.id, ym, called_at: zonedToUtc(y, m, day, hr, mi, 0, c.timezone).toISOString(), caller_number: au ? auMobile(r) : nzMobile(r), duration_sec, outcome, estimated_value: r() < 0.6 ? ests[Math.floor(r() * ests.length)] : null,
+      const sums = au ? SUM_EL : SUM_PL;
+      out.push({ id: uuid(r), client_id: c.id, ym, called_at: zonedToUtc(y, m, day, hr, mi, 0, c.timezone).toISOString(), caller_number: au ? auMobile(r) : nzMobile(r), duration_sec, outcome, estimated_value: r() < 0.6 ? ests[Math.floor(r() * ests.length)] : null, summary: outcome === "answered" ? sums[Math.floor(r() * sums.length)] : "",
         tracking_number: au ? "07 5600 1122" : "09 801 2201", source: "Google Ads", campaign: au ? "GC Electrician · Search" : "AKL Plumber · Search", keyword: kw[Math.floor(r() * kw.length)],
         city: subs[Math.floor(r() * subs.length)], recording_url: outcome === "answered" ? "demo" : null, recording_path: null, nimbata_call_id: "nb" + (++idc),
         admin_note: outcome === "answered" && r() < 0.6 ? notes[Math.floor(r() * notes.length)] : "", client_status: "new", job_value: 0, client_note: "", raw: null });
@@ -66,7 +69,7 @@
   function forceOutcomes(calls, nMissed, nVoice, lunch, tz) {
     calls.forEach((c, i) => {
       if (i < nMissed + nVoice) {
-        c.outcome = i < nMissed ? "missed" : "voicemail"; c.duration_sec = c.outcome === "voicemail" ? 25 + i * 7 : 0; c.recording_url = null; c.admin_note = "";
+        c.outcome = i < nMissed ? "missed" : "voicemail"; c.duration_sec = c.outcome === "voicemail" ? 25 + i * 7 : 0; c.recording_url = null; c.admin_note = ""; c.summary = "";
         if (lunch) { const p = tzParts(new Date(c.called_at).getTime(), tz); c.called_at = zonedToUtc(+p.year, +p.month, +p.day, 12 + (i % 2), 5 + i * 11, 0, tz).toISOString(); }
       } else { c.outcome = "answered"; if (c.duration_sec < 45) c.duration_sec = 60 + i * 9; c.recording_url = "demo"; }
     });
@@ -116,7 +119,7 @@
     forceOutcomes(pick(bay, m2), 4, 1, false, AU); applyTags(pick(bay, m2), [["won", 1800], ["ongoing"], ["won", 520], ["won", 3100], ["ongoing"], ["won", 690]]);
     // Brian's first call since launch
     const [ly, lm] = m1.split("-").map(Number);
-    calls.push({ id: uuid(r), client_id: nth.id, ym: m1, called_at: zonedToUtc(ly, lm, 30, 14, 5, 0, NZ).toISOString(), caller_number: "021 884 0022", duration_sec: 168, outcome: "answered", estimated_value: 6500, tracking_number: "09 801 3300", source: "Google Ads", campaign: "Northland Handyman · Search", keyword: "deck builder whangarei", city: "Whangārei", recording_url: "demo", recording_path: null, nimbata_call_id: "nb9001", admin_note: "Deck rebuild, Kamo. Wants a quote next week.", client_status: "new", job_value: 0, client_note: "", raw: null });
+    calls.push({ id: uuid(r), client_id: nth.id, ym: m1, called_at: zonedToUtc(ly, lm, 30, 14, 5, 0, NZ).toISOString(), caller_number: "021 884 0022", duration_sec: 168, outcome: "answered", estimated_value: 6500, summary: "Wants an old deck pulled out and rebuilt in Kamo, about 25 square metres. Asked for a quote next week, happy to send photos.", tracking_number: "09 801 3300", source: "Google Ads", campaign: "Northland Handyman · Search", keyword: "deck builder whangarei", city: "Whangārei", recording_url: "demo", recording_path: null, nimbata_call_id: "nb9001", admin_note: "Deck rebuild, Kamo. Wants a quote next week.", client_status: "new", job_value: 0, client_note: "", raw: null });
 
     const mk = (c, ym, status, ad_spend, summary, points) => ({ id: uuid(r), client_id: c.id, ym, status, summary, points, pdf_path: null, published_at: status === "published" ? zonedToUtc(+ymAdd(ym, 1).split("-")[0], +ymAdd(ym, 1).split("-")[1], 2, 18, 0, 0, c.timezone).toISOString() : null, ad_spend });
     months.push(mk(mike, m4, "published", 612, "First month in and we're already inside the target range. The campaign is still learning, so expect leads to climb from here as Google works out which searches turn into calls for you.",
