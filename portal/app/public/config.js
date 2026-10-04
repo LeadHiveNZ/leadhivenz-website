@@ -9,8 +9,8 @@ window.LEADHIVE_CONFIG = {
   adminEmail: "hello@leadhivenz.com",
   joe: {
     name: "Joe",
-    phone: "+64 21 000 0000",          // shown as the "Call" button on the Account screen
-    whatsapp: "https://wa.me/64210000000",
+    phone: "+61 450 925 145",          // shown as the "Call" button on the Account screen
+    whatsapp: "https://wa.me/61450925145",
     email: "hello@leadhivenz.com",
   },
 };
