@@ -21,6 +21,8 @@ const emptyState = (title, body) => `<div class="empty"><img src="${LOGO_BEE}" a
 
 /* ═══════════════════════════ utilities ═══════════════════════════ */
 const $ = (id) => document.getElementById(id);
+const NET_RE = /failed to fetch|networkerror|load failed|network request failed|fetch failed/i;
+const netMsg = (m) => (NET_RE.test(String(m || "")) ? "Can't reach the portal right now. Check your signal and try again." : String(m || "Something went wrong"));
 const h = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" }[c]));
 const money = (n, dp = 0) => "$" + Number(n || 0).toLocaleString("en-NZ", { minimumFractionDigits: dp, maximumFractionDigits: dp });
 const pct = (a, b) => (b ? Math.round((a / b) * 100) : 0);
@@ -54,7 +56,7 @@ const fmtTime = (d) => new Date(d).toLocaleTimeString("en-NZ", { timeZone: TZ, h
 const fmtDay = (d) => { const t = new Date(); const td = ymdOf(t), yd = ymdOf(new Date(t.getTime() - 864e5)), x = ymdOf(d); if (x === td) return "Today"; if (x === yd) return "Yesterday"; return new Date(d).toLocaleDateString("en-NZ", { timeZone: TZ, weekday: "short", day: "numeric", month: "short" }); };
 const fmtDT = (d) => `${fmtDay(d)}, ${fmtTime(d)}`;
 const fmtDate = (d) => new Date(d).toLocaleDateString("en-NZ", { timeZone: TZ, day: "numeric", month: "short", year: "numeric" });
-function toast(m, bad) { const t = $("toast"); t.textContent = m; t.className = "toast on" + (bad ? " bad" : ""); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("on"), bad ? 4000 : 2200); }
+function toast(m, bad) { const t = $("toast"); t.textContent = bad ? netMsg(m) : m; t.className = "toast on" + (bad ? " bad" : ""); clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove("on"), bad ? 4000 : 2200); }
 const copyText = (txt, okMsg) => (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject()).then(() => toast(okMsg || "Copied"), () => {
   try { const ta = document.createElement("textarea"); ta.value = txt; ta.style.cssText = "position:fixed;left:-9999px;top:0"; document.body.appendChild(ta); ta.select(); const ok = document.execCommand("copy"); ta.remove(); toast(ok ? (okMsg || "Copied") : "Couldn't copy on this device", !ok); } catch (e) { toast("Couldn't copy on this device", true); }
 });
@@ -499,7 +501,7 @@ async function route() {
     return (clientPages[page] || renderHome)(ctx);
   } catch (e) {
     console.error(e); hideTabs();
-    app().innerHTML = `<div class="shell" style="padding-top:60px"><div class="card"><b>Something went wrong</b><p class="lede mt8">${h(e.message || e)}</p><button class="btn navy mt16" id="retry">Try again</button><button class="btn ghost mt12" id="out">Log out</button></div></div>`;
+    app().innerHTML = `<div class="shell" style="padding-top:60px"><div class="card"><b>Something went wrong</b><p class="lede mt8">${h(netMsg(e && e.message ? e.message : e))}</p><button class="btn navy mt16" id="retry">Try again</button><button class="btn ghost mt12" id="out">Log out</button></div></div>`;
     $("retry").onclick = () => route(); $("out").onclick = async () => { await api.signOut(); resetDB(); go("/"); route(); };
   }
 }
@@ -531,7 +533,7 @@ function renderLogin(notice) {
   const err = $("l-err");
   $("login-f").onsubmit = async (e) => { e.preventDefault(); err.classList.add("hidden"); $("l-btn").setAttribute("disabled", ""); $("l-btn").textContent = "Logging in…";
     try { await api.signIn($("l-email").value.trim().toLowerCase(), $("l-pass").value); resetDB(); go("/"); await route(); }
-    catch (ex) { err.textContent = /invalid/i.test(ex.message) ? "That email or password isn't right." : ex.message; err.classList.remove("hidden"); $("l-btn").removeAttribute("disabled"); $("l-btn").textContent = "Log in"; } };
+    catch (ex) { err.textContent = /invalid/i.test(ex.message) ? "That email or password isn't right." : netMsg(ex.message); err.classList.remove("hidden"); $("l-btn").removeAttribute("disabled"); $("l-btn").textContent = "Log in"; } };
   $("l-forgot").onclick = async (e) => { e.preventDefault(); const em = $("l-email").value.trim().toLowerCase(); if (!em) { err.textContent = "Type your email first, then tap the reset link."; err.classList.remove("hidden"); $("l-email").focus(); return; }
     try { await api.resetPassword(em); toast("Reset link sent. Check your email."); } catch (ex) { toast(ex.message, true); } };
 }
@@ -547,7 +549,7 @@ function renderSignup() {
   $("su-f").onsubmit = async (e) => { e.preventDefault(); err.classList.add("hidden"); const p1 = $("su-pass").value, p2 = $("su-pass2").value; if (p1 !== p2) { err.textContent = "Those passwords don't match."; err.classList.remove("hidden"); return; }
     $("su-btn").setAttribute("disabled", "");
     try { const data = await api.signUp($("su-email").value.trim().toLowerCase(), p1); if (data && data.session) { resetDB(); go("/"); await route(); } else { app().innerHTML = loginShell(`<h2>Check your email</h2><p class="lede mt8">We sent a confirmation link. Tap it, then come back and log in.</p><a class="btn navy mt20" href="#/">Back to log in</a>`); } }
-    catch (ex) { err.textContent = ex.message; err.classList.remove("hidden"); $("su-btn").removeAttribute("disabled"); } };
+    catch (ex) { err.textContent = netMsg(ex.message); err.classList.remove("hidden"); $("su-btn").removeAttribute("disabled"); } };
 }
 function renderReset() {
   app().innerHTML = loginShell(`<h2>Set a new password</h2>
@@ -555,7 +557,7 @@ function renderReset() {
     <label class="fld"><span>Again</span><input id="rs-pass2" type="password" autocomplete="new-password" minlength="6" required></label>
     <div class="err hidden" id="rs-err"></div><button class="btn primary mt20" type="submit">Save password</button></form>`);
   $("rs-f").onsubmit = async (e) => { e.preventDefault(); const err = $("rs-err"); err.classList.add("hidden"); if ($("rs-pass").value !== $("rs-pass2").value) { err.textContent = "Those passwords don't match."; err.classList.remove("hidden"); return; }
-    try { await api.updatePassword($("rs-pass").value); toast("Password saved"); resetDB(); go("/"); await route(); } catch (ex) { err.textContent = ex.message; err.classList.remove("hidden"); } };
+    try { await api.updatePassword($("rs-pass").value); toast("Password saved"); resetDB(); go("/"); await route(); } catch (ex) { err.textContent = netMsg(ex.message); err.classList.remove("hidden"); } };
 }
 function renderPaused(c) {
   app().innerHTML = loginShell(`<h2>Your portal is paused</h2><p class="lede mt8">${h(c.business_name)} isn't running with LeadHive right now, so the portal is switched off. Your calls, recordings and results are all kept, and it's one message to ${h(JOE.name)} to switch it back on.</p>
