@@ -317,6 +317,9 @@ const estimateFor = (x, c) => (x.estimated_value != null && x.estimated_value !=
 function findLead(id) { const c = DB.calls.find((x) => x.id === id); if (c) return { ...c, kind: "call", at: c.called_at }; const e = DB.enquiries.find((x) => x.id === id); return e ? { ...e, kind: "enquiry", at: e.received_at } : null; }
 // A plain-English summary written from the month's numbers, used for backfilled reports.
 // Facts the partner can act on; never ad spend or cost per lead.
+// A report summary the portal wrote from the numbers (not by Joe) can be rewritten when the data changes.
+const isAutoSummary = (t) => /^(No leads came through in [A-Z][a-z]+\.$|\d+ leads? in [A-Z][a-z]+: \d+ calls?\b)/.test(String(t || "").trim());
+const keepReport = (m) => !!m && ((m.summary && !isAutoSummary(m.summary)) || (!m.summary && m.status === "published"));
 function autoSummary(c, ym) {
   const st = monthStats(c, ym); const mon = MONTHS[+String(ym).split("-")[1] - 1]; const s = [];
   if (!st.leads) return `No leads came through in ${mon}.`;
@@ -387,6 +390,9 @@ const COLS = {
   notes: ["notes", "note", "comment", "comments", "agentnotes", "joesnote"],
   tracking: ["trackingnumber", "tracking", "dialednumber", "tonumber", "number"],
   value: ["value", "leadvalue", "estimatedvalue", "estimate", "jobvalue", "revenue", "amount"],
+  direction: ["direction", "calldirection"],
+  destName: ["destinationname", "forwardedtoname"],
+  destination: ["destination", "destinationformatted", "destinationnumber", "forwardedto", "forwardto"],
 };
 function mapColumns(headers) {
   const nh = headers.map(norm); const map = {}; const used = new Set();
@@ -413,7 +419,7 @@ function parseDuration(v) {
   let s = 0; const mh = v.match(/(\d+)\s*h/), mm = v.match(/(\d+)\s*m/), ms = v.match(/(\d+)\s*s/); if (mh) s += +mh[1] * 3600; if (mm) s += +mm[1] * 60; if (ms) s += +ms[1]; return s;
 }
 function parseOutcome(v, durSec) {
-  v = String(v || "").trim().toLowerCase();
+  v = String(v || "").trim().toLowerCase().replace(/[_-]+/g, " "); // Nimbata writes NOT_ANSWERED
   if (/voicemail|\bvm\b/.test(v)) return "voicemail";
   if (/missed|no answer|noanswer|unanswered|busy|failed|abandon|not answered|ringout|no-answer/.test(v)) return "missed";
   if (/answer|complete|connect|success|yes|true/.test(v)) return "answered";
@@ -447,16 +453,46 @@ function rowsToEnquiries(rows, map) {
   }
   return { enquiries: out, skipped };
 }
-function rowsToCalls(rows, map) {
-  const headers = rows[0]; const out = []; const skipped = [];
+// Rows that aren't leads: Nimbata's blocked spam numbers, outbound calls, test calls from Joe's own phone,
+// and calls that never rang through to anyone (no destination and not answered).
+const blankish = (v) => !String(v ?? "").trim() || /^[-–—\s]+$/.test(String(v));
+const JOE_DIGITS = String(JOE.phone || "").replace(/\D/g, "").slice(-9);
+function callSkip(r, map) {
+  const g = (f) => (map[f] === undefined ? "" : String(r[map[f]] ?? "").trim());
+  if (/block|spam|reject/i.test(g("outcome"))) return "blocked";
+  if (/^out/i.test(g("direction"))) return "outbound";
+  if (JOE_DIGITS.length >= 8 && g("caller").replace(/\D/g, "").endsWith(JOE_DIGITS)) return "test";
+  if ((map.destination !== undefined || map.destName !== undefined) && blankish(g("destination")) && blankish(g("destName")) && parseOutcome(g("outcome"), parseDuration(g("duration"))) !== "answered") return "noring";
+  return "";
+}
+const SKIP_WORDS = { blocked: ["blocked spam call", "blocked spam calls"], outbound: ["outbound call", "outbound calls"], test: ["test call from you", "test calls from you"], noring: ["call that never rang through", "calls that never rang through"] };
+const skipText = (left) => Object.entries(left || {}).filter(([, n]) => n).map(([k, n]) => `${n} ${SKIP_WORDS[k][n === 1 ? 0 : 1]}`).join(", ");
+// Nimbata exports times in UTC (its busiest hour reads 22:00, which is 11am in NZ). Decide per file by asking which
+// reading puts more calls in working hours; a Nimbata file is UTC unless its times clearly read as local already.
+function timesLookUtc(rows, map, tz = TZ) {
+  const isNimbata = (rows[0] || []).some((hd) => /^(trackingname|trackingnumformatted|destinationname|destinationformatted|timescalled|whohungup)$/.test(norm(hd)));
+  const keep = TZ; let n = 0, asLocal = 0, asUtc = 0; const biz = (x) => x >= 7 && x <= 20;
+  TZ = "UTC";
+  try {
+    for (let i = 1; i < rows.length && n < 500; i++) { const r = rows[i]; const g = (f) => (map[f] === undefined ? "" : String(r[map[f]] ?? "").trim());
+      if (callSkip(r, map)) continue; if (/(Z|[+-]\d{2}:?\d{2})$/.test(g("datetime"))) return false;
+      const dt = parseDate(g("datetime"), map.time !== undefined && map.time !== map.datetime ? g("time") : ""); if (!dt) continue;
+      n++; if (biz(dt.date.getUTCHours())) asLocal++; if (biz(+tzParts(dt.date, tz).hour)) asUtc++; }
+  } finally { TZ = keep; }
+  return n >= 8 ? asUtc - asLocal > n * 0.15 || (isNimbata && asUtc >= asLocal) : isNimbata;
+}
+function rowsToCalls(rows, map, opts = {}) {
+  const headers = rows[0]; const out = []; const skipped = []; const left = {}; const local = TZ;
   for (let i = 1; i < rows.length; i++) { const r = rows[i]; const g = (f) => (map[f] === undefined ? "" : String(r[map[f]] ?? "").trim());
-    const dt = parseDate(g("datetime"), map.time !== undefined && map.time !== map.datetime ? g("time") : "");
+    const why = callSkip(r, map); if (why) { left[why] = (left[why] || 0) + 1; continue; }
+    const when = [g("datetime"), map.time !== undefined && map.time !== map.datetime ? g("time") : ""];
+    let dt; if (opts.utc) { TZ = "UTC"; try { dt = parseDate(...when); } finally { TZ = local; } if (dt) dt = { date: dt.date, ym: ymOf(dt.date, local) }; } else dt = parseDate(...when);
     if (!dt) { skipped.push(i + 1); continue; }
     const duration_sec = parseDuration(g("duration")); const rec = g("recording");
-    const raw = {}; headers.forEach((hd, ix) => { if (hd && r[ix] !== undefined && r[ix] !== "") raw[hd] = r[ix]; });
+    const raw = {}; headers.forEach((hd, ix) => { if (hd && r[ix] !== undefined && r[ix] !== "") raw[hd] = r[ix]; }); raw._tz = opts.utc ? "utc" : "local";
     out.push({ called_at: dt.date.toISOString(), ym: dt.ym, caller_number: g("caller") || "Unknown", duration_sec, outcome: parseOutcome(g("outcome"), duration_sec), tracking_number: g("tracking") || null, source: g("source") || "Google Ads", campaign: g("campaign") || null, keyword: g("keyword") || null, city: g("city") || null, recording_url: /^https?:/i.test(rec) ? rec : null, nimbata_call_id: g("callId") || null, admin_note: g("notes") || "", summary: g("summary").replace(/\s+/g, " ").slice(0, 700), estimated_value: (() => { const v = parseFloat(String(g("value")).replace(/[^0-9.]/g, "")); return isFinite(v) && v > 0 ? v : null; })(), raw });
   }
-  return { calls: out, skipped };
+  return { calls: out, skipped, left };
 }
 function importSummary(calls) {
   const ans = calls.filter((c) => c.outcome === "answered"); const byYm = {}; for (const c of calls) byYm[c.ym] = (byYm[c.ym] || 0) + 1;
@@ -875,7 +911,7 @@ function renderUpload(ctx) {
     const months = Object.keys(sm.byYm).sort();
     $("u-allwrap").classList.toggle("hidden", months.length < 2);
     if (months.length >= 2) $("u-allhint").textContent = `${months.length} months in this file: ${months.map((y) => `${ymLabel(y, false)} (${sm.byYm[y]})`).join(", ")}. Each call goes to its own month. Notes below are for ${ymLabel(state.ym, false)} only.`;
-    prev.innerHTML = `<div class="card mt12"><div class="row"><div class="grow"><b style="font-size:15px">${h(state.fileName || "Pasted CSV")}</b><div class="small muted">${state.headers.length} columns · ${state.calls.length} calls parsed${state.skipped.length ? ` · ${state.skipped.length} rows skipped (no date)` : ""}</div></div><span class="chip ${months.length > 1 ? "blue" : "good"}">${months.length > 1 ? `${months.length} months` : "Looks good"}</span></div>
+    prev.innerHTML = `<div class="card mt12"><div class="row"><div class="grow"><b style="font-size:15px">${h(state.fileName || "Pasted CSV")}</b><div class="small muted">${state.headers.length} columns · ${state.calls.length} calls parsed${state.skipped.length ? ` · ${state.skipped.length} rows skipped (no date)` : ""}${state.utc ? " · times converted from UTC" : ""}${skipText(state.left) ? ` · left out: ${skipText(state.left)}` : ""}</div></div><span class="chip ${months.length > 1 ? "blue" : "good"}">${months.length > 1 ? `${months.length} months` : "Looks good"}</span></div>
     ${other.length ? `<p class="small mt8" style="color:var(--ink-2)">${months.map((y) => `${ymLabel(y, false)}: ${sm.byYm[y]}`).join(" · ")}. With "Import every month" on, all of them load; off, only the ${inMonth} ${ymLabel(state.ym, false)} rows do.</p>` : ""}
     <div class="kpis" style="margin-top:12px"><div class="kpi"><div class="l">Calls</div><div class="v">${sm.n}</div></div><div class="kpi"><div class="l">Missed</div><div class="v">${sm.missed}<small>${pct(sm.missed, sm.n)}%</small></div></div><div class="kpi"><div class="l">Avg answered</div><div class="v">${dur(sm.avg)}</div></div><div class="kpi"><div class="l">Recordings</div><div class="v">${sm.recordings}</div></div></div>
     <details class="mt12"><summary>Column mapping</summary><div class="map mt8">${fields.map(([f, l]) => `<div class="${state.map[f] !== undefined ? "ok" : ""}"><span>${l}</span><span>${state.map[f] !== undefined ? h(state.headers[state.map[f]]) : "not found"}</span></div>`).join("")}</div></details>
@@ -921,11 +957,11 @@ function renderUpload(ctx) {
     }
     const yms = Object.keys(by).filter((y) => y < curYm).sort();
     if (!(yms.length >= 2 || (yms.length === 1 && yms[0] !== state.ym))) { el.innerHTML = ""; return; }
-    const done = yms.filter((y) => { const m = monthRec(c.id, y); return m && (m.summary || m.status === "published"); }); const todo = yms.filter((y) => !done.includes(y));
+    const done = yms.filter((y) => keepReport(monthRec(c.id, y))); const todo = yms.filter((y) => !done.includes(y));
     el.innerHTML = `<div class="card mt12" style="border:1.5px solid var(--blue);background:var(--card)"><b style="font-size:15px">Create a report for every month</b><p class="small mt8" style="color:var(--ink-2);line-height:1.5">${yms.map((y) => `${ymLabel(y, false)} (${by[y]} lead${by[y] === 1 ? "" : "s"})`).join(" · ")}.</p><p class="small mt8" style="color:var(--ink-2);line-height:1.5">Each month gets its own published report: leads, calls, web enquiries, a week-by-week split and a summary written from the numbers, so ${h(c.contact_name || "the partner")} can look back through them.${todo.includes(state.ym) ? ` ${ymLabel(state.ym, false)} uses your notes below if you've written them.` : ""}${done.length ? ` ${done.map((y) => ymLabel(y, false)).join(", ")} already ${done.length === 1 ? "has a report or notes" : "have reports or notes"} and won't change.` : ""} ${ymLabel(curYm, false)} stays as "this month so far". No emails are sent.</p><button class="btn primary mt12" type="button" id="u-backfill-go" ${todo.length ? "" : "disabled"}>${todo.length ? `Import and create ${todo.length} report${todo.length === 1 ? "" : "s"}` : "Every month already has a report"}</button></div>`;
     const b = $("u-backfill-go"); if (b) b.onclick = () => backfill(todo);
   };
-  const ingest = (text, name) => { const rows = parseCSV(text); if (rows.length < 2) { toast("Couldn't read that file", true); return; } state.headers = rows[0]; state.map = mapColumns(rows[0]); const r = rowsToCalls(rows, state.map); state.calls = r.calls; state.skipped = r.skipped; state.fileName = name || ""; renderPreview(); renderStartNote(); toast(`${state.calls.length} calls parsed`); };
+  const ingest = (text, name) => { const rows = parseCSV(text); if (rows.length < 2) { toast("Couldn't read that file", true); return; } state.headers = rows[0]; state.map = mapColumns(rows[0]); state.utc = timesLookUtc(rows, state.map); const r = rowsToCalls(rows, state.map, { utc: state.utc }); state.calls = r.calls; state.skipped = r.skipped; state.left = r.left; state.fileName = name || ""; renderPreview(); renderStartNote(); toast(`${state.calls.length} calls parsed`); };
   $("u-cid").onchange = (e) => go(`/admin/upload/${e.target.value}/${state.ym}`);
   $("u-ym").onchange = (e) => go(`/admin/upload/${state.cid}/${e.target.value}`);
   $("u-file").onchange = (e) => { const f = e.target.files[0]; if (!f) return; f.text().then((t) => ingest(t, f.name)); };
@@ -1024,14 +1060,20 @@ function partnerLines() {
 function renderImport() {
   const lines = partnerLines(); const lineList = Object.values(lines).sort((a, b) => a.label.localeCompare(b.label));
   const files = []; let done = false; let reports = true;
+  const mainTz = (() => { const n = {}; lineList.forEach((l) => (n[l.tz] = (n[l.tz] || 0) + l.partners.length)); return Object.keys(n).sort((a, b) => n[b] - n[a])[0] || "Pacific/Auckland"; })();
   const SPLIT_PRI = [/project/, /trackingnumbername|trackingname|numbername|campaignname/, /landingpage|^page$|website|site/, /campaign/, /trackingnumber|tracking|dialednumber|tonumber/, /destination|forward/];
-  const guessLine = (text) => { const t = norm(text); const d = String(text || "").replace(/\D/g, ""); let best = null, score = 0;
+  const words = (x) => String(x || "").toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+  const PLAIN = new Set([..."electrical electrics electric electrician electricians plumbing plumber plumbers services service builders builds building build construction maintenance renovation renovations reno ltd limited nz co the and developments development solutions group trade trades handyman property south north east west".split(" "), ...lineList.flatMap((l) => words(l.region))]);
+  // who = the text is a "Destination Name" (who answered), so a partner's distinctive business word or first name counts too.
+  // A tie between landing pages is a guess, not a match, so it's left for Joe to pick.
+  const guessLine = (text, who) => { const t = norm(text); const d = String(text || "").replace(/\D/g, ""); const tw = new Set(words(text)); let best = null, score = 0, tie = false;
     lineList.forEach((l) => { let sc = 0; const r = norm(l.region); if (r && t.includes(r)) sc += r.length; if (sc && t.includes(norm(l.niche))) sc += 5;
-      l.partners.forEach((p) => { if (norm(p.c.business_name).length > 3 && t.includes(norm(p.c.business_name))) sc += 50; const ph = String(p.c.phone || "").replace(/\D/g, "").slice(-8); if (ph.length >= 7 && d.includes(ph)) sc += 50; if (p.c.email && String(text).toLowerCase().includes(p.c.email.toLowerCase())) sc += 50; });
-      if (sc > score) { score = sc; best = l; } });
-    return best ? best.key : ""; };
+      l.partners.forEach((p) => { if (norm(p.c.business_name).length > 3 && t.includes(norm(p.c.business_name))) sc += 50; const ph = String(p.c.phone || "").replace(/\D/g, "").slice(-8); if (ph.length >= 7 && d.includes(ph)) sc += 50; if (p.c.email && String(text).toLowerCase().includes(p.c.email.toLowerCase())) sc += 50;
+        if (who) { const bw = words(p.c.business_name).filter((w) => w.length >= 3 && !PLAIN.has(w)); if (bw.length && bw.every((w) => tw.has(w))) sc += 40; const fn = words(p.c.contact_name)[0]; if (fn && fn.length >= 3 && tw.has(fn)) sc += 20; } });
+      if (sc > score) { score = sc; best = l; tie = false; } else if (sc && sc === score) tie = true; });
+    return best && !tie ? best.key : ""; };
   const parseGroup = (f, g) => { const line = lines[g.line]; const keep = TZ; if (line) TZ = line.tz; try { const data = [f.headers, ...g.idx.map((i) => f.rows[i])];
-      return f.kind === "calls" ? rowsToCalls(data, f.map).calls.map((x) => ({ ...x, t: new Date(x.called_at).getTime() })) : rowsToEnquiries(data, f.map).enquiries.map((x) => ({ ...x, t: new Date(x.received_at).getTime() })); } finally { TZ = keep; } };
+      return f.kind === "calls" ? rowsToCalls(data, f.map, { utc: f.utc }).calls.map((x) => ({ ...x, t: new Date(x.called_at).getTime() })) : rowsToEnquiries(data, f.map).enquiries.map((x) => ({ ...x, t: new Date(x.received_at).getTime() })); } finally { TZ = keep; } };
   const gapOf = (line, t) => { const prev = line.partners.filter((x) => x.e <= t).sort((a, b) => b.e - a.e)[0]; const next = line.partners.filter((x) => x.s > t).sort((a, b) => a.s - b.s)[0];
     const label = prev && next ? `No partner between ${prev.c.business_name} (last day ${fmtCal(prev.c.churned_on)}) and ${next.c.business_name} (started ${fmtCal(next.c.started_on)})` : next ? `Before ${next.c.business_name} started (${fmtCal(next.c.started_on)})` : prev ? `After ${prev.c.business_name}'s last day (${fmtCal(prev.c.churned_on)}), no partner since` : "No partner";
     return { key: `${prev ? prev.c.id : "-"}|${next ? next.c.id : "-"}`, label }; };
@@ -1044,10 +1086,26 @@ function renderImport() {
     const cm = mapColumns(headers); const em = mapEnqColumns(headers); const kind = cm.duration !== undefined || (cm.caller !== undefined && em.name === undefined) ? "calls" : "enquiries";
     const nh = headers.map(norm); const iReg = nh.indexOf("region"), iTr = nh.findIndex((h) => h === "trade" || h === "niche");
     let split = -1; if (iReg >= 0 && iTr >= 0) split = -2; else for (const re of SPLIT_PRI) { const i = nh.findIndex((h) => re.test(h)); if (i >= 0) { split = i; break; } }
-    const f = { id: "f" + files.length, name, kind, headers, rows, map: kind === "calls" ? cm : em, split, iReg, iTr, groups: [] }; regroup(f); files.push(f); renderAll(); };
+    const map = kind === "calls" ? cm : em; const left = {}; const keep = [];
+    rows.forEach((r, i) => { const why = kind === "calls" ? callSkip(r, map) : ""; if (why) left[why] = (left[why] || 0) + 1; else keep.push(i); });
+    const f = { id: "f" + files.length, name, kind, headers, rows, keep, left, map, split, iReg, iTr, utc: kind === "calls" && timesLookUtc([headers, ...rows], map, mainTz), groups: [] }; regroup(f); files.push(f); renderAll(); };
   const regroup = (f) => { const val = (r) => f.split === -2 ? `${String(r[f.iReg] || "").trim()} ${String(r[f.iTr] || "").trim()}`.trim() : f.split >= 0 ? String(r[f.split] || "").trim() : "";
-    const m = new Map(); f.rows.forEach((r, i) => { const v = val(r) || (f.split === -1 ? "Whole file" : "(blank)"); if (!m.has(v)) m.set(v, []); m.get(v).push(i); });
-    f.groups = [...m.entries()].map(([value, idx]) => { const key = f.split === -2 ? lineKeyOf(f.rows[idx[0]][f.iReg], f.rows[idx[0]][f.iTr]) : ""; return { value, idx, line: key && lines[key] ? key : guessLine(`${value === "Whole file" || value === "(blank)" ? "" : value} ${f.name}`) }; }); };
+    const m = new Map(); f.keep.forEach((i) => { const v = val(f.rows[i]) || (f.split === -1 ? "Whole file" : "(blank)"); if (!m.has(v)) m.set(v, []); m.get(v).push(i); });
+    f.groups = [...m.entries()].map(([value, idx]) => { const key = f.split === -2 ? lineKeyOf(f.rows[idx[0]][f.iReg], f.rows[idx[0]][f.iTr]) : ""; return { value, idx, line: key && lines[key] ? key : guessLine(`${value === "Whole file" || value === "(blank)" ? "" : value} ${f.name}`) }; });
+    // One project can hold several partners' calls (early on, every region sat under "New Plymouth"). When the
+    // Destination column shows calls going to partners on different landing pages, split the group by who answered.
+    const iN = f.map.destName, iD = f.map.destination, iT = f.map.tracking;
+    if (f.kind !== "calls" || (iN === undefined && iD === undefined) || f.split === iN || f.split === iD) return;
+    const destOf = (r) => [iN, iD].map((ix) => (ix === undefined || blankish(r[ix]) ? "" : String(r[ix]).trim())).filter(Boolean).join(" · ");
+    const trk = (r) => (iT === undefined ? "" : String(r[iT] || "").replace(/\D/g, ""));
+    f.groups = f.groups.flatMap((g) => {
+      const byT = new Map(); g.idx.forEach((i) => { const dv = destOf(f.rows[i]), tv = trk(f.rows[i]); if (dv && tv) { const x = byT.get(tv) || new Map(); x.set(dv, (x.get(dv) || 0) + 1); byT.set(tv, x); } });
+      const top = (tv) => { const x = byT.get(tv); return x ? [...x.entries()].sort((a, b) => b[1] - a[1])[0][0] : ""; }; // no destination: whoever that tracking number usually rang
+      const buckets = new Map(); g.idx.forEach((i) => { const k = destOf(f.rows[i]) || top(trk(f.rows[i])); if (!buckets.has(k)) buckets.set(k, []); buckets.get(k).push(i); });
+      const guess = new Map([...buckets.keys()].map((k) => [k, k ? guessLine(k, true) : ""])); const distinct = new Set([...guess.values()].filter(Boolean));
+      if (distinct.size < 2) { if (!g.line && distinct.size === 1) g.line = [...distinct][0]; return [g]; }
+      return [...buckets.entries()].sort((a, b) => b[1].length - a[1].length).map(([k, idx]) => ({ value: `${g.value} → ${k ? k.split(" · ")[0] : "no destination"}`, idx, line: guess.get(k) || g.line }));
+    }); };
   const fmtD = (t) => (isFinite(t) ? new Date(t).toLocaleDateString("en-NZ", { day: "numeric", month: "short", year: "numeric", timeZone: "Pacific/Auckland" }) : "–");
 
   app().innerHTML = topBar({ title: "Upload data for every partner", sub: "Nimbata exports and web enquiries, all at once", back: "/admin" }) + `<div class="shell">
@@ -1060,9 +1118,11 @@ function renderImport() {
       <label class="fld" style="margin-top:6px"><span>Landing page</span><select data-file="${f.id}" data-g="${gi}"><option value="">Skip these</option>${lineList.map((l) => `<option value="${l.key}" ${g.line === l.key ? "selected" : ""}>${h(l.label)}: ${h(l.who)}</option>`).join("")}</select></label>
       <div class="small mt8" style="color:${g.line ? "var(--ink-2)" : "var(--warn)"}">${g.line ? (parts.join(" · ") || "No partner had these dates") : "Pick the landing page, or leave it skipped."}</div>
       ${g.line ? [...a.gaps.values()].map((x) => `<div class="small mt8" style="color:var(--warn);line-height:1.45">${h(x.label)}: ${x.n} ${f.kind === "calls" ? "call" : "enquir"}${x.n === 1 ? (f.kind === "calls" ? "" : "y") : (f.kind === "calls" ? "s" : "ies")} (${x.from === x.to ? fmtD(x.from) : `${fmtD(x.from)} to ${fmtD(x.to)}`}), not given to anyone.</div>`).join("") : ""}</div>`; };
-  const fileHtml = (f) => { const cols = f.headers.map((hd, i) => [i, hd]); const tot = f.rows.length;
-    return `<div class="card mt12"><div class="row"><div class="grow"><b style="font-size:15px">${h(f.name)}</b><div class="small muted">${tot} ${f.kind === "calls" ? "calls (Nimbata)" : "web enquiries"}</div></div><button class="btn ghost sm" type="button" data-rm="${f.id}">Remove</button></div>
+  const fileHtml = (f) => { const cols = f.headers.map((hd, i) => [i, hd]);
+    return `<div class="card mt12"><div class="row"><div class="grow"><b style="font-size:15px">${h(f.name)}</b><div class="small muted">${f.keep.length} ${f.kind === "calls" ? "calls (Nimbata)" : "web enquiries"}</div></div><button class="btn ghost sm" type="button" data-rm="${f.id}">Remove</button></div>
       <label class="fld"><span>Split by</span><select data-split="${f.id}"><option value="-1" ${f.split === -1 ? "selected" : ""}>Whole file is one landing page</option>${f.iReg >= 0 && f.iTr >= 0 ? `<option value="-2" ${f.split === -2 ? "selected" : ""}>Region + Trade columns</option>` : ""}${cols.map(([i, hd]) => `<option value="${i}" ${f.split === i ? "selected" : ""}>${h(hd)}</option>`).join("")}</select></label>
+      ${f.kind === "calls" ? `<label class="fld"><span>Times in this file</span><select data-utc="${f.id}"><option value="1" ${f.utc ? "selected" : ""}>UTC, convert to each partner's time (Nimbata exports)</option><option value="0" ${f.utc ? "" : "selected"}>Already local NZ / AU time</option></select></label>` : ""}
+      ${skipText(f.left) ? `<p class="small muted mt8" style="line-height:1.45">Left out: ${skipText(f.left)}. They aren't leads.</p>` : ""}
       ${f.groups.map((g, gi) => groupHtml(f, g, gi)).join("")}</div>`; };
   const plan = () => { const per = new Map(); files.forEach((f) => f.groups.forEach((g) => { if (!g.line) return; const a = assignGroup(f, g); a.by.forEach((x, id) => { if (!per.has(id)) per.set(id, { c: x.c, calls: [], enq: [] }); per.get(id)[f.kind === "calls" ? "calls" : "enq"].push(...x.recs); }); })); return per; };
   const renderSum = () => { if (!files.length) { sumEl.innerHTML = ""; return; } const per = plan(); const list = [...per.values()].sort((a, b) => a.c.business_name.localeCompare(b.c.business_name));
@@ -1071,13 +1131,13 @@ function renderImport() {
     sumEl.innerHTML = `<div class="sec"><div class="sec-h"><h2>2 · Check and import</h2></div><div class="card">
       ${list.map((x) => { const yms = [...new Set([...x.calls, ...x.enq].map((r) => ymOf(new Date(r.t), tzOf(x.c))))].sort(); return `<div class="rpt-k" data-p="${x.c.id}"><span>${h(x.c.business_name)}${x.c.active ? "" : ` <span class="muted small">(past)</span>`}<br><span class="small muted">${yms.length ? (yms.length === 1 ? ymLabel(yms[0], false) : `${ymLabel(yms[0], false)} to ${ymLabel(yms[yms.length - 1], false)}`) : ""}</span></span><b>${x.calls.length} call${x.calls.length === 1 ? "" : "s"} · ${x.enq.length} web<br><span class="small muted" data-pst>${x.status || ""}</span></b></div>`; }).join("") || `<p class="small muted">Nothing matched yet. Pick a landing page for each file above.</p>`}
       ${gapN ? `<p class="small mt12" style="color:var(--warn);line-height:1.45">${gapN} lead${gapN === 1 ? "" : "s"} fell in periods with no partner and won't be imported. Each gap is listed under its file above. If one is wrong, fix that partner's start date or last day in their Settings and drop the files in again.</p>` : ""}
-      <label class="switch mt12" style="border-top:0;padding-top:0"><div><b style="font-size:13.5px">Create a report for every finished month</b><small>For current partners only. Months that already have a report are left as they are. No emails are sent.</small></div><button type="button" class="tog ${reports ? "on" : ""}" id="i-rep"></button></label>
+      <label class="switch mt12" style="border-top:0;padding-top:0"><div><b style="font-size:13.5px">Create a report for every finished month</b><small>For current partners only. Reports the portal wrote are refreshed with the new numbers; anything you wrote yourself is left as it is. No emails are sent.</small></div><button type="button" class="tog ${reports ? "on" : ""}" id="i-rep"></button></label>
       <button class="btn primary mt16" type="button" id="i-go" ${!list.length || done ? "disabled" : ""}>${done ? "Done" : `Import ${nC} calls and ${nE} enquiries`}</button>${done ? `<a class="btn ghost mt12" href="#/admin">Back to partners</a>` : ""}</div></div>`;
     $("i-rep").onclick = (e) => { reports = !e.currentTarget.classList.contains("on"); e.currentTarget.classList.toggle("on", reports); };
     const go = $("i-go"); if (go) go.onclick = run; };
   const renderAll = () => { filesEl.innerHTML = files.length ? `<div class="sec"><div class="sec-h"><h2>${files.length} file${files.length === 1 ? "" : "s"}</h2></div>${files.map(fileHtml).join("")}</div>` : ""; renderSum(); };
-  filesEl.addEventListener("change", (e) => { const t = e.target; const f = files.find((x) => x.id === (t.dataset.file || t.dataset.split)); if (!f) return;
-    if (t.dataset.split) { f.split = Number(t.value); regroup(f); } else { f.groups[Number(t.dataset.g)].line = t.value; } renderAll(); });
+  filesEl.addEventListener("change", (e) => { const t = e.target; const f = files.find((x) => x.id === (t.dataset.file || t.dataset.split || t.dataset.utc)); if (!f) return;
+    if (t.dataset.split) { f.split = Number(t.value); regroup(f); } else if (t.dataset.utc) f.utc = t.value === "1"; else { f.groups[Number(t.dataset.g)].line = t.value; } renderAll(); });
   filesEl.addEventListener("click", (e) => { const b = e.target.closest("[data-rm]"); if (!b) return; const i = files.findIndex((x) => x.id === b.dataset.rm); if (i >= 0) files.splice(i, 1); renderAll(); });
   const take = (list) => Promise.all([...list].map((f) => f.text().then((t) => [f.name, t]))).then((arr) => arr.forEach(([n, t]) => addFile(n, t)));
   $("i-file").onchange = (e) => take(e.target.files);
@@ -1097,7 +1157,7 @@ function renderImport() {
         if (reports && c.active) {
           await ensureClient(c.id, true); await refreshAdmin(); const keep = TZ; TZ = tz;
           try { const cur = CUR_YM(); const yms = [...new Set([...DB.calls, ...DB.enquiries].filter((r) => r.client_id === c.id && r.ym && r.ym < cur).map((r) => r.ym))].sort();
-            for (const y of yms) { const m = monthRec(c.id, y); if (m && (m.summary || m.status === "published")) continue; setSt(x, `Report for ${ymLabel(y, false)}…`); await api.upsertMonth({ client_id: c.id, ym: y, status: "published", summary: autoSummary(c, y), points: (m && m.points) || [], published_at: new Date().toISOString() }); made++; } } finally { TZ = keep; }
+            for (const y of yms) { const m = monthRec(c.id, y); if (keepReport(m)) continue; setSt(x, `Report for ${ymLabel(y, false)}…`); await api.upsertMonth({ client_id: c.id, ym: y, status: "published", summary: autoSummary(c, y), points: (m && m.points) || [], published_at: (m && m.published_at) || new Date().toISOString() }); made++; } } finally { TZ = keep; }
         }
         setSt(x, `✓ ${ins} new, ${upd} refreshed${made ? ` · ${made} report${made === 1 ? "" : "s"}` : ""}`); ok++;
       } catch (ex) { setSt(x, `✗ ${netMsg(ex.message)}`); }

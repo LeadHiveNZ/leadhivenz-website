@@ -87,8 +87,20 @@ start dates and last days in Settings, so an all-time Hamilton Electrician expor
 Lachlan and Luke by itself. Leads in a period with no partner (before the first, between two, or
 after the last) are listed with their dates and not given to anyone; fix a partner's dates and drop
 the files again if a gap looks wrong. **Create a report for every finished month** publishes an
-auto-written report for current partners' months that have no report or notes yet. Re-importing
-the same files refreshes rows instead of duplicating them.
+auto-written report for current partners' months that have no report yet, and refreshes reports
+the portal wrote earlier; anything you wrote yourself is never touched. Re-importing the same
+files refreshes rows instead of duplicating them.
+
+**One project holding several partners.** Early on every region sat under one Nimbata project
+("New Plymouth"). When the Destination Name / Destination column shows a group's calls going to
+partners on different landing pages, the group is split by who answered ("New Plymouth → Local
+Plumber", "New Plymouth → Jamie Plumbgenix" …) and each part is matched on its own, by business
+name, mobile, or first name. A call with no destination follows whoever its tracking number
+usually rang.
+
+**Left out automatically**: Nimbata's blocked spam numbers, outbound calls, test calls from your
+own phone (`joe.phone` in `config.js`), and calls that never rang through to anyone (no
+destination and not answered). Each file shows how many it left out.
 
 ## Monthly routine (about 5 minutes per partner)
 
@@ -126,18 +138,23 @@ database, not just the UI). Recordings and PDFs are private files served by shor
 
 ## CSV format (Nimbata export)
 
-Headers are matched loosely (case and spaces ignored). Dates are read in the partner's time zone.
+Headers are matched loosely (case and spaces ignored). Nimbata exports its times in UTC (its
+busiest hour reads 22:00, which is 11am in NZ), so a Nimbata file is read as UTC and every call is
+filed under the partner's own day and month. Other files are read in the partner's time zone. The
+upload screens decide per file by checking which reading puts the calls in working hours, and the
+bulk upload lets you override it ("Times in this file").
 
 | Field      | Accepted headers                                              | Notes                                     |
 |------------|---------------------------------------------------------------|-------------------------------------------|
 | Date/time  | Date + Time, or Date/Time, Start time, Timestamp               | dd/mm/yyyy, optional am/pm, or ISO        |
 | Caller     | Caller, Caller ID, Caller Number, From, Phone                  |                                           |
 | Duration   | Call Duration, Duration, Talk time                             | seconds, m:ss, h:mm:ss or "2m 34s"        |
-| Outcome    | Outcome, Status, Disposition                                   | answered / missed / voicemail; if missing, answered when ≥ 20s |
+| Outcome    | Outcome, Status, Disposition                                   | answered / missed (NOT_ANSWERED, no answer, busy) / voicemail; BLOCKED rows are left out; if missing, answered when ≥ 20s |
 | Recording  | Recording, Recording URL                                       | a link; if Nimbata links need a login, attach the file on the lead instead |
 | Summary    | Summary, AI Summary, Call Summary, Description                 | the AI call summary; shown to the partner on the lead and as the one-liner in the list |
 | Value      | Value, Lead Value, Estimate, Job Value                         | your estimate for that job, shown as "Est." on the lead |
-| Optional   | Tracking Number, Source, Campaign, Keyword, City, Call ID, Notes | kept in `raw`                           |
+| Who answered | Destination Name, Destination                                | splits a project shared by several partners; no destination + not answered = never rang through, left out |
+| Optional   | Tracking Number, Source, Campaign, Keyword, City, Call ID, Notes, Direction | kept in `raw`; outbound calls are left out |
 
 A file that spans several months is split automatically ("Import every month in this file"
 is on by default when more than one month is detected). A partner who has been running for
@@ -244,6 +261,14 @@ opening it is your early warning.
 - **"login not created: Admin login required"**: in Netlify, `SUPABASE_URL` must be exactly
   `https://<project>.supabase.co` (no `/rest/v1/`) and `SUPABASE_SERVICE_ROLE_KEY` must be the
   service_role key. Trigger a new deploy after changing either.
+
+- **Call times 12 to 13 hours out, or missed calls showing as answered** (anything uploaded before
+  October 2026): open Supabase → SQL Editor, paste all of `app/supabase/fix-nimbata-times.sql`
+  (Raw view) and Run. It moves every Nimbata call to its real time and month, marks NOT_ANSWERED
+  calls as missed, and removes blocked spam, your test calls and calls that never rang through.
+  Running it twice changes nothing. Then drop your all-time Nimbata export into **Upload data for
+  every partner** again: it fills in anything the old reading put with the wrong partner and
+  refreshes the auto-written reports.
 
 ## Changing things later
 
