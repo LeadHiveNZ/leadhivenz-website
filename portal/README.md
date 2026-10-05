@@ -60,6 +60,16 @@ That email is made admin automatically (see `handle_new_user` in the schema). An
 signs up becomes a partner only if a client row with their email exists.
 
 ### 4. Add a partner
+**Several at once:** Admin → *Add several partners at once* → drop a partner list (CSV: Business,
+First name, Last name, Email, Phone, Region, Niche, Country, Package, Monthly fee, Start date, Last
+day, Why finished; optional Initials, Password, Start hint, End hint). Type the dates on each card,
+check the summary, press **Create N partners**. Initials default to first + last initial (first +
+trade if there's no last name); passwords default to first name + region + trade in lower case.
+Partners with a last day become past partners without a login, partners in the same region and
+trade are linked in date order for "before you" history, and re-running the same list updates
+rather than duplicates. **Copy all login messages** gives you every login text at once.
+
+**One at a time:**
 Admin → + New partner → fill in the business, plan and their email, type a password →
 "Create partner + login". Tap "Copy login message" and text it to them. Done.
 (Creating the login goes through `/api/create-login`, which needs the Netlify env vars above.)

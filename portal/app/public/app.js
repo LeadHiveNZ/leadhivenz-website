@@ -523,7 +523,7 @@ async function route() {
     else if (seg === "as" && isAdmin) { cid = parts[1]; page = parts[2] || "home"; args = parts.slice(3); }
     else { page = seg; args = parts.slice(1); }
     const ctx = { user: DB.me, cid, isAdmin, viewAs: seg === "as", args, base: seg === "as" ? `/as/${cid}` : "" };
-    const adminPages = { admin: renderAdmin, client: renderAdminClient, upload: renderUpload, settings: renderSettings, newclient: renderSettings };
+    const adminPages = { admin: renderAdmin, client: renderAdminClient, upload: renderUpload, settings: renderSettings, newclient: renderSettings, bulk: renderBulk };
     const clientPages = { home: renderHome, leads: renderLeads, lead: renderLead, reports: renderReports, report: renderReport, account: renderAccount };
     if (seg === "admin") { renderTabs(ctx, page); const fn = adminPages[page] || renderAdmin; if (page === "client" || page === "upload" || page === "settings") { const target = args[0]; if (target && client(target)) { skeleton(); await ensureClient(target); if (token !== routeToken) return; } } return fn(ctx); }
     if (!cid || !client(cid)) { hideTabs(); if (isAdmin) return go("/admin"); return renderNoPortal(); }
@@ -809,6 +809,7 @@ function renderAdmin() {
   app().innerHTML = topBar({ brand: true, right: `<span class="pill-admin">ADMIN</span>` }) + `<div class="shell">
   <div class="row" style="margin:18px 0 12px"><div class="grow"><h1 style="font-size:22px;font-weight:600">Partners</h1><div class="small muted">${cs.length} active · ${due} report${due === 1 ? "" : "s"} due for ${ymLabel(prevYm, false)} · ${live} lead${live === 1 ? "" : "s"} logged so far in ${ymLabel(cur, false)}</div></div></div>
   <div class="btn-row"><a class="btn primary" href="#/admin/upload">${ICON.upload}Upload month</a><a class="btn ghost" href="#/admin/newclient">+ New partner</a></div>
+  <a class="small" href="#/admin/bulk" style="display:block;text-align:center;margin-top:10px;color:var(--blue);font-weight:600">Add several partners at once</a>
   <div class="list mt16">${cs.length ? cs.map((c) => { const s = clientStatus(c); const k = countFor(c.id, prevYm); return `<a class="li client-li" href="#/admin/client/${c.id}"><div class="ic">${h(c.initials || "")}</div><div class="grow"><div class="t1"><span>${h(c.business_name)}</span></div><div class="t2"><span class="tx">${h(c.niche)} · ${h(c.region)} ${h(c.country)} · ${h(c.package_name)} ${money(c.monthly_fee)}</span></div><div style="margin-top:5px"><span class="chip ${s.cls}"><i></i>${s.l}</span> ${(() => { const seen = DB.seen[c.id]; const d = seen ? Math.floor((Date.now() - new Date(seen)) / 864e5) : null; return `<span class="chip ${d == null || d >= 14 ? "warn" : ""}">${agoText(seen)}</span>`; })()}</div></div><div class="meta"><div class="tm">${k.leads ? k.leads + (k.leads === 1 ? " lead" : " leads") : ""}</div><div class="du muted">${k.leads ? ymLabel(prevYm, false) : ""}</div></div><span class="chev">${ICON.chev}</span></a>`; }).join("") : `<div class="empty">No partners yet. Add your first one.</div>`}</div>
   <div class="sec"><div class="sec-h"><h2>Month-end routine</h2></div><div class="card"><div class="pt"><div class="ix">1</div><div><b>Export from Nimbata, as often as you like</b><p>Call log → filter the partner's project and the month → Export CSV. Fortnightly is fine: uploads add new calls and refresh existing ones, nothing gets wiped.</p></div></div><div class="pt"><div class="ix">2</div><div><b>Send the stats to Claude for the notes</b><p>Upload step 2 has a "Copy summary" button. Paste it to Claude with the Google Ads spend and you get the summary and three "what I'm changing" points back.</p></div></div><div class="pt"><div class="ix">3</div><div><b>Paste, attach the PDF, publish</b><p>The partner gets an email saying their results are in, and it's in their portal the moment you hit publish.</p></div></div></div></div>
   ${inactive.length ? `<div class="sec"><div class="sec-h"><h2>Past partners</h2><span class="small muted">${inactive.length}</span></div><div class="list">${inactive.map((c) => `<a class="li client-li" href="#/admin/client/${c.id}" style="opacity:.75"><div class="ic" style="background:var(--ink-3)">${h(c.initials || "")}</div><div class="grow"><div class="t1"><span>${h(c.business_name)}</span></div><div class="t2"><span class="tx">${h(c.region)} · left ${c.churned_on ? fmtCal(c.churned_on) : "–"}${c.churn_reason ? " · " + h(CHURN_REASONS[c.churn_reason] || c.churn_reason) : ""}</span></div></div><span class="chev">${ICON.chev}</span></a>`).join("")}</div><p class="small muted mt8">Their data and recordings are kept. Open one to reactivate.</p></div>` : ""}
@@ -1001,6 +1002,114 @@ function renderUpload(ctx) {
   };
   $("u-draft").onclick = () => commit("draft"); $("u-pub").onclick = () => commit("published");
 }
+// ───────────────────────────── Bulk add partners ─────────────────────────────
+// Joe drops a partner list (CSV), types start dates / last days, and one button creates every
+// partner and login. Safe to run again: rows matching an existing partner (email or business) update it.
+function loginMessage(name, email, pw) {
+  return `Hey ${name || "there"}, your LeadHive portal is live.\n\nLog in: ${PORTAL_URL}\nEmail: ${email || "(add their email)"}\nPassword: ${pw || "(set a password first)"}\n\nYou'll see every call and web enquiry, listen to recordings, and get my monthly notes there. Add it to your home screen and it works like an app. When a job lands, tap Won on that lead and put in what it was worth. Ongoing or Lost for the rest. Takes seconds and it shows your real return.\n\n${JOE.name}`;
+}
+const PLANS = { NZ: { Starter: [1500, 15, 25], Growth: [2000, 25, 35] }, AU: { Starter: [1500, 15, 20], Growth: [2200, 25, 35], Dominator: [3400, 40, 60] } };
+const BULK_COLS = { business: ["business", "businessname", "company", "partner"], first: ["firstname", "first", "contactfirstname", "contactname", "contact"], last: ["lastname", "last", "surname"], initials: ["initials"], email: ["email", "emailaddress", "login"], phone: ["phone", "mobile", "cell", "phonenumber"], region: ["region", "area", "city", "location"], niche: ["niche", "trade"], country: ["country"], pkg: ["package", "plan"], fee: ["monthlyfee", "fee", "price"], start: ["startdate", "start", "started", "firstday"], end: ["lastday", "enddate", "end", "stopped", "finished"], why: ["whyfinished", "whystopped", "reason", "churnreason"], password: ["password"], startHint: ["starthint"], endHint: ["endhint"] };
+const nicheWord = (n) => { const t = String(n || "").toLowerCase(); return /electric|sparky/.test(t) ? "Electrician" : /plumb|gas/.test(t) ? "Plumber" : /handy|maint/.test(t) ? "Handyman" : /build|reno/.test(t) ? "Builder" : /lock/.test(t) ? "Locksmith" : /roof/.test(t) ? "Roofer" : /drain/.test(t) ? "Drainlayer" : t ? t.charAt(0).toUpperCase() + t.slice(1) : ""; };
+const portalNiche = (w) => ({ Electrician: "Emergency electrician", Plumber: "Emergency plumber" }[w] || (["Handyman", "Locksmith", "Roofer", "Drainlayer", "Builder"].includes(w) ? w : "Other"));
+const tzForRegion = (region, country) => { const r = String(region || "").toLowerCase(); if (country === "AU") { if (/gold coast|townsville|brisbane|cairns|sunshine|toowoomba|queensland|qld/.test(r)) return "Australia/Brisbane"; if (/melbourne|geelong|victoria/.test(r)) return "Australia/Melbourne"; if (/adelaide/.test(r)) return "Australia/Adelaide"; if (/perth/.test(r)) return "Australia/Perth"; return "Australia/Sydney"; } return TZ_FOR[country] || "Pacific/Auckland"; };
+const reasonKey = (t) => { const x = String(t || "").toLowerCase(); return /price|cost|afford|money/.test(x) ? "price" : /capac|busy|too much work|full/.test(x) ? "capacity" : /quality|bad lead|leads? (were|was)/.test(x) ? "quality" : /in.?house|themselves/.test(x) ? "in_house" : /season|pause|winter|holiday/.test(x) ? "seasonal" : CHURN_REASONS[x] ? x : "other"; };
+const isoDay = (v) => { const t = String(v || "").trim(); if (/^\d{4}-\d{2}-\d{2}/.test(t)) return t.slice(0, 10); const m = t.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})$/); if (!m) return ""; const y = m[3].length === 2 ? "20" + m[3] : m[3]; return `${y}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}`; };
+const autoInitials = (r) => ((r.first || r.business || "").trim().charAt(0) + ((r.last || "").trim().charAt(0) || nicheWord(r.niche).charAt(0))).toUpperCase();
+const autoPassword = (r) => `${r.first || ""}${r.region || ""}${nicheWord(r.niche)}`.toLowerCase().replace(/[^a-z0-9]/g, "");
+const BULK_KEY = "lh-bulk-draft";
+
+function renderBulk() {
+  let rows = []; let done = false;
+  const today = ymdOf(new Date());
+  const existingFor = (r) => DB.clients.find((c) => (r.email && c.email && c.email.toLowerCase() === r.email.toLowerCase()) || norm(c.business_name) === norm(r.business));
+  const rowFrom = (o, i) => { const r = { key: "r" + i + "_" + Math.random().toString(36).slice(2, 7), include: true, business: "", first: "", last: "", initials: "", email: "", phone: "", region: "", niche: "", country: "NZ", pkg: "Starter", fee: "", start: "", end: "", why: "", password: "", startHint: "", endHint: "", status: "", ...o };
+    r.niche = nicheWord(r.niche); r.country = /^au/i.test(r.country) ? "AU" : "NZ"; r.pkg = ["Starter", "Growth", "Dominator", "Custom"].find((p) => p.toLowerCase() === String(r.pkg || "").trim().toLowerCase()) || "Starter";
+    r.start = isoDay(r.start); r.end = isoDay(r.end); r.startHint = isoDay(r.startHint); r.endHint = isoDay(r.endHint); r.why = r.why ? reasonKey(r.why) : ""; return r; };
+  const save = () => { try { localStorage.setItem(BULK_KEY, JSON.stringify(rows.map(({ password, status, ...r }) => r))); } catch (e) {} };
+  const fee = (r) => (r.fee !== "" && r.fee != null ? Number(r.fee) : ((PLANS[r.country] || PLANS.NZ)[r.pkg] || [1500])[0]);
+  const pw = (r) => r.password || autoPassword(r);
+  const ini = (r) => r.initials || autoInitials(r);
+  const isPast = (r) => !!r.end;
+  const linkPlan = () => { const groups = {}; rows.filter((r) => r.include && r.start).forEach((r) => { const k = norm(r.region) + "|" + r.niche; (groups[k] ||= []).push(r); }); const links = []; Object.values(groups).forEach((g) => { g.sort((a, b) => (a.start < b.start ? -1 : 1)); for (let i = 1; i < g.length; i++) { const a = g[i - 1], b = g[i]; if (a.end && (!b.end || a.end <= b.end)) links.push([a, b]); } }); return links; };
+  const problems = (r) => { const p = []; if (!r.business) p.push("no business name"); if (!r.region) p.push("no region"); if (!r.niche) p.push("no trade"); if (r.end && r.start && r.end < r.start) p.push("last day is before the start date"); if (r.end && r.end > today) p.push("last day is in the future"); if (!r.start) p.push("no start date"); return p; };
+  const warns = (r) => { const w = []; if (!isPast(r) && !r.email) w.push("no email, so no login"); if (!isPast(r) && r.email && pw(r).length < 6) w.push("password under 6 characters"); return w; };
+
+  app().innerHTML = topBar({ title: "Add partners in bulk", sub: "Create every partner and login in one go", back: "/admin" }) + `<div class="shell">
+  <div class="sec"><div class="sec-h"><h2>1 · Partner list</h2></div>
+  <label class="drop" id="b-drop"><b>Drop the partner list (CSV) here or tap to choose</b>Columns: Business, First name, Last name, Email, Phone, Region, Niche, Country, Package, Monthly fee, Start date, Last day, Why finished. Optional: Initials, Password, Start hint, End hint.<input type="file" id="b-file" accept=".csv,text/csv,.txt"></label>
+  <div id="b-restore"></div></div>
+  <div id="b-list"></div><div id="b-sum"></div><div style="height:24px"></div></div>`;
+
+  const list = $("b-list"), sum = $("b-sum");
+  const card = (r) => { const ex = existingFor(r); const past = isPast(r); const pr = problems(r); const wr = warns(r);
+    const chip = !r.include ? `<span class="chip">Skipped</span>` : r.status && r.status.startsWith("✓") ? `<span class="chip good">Saved</span>` : ex ? `<span class="chip blue">Update</span>` : past ? `<span class="chip warn">Past partner</span>` : `<span class="chip good">New</span>`;
+    const st = r.status ? r.status : pr.length ? `<span style="color:var(--bad)">Fix: ${pr.join(", ")}</span>` : wr.length ? `<span style="color:var(--warn)">${wr.join(", ")}</span>` : past ? `No login · finished ${fmtCal(r.end)}` : `Login: ${h(r.email)} · ${h(pw(r))}`;
+    const fld = (f, label, type = "text", extra = "") => `<label class="fld"><span>${label}</span><input data-f="${f}" type="${type}" value="${h(r[f] ?? "")}" ${extra}></label>`;
+    const sel = (f, label, opts) => `<label class="fld"><span>${label}</span><select data-f="${f}">${opts.map(([v, l]) => `<option value="${h(v)}" ${String(r[f]) === String(v) ? "selected" : ""}>${h(l)}</option>`).join("")}</select></label>`;
+    return `<div class="card mt12" data-k="${r.key}" style="${r.include ? "" : "opacity:.6"}"><div class="row"><div class="grow"><b style="font-size:15px">${h(r.business || "(no business name)")}</b><div class="small muted" data-meta>${h([r.first, r.last].filter(Boolean).join(" ") || "no contact")} · ${h(r.region || "no region")} ${h(r.niche)} · ${r.country} · ${h(ini(r))}</div></div>${chip}<button type="button" class="tog ${r.include ? "on" : ""}" data-f="include" aria-label="include"></button></div>
+      <div class="two mt8"><label class="fld" style="margin-top:0"><span>Start date</span><input data-f="start" type="date" value="${h(r.start)}">${r.startHint ? `<div class="hint">First lead seen ${fmtCal(r.startHint)}</div>` : ""}</label><label class="fld" style="margin-top:0"><span>Last day</span><input data-f="end" type="date" value="${h(r.end)}" max="${today}"><div class="hint">${r.endHint ? `Last lead seen ${fmtCal(r.endHint)}. ` : ""}Blank if still with you.</div></label></div>
+      ${past ? sel("why", "Why they finished", [["", "Pick a reason"], ...Object.entries(CHURN_REASONS)]) : ""}
+      <div class="small mt8" data-st>${st}</div>
+      <details class="mt8"><summary class="small">Details: name, login, phone, plan</summary>
+        ${fld("business", "Business name")}<div class="two">${fld("first", "First name")}${fld("last", "Last name")}</div>
+        <div class="two">${fld("email", "Email (their login)", "email")}${fld("phone", "Mobile", "tel")}</div>
+        <div class="two">${fld("region", "Region")}${sel("niche", "Trade", ["Electrician", "Plumber", "Handyman", "Builder", "Locksmith", "Roofer", "Drainlayer"].map((x) => [x, x]))}</div>
+        <div class="two">${sel("country", "Country", [["NZ", "NZ"], ["AU", "AU"]])}${sel("pkg", "Package", ["Starter", "Growth", "Dominator", "Custom"].map((x) => [x, x]))}</div>
+        <div class="two">${fld("fee", "Monthly fee", "number", `placeholder="${fee({ ...r, fee: "" })}"`)}${fld("initials", "Initials", "text", `placeholder="${h(autoInitials(r))}" maxlength="3"`)}</div>
+        ${fld("password", "Password", "text", `placeholder="${h(autoPassword(r))}" autocomplete="off"`)}
+      </details></div>`; };
+  const renderSummary = () => {
+    const inc = rows.filter((r) => r.include); if (!rows.length) { sum.innerHTML = ""; return; }
+    const bad = inc.filter((r) => problems(r).length); const links = linkPlan();
+    const nNew = inc.filter((r) => !existingFor(r)).length, nUpd = inc.length - nNew, nPast = inc.filter(isPast).length, nLogin = inc.filter((r) => !isPast(r) && r.email && pw(r).length >= 6).length;
+    const hinted = rows.filter((r) => (!r.start && r.startHint) || (!r.end && r.endHint && r.endHint < ymdOf(new Date(Date.now() - 21 * 864e5)))).length;
+    sum.innerHTML = `<div class="sec"><div class="sec-h"><h2>2 · Check and create</h2></div><div class="card">
+      ${hinted ? `<button class="btn ghost sm" type="button" id="b-hints" style="margin-bottom:12px">Fill empty dates from the hints (${hinted})</button><p class="small muted" style="margin:-4px 0 12px;line-height:1.45">Uses the first lead seen as the start date, and the last lead seen as the last day when it's more than three weeks old. Check each one afterwards.</p>` : ""}
+      <div class="rpt-k"><span>New partners</span><b>${nNew}</b></div><div class="rpt-k"><span>Updates to existing partners</span><b>${nUpd}</b></div><div class="rpt-k"><span>Past partners (no login)</span><b>${nPast}</b></div><div class="rpt-k"><span>Logins created or reset</span><b>${nLogin}</b></div>
+      ${links.length ? `<p class="small mt12" style="font-weight:600">Region history links</p>${links.map(([a, b]) => `<p class="small muted" style="margin-top:4px">${h(b.region)} ${h(b.niche)}: ${h(a.business)} → ${h(b.business)}</p>`).join("")}` : ""}
+      ${bad.length ? `<p class="small mt12" style="color:var(--bad)">${bad.length} partner${bad.length === 1 ? " needs" : "s need"} fixing first: ${bad.map((r) => h(r.business || "unnamed")).join(", ")}.</p>` : ""}
+      <button class="btn primary mt16" type="button" id="b-go" ${bad.length || !inc.length || done ? "disabled" : ""}>${done ? "Done" : `Create ${inc.length} partner${inc.length === 1 ? "" : "s"}`}</button>
+      ${done ? `<button class="btn ghost mt12" type="button" id="b-msgs">Copy all login messages</button><a class="btn ghost mt12" href="#/admin">Back to partners</a>` : ""}</div></div>`;
+    const hb = $("b-hints"); if (hb) hb.onclick = () => { const cut = ymdOf(new Date(Date.now() - 21 * 864e5)); rows.forEach((r) => { if (!r.start && r.startHint) r.start = r.startHint; if (!r.end && r.endHint && r.endHint < cut) r.end = r.endHint; }); save(); renderAll(); toast("Dates filled from the hints. Check them before creating."); };
+    const go = $("b-go"); if (go) go.onclick = run;
+    const bm = $("b-msgs"); if (bm) bm.onclick = () => copyText(rows.filter((r) => r.include && !isPast(r) && r.email && r.status && r.status.includes("login ready")).map((r) => loginMessage(r.first, r.email, pw(r))).join("\n\n――――――――\n\n"), "All login messages copied");
+  };
+  const renderAll = () => { list.innerHTML = rows.length ? `<div class="sec"><div class="sec-h"><h2>${rows.length} partners</h2><span class="small muted">type the dates, tap a card's Details to edit</span></div>${rows.map(card).join("")}</div>` : ""; renderSummary(); };
+  const refreshCard = (r) => { const el = list.querySelector(`[data-k="${r.key}"]`); if (!el) return; const open = el.querySelector("details").open; const fresh = document.createElement("div"); fresh.innerHTML = card(r); const nu = fresh.firstElementChild; nu.querySelector("details").open = open; if (!el.isConnected) return; try { el.replaceWith(nu); } catch (e) { /* the card was already redrawn by a blur */ } };
+  list.addEventListener("click", (e) => { const t = e.target.closest('[data-f="include"]'); if (!t) return; const r = rows.find((x) => x.key === t.closest("[data-k]").dataset.k); r.include = !r.include; save(); refreshCard(r); renderSummary(); });
+  list.addEventListener("change", (e) => { const t = e.target.closest("[data-f]"); if (!t || t.dataset.f === "include" || !t.isConnected) return; const host = t.closest("[data-k]"); const r = host && rows.find((x) => x.key === host.dataset.k); if (!r) return; r[t.dataset.f] = t.value.trim(); if (t.dataset.f === "end" && !r.end) r.why = ""; save(); setTimeout(() => { refreshCard(r); renderSummary(); }, 0); });
+
+  const load = (text) => { const data = parseCSV(text); if (data.length < 2) { toast("Couldn't read that file", true); return; } const hd = data[0].map(norm); const map = {}; const used = new Set();
+    for (const [f, al] of Object.entries(BULK_COLS)) { const i = hd.findIndex((x, ix) => !used.has(ix) && al.includes(x)); if (i >= 0) { map[f] = i; used.add(i); } }
+    rows = data.slice(1).filter((r) => r.some((c) => String(c).trim())).map((r, i) => { const o = {}; for (const [f, ix] of Object.entries(map)) o[f] = String(r[ix] ?? "").trim(); return rowFrom(o, i); });
+    done = false; save(); renderAll(); toast(`${rows.length} partners loaded`); };
+  $("b-file").onchange = (e) => { const f = e.target.files[0]; if (f) f.text().then(load); };
+  const drop = $("b-drop"); ["dragenter", "dragover"].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add("on"); })); ["dragleave", "drop"].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove("on"); })); drop.addEventListener("drop", (e) => { const f = e.dataTransfer.files[0]; if (f) f.text().then(load); });
+  try { const d = JSON.parse(localStorage.getItem(BULK_KEY) || "null"); if (Array.isArray(d) && d.length) { $("b-restore").innerHTML = `<button class="btn ghost sm mt8" type="button" id="b-res">Carry on with your unsaved list (${d.length} partners)</button>`; $("b-res").onclick = () => { rows = d.map((o, i) => rowFrom(o, i)); $("b-restore").innerHTML = ""; renderAll(); }; } } catch (e) {}
+
+  async function run() {
+    const inc = rows.filter((r) => r.include && !problems(r).length); const go = $("b-go"); go.disabled = true;
+    for (const r of inc) {
+      r.status = "Saving…"; refreshCard(r);
+      try {
+        const ex = existingFor(r); const plan = (PLANS[r.country] || PLANS.NZ)[r.pkg]; const past = isPast(r);
+        const row = { business_name: r.business, contact_name: r.first, initials: ini(r), phone: r.phone, email: r.email ? r.email.toLowerCase() : null, niche: portalNiche(r.niche), region: r.region, country: r.country, timezone: tzForRegion(r.region, r.country), started_on: r.start, package_name: r.pkg, monthly_fee: fee(r), billing_day: Math.min(28, Number(r.start.slice(8, 10)) || 1), active: !past, churned_on: past ? r.end : null, churn_reason: past ? r.why || "other" : null, churn_note: "" };
+        if (plan) Object.assign(row, { lead_target_min: plan[1], lead_target_max: plan[2] }); else if (!ex) Object.assign(row, { lead_target_min: 15, lead_target_max: 25 });
+        const saved = await api.upsertClient(ex ? { id: ex.id, ...row } : row);
+        const ix = DB.clients.findIndex((c) => c.id === saved.id); if (ix >= 0) DB.clients[ix] = saved; else DB.clients.push(saved); r.id = saved.id;
+        let note = past ? "past partner, no login" : "no login (no email)";
+        if (!past && r.email && pw(r).length >= 6) { try { await api.createLogin(saved.id, r.email, pw(r)); note = "login ready"; } catch (ex2) { note = "login not created: " + netMsg(ex2.message); } }
+        r.status = `${note.startsWith("login not") ? "⚠️" : "✓"} ${ex ? "Updated" : "Created"} · ${note}`;
+      } catch (ex) { r.status = `✗ ${netMsg(ex.message)}`; }
+      refreshCard(r);
+    }
+    for (const [a, b] of linkPlan()) { if (!a.id || !b.id) continue; try { const sc = await api.updateClient(b.id, { predecessor_id: a.id }); const ci = DB.clients.findIndex((c) => c.id === sc.id); if (ci >= 0) DB.clients[ci] = sc; } catch (e) { toast(`${b.business} wasn't linked to ${a.business}: ${netMsg(e.message)}`, true); } }
+    DB.history = {}; await refreshAdmin(); done = true; try { localStorage.removeItem(BULK_KEY); } catch (e) {}
+    const okN = inc.filter((r) => r.status.startsWith("✓")).length; renderSummary(); toast(`${okN} of ${inc.length} partners saved`, okN < inc.length);
+  }
+}
+
 async function renderSettings(ctx) {
   const isNew = !ctx.args[0]; const cur = CUR_YM();
   const c = isNew ? { id: "", business_name: "", initials: "", contact_name: "", email: "", phone: "", niche: "Emergency plumber", region: "", country: "NZ", timezone: "Pacific/Auckland", package_name: "Starter", monthly_fee: 1500, lead_target_min: 15, lead_target_max: 25, started_on: ymdOf(new Date()), billing_day: 1, show_cost_per_lead: true, show_ad_spend: false, avg_job_value: 450, active: true } : client(ctx.args[0]);
@@ -1049,7 +1158,7 @@ async function renderSettings(ctx) {
       else if (pw || (isNew && v.email)) { if (!v.email) note = " · no email, so no login yet"; else if (!pw) note = " · no password set, they can use Set up your login"; else { try { await api.createLogin(saved.id, v.email, pw); note = " · login ready"; } catch (ex) { note = " · login not created: " + ex.message; } } }
       DB.history = {}; await refreshAdmin(); toast((past ? "Past partner added" : isNew ? "Partner created" : "Saved") + note + (isNew ? " · now drop in their data" : ""), /not created/.test(note)); setTimeout(() => go(isNew ? `/admin/upload/${saved.id}` : `/admin/client/${saved.id}`), 600); }
     catch (ex) { toast(ex.message, true); btn.removeAttribute("disabled"); } };
-  $("s-sendlogin").onclick = () => { const v = read(); const pw = $("s-pass").value.trim() || "(set a password first)"; copyText(`Hey ${v.contact_name}, your LeadHive portal is live.\n\nLog in: ${PORTAL_URL}\nEmail: ${v.email || "(add their email)"}\nPassword: ${pw}\n\nYou'll see every call and web enquiry, listen to recordings, and get my monthly notes there. Add it to your home screen and it works like an app. When a job lands, tap Won on that lead and put in what it was worth. Ongoing or Lost for the rest. Takes seconds and it shows your real return.\n\n${JOE.name}`, "Login message copied"); };
+  $("s-sendlogin").onclick = () => { const v = read(); copyText(loginMessage(v.contact_name, v.email, $("s-pass").value.trim()), "Login message copied"); };
   const off = $("s-off"); if (off) off.onclick = () => { $("off-box").classList.toggle("hidden"); $("off-box").scrollIntoView({ behavior: "smooth", block: "center" }); };
   const offC = $("off-cancel"); if (offC) offC.onclick = () => $("off-box").classList.add("hidden");
   const offG = $("off-go"); if (offG) offG.onclick = async () => { try { offG.setAttribute("disabled", ""); const day = /^\d{4}-\d{2}-\d{2}$/.test($("off-day").value) ? $("off-day").value : new Date().toISOString().slice(0, 10); await api.deactivateClient(c.id, $("off-reason").value, $("off-note").value.trim(), day); Object.assign(c, { active: false, churned_on: day, churn_reason: $("off-reason").value, churn_note: $("off-note").value.trim() }); toast(`${c.business_name} paused. Their data is kept.`); go(`/admin/client/${c.id}`); } catch (ex) { toast(ex.message, true); offG.removeAttribute("disabled"); } };
