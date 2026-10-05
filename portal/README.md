@@ -74,6 +74,22 @@ Admin → + New partner → fill in the business, plan and their email, type a p
 "Create partner + login". Tap "Copy login message" and text it to them. Done.
 (Creating the login goes through `/api/create-login`, which needs the Netlify env vars above.)
 
+## Loading everyone's history at once
+
+Admin → **Upload data for every partner** → drop every Nimbata export and web-enquiry file together
+(one export per Nimbata project, or one big all-time export). Each file, or each value of a column
+such as Tracking Number Name / Project / Campaign / landing page, is matched to a landing page
+(region + trade); a file with Region and Trade columns matches exactly. Unrecognised groups wait for
+you to pick the landing page or skip them.
+
+Every call and enquiry then goes to the partner who held that landing page on that date, from the
+start dates and last days in Settings, so an all-time Hamilton Electrician export splits between
+Lachlan and Luke by itself. Leads in a period with no partner (before the first, between two, or
+after the last) are listed with their dates and not given to anyone; fix a partner's dates and drop
+the files again if a gap looks wrong. **Create a report for every finished month** publishes an
+auto-written report for current partners' months that have no report or notes yet. Re-importing
+the same files refreshes rows instead of duplicating them.
+
 ## Monthly routine (about 5 minutes per partner)
 
 1. Nimbata → Call log → filter the partner's project + the month → Export CSV.

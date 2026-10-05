@@ -523,7 +523,7 @@ async function route() {
     else if (seg === "as" && isAdmin) { cid = parts[1]; page = parts[2] || "home"; args = parts.slice(3); }
     else { page = seg; args = parts.slice(1); }
     const ctx = { user: DB.me, cid, isAdmin, viewAs: seg === "as", args, base: seg === "as" ? `/as/${cid}` : "" };
-    const adminPages = { admin: renderAdmin, client: renderAdminClient, upload: renderUpload, settings: renderSettings, newclient: renderSettings, bulk: renderBulk };
+    const adminPages = { admin: renderAdmin, client: renderAdminClient, upload: renderUpload, settings: renderSettings, newclient: renderSettings, bulk: renderBulk, import: renderImport };
     const clientPages = { home: renderHome, leads: renderLeads, lead: renderLead, reports: renderReports, report: renderReport, account: renderAccount };
     if (seg === "admin") { renderTabs(ctx, page); const fn = adminPages[page] || renderAdmin; if (page === "client" || page === "upload" || page === "settings") { const target = args[0]; if (target && client(target)) { skeleton(); await ensureClient(target); if (token !== routeToken) return; } } return fn(ctx); }
     if (!cid || !client(cid)) { hideTabs(); if (isAdmin) return go("/admin"); return renderNoPortal(); }
@@ -811,7 +811,7 @@ function renderAdmin() {
   app().innerHTML = topBar({ brand: true, right: `<span class="pill-admin">ADMIN</span>` }) + `<div class="shell">
   <div class="row" style="margin:18px 0 12px"><div class="grow"><h1 style="font-size:22px;font-weight:600">Partners</h1><div class="small muted">${cs.length} active · ${due} report${due === 1 ? "" : "s"} due for ${ymLabel(prevYm, false)} · ${live} lead${live === 1 ? "" : "s"} logged so far in ${ymLabel(cur, false)}</div></div></div>
   <div class="btn-row"><a class="btn primary" href="#/admin/upload">${ICON.upload}Upload month</a><a class="btn ghost" href="#/admin/newclient">+ New partner</a></div>
-  <a class="small" href="#/admin/bulk" style="display:block;text-align:center;margin-top:10px;color:var(--blue);font-weight:600">Add several partners at once</a>
+  <div class="btn-row" style="margin-top:10px"><a class="small" href="#/admin/bulk" style="flex:1;text-align:center;color:var(--blue);font-weight:600">Add several partners at once</a><a class="small" href="#/admin/import" style="flex:1;text-align:center;color:var(--blue);font-weight:600">Upload data for every partner</a></div>
   <div class="list mt16">${cs.length ? cs.map((c) => { const s = clientStatus(c); const k = countFor(c.id, prevYm); return `<a class="li client-li" href="#/admin/client/${c.id}"><div class="ic">${h(c.initials || "")}</div><div class="grow"><div class="t1"><span>${h(c.business_name)}</span></div><div class="t2"><span class="tx">${h(c.niche)} · ${h(c.region)} ${h(c.country)} · ${h(c.package_name)} ${money(c.monthly_fee)}</span></div><div style="margin-top:5px"><span class="chip ${s.cls}"><i></i>${s.l}</span> ${(() => { const seen = DB.seen[c.id]; const d = seen ? Math.floor((Date.now() - new Date(seen)) / 864e5) : null; return `<span class="chip ${d == null || d >= 14 ? "warn" : ""}">${agoText(seen)}</span>`; })()}</div></div><div class="meta"><div class="tm">${k.leads ? k.leads + (k.leads === 1 ? " lead" : " leads") : ""}</div><div class="du muted">${k.leads ? ymLabel(prevYm, false) : ""}</div></div><span class="chev">${ICON.chev}</span></a>`; }).join("") : `<div class="empty">No partners yet. Add your first one.</div>`}</div>
   <div class="sec"><div class="sec-h"><h2>Month-end routine</h2></div><div class="card"><div class="pt"><div class="ix">1</div><div><b>Export from Nimbata, as often as you like</b><p>Call log → filter the partner's project and the month → Export CSV. Fortnightly is fine: uploads add new calls and refresh existing ones, nothing gets wiped.</p></div></div><div class="pt"><div class="ix">2</div><div><b>Send the stats to Claude for the notes</b><p>Upload step 2 has a "Copy summary" button. Paste it to Claude with the Google Ads spend and you get the summary and three "what I'm changing" points back.</p></div></div><div class="pt"><div class="ix">3</div><div><b>Paste, attach the PDF, publish</b><p>The partner gets an email saying their results are in, and it's in their portal the moment you hit publish.</p></div></div></div></div>
   ${inactive.length ? `<div class="sec"><div class="sec-h"><h2>Past partners</h2><span class="small muted">${inactive.length}</span></div><div class="list">${inactive.map((c) => `<a class="li client-li" href="#/admin/client/${c.id}" style="opacity:.75"><div class="ic" style="background:var(--ink-3)">${h(c.initials || "")}</div><div class="grow"><div class="t1"><span>${h(c.business_name)}</span></div><div class="t2"><span class="tx">${h(c.region)} · left ${c.churned_on ? fmtCal(c.churned_on) : "–"}${c.churn_reason ? " · " + h(CHURN_REASONS[c.churn_reason] || c.churn_reason) : ""}</span></div></div><span class="chev">${ICON.chev}</span></a>`).join("")}</div><p class="small muted mt8">Their data and recordings are kept. Open one to reactivate.</p></div>` : ""}
@@ -921,8 +921,8 @@ function renderUpload(ctx) {
     }
     const yms = Object.keys(by).filter((y) => y < curYm).sort();
     if (!(yms.length >= 2 || (yms.length === 1 && yms[0] !== state.ym))) { el.innerHTML = ""; return; }
-    const done = yms.filter((y) => { const m = monthRec(c.id, y); return m && m.status === "published" && m.summary; }); const todo = yms.filter((y) => !done.includes(y));
-    el.innerHTML = `<div class="card mt12" style="border:1.5px solid var(--blue);background:var(--card)"><b style="font-size:15px">Create a report for every month</b><p class="small mt8" style="color:var(--ink-2);line-height:1.5">${yms.map((y) => `${ymLabel(y, false)} (${by[y]} lead${by[y] === 1 ? "" : "s"})`).join(" · ")}.</p><p class="small mt8" style="color:var(--ink-2);line-height:1.5">Each month gets its own published report: leads, calls, web enquiries, a week-by-week split and a summary written from the numbers, so ${h(c.contact_name || "the partner")} can look back through them.${todo.includes(state.ym) ? ` ${ymLabel(state.ym, false)} uses your notes below if you've written them.` : ""}${done.length ? ` ${done.map((y) => ymLabel(y, false)).join(", ")} already ${done.length === 1 ? "has a report" : "have reports"} and won't change.` : ""} ${ymLabel(curYm, false)} stays as "this month so far". No emails are sent.</p><button class="btn primary mt12" type="button" id="u-backfill-go" ${todo.length ? "" : "disabled"}>${todo.length ? `Import and create ${todo.length} report${todo.length === 1 ? "" : "s"}` : "Every month already has a report"}</button></div>`;
+    const done = yms.filter((y) => { const m = monthRec(c.id, y); return m && (m.summary || m.status === "published"); }); const todo = yms.filter((y) => !done.includes(y));
+    el.innerHTML = `<div class="card mt12" style="border:1.5px solid var(--blue);background:var(--card)"><b style="font-size:15px">Create a report for every month</b><p class="small mt8" style="color:var(--ink-2);line-height:1.5">${yms.map((y) => `${ymLabel(y, false)} (${by[y]} lead${by[y] === 1 ? "" : "s"})`).join(" · ")}.</p><p class="small mt8" style="color:var(--ink-2);line-height:1.5">Each month gets its own published report: leads, calls, web enquiries, a week-by-week split and a summary written from the numbers, so ${h(c.contact_name || "the partner")} can look back through them.${todo.includes(state.ym) ? ` ${ymLabel(state.ym, false)} uses your notes below if you've written them.` : ""}${done.length ? ` ${done.map((y) => ymLabel(y, false)).join(", ")} already ${done.length === 1 ? "has a report or notes" : "have reports or notes"} and won't change.` : ""} ${ymLabel(curYm, false)} stays as "this month so far". No emails are sent.</p><button class="btn primary mt12" type="button" id="u-backfill-go" ${todo.length ? "" : "disabled"}>${todo.length ? `Import and create ${todo.length} report${todo.length === 1 ? "" : "s"}` : "Every month already has a report"}</button></div>`;
     const b = $("u-backfill-go"); if (b) b.onclick = () => backfill(todo);
   };
   const ingest = (text, name) => { const rows = parseCSV(text); if (rows.length < 2) { toast("Couldn't read that file", true); return; } state.headers = rows[0]; state.map = mapColumns(rows[0]); const r = rowsToCalls(rows, state.map); state.calls = r.calls; state.skipped = r.skipped; state.fileName = name || ""; renderPreview(); renderStartNote(); toast(`${state.calls.length} calls parsed`); };
@@ -1004,6 +1004,109 @@ function renderUpload(ctx) {
   };
   $("u-draft").onclick = () => commit("draft"); $("u-pub").onclick = () => commit("published");
 }
+// ───────────────────────────── Bulk data import ─────────────────────────────
+// Drop any number of Nimbata exports and web-enquiry files. Each file (or each tracking number /
+// project / landing page inside it) is matched to a landing page (region + trade), and every call or
+// enquiry goes to the partner who held that landing page on that date (their start date to last day).
+const lineKeyOf = (region, niche) => norm(region) + "|" + nicheWord(niche);
+function partnerLines() {
+  const lines = {};
+  DB.clients.forEach((c) => {
+    const k = lineKeyOf(c.region, c.niche); const tz = tzOf(c);
+    const day = (d, plus) => { const [y, m, dd] = String(d).split("-").map(Number); return zonedToUtc(y, m, dd + (plus || 0), 0, 0, 0, tz); };
+    const s = /^\d{4}-\d{2}-\d{2}/.test(c.started_on || "") ? day(c.started_on) : -Infinity;
+    const e = !c.active && /^\d{4}-\d{2}-\d{2}/.test(c.churned_on || "") ? day(c.churned_on, 1) : Infinity;
+    (lines[k] ||= { key: k, region: c.region, niche: nicheWord(c.niche), tz, partners: [] }).partners.push({ c, s, e });
+  });
+  Object.values(lines).forEach((l) => { l.partners.sort((a, b) => a.s - b.s); l.label = `${l.region} · ${l.niche}`; l.who = l.partners.map((p) => `${p.c.business_name}${p.c.active ? "" : " (past)"}`).join(" → "); });
+  return lines;
+}
+function renderImport() {
+  const lines = partnerLines(); const lineList = Object.values(lines).sort((a, b) => a.label.localeCompare(b.label));
+  const files = []; let done = false; let reports = true;
+  const SPLIT_PRI = [/project/, /trackingnumbername|trackingname|numbername|campaignname/, /landingpage|^page$|website|site/, /campaign/, /trackingnumber|tracking|dialednumber|tonumber/, /destination|forward/];
+  const guessLine = (text) => { const t = norm(text); const d = String(text || "").replace(/\D/g, ""); let best = null, score = 0;
+    lineList.forEach((l) => { let sc = 0; const r = norm(l.region); if (r && t.includes(r)) sc += r.length; if (sc && t.includes(norm(l.niche))) sc += 5;
+      l.partners.forEach((p) => { if (norm(p.c.business_name).length > 3 && t.includes(norm(p.c.business_name))) sc += 50; const ph = String(p.c.phone || "").replace(/\D/g, "").slice(-8); if (ph.length >= 7 && d.includes(ph)) sc += 50; if (p.c.email && String(text).toLowerCase().includes(p.c.email.toLowerCase())) sc += 50; });
+      if (sc > score) { score = sc; best = l; } });
+    return best ? best.key : ""; };
+  const parseGroup = (f, g) => { const line = lines[g.line]; const keep = TZ; if (line) TZ = line.tz; try { const data = [f.headers, ...g.idx.map((i) => f.rows[i])];
+      return f.kind === "calls" ? rowsToCalls(data, f.map).calls.map((x) => ({ ...x, t: new Date(x.called_at).getTime() })) : rowsToEnquiries(data, f.map).enquiries.map((x) => ({ ...x, t: new Date(x.received_at).getTime() })); } finally { TZ = keep; } };
+  const gapOf = (line, t) => { const prev = line.partners.filter((x) => x.e <= t).sort((a, b) => b.e - a.e)[0]; const next = line.partners.filter((x) => x.s > t).sort((a, b) => a.s - b.s)[0];
+    const label = prev && next ? `No partner between ${prev.c.business_name} (last day ${fmtCal(prev.c.churned_on)}) and ${next.c.business_name} (started ${fmtCal(next.c.started_on)})` : next ? `Before ${next.c.business_name} started (${fmtCal(next.c.started_on)})` : prev ? `After ${prev.c.business_name}'s last day (${fmtCal(prev.c.churned_on)}), no partner since` : "No partner";
+    return { key: `${prev ? prev.c.id : "-"}|${next ? next.c.id : "-"}`, label }; };
+  const assignGroup = (f, g) => { const line = lines[g.line]; const recs = parseGroup(f, g); const by = new Map(); const gaps = new Map(); let out = 0;
+    recs.forEach((r) => { const p = line && line.partners.filter((x) => r.t >= x.s && r.t < x.e).sort((a, b) => b.s - a.s)[0];
+      if (!p) { out++; if (line) { const gp = gapOf(line, r.t); if (!gaps.has(gp.key)) gaps.set(gp.key, { label: gp.label, n: 0, from: r.t, to: r.t }); const x = gaps.get(gp.key); x.n++; x.from = Math.min(x.from, r.t); x.to = Math.max(x.to, r.t); } return; }
+      if (!by.has(p.c.id)) by.set(p.c.id, { c: p.c, recs: [] }); by.get(p.c.id).recs.push(r); });
+    const ts = recs.map((r) => r.t).sort((a, b) => a - b); return { by, gaps, out, n: recs.length, from: ts[0], to: ts[ts.length - 1] }; };
+  const addFile = (name, text) => { const data = parseCSV(text); if (data.length < 2) { toast(`Couldn't read ${name}`, true); return; } const headers = data[0]; const rows = data.slice(1).filter((r) => r.some((c) => String(c).trim()));
+    const cm = mapColumns(headers); const em = mapEnqColumns(headers); const kind = cm.duration !== undefined || (cm.caller !== undefined && em.name === undefined) ? "calls" : "enquiries";
+    const nh = headers.map(norm); const iReg = nh.indexOf("region"), iTr = nh.findIndex((h) => h === "trade" || h === "niche");
+    let split = -1; if (iReg >= 0 && iTr >= 0) split = -2; else for (const re of SPLIT_PRI) { const i = nh.findIndex((h) => re.test(h)); if (i >= 0) { split = i; break; } }
+    const f = { id: "f" + files.length, name, kind, headers, rows, map: kind === "calls" ? cm : em, split, iReg, iTr, groups: [] }; regroup(f); files.push(f); renderAll(); };
+  const regroup = (f) => { const val = (r) => f.split === -2 ? `${String(r[f.iReg] || "").trim()} ${String(r[f.iTr] || "").trim()}`.trim() : f.split >= 0 ? String(r[f.split] || "").trim() : "";
+    const m = new Map(); f.rows.forEach((r, i) => { const v = val(r) || (f.split === -1 ? "Whole file" : "(blank)"); if (!m.has(v)) m.set(v, []); m.get(v).push(i); });
+    f.groups = [...m.entries()].map(([value, idx]) => { const key = f.split === -2 ? lineKeyOf(f.rows[idx[0]][f.iReg], f.rows[idx[0]][f.iTr]) : ""; return { value, idx, line: key && lines[key] ? key : guessLine(`${value === "Whole file" || value === "(blank)" ? "" : value} ${f.name}`) }; }); };
+  const fmtD = (t) => (isFinite(t) ? new Date(t).toLocaleDateString("en-NZ", { day: "numeric", month: "short", year: "numeric", timeZone: "Pacific/Auckland" }) : "–");
+
+  app().innerHTML = topBar({ title: "Upload data for every partner", sub: "Nimbata exports and web enquiries, all at once", back: "/admin" }) + `<div class="shell">
+  <p class="lede" style="margin:16px 0 4px">Each call and enquiry goes to whichever partner had that region and trade on that date, using the start dates and last days you set. Uploading the same files again won't create duplicates.</p>
+  <div class="sec"><div class="sec-h"><h2>1 · Files</h2></div><label class="drop" id="i-drop"><b>Drop every file here, or tap to choose</b>Nimbata call exports (one per project or one big export) and web-enquiry files. Pick several at once.<input type="file" id="i-file" accept=".csv,text/csv,.txt,.tsv" multiple></label></div>
+  <div id="i-files"></div><div id="i-sum"></div><div style="height:24px"></div></div>`;
+  const filesEl = $("i-files"), sumEl = $("i-sum");
+  const groupHtml = (f, g, gi) => { const a = assignGroup(f, g); const parts = [...a.by.values()].map((x) => `${h(x.c.business_name)} ${x.recs.length}`);
+    return `<div style="border-top:1px solid var(--rule);padding:10px 0"><div class="row"><div class="grow"><b style="font-size:14px">${h(g.value)}</b><div class="small muted">${a.n} ${f.kind === "calls" ? (a.n === 1 ? "call" : "calls") : (a.n === 1 ? "enquiry" : "enquiries")} · ${a.from === a.to ? fmtD(a.from) : `${fmtD(a.from)} to ${fmtD(a.to)}`}</div></div></div>
+      <label class="fld" style="margin-top:6px"><span>Landing page</span><select data-file="${f.id}" data-g="${gi}"><option value="">Skip these</option>${lineList.map((l) => `<option value="${l.key}" ${g.line === l.key ? "selected" : ""}>${h(l.label)}: ${h(l.who)}</option>`).join("")}</select></label>
+      <div class="small mt8" style="color:${g.line ? "var(--ink-2)" : "var(--warn)"}">${g.line ? (parts.join(" · ") || "No partner had these dates") : "Pick the landing page, or leave it skipped."}</div>
+      ${g.line ? [...a.gaps.values()].map((x) => `<div class="small mt8" style="color:var(--warn);line-height:1.45">${h(x.label)}: ${x.n} ${f.kind === "calls" ? "call" : "enquir"}${x.n === 1 ? (f.kind === "calls" ? "" : "y") : (f.kind === "calls" ? "s" : "ies")} (${x.from === x.to ? fmtD(x.from) : `${fmtD(x.from)} to ${fmtD(x.to)}`}), not given to anyone.</div>`).join("") : ""}</div>`; };
+  const fileHtml = (f) => { const cols = f.headers.map((hd, i) => [i, hd]); const tot = f.rows.length;
+    return `<div class="card mt12"><div class="row"><div class="grow"><b style="font-size:15px">${h(f.name)}</b><div class="small muted">${tot} ${f.kind === "calls" ? "calls (Nimbata)" : "web enquiries"}</div></div><button class="btn ghost sm" type="button" data-rm="${f.id}">Remove</button></div>
+      <label class="fld"><span>Split by</span><select data-split="${f.id}"><option value="-1" ${f.split === -1 ? "selected" : ""}>Whole file is one landing page</option>${f.iReg >= 0 && f.iTr >= 0 ? `<option value="-2" ${f.split === -2 ? "selected" : ""}>Region + Trade columns</option>` : ""}${cols.map(([i, hd]) => `<option value="${i}" ${f.split === i ? "selected" : ""}>${h(hd)}</option>`).join("")}</select></label>
+      ${f.groups.map((g, gi) => groupHtml(f, g, gi)).join("")}</div>`; };
+  const plan = () => { const per = new Map(); files.forEach((f) => f.groups.forEach((g) => { if (!g.line) return; const a = assignGroup(f, g); a.by.forEach((x, id) => { if (!per.has(id)) per.set(id, { c: x.c, calls: [], enq: [] }); per.get(id)[f.kind === "calls" ? "calls" : "enq"].push(...x.recs); }); })); return per; };
+  const renderSum = () => { if (!files.length) { sumEl.innerHTML = ""; return; } const per = plan(); const list = [...per.values()].sort((a, b) => a.c.business_name.localeCompare(b.c.business_name));
+    let gapN = 0; files.forEach((f) => f.groups.forEach((g) => { if (g.line) gapN += assignGroup(f, g).out; }));
+    const nC = list.reduce((a, x) => a + x.calls.length, 0), nE = list.reduce((a, x) => a + x.enq.length, 0);
+    sumEl.innerHTML = `<div class="sec"><div class="sec-h"><h2>2 · Check and import</h2></div><div class="card">
+      ${list.map((x) => { const yms = [...new Set([...x.calls, ...x.enq].map((r) => ymOf(new Date(r.t), tzOf(x.c))))].sort(); return `<div class="rpt-k" data-p="${x.c.id}"><span>${h(x.c.business_name)}${x.c.active ? "" : ` <span class="muted small">(past)</span>`}<br><span class="small muted">${yms.length ? (yms.length === 1 ? ymLabel(yms[0], false) : `${ymLabel(yms[0], false)} to ${ymLabel(yms[yms.length - 1], false)}`) : ""}</span></span><b>${x.calls.length} call${x.calls.length === 1 ? "" : "s"} · ${x.enq.length} web<br><span class="small muted" data-pst>${x.status || ""}</span></b></div>`; }).join("") || `<p class="small muted">Nothing matched yet. Pick a landing page for each file above.</p>`}
+      ${gapN ? `<p class="small mt12" style="color:var(--warn);line-height:1.45">${gapN} lead${gapN === 1 ? "" : "s"} fell in periods with no partner and won't be imported. Each gap is listed under its file above. If one is wrong, fix that partner's start date or last day in their Settings and drop the files in again.</p>` : ""}
+      <label class="switch mt12" style="border-top:0;padding-top:0"><div><b style="font-size:13.5px">Create a report for every finished month</b><small>For current partners only. Months that already have a report are left as they are. No emails are sent.</small></div><button type="button" class="tog ${reports ? "on" : ""}" id="i-rep"></button></label>
+      <button class="btn primary mt16" type="button" id="i-go" ${!list.length || done ? "disabled" : ""}>${done ? "Done" : `Import ${nC} calls and ${nE} enquiries`}</button>${done ? `<a class="btn ghost mt12" href="#/admin">Back to partners</a>` : ""}</div></div>`;
+    $("i-rep").onclick = (e) => { reports = !e.currentTarget.classList.contains("on"); e.currentTarget.classList.toggle("on", reports); };
+    const go = $("i-go"); if (go) go.onclick = run; };
+  const renderAll = () => { filesEl.innerHTML = files.length ? `<div class="sec"><div class="sec-h"><h2>${files.length} file${files.length === 1 ? "" : "s"}</h2></div>${files.map(fileHtml).join("")}</div>` : ""; renderSum(); };
+  filesEl.addEventListener("change", (e) => { const t = e.target; const f = files.find((x) => x.id === (t.dataset.file || t.dataset.split)); if (!f) return;
+    if (t.dataset.split) { f.split = Number(t.value); regroup(f); } else { f.groups[Number(t.dataset.g)].line = t.value; } renderAll(); });
+  filesEl.addEventListener("click", (e) => { const b = e.target.closest("[data-rm]"); if (!b) return; const i = files.findIndex((x) => x.id === b.dataset.rm); if (i >= 0) files.splice(i, 1); renderAll(); });
+  const take = (list) => Promise.all([...list].map((f) => f.text().then((t) => [f.name, t]))).then((arr) => arr.forEach(([n, t]) => addFile(n, t)));
+  $("i-file").onchange = (e) => take(e.target.files);
+  const drop = $("i-drop"); ["dragenter", "dragover"].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.add("on"); })); ["dragleave", "drop"].forEach((ev) => drop.addEventListener(ev, (e) => { e.preventDefault(); drop.classList.remove("on"); })); drop.addEventListener("drop", (e) => take(e.dataTransfer.files));
+
+  async function run() {
+    const per = [...plan().values()]; const go = $("i-go"); go.disabled = true; go.textContent = "Importing…"; let ok = 0;
+    const setSt = (x, txt) => { x.status = txt; const el = sumEl.querySelector(`[data-p="${x.c.id}"] [data-pst]`); if (el) el.textContent = txt; };
+    for (const x of per) {
+      try {
+        const c = x.c; const tz = tzOf(c); const groups = {};
+        x.calls.forEach(({ t, ym, ...r }) => { const y = ymOf(new Date(t), tz); (groups[y] ||= []).push(r); });
+        let ins = 0, upd = 0;
+        for (const y of Object.keys(groups).sort()) { setSt(x, `Calls for ${ymLabel(y, false)}…`); const r = await api.mergeMonthCalls(c.id, y, groups[y]); ins += r.inserted; upd += r.updated; }
+        if (x.enq.length) { setSt(x, "Enquiries…"); const r = await api.mergeEnquiries(c.id, x.enq.map(({ t, ym, ...e }) => e)); ins += r.inserted; upd += r.updated; }
+        let made = 0;
+        if (reports && c.active) {
+          await ensureClient(c.id, true); await refreshAdmin(); const keep = TZ; TZ = tz;
+          try { const cur = CUR_YM(); const yms = [...new Set([...DB.calls, ...DB.enquiries].filter((r) => r.client_id === c.id && r.ym && r.ym < cur).map((r) => r.ym))].sort();
+            for (const y of yms) { const m = monthRec(c.id, y); if (m && (m.summary || m.status === "published")) continue; setSt(x, `Report for ${ymLabel(y, false)}…`); await api.upsertMonth({ client_id: c.id, ym: y, status: "published", summary: autoSummary(c, y), points: (m && m.points) || [], published_at: new Date().toISOString() }); made++; } } finally { TZ = keep; }
+        }
+        setSt(x, `✓ ${ins} new, ${upd} refreshed${made ? ` · ${made} report${made === 1 ? "" : "s"}` : ""}`); ok++;
+      } catch (ex) { setSt(x, `✗ ${netMsg(ex.message)}`); }
+    }
+    DB.loaded = {}; DB.history = {}; await refreshAdmin(); done = true; renderSum(); per.forEach((x) => setSt(x, x.status));
+    toast(`${ok} of ${per.length} partners imported`, ok < per.length);
+  }
+}
+
 // ───────────────────────────── Bulk add partners ─────────────────────────────
 // Joe drops a partner list (CSV), types start dates / last days, and one button creates every
 // partner and login. Safe to run again: rows matching an existing partner (email or business) update it.
