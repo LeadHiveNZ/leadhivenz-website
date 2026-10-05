@@ -8,6 +8,8 @@ alter table public.clients add column if not exists billing_start date;
 alter table public.clients add column if not exists setup_fee   numeric not null default 0;
 alter table public.clients add column if not exists extra_fee   numeric not null default 0;
 alter table public.clients add column if not exists extra_label text    not null default '';
+-- old flat-price contracts: invoices dated on or before this day are the fee and nothing more (GST included)
+alter table public.clients add column if not exists flat_until  date;
 
 -- a payment received for one billing month (Month 1, Month 2, …)
 create table if not exists public.payments (

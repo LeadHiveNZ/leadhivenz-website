@@ -204,7 +204,12 @@ Run. Until then the portal works as before and the Billing page says the update 
 monthly from their billing start: Month 1 on that day, Month 2 a month later, each due on its first
 day. Billing start is the partner's start date unless you set another one in Settings (e.g. billing
 began after a free trial), where the setup fee (added to Month 1) and an extra monthly charge such as
-"Website $50" live too. Amounts show ex GST and incl. GST (15% NZ, 10% AU).
+"Website $50" live too.
+
+**GST:** invoices dated on or after the registration day in `config.js` (`gstFrom`, NZ 28 Sep 2026)
+add GST (15% NZ, 10% AU); earlier invoices have none. A partner still on an old flat-price contract
+gets "Old flat-price contract: last day" in Settings: invoices up to that day are the fee and nothing
+more (GST included), and GST is added after it.
 
 - **First visit:** a one-time list marks old invoices paid. Untick anyone who still owes money.
   Current partners keep their latest invoice open; past partners are cleared completely.

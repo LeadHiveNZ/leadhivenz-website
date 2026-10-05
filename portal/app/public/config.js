@@ -7,6 +7,8 @@ window.LEADHIVE_CONFIG = {
   portalUrl: "",   // empty = use whatever address the portal is open on (e.g. the Netlify address)
   // logo: "/logo.png", logoSmall: "/logo-small.png",   // override if you swap the artwork
   adminEmail: "hello@leadhivenz.com",
+  // GST registration: invoices dated on or after this day add GST (NZ 15%, AU 10%). null = not registered.
+  gstFrom: { NZ: "2026-09-28", AU: null },
   joe: {
     name: "Joe",
     phone: "+61 450 925 145",          // shown as the "Call" button on the Account screen
