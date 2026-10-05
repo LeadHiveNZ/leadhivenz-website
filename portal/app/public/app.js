@@ -1180,6 +1180,41 @@ function bindBilling(root, after) {
 const hasPaid = (cid) => (DB.billing.payments || []).some((x) => x.client_id === cid);
 const billingSetupList = () => DB.clients.map((c) => ({ c, p: billingPlan(c) })).filter(({ c, p }) => p && !hasPaid(c.id) && p.unpaid.length >= (c.active ? 2 : 1));
 const setupMonths = ({ c, p }) => (c.active ? p.unpaid.slice(0, -1) : p.unpaid);
+// Billing file: one row per invoice (Partner, Invoice date, Status Paid/Waived, Paid on, Amount, Note), e.g. one Claude
+// builds from bank statements. Each row lands on the partner's billing month that starts nearest its invoice date, so
+// it lines up with your own billing dates; a preview shows every row before anything is saved.
+const BILL_COLS = { partner: ["partner", "business", "businessname", "client"], invoice: ["invoicedate", "invoice", "duedate", "due", "covers", "month"], status: ["status"], paid: ["paidon", "datepaid", "paid", "date"], amount: ["amount", "paidamount", "total"], note: ["note", "notes", "reason"] };
+function readBillingFile(text) {
+  const data = parseCSV(text); if (data.length < 2) throw new Error("Couldn't read that file");
+  const hd = data[0].map(norm); const col = {}; const used = new Set();
+  for (const [k, al] of Object.entries(BILL_COLS)) { const i = hd.findIndex((x, ix) => !used.has(ix) && al.includes(x)); if (i >= 0) { col[k] = i; used.add(i); } }
+  if (col.partner === undefined || col.invoice === undefined) throw new Error("The file needs Partner and Invoice date columns");
+  const g = (r, k) => (col[k] === undefined ? "" : String(r[col[k]] ?? "").trim());
+  return data.slice(1).filter((r) => r.some((x) => String(x).trim())).map((r) => ({ partner: g(r, "partner"), invoice: isoDay(g(r, "invoice")), waived: /waiv|write|not owed/i.test(g(r, "status")), paidOn: isoDay(g(r, "paid")), amount: Number(g(r, "amount").replace(/[^0-9.-]/g, "")) || 0, note: g(r, "note") }));
+}
+const findPartner = (name) => { const n = norm(name); if (!n) return null; return DB.clients.find((c) => norm(c.business_name) === n) || DB.clients.find((c) => norm(c.business_name).includes(n) || n.includes(norm(c.business_name))) || null; };
+function planBillingFile(rows, picks) {
+  const out = rows.map((r) => { const c = r.partner in picks ? client(picks[r.partner]) : findPartner(r.partner); const p = c && billingPlan(c); let m = null, gap = Infinity;
+    if (p && r.invoice) p.months.forEach((x) => { const d = Math.abs(daysFrom(x.start, r.invoice)); if (d < gap) { gap = d; m = x; } });
+    const ok = !!m && gap <= 20; return { ...r, c, m: ok ? m : null, why: !c ? "partner not found" : !r.invoice ? "no invoice date" : !ok ? `no billing month near ${fmtCal(r.invoice)}` : "" }; });
+  const seen = {}; out.forEach((r) => { if (!r.m) return; const k = r.c.id + "|" + r.m.no; if (seen[k]) { seen[k].why = `two rows land on Month ${r.m.no}; the later one is used`; seen[k].m = null; } seen[k] = r; });
+  return out;
+}
+function bindBillingFile() {
+  const inp = $("bf-file"), prev = $("bf-prev"); if (!inp) return; let rows = [], picks = {};
+  const draw = () => { const plan = planBillingFile(rows, picks); const go = plan.filter((r) => r.m); const groups = {}; plan.forEach((r) => (groups[r.partner] ||= []).push(r));
+    prev.innerHTML = `${Object.entries(groups).map(([name, rs]) => { const c = rs[0].c; return `<div style="border-top:1px solid var(--rule);padding:10px 0"><div class="row"><div class="grow"><b style="font-size:14px">${h(c ? c.business_name : name)}</b>${c && norm(c.business_name) !== norm(name) ? ` <span class="small muted">(file: ${h(name)})</span>` : ""}</div></div>
+      ${!c || name in picks ? `<label class="fld" style="margin-top:4px"><span>${c ? "Matched to" : `"${h(name)}" isn't a partner. Pick one or skip`}</span><select data-pick="${h(name)}"><option value="">Skip these rows</option>${DB.clients.map((x) => `<option value="${x.id}" ${c && c.id === x.id ? "selected" : ""}>${h(x.business_name)}</option>`).join("")}</select></label>` : ""}
+      ${rs.map((r) => `<div class="small mt8" style="display:flex;justify-content:space-between;gap:10px;${r.m ? "" : "color:var(--warn)"}"><span>${r.m ? `Month ${r.m.no} · ${fmtCal(r.m.start)}` : h(r.why)}</span><span style="text-align:right">${r.waived ? `Waived${r.note ? ` · ${h(r.note)}` : ""}` : `Paid ${r.paidOn ? fmtCal(r.paidOn) : ""} · ${amt(r.amount || (r.m ? r.m.inc : 0))}${r.note ? `<br><span class="muted">${h(r.note)}</span>` : ""}`}${r.m && r.m.pay ? `<br><span class="muted">replaces what's marked now</span>` : ""}</span></div>`).join("")}</div>`; }).join("")}
+      <button class="btn primary mt12" type="button" id="bf-go" ${go.length ? "" : "disabled"}>Apply ${go.length} row${go.length === 1 ? "" : "s"}</button>${plan.length - go.length ? `<p class="small muted mt8">${plan.length - go.length} row${plan.length - go.length === 1 ? "" : "s"} will be skipped (shown in orange).</p>` : ""}`;
+    prev.querySelectorAll("[data-pick]").forEach((sel) => (sel.onchange = () => { picks[sel.dataset.pick] = sel.value; draw(); }));
+    $("bf-go").onclick = async (e) => { const btn = e.currentTarget; btn.disabled = true; btn.textContent = "Saving…";
+      try { await api.savePayments(go.map((r) => ({ client_id: r.c.id, month_no: r.m.no, amount: r.waived ? 0 : r.amount || r.m.inc, paid_on: r.paidOn || r.invoice || ymdOf(new Date()), note: r.waived ? "Waived" + (r.note ? `: ${r.note}` : "") : r.note || "From billing file" })));
+        await loadBilling(); toast(`${go.length} invoices updated`); renderBilling(); } catch (ex) { toast(ex.message, true); btn.disabled = false; btn.textContent = `Apply ${go.length} rows`; } }; };
+  const load = (f) => f && f.text().then((t) => { try { rows = readBillingFile(t); picks = {}; draw(); } catch (ex) { toast(ex.message, true); } });
+  inp.onchange = () => load(inp.files[0]); const zone = inp.closest(".drop");
+  ["dragenter", "dragover"].forEach((ev) => zone.addEventListener(ev, (e) => { e.preventDefault(); zone.classList.add("on"); })); ["dragleave", "drop"].forEach((ev) => zone.addEventListener(ev, (e) => { e.preventDefault(); zone.classList.remove("on"); })); zone.addEventListener("drop", (e) => load(e.dataTransfer.files[0]));
+}
 function renderBilling() {
   const rows = DB.clients.map((c) => ({ c, p: billingPlan(c) })).filter((x) => x.c.active || (x.p && x.p.unpaid.length));
   const rank = (x) => (!x.p ? 1e7 : x.p.late.length ? -1e6 - x.p.lateDays : x.p.unpaid.length ? -1e5 : x.c.active && x.p.upcoming ? daysFrom(x.p.today, x.p.upcoming.start) : 1e6);
@@ -1195,8 +1230,9 @@ function renderBilling() {
     <div class="mt8">${setup.map((x) => { const ms = setupMonths(x); return `<label class="rpt-k" style="cursor:pointer;align-items:center"><span><input type="checkbox" data-setup="${x.c.id}" checked style="margin-right:8px;transform:scale(1.2)">${h(x.c.business_name)}${x.c.active ? "" : ` <span class="muted small">(past)</span>`}<br><span class="small muted" style="margin-left:26px">${ms.length === 1 ? `Month ${ms[0].no}` : `Months ${ms[0].no}–${ms[ms.length - 1].no}`} paid${x.c.active ? ` · Month ${x.p.unpaid[x.p.unpaid.length - 1].no} (${fmtCal(x.p.unpaid[x.p.unpaid.length - 1].start)}) left open` : ""}</span></span><b class="small">${amt(ms.reduce((a, m) => a + m.inc, 0))}</b></label>`; }).join("")}</div>
     <button class="btn primary mt12" type="button" id="b-setup">Mark the ticked ones paid</button></div>` : ""}
   <div id="bill-root">${rows.map((x) => billCard(x.c, x.p, false)).join("") || `<div class="empty mt12">No partners yet.</div>`}</div>
+  ${DB.billingErr ? "" : `<div class="sec"><div class="sec-h"><h2>Upload a billing file</h2></div><div class="card"><p class="small" style="line-height:1.5">A CSV with one row per invoice: <b>Partner, Invoice date, Status</b> (Paid or Waived), <b>Paid on, Amount, Note</b>. Ask Claude to build one from your bank statements. Each row goes on the partner's month that starts nearest its invoice date, and you see every row before anything is saved.</p><label class="drop mt8"><b>Drop the billing file here, or tap to choose</b><input type="file" id="bf-file" accept=".csv,text/csv"></label><div id="bf-prev"></div></div></div>`}
   <p class="small muted mt16" style="line-height:1.5">Each month is invoiced on its first day. Billing starts on the partner's start date unless you set a different billing start in their Settings, where the setup fee and extra charges like a website live too. Lead counts come from the data you've uploaded.</p><div style="height:24px"></div></div>`;
-  bindBilling($("bill-root"), () => renderBilling());
+  bindBilling($("bill-root"), () => renderBilling()); bindBillingFile();
   const sb = $("b-setup"); if (sb) sb.onclick = async () => { const on = new Set([...document.querySelectorAll("[data-setup]")].filter((x) => x.checked).map((x) => x.dataset.setup)); const rowsP = setup.filter((x) => on.has(x.c.id)).flatMap((x) => setupMonths(x).map((m) => ({ client_id: x.c.id, month_no: m.no, amount: m.inc, paid_on: m.start, note: "Paid before the portal" })));
     if (!rowsP.length) { toast("Nobody is ticked", true); return; } sb.disabled = true;
     try { await api.savePayments(rowsP); await loadBilling(); toast(`${rowsP.length} old invoices marked paid`); renderBilling(); } catch (ex) { toast(ex.message, true); sb.disabled = false; } };

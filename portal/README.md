@@ -222,6 +222,12 @@ more (GST included), and GST is added after it.
   extension is listed on the partner's card with its reason and date, and can be removed. A month that
   finished under target shows "Extend it". The partner's Account page shows the moved invoice date;
   the reasons stay with you.
+- **Upload a billing file** (bottom of the Billing page): a CSV with one row per invoice, with columns
+  `Partner, Invoice date, Status (Paid / Waived), Paid on, Amount, Note`. Ask Claude to build one from
+  your bank statements. Each row lands on the partner's billing month that starts nearest its invoice
+  date (within 20 days), so it follows your own billing dates. The preview shows every row, lets you
+  pick the partner for a name it doesn't recognise, and saves nothing until you press Apply. A row
+  replaces whatever that month had before.
 - Lead counts per billing month come from the data you've uploaded.
 
 **Slots** (tab): every region and trade, grouped like Plumbers / Electricians / Handyman / builder.
