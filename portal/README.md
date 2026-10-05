@@ -213,8 +213,10 @@ more (GST included), and GST is added after it.
 
 - **First visit:** a one-time list marks old invoices paid. Untick anyone who still owes money.
   Current partners keep their latest invoice open; past partners are cleared completely.
-- **Mark paid** on any due or late month records the date and amount. "Undo" is under Every month on
-  the partner's page.
+- **Mark paid** on any due or late month records the date and amount. The same form has **Not owed:
+  waive**, for a month they gave notice on, one you extended or cancelled, or one you under-delivered
+  on; it stops counting as overdue and shows as waived. "Undo" for both is under Every month on the
+  partner's page.
 - **Extend a month** (lead target missed): pick the month and the extra days (3, 7, 14 or any number)
   and a reason. That month runs longer and every later invoice moves back by the same days. Each
   extension is listed on the partner's card with its reason and date, and can be removed. A month that
