@@ -31,6 +31,18 @@ with moved as (
   returning 1
 ) insert into _fix select '1. Times moved from UTC to local time', count(*) from moved;
 
+-- if the export was uploaded again before this ran, the fresh copy and the moved copy are the same call:
+-- keep the moved one (it carries the partner's Won/Lost tags) and drop the fresh one
+with dupes as (
+  delete from public.calls b
+   using public.calls a
+   where a.client_id = b.client_id and a.id <> b.id
+     and a.raw->>'_tz' = 'shifted' and b.raw->>'_tz' in ('utc', 'local')
+     and abs(extract(epoch from (a.called_at - b.called_at))) < 120
+     and regexp_replace(a.caller_number, '\D', '', 'g') = regexp_replace(b.caller_number, '\D', '', 'g')
+  returning 1
+) insert into _fix select '1b. Duplicates from an earlier re-upload removed', count(*) from dupes;
+
 with fixed as (
   update public.calls
      set outcome = 'missed'
