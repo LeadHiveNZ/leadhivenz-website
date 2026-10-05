@@ -195,6 +195,35 @@ await fetch("https://portal.leadhivenz.com/api/enquiry", {
 and set `LEADHIVE_PORTAL_KEY` in that Lovable project's secrets to the partner's key. (That edit
 is one small Lovable message per landing page; do it when you next touch the page.)
 
+## Billing and slots (admin only)
+
+**One-off setup:** Supabase → SQL Editor → paste all of `app/supabase/add-billing.sql` (Raw view) →
+Run. Until then the portal works as before and the Billing page says the update is needed.
+
+**Billing** (tab, and the Overdue / Invoices due tiles on the Partners page). Every partner is invoiced
+monthly from their billing start: Month 1 on that day, Month 2 a month later, each due on its first
+day. Billing start is the partner's start date unless you set another one in Settings (e.g. billing
+began after a free trial), where the setup fee (added to Month 1) and an extra monthly charge such as
+"Website $50" live too. Amounts show ex GST and incl. GST (15% NZ, 10% AU).
+
+- **First visit:** a one-time list marks old invoices paid. Untick anyone who still owes money.
+  Current partners keep their latest invoice open; past partners are cleared completely.
+- **Mark paid** on any due or late month records the date and amount. "Undo" is under Every month on
+  the partner's page.
+- **Extend a month** (lead target missed): pick the month and the extra days (3, 7, 14 or any number)
+  and a reason. That month runs longer and every later invoice moves back by the same days. Each
+  extension is listed on the partner's card with its reason and date, and can be removed. A month that
+  finished under target shows "Extend it". The partner's Account page shows the moved invoice date;
+  the reasons stay with you.
+- Lead counts per billing month come from the data you've uploaded.
+
+**Slots** (tab): every region and trade, grouped like Plumbers / Electricians / Handyman / builder.
+Lines that have had a partner appear by themselves: filled ones show the partner, start date and next
+invoice; open ones show how long they've been open and how many leads the last partner was getting
+(your pitch). **Fill** opens the new-partner form with the region, trade and "takes over from" already
+set. **Hide** drops a line you no longer sell; **Add a slot** adds one that's never had a partner
+(e.g. a roofer line).
+
 ## Won / Lost tagging = the ROI engine
 
 Every lead row has **Won**, **Lost** and **Ongoing** buttons. Won opens a value box prefilled with your

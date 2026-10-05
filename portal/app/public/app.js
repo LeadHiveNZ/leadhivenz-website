@@ -87,6 +87,8 @@ const ICON = {
   home: '<svg class="ico" viewBox="0 0 24 24"><path d="M12 3l9 8h-3v9h-5v-6h-2v6H6v-9H3z"/></svg>',
   leads: '<svg class="ico" viewBox="0 0 24 24"><path d="M4 5h16v2H4zm0 6h16v2H4zm0 6h10v2H4z"/></svg>',
   report: '<svg class="ico" viewBox="0 0 24 24"><path d="M5 20V10h3v10zm5.5 0V4h3v16zM16 20v-7h3v7z"/></svg>',
+  cash: '<svg class="ico" viewBox="0 0 24 24"><path d="M3 6h18v12H3zm2 2v8h14V8zm7 1.5a2.5 2.5 0 110 5 2.5 2.5 0 010-5z"/></svg>',
+  grid: '<svg class="ico" viewBox="0 0 24 24"><path d="M4 4h7v7H4zm9 0h7v7h-7zM4 13h7v7H4zm9 0h7v7h-7z"/></svg>',
   user: '<svg class="ico" viewBox="0 0 24 24"><path d="M12 12a4.5 4.5 0 100-9 4.5 4.5 0 000 9zm0 2c-4 0-8 2-8 5v2h16v-2c0-3-4-5-8-5z"/></svg>',
   star: '<svg class="ico" viewBox="0 0 24 24"><path d="M12 2l3 6.3 7 1-5 4.9 1.2 6.9L12 17.8 5.8 21l1.2-6.9-5-4.9 7-1z"/></svg>',
   quote: '<svg class="ico" viewBox="0 0 24 24"><path d="M5 4h14a1 1 0 011 1v11a1 1 0 01-1 1H9l-5 4V5a1 1 0 011-1z"/></svg>',
@@ -185,6 +187,17 @@ function makeSupabaseApi() {
     },
     async upsertMonth(m) { return q(sb.from("months").upsert(m, { onConflict: "client_id,ym" }).select().single()); },
     async setAdSpend(month_id, ad_spend) { await q(sb.from("month_private").upsert({ month_id, ad_spend })); },
+    async loadBilling() {
+      const all = async (mk) => { const out = []; for (let from = 0; from < 200000; from += 1000) { const rows = await q(mk().range(from, from + 999)); out.push(...rows); if (rows.length < 1000) break; } return out; };
+      const [payments, extensions, slots, days] = await Promise.all([q(sb.from("payments").select("*").order("month_no")), q(sb.from("extensions").select("*").order("created_at")), q(sb.from("slots").select("*").order("created_at")), all(() => sb.from("v_lead_days").select("client_id,day,leads").order("client_id").order("day"))]);
+      return { payments: payments.map((x) => ({ ...x, amount: num(x.amount), month_no: num(x.month_no) })), extensions: extensions.map((x) => ({ ...x, days: num(x.days), month_no: num(x.month_no) })), slots, leadDays: days.map((d) => ({ ...d, leads: num(d.leads) })) };
+    },
+    async loadMyExtensions(cid) { return (await q(sb.from("extensions").select("*").eq("client_id", cid))).map((x) => ({ ...x, days: num(x.days), month_no: num(x.month_no) })); },
+    async savePayments(rows) { return q(sb.from("payments").upsert(rows, { onConflict: "client_id,month_no" }).select()); },
+    async deletePayment(id) { await q(sb.from("payments").delete().eq("id", id)); },
+    async addExtension(x) { return q(sb.from("extensions").insert(x).select().single()); },
+    async deleteExtension(id) { await q(sb.from("extensions").delete().eq("id", id)); },
+    async saveSlot(x) { return q(sb.from("slots").upsert(x, { onConflict: "region,trade,country" }).select().single()); },
     async replaceMonthCalls(cid, ym, rows) { const n = await q(sb.rpc("replace_month_calls", { p_client: cid, p_ym: ym, p_rows: rows })); return { inserted: Number(n) || 0, updated: 0, replaced: true }; },
     async mergeMonthCalls(cid, ym, rows) { const r = await q(sb.rpc("merge_month_calls", { p_client: cid, p_ym: ym, p_rows: rows })); return { inserted: Number(r && r.inserted) || 0, updated: Number(r && r.updated) || 0 }; },
     async mergeEnquiries(cid, rows) { const r = await q(sb.rpc("merge_enquiries", { p_client: cid, p_rows: rows })); return { inserted: Number(r && r.inserted) || 0, updated: Number(r && r.updated) || 0 }; },
@@ -246,6 +259,18 @@ function makeDemoApi() {
     },
     async upsertMonth(m) { let row = D.months.find((x) => x.client_id === m.client_id && x.ym === m.ym); if (!row) { row = { id: uid(), ad_spend: 0, pdf_path: null, published_at: null, ...m }; D.months.push(row); } else Object.assign(row, m); persist(); return { ...row }; },
     async setAdSpend(month_id, ad_spend) { const m = D.months.find((x) => x.id === month_id); if (m) m.ad_spend = ad_spend; persist(); },
+    async loadBilling() {
+      if (meSync().role !== "admin") throw new Error("admin only"); D.payments ||= []; D.extensions ||= []; D.slots ||= []; const days = {};
+      const add = (cid, iso, spam) => { const c = D.clients.find((x) => x.id === cid); const k = cid + "|" + ymdOf(new Date(iso), (c && c.timezone) || "Pacific/Auckland"); days[k] = (days[k] || 0) + (spam ? 0 : 1); };
+      D.calls.forEach((x) => add(x.client_id, x.called_at, x.client_status === "spam")); D.enquiries.forEach((x) => add(x.client_id, x.received_at, x.client_status === "spam"));
+      return { payments: D.payments.map((x) => ({ ...x })), extensions: D.extensions.map((x) => ({ ...x })), slots: D.slots.map((x) => ({ ...x })), leadDays: Object.entries(days).map(([k, leads]) => { const [client_id, day] = k.split("|"); return { client_id, day, leads }; }) };
+    },
+    async loadMyExtensions(cid) { return (D.extensions || []).filter((x) => x.client_id === cid).map((x) => ({ ...x })); },
+    async savePayments(rows) { D.payments ||= []; const out = rows.map((r) => { let x = D.payments.find((y) => y.client_id === r.client_id && y.month_no === r.month_no); if (!x) { x = { id: uid(), note: "", created_at: new Date().toISOString(), ...r }; D.payments.push(x); } else Object.assign(x, r); return { ...x }; }); persist(); return out; },
+    async deletePayment(id) { D.payments = (D.payments || []).filter((x) => x.id !== id); persist(); },
+    async addExtension(x) { D.extensions ||= []; const row = { id: uid(), reason: "", created_at: new Date().toISOString(), ...x }; D.extensions.push(row); persist(); return { ...row }; },
+    async deleteExtension(id) { D.extensions = (D.extensions || []).filter((x) => x.id !== id); persist(); },
+    async saveSlot(x) { D.slots ||= []; let row = D.slots.find((y) => y.region === x.region && y.trade === x.trade && y.country === x.country); if (!row) { row = { id: uid(), note: "", active: true, created_at: new Date().toISOString(), ...x }; D.slots.push(row); } else Object.assign(row, x); persist(); return { ...row }; },
     async replaceMonthCalls(cid, ym, rows) {
       const old = D.calls.filter((c) => c.client_id === cid && c.ym === ym); const digits = (s) => String(s || "").replace(/\D/g, "");
       D.calls = D.calls.filter((c) => !(c.client_id === cid && c.ym === ym));
@@ -285,14 +310,17 @@ function makeDemoApi() {
 const api = DEMO ? makeDemoApi() : makeSupabaseApi();
 
 /* ═══════════════════════════ cache + loaders ═══════════════════════════ */
-const DB = { me: null, clients: [], months: [], calls: [], enquiries: [], counts: [], loaded: {}, keys: {}, seen: {}, history: {} };
-function resetDB() { DB.me = null; DB.clients = []; DB.months = []; DB.calls = []; DB.enquiries = []; DB.counts = []; DB.loaded = {}; DB.keys = {}; DB.seen = {}; DB.history = {}; }
+const emptyBilling = () => ({ payments: [], extensions: [], slots: [], leadDays: [] });
+const DB = { me: null, clients: [], months: [], calls: [], enquiries: [], counts: [], loaded: {}, keys: {}, seen: {}, history: {}, billing: emptyBilling(), billingErr: "" };
+function resetDB() { DB.me = null; DB.clients = []; DB.months = []; DB.calls = []; DB.enquiries = []; DB.counts = []; DB.loaded = {}; DB.keys = {}; DB.seen = {}; DB.history = {}; DB.billing = emptyBilling(); DB.billingErr = ""; }
+// payments, extensions, slots and leads per day; if the billing tables aren't in Supabase yet, the rest of the portal carries on
+async function loadBilling() { try { DB.billing = await api.loadBilling(); DB.billingErr = ""; } catch (e) { DB.billing = emptyBilling(); DB.billingErr = (e && e.message) || String(e); } }
 async function loadBase() {
   DB.me = await api.me();
   if (!DB.me) return;
   DB.clients = await api.loadClients();
-  if (DB.me.role === "admin") { const [counts, months, seen] = await Promise.all([api.loadCounts(), api.loadMonths(), api.loadLastSeen().catch(() => ({}))]); DB.counts = counts; DB.months = months; DB.seen = seen; }
-  else if (DB.me.client_id) api.touchSeen();
+  if (DB.me.role === "admin") { const [counts, months, seen] = await Promise.all([api.loadCounts(), api.loadMonths(), api.loadLastSeen().catch(() => ({})), loadBilling()]); DB.counts = counts; DB.months = months; DB.seen = seen; }
+  else if (DB.me.client_id) { api.touchSeen(); DB.billing.extensions = await api.loadMyExtensions(DB.me.client_id).catch(() => []); }
 }
 async function ensureClient(cid, force) {
   if (!force && DB.loaded[cid]) return;
@@ -303,7 +331,7 @@ async function ensureClient(cid, force) {
   const c = client(cid); DB.history[cid] = c && c.predecessor_id ? await api.regionHistory(cid).catch(() => []) : [];
   DB.loaded[cid] = true;
 }
-async function refreshAdmin() { if (DB.me && DB.me.role === "admin") { const [counts, months] = await Promise.all([api.loadCounts(), api.loadMonths()]); DB.counts = counts; DB.months = months; } }
+async function refreshAdmin() { if (DB.me && DB.me.role === "admin") { const [counts, months] = await Promise.all([api.loadCounts(), api.loadMonths(), loadBilling()]); DB.counts = counts; DB.months = months; } }
 const client = (id) => DB.clients.find((c) => c.id === id);
 const monthRec = (cid, ym) => DB.months.find((m) => m.client_id === cid && m.ym === ym);
 const tzOf = (c) => (c && (c.timezone || TZ_FOR[c.country])) || "Pacific/Auckland";
@@ -559,7 +587,7 @@ async function route() {
     else if (seg === "as" && isAdmin) { cid = parts[1]; page = parts[2] || "home"; args = parts.slice(3); }
     else { page = seg; args = parts.slice(1); }
     const ctx = { user: DB.me, cid, isAdmin, viewAs: seg === "as", args, base: seg === "as" ? `/as/${cid}` : "" };
-    const adminPages = { admin: renderAdmin, client: renderAdminClient, upload: renderUpload, settings: renderSettings, newclient: renderSettings, bulk: renderBulk, import: renderImport };
+    const adminPages = { admin: renderAdmin, client: renderAdminClient, upload: renderUpload, settings: renderSettings, newclient: renderSettings, bulk: renderBulk, import: renderImport, billing: renderBilling, slots: renderSlots };
     const clientPages = { home: renderHome, leads: renderLeads, lead: renderLead, reports: renderReports, report: renderReport, account: renderAccount };
     if (seg === "admin") { renderTabs(ctx, page); const fn = adminPages[page] || renderAdmin; if (page === "client" || page === "upload" || page === "settings") { const target = args[0]; if (target && client(target)) { skeleton(); await ensureClient(target); if (token !== routeToken) return; } } return fn(ctx); }
     if (!cid || !client(cid)) { hideTabs(); if (isAdmin) return go("/admin"); return renderNoPortal(); }
@@ -576,8 +604,8 @@ async function route() {
 }
 function renderTabs(ctx, page) {
   const t = $("tabs"), inn = $("tabs-in"); document.body.classList.add("has-tabs"); t.classList.remove("hidden");
-  if (!ctx.cid || ["admin", "client", "upload", "settings", "newclient"].includes(page) && !ctx.viewAs) {
-    inn.innerHTML = `<a href="#/admin" class="${page === "admin" || page === "client" ? "on" : ""}">${ICON.user}Partners</a><a href="#/admin/upload" class="${page === "upload" ? "on" : ""}">${ICON.upload}Upload</a><a href="#" data-logout>${ICON.out}Log out</a>`;
+  if (!ctx.cid || ["admin", "client", "upload", "settings", "newclient", "billing", "slots", "bulk", "import"].includes(page) && !ctx.viewAs) {
+    inn.innerHTML = `<a href="#/admin" class="${page === "admin" || page === "client" ? "on" : ""}">${ICON.user}Partners</a><a href="#/admin/billing" class="${page === "billing" ? "on" : ""}">${ICON.cash}Billing</a><a href="#/admin/slots" class="${page === "slots" ? "on" : ""}">${ICON.grid}Slots</a><a href="#/admin/upload" class="${page === "upload" ? "on" : ""}">${ICON.upload}Upload</a><a href="#" data-logout>${ICON.out}Log out</a>`;
   } else {
     const b = ctx.base; const unread = leadsFor(ctx.cid, CUR_YM()).filter((x) => x.client_status === "new").length;
     inn.innerHTML = `<a href="#${b}/home" class="${page === "home" ? "on" : ""}">${ICON.home}Home</a><a href="#${b}/leads" class="${page === "leads" || page === "lead" ? "on" : ""}">${ICON.leads}Leads${unread ? `<span class="bdg">${unread}</span>` : ""}</a><a href="#${b}/reports" class="${page === "reports" || page === "report" ? "on" : ""}">${ICON.report}Reports</a><a href="#${b}/account" class="${page === "account" ? "on" : ""}">${ICON.user}${ctx.viewAs ? "Admin" : "Account"}</a>`;
@@ -812,12 +840,12 @@ function renderReport(ctx) {
 }
 function renderAccount(ctx) {
   const c = ctx.client; const user = ctx.user;
-  const next = (() => { const p = tzParts(new Date()); let y = +p.year, mo = +p.month; if (+p.day >= c.billing_day) { mo++; if (mo > 12) { mo = 1; y++; } } return new Date(Date.UTC(y, mo - 1, c.billing_day, 12)); })();
+  const bp = billingPlan(c); const next = bp && bp.upcoming ? new Date(bp.upcoming.start + "T12:00:00Z") : null;
   const telJ = (JOE.phone || "").replace(/\s/g, "");
   app().innerHTML = topBar({ title: ctx.viewAs ? "Viewing as partner" : "Account", sub: h(c.business_name) }) + `<div class="shell">
   ${ctx.viewAs ? `<a class="btn navy" style="margin-top:16px" href="#/admin/client/${c.id}">${ICON.back}Back to admin</a>` : ""}
   <div class="card mt16"><div class="row"><div class="avatar" style="width:46px;height:46px;font-size:16px">${h(c.initials || "")}</div><div class="grow"><b style="font-size:16px;font-family:var(--head)">${h(c.business_name)}</b><div class="small muted">${h(c.contact_name)} · ${h(c.niche)} · ${h(c.region)}</div></div></div>
-  <div class="facts"><div><small>Plan</small>${h(c.package_name)}</div><div><small>Monthly fee</small>${money(c.monthly_fee)} + GST</div><div><small>Lead target</small>${c.lead_target_min} to ${c.lead_target_max} a month</div><div><small>Next invoice</small>${next.toLocaleDateString("en-NZ", { timeZone: "UTC", day: "numeric", month: "short", year: "numeric" })}</div><div><small>Partner since</small>${c.started_on ? new Date(c.started_on + "T12:00:00Z").toLocaleDateString("en-NZ", { timeZone: "UTC", day: "numeric", month: "short", year: "numeric" }) : "–"}</div><div><small>Login</small>${h(ctx.viewAs ? c.email : user.email)}</div></div></div>
+  <div class="facts"><div><small>Plan</small>${h(c.package_name)}</div><div><small>Monthly fee</small>${money(c.monthly_fee)} + GST</div><div><small>Lead target</small>${c.lead_target_min} to ${c.lead_target_max} a month</div><div><small>Next invoice</small>${next ? next.toLocaleDateString("en-NZ", { timeZone: "UTC", day: "numeric", month: "short", year: "numeric" }) : "–"}</div><div><small>Partner since</small>${c.started_on ? new Date(c.started_on + "T12:00:00Z").toLocaleDateString("en-NZ", { timeZone: "UTC", day: "numeric", month: "short", year: "numeric" }) : "–"}</div><div><small>Login</small>${h(ctx.viewAs ? c.email : user.email)}</div></div></div>
   <div class="sec"><div class="sec-h"><h2>Talk to ${h(JOE.name)}</h2></div><div class="btn-row">${telJ ? `<a class="btn navy" href="tel:${h(telJ)}">${ICON.phone}Call</a>` : ""}${JOE.whatsapp ? `<a class="btn ghost" href="${h(JOE.whatsapp)}" target="_blank" rel="noopener">WhatsApp</a>` : ""}<a class="btn ghost" href="mailto:${h(JOE.email)}">Email</a></div></div>
   <div class="sec"><div class="sec-h"><h2>Put it on your home screen</h2></div><div class="card"><p class="lede">This portal works like an app. On iPhone tap <b>Share</b> then <b>Add to Home Screen</b>. On Android tap the <b>⋮ menu</b> then <b>Add to Home screen</b>. You'll get a LeadHive icon and it opens full-screen.</p></div></div>
   <div class="sec"><div class="sec-h"><h2>Your lead line</h2></div><div class="card"><p class="lede">Calls from your Google ads come through a LeadHive tracking number that forwards straight to <b>${h(c.phone || "your mobile")}</b>. That's how we count calls and record them. Web enquiries come from your LeadHive landing page and land here the moment they're sent.</p></div></div>
@@ -848,6 +876,8 @@ function renderAdmin() {
   <div class="row" style="margin:18px 0 12px"><div class="grow"><h1 style="font-size:22px;font-weight:600">Partners</h1><div class="small muted">${cs.length} active · ${due} report${due === 1 ? "" : "s"} due for ${ymLabel(prevYm, false)} · ${live} lead${live === 1 ? "" : "s"} logged so far in ${ymLabel(cur, false)}</div></div></div>
   <div class="btn-row"><a class="btn primary" href="#/admin/upload">${ICON.upload}Upload month</a><a class="btn ghost" href="#/admin/newclient">+ New partner</a></div>
   <div class="btn-row" style="margin-top:10px"><a class="small" href="#/admin/bulk" style="flex:1;text-align:center;color:var(--blue);font-weight:600">Add several partners at once</a><a class="small" href="#/admin/import" style="flex:1;text-align:center;color:var(--blue);font-weight:600">Upload data for every partner</a></div>
+  ${(() => { const ps = DB.clients.map((c) => [c, billingPlan(c)]).filter(([, p]) => p); const late = ps.filter(([, p]) => p.late.length); const soon = ps.filter(([c, p]) => c.active && ((p.unpaid.length && !p.late.length) || (p.upcoming && daysFrom(p.today, p.upcoming.start) <= 7))); const open = slotLines().filter((L) => !L.hidden && !L.cur.length).length; const tile = "text-decoration:none;color:inherit"; const pending = !DB.billingErr && billingSetupList().length; const dueOn = (p) => (p.unpaid.length && !p.late.length ? p.unpaid[0].start : p.upcoming.start);
+    return `<div class="kpis"><a class="kpi" href="#/admin/billing" style="${tile}"><div class="l">Overdue</div>${pending || DB.billingErr ? `<div class="v" style="font-size:18px">Set up billing</div><div class="d flat">${DB.billingErr ? "one-off Supabase update" : "tick off old invoices first"}</div>` : `<div class="v" style="color:${late.length ? "var(--bad)" : "inherit"}">${amt(late.reduce((a, [, p]) => a + p.lateAmt, 0))}</div><div class="d flat">${late.length ? late.map(([c]) => h(c.business_name)).slice(0, 2).join(", ") + (late.length > 2 ? " +" + (late.length - 2) : "") : "nobody"}</div>`}</a><a class="kpi" href="#/admin/billing" style="${tile}"><div class="l">Invoices due in 7 days</div><div class="v">${soon.length}</div><div class="d flat">${soon.length ? soon.map(([c, p]) => `${h(c.business_name.split(" ")[0])} ${fmtCal(dueOn(p)).replace(/ \d{4}$/, "")}`).slice(0, 2).join(", ") : "none"}</div></a><a class="kpi" href="#/admin/slots" style="${tile}"><div class="l">Open slots</div><div class="v">${open}</div><div class="d flat">see every region</div></a></div>`; })()}
   <div class="list mt16">${cs.length ? cs.map((c) => { const s = clientStatus(c); const k = countFor(c.id, prevYm); return `<a class="li client-li" href="#/admin/client/${c.id}"><div class="ic">${h(c.initials || "")}</div><div class="grow"><div class="t1"><span>${h(c.business_name)}</span></div><div class="t2"><span class="tx">${h(c.niche)} · ${h(c.region)} ${h(c.country)} · ${h(c.package_name)} ${money(c.monthly_fee)}</span></div><div style="margin-top:5px"><span class="chip ${s.cls}"><i></i>${s.l}</span> ${(() => { const seen = DB.seen[c.id]; const d = seen ? Math.floor((Date.now() - new Date(seen)) / 864e5) : null; return `<span class="chip ${d == null || d >= 14 ? "warn" : ""}">${agoText(seen)}</span>`; })()}</div></div><div class="meta"><div class="tm">${k.leads ? k.leads + (k.leads === 1 ? " lead" : " leads") : ""}</div><div class="du muted">${k.leads ? ymLabel(prevYm, false) : ""}</div></div><span class="chev">${ICON.chev}</span></a>`; }).join("") : `<div class="empty">No partners yet. Add your first one.</div>`}</div>
   <div class="sec"><div class="sec-h"><h2>Month-end routine</h2></div><div class="card"><div class="pt"><div class="ix">1</div><div><b>Export from Nimbata, as often as you like</b><p>Call log → filter the partner's project and the month → Export CSV. Fortnightly is fine: uploads add new calls and refresh existing ones, nothing gets wiped.</p></div></div><div class="pt"><div class="ix">2</div><div><b>Send the stats to Claude for the notes</b><p>Upload step 2 has a "Copy summary" button. Paste it to Claude with the Google Ads spend and you get the summary and three "what I'm changing" points back.</p></div></div><div class="pt"><div class="ix">3</div><div><b>Paste, attach the PDF, publish</b><p>The partner gets an email saying their results are in, and it's in their portal the moment you hit publish.</p></div></div></div></div>
   ${inactive.length ? `<div class="sec"><div class="sec-h"><h2>Past partners</h2><span class="small muted">${inactive.length}</span></div><div class="list">${inactive.map((c) => `<a class="li client-li" href="#/admin/client/${c.id}" style="opacity:.75"><div class="ic" style="background:var(--ink-3)">${h(c.initials || "")}</div><div class="grow"><div class="t1"><span>${h(c.business_name)}</span></div><div class="t2"><span class="tx">${h(c.region)} · left ${c.churned_on ? fmtCal(c.churned_on) : "–"}${c.churn_reason ? " · " + h(CHURN_REASONS[c.churn_reason] || c.churn_reason) : ""}</span></div></div><span class="chev">${ICON.chev}</span></a>`).join("")}</div><p class="small muted mt8">Their data and recordings are kept. Open one to reactivate.</p></div>` : ""}
@@ -866,9 +896,11 @@ function renderAdminClient(ctx) {
   <div class="mt16"><span class="chip ${s.cls}"><i></i>${s.l}</span> <span class="chip">${c.lead_target_min}–${c.lead_target_max} leads</span> <span class="chip">${h(c.country)}</span>${c.predecessor_id && client(c.predecessor_id) ? ` <span class="chip blue">Took over from ${h(client(c.predecessor_id).business_name)}</span>` : ""} <span class="chip ${DB.seen[c.id] && (Date.now() - new Date(DB.seen[c.id])) / 864e5 < 14 ? "" : "warn"}">${agoText(DB.seen[c.id])}</span></div>
   <div class="btn-row mt12"><a class="btn primary" href="#/admin/upload/${c.id}">${ICON.upload}Upload month</a><a class="btn ghost" href="#/as/${c.id}/home">View as ${h(c.contact_name || "partner")}</a></div>
   <div class="btn-row" style="margin-top:8px"><a class="btn ghost sm" style="flex:1" href="#/admin/settings/${c.id}">${ICON.cog}Settings &amp; login</a><button class="btn ghost sm" style="flex:1" id="copy-hook">${ICON.copy}Enquiry webhook</button></div>
+  <div class="sec"><div class="sec-h"><h2>Billing</h2><a href="#/admin/billing">All partners</a></div>${DB.billingErr ? billSetupNote() : `<div id="bill-root">${billCard(c, billingPlan(c), true)}</div>`}</div>
   <div class="sec"><div class="sec-h"><h2>Months</h2></div><div class="list">${ms.length ? ms.map((m) => { const st = monthStats(c, m.ym); return `<a class="li" href="#/admin/upload/${c.id}/${m.ym}"><div class="grow"><div class="t1"><span>${ymLabel(m.ym)}</span>${m.status === "published" ? `<span class="chip good">Published</span>` : m.status === "draft" ? `<span class="chip warn">Draft</span>` : `<span class="chip">Calls only · add notes</span>`}</div><div class="t2"><span class="tx">${st.leads} leads · ${st.calls} calls · ${st.missedRate}% missed · ${st.enq} web${st.adSpend ? ` · ads ${money(st.adSpend)}${st.leads ? ` (${money(st.cplAd)}/lead)` : ""}` : ""}</span></div></div><span class="chev">${ICON.chev}</span></a>`; }).join("") : `<div class="empty">No months uploaded yet.</div>`}</div></div>
   <div class="sec"><div class="sec-h"><h2>${ymLabel(cur, false)} so far</h2><a href="#/as/${c.id}/leads/${cur}">${live.length} lead${live.length === 1 ? "" : "s"}</a></div><div class="list">${live.length ? live.slice(0, 4).map((x) => leadRow(x, `/as/${c.id}`, null)).join("") : `<div class="empty">Nothing logged yet this month. Web enquiries land here live once the webhook is on the landing page; calls arrive with the CSV.</div>`}</div></div>
   <div class="sec"><div class="sec-h"><h2>Margin (admin only)</h2></div><div class="card">${ms.filter((m) => m.status === "published" && m.ad_spend != null).slice(0, 3).map((m) => { const ad = Number(m.ad_spend) || 0; const fee = Number(c.monthly_fee) || 0; return `<div class="rpt-k"><span>${ymLabel(m.ym, false)}</span><b>${money(fee - ad)} <span class="muted small">of ${money(fee)} · ${pct(fee - ad, fee)}%</span></b></div>`; }).join("") || `<div class="muted small">Nothing published yet.</div>`}<p class="small muted mt8">Partners never see ad spend unless you switch it on in Settings.</p></div></div></div>`;
+  const br = $("bill-root"); if (br) bindBilling(br, () => rerenderKeepScroll());
   $("copy-hook").onclick = async () => { try { const key = DB.keys[c.id] || (DB.keys[c.id] = await api.getWebhookKey(c.id)); copyText(`POST ${PORTAL_URL}/api/enquiry\nx-leadhive-key: ${key}\n{ "name", "phone", "suburb", "issue", "isUrgent", "page" }`, "Webhook details copied"); } catch (e) { toast(e.message, true); } };
   const ra = $("react"); if (ra) ra.onclick = async () => { try { ra.setAttribute("disabled", ""); await api.reactivateClient(c.id); Object.assign(c, { active: true, churned_on: null, churn_reason: null, churn_note: "" }); toast(`${c.business_name} is back`); route(); } catch (e) { toast(e.message, true); ra.removeAttribute("disabled"); } };
 }
@@ -1040,6 +1072,160 @@ function renderUpload(ctx) {
   };
   $("u-draft").onclick = () => commit("draft"); $("u-pub").onclick = () => commit("published");
 }
+// ───────────────────────────── Billing + slots ─────────────────────────────
+// Each partner is invoiced monthly from their billing start (blank = start date): Month 1 on that day,
+// Month 2 a month later, and so on, each invoice due on its month's first day. Extending a month
+// (lead target missed) makes that month longer and moves every later invoice back by the same days.
+const GST_RATE = { NZ: 0.15, AU: 0.1 };
+const isYmd = (s) => /^\d{4}-\d{2}-\d{2}/.test(String(s || ""));
+const ymdAddDays = (s, n) => { const d = new Date(String(s).slice(0, 10) + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
+const ymdAddMonths = (s, n) => { const [y, m, d] = String(s).slice(0, 10).split("-").map(Number); const last = new Date(Date.UTC(y, m + n, 0, 12)).getUTCDate(); return new Date(Date.UTC(y, m - 1 + n, Math.min(d, last), 12)).toISOString().slice(0, 10); };
+const daysFrom = (a, b) => Math.round((new Date(String(b).slice(0, 10) + "T12:00:00Z") - new Date(String(a).slice(0, 10) + "T12:00:00Z")) / 864e5);
+const ordinal = (n) => { const s = ["th", "st", "nd", "rd"], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); };
+const fmtShort = (s) => (isYmd(s) ? new Date(String(s).slice(0, 10) + "T12:00:00Z").toLocaleDateString("en-NZ", { timeZone: "UTC", weekday: "short", day: "numeric", month: "short" }) : "–");
+const amt = (n) => money(n, Number(n) % 1 ? 2 : 0);
+const dayWord = (n) => `${n} day${n === 1 ? "" : "s"}`;
+const billingReady = () => DEMO || (!DB.billingErr && DB.clients.some((c) => "setup_fee" in c));
+function billingPlan(c, B = DB.billing) {
+  if (!c) return null;
+  const anchor = isYmd(c.billing_start) ? String(c.billing_start).slice(0, 10) : isYmd(c.started_on) ? String(c.started_on).slice(0, 10) : "";
+  if (!anchor) return null;
+  const today = ymdOf(new Date(), tzOf(c)); const gst = GST_RATE[c.country] ?? 0.15;
+  const exts = (B.extensions || []).filter((x) => x.client_id === c.id); const pays = (B.payments || []).filter((p) => p.client_id === c.id);
+  const days = (B.leadDays || []).filter((d) => d.client_id === c.id);
+  const lastDay = !c.active && isYmd(c.churned_on) ? String(c.churned_on).slice(0, 10) : "";
+  const base = (Number(c.monthly_fee) || 0) + (Number(c.extra_fee) || 0);
+  const months = []; let shift = 0;
+  for (let no = 1; no <= 240; no++) {
+    const start = ymdAddDays(ymdAddMonths(anchor, no - 1), shift);
+    if (lastDay && start > lastDay) break;
+    const mx = exts.filter((x) => Number(x.month_no) === no); const ext = mx.reduce((a, x) => a + (Number(x.days) || 0), 0);
+    const next = ymdAddDays(ymdAddMonths(anchor, no), shift + ext); const ex = base + (no === 1 ? Number(c.setup_fee) || 0 : 0);
+    months.push({ no, start, next, end: ymdAddDays(next, -1), ext, exts: mx, ex, inc: Math.round(ex * (1 + gst) * 100) / 100, pay: pays.find((p) => Number(p.month_no) === no) || null,
+      leads: days.filter((d) => d.day >= start && d.day < next).reduce((a, d) => a + (Number(d.leads) || 0), 0) });
+    shift += ext;
+    if (start > today) break; // stop after the first month that hasn't started
+  }
+  const unpaid = months.filter((m) => !m.pay && m.start <= today); const late = unpaid.filter((m) => m.start < today);
+  return { anchor, today, gst, months, unpaid, late, cur: months.find((m) => m.start <= today && today < m.next) || null, upcoming: months.find((m) => m.start > today) || null,
+    owed: unpaid.reduce((a, m) => a + m.inc, 0), lateAmt: late.reduce((a, m) => a + m.inc, 0), lateDays: late.length ? daysFrom(late[0].start, today) : 0 };
+}
+function billStatus(c, p) {
+  if (!p) return { cls: "", l: "No billing date" };
+  if (p.late.length) return { cls: "bad", l: `${amt(p.lateAmt)} overdue · ${dayWord(p.lateDays)}` };
+  if (p.unpaid.length) return { cls: "warn", l: `Month ${p.unpaid[0].no} due today` };
+  if (c.active && p.upcoming) { const d = daysFrom(p.today, p.upcoming.start); return { cls: d <= 7 ? "warn" : "good", l: `Paid up · next in ${dayWord(d)}` }; }
+  return { cls: "good", l: "Paid up" };
+}
+const billSetupNote = () => `<div class="card mt12" style="background:var(--warn-bg);border-color:#F3DDA8"><b style="color:var(--warn)">One-off update needed in Supabase</b><p class="small mt8" style="line-height:1.5">Open Supabase → SQL Editor, paste all of <b>app/supabase/add-billing.sql</b> from GitHub (Raw view) and press Run. Then reload this page.</p><p class="small muted mt8">${h(DB.billingErr || "")}</p></div>`;
+function billCard(c, p, full) {
+  const trade = nicheWord(c.niche); const min = Number(c.lead_target_min) || 0; const st = billStatus(c, p);
+  if (!p) return `<div class="card mt12" data-bill="${c.id}"><b>${h(c.business_name)}</b><p class="small muted mt8">No start date, so no billing dates. Set one in Settings.</p></div>`;
+  if (!p.months.length) return `<div class="card mt12" data-bill="${c.id}"><b>${h(c.business_name)}</b><p class="small muted mt8">Finished before their billing start (${fmtCal(p.anchor)}), so no invoices.</p></div>`;
+  const { cur, upcoming: up } = p; const ref = up || cur || p.months[p.months.length - 1];
+  const out = []; const row = (l, r, style = "") => `<div class="rpt-k" style="${style}"><span>${l}</span><b style="text-align:right">${r}</b></div>`;
+  p.unpaid.forEach((m) => out.push(row(`Month ${m.no} · ${m.start < p.today ? `due ${fmtShort(m.start)}, ${dayWord(daysFrom(m.start, p.today))} late` : "due today"}`, `${amt(m.inc)}<br><button class="btn ghost sm" type="button" data-pay="${m.no}" style="margin-top:4px">Mark paid</button>`, "color:var(--bad)")));
+  if (p.unpaid.length >= 2) { const upto = p.unpaid[p.unpaid.length - 2].no, many = upto > p.unpaid[0].no; out.push(`<div class="small mt8" style="line-height:1.45">${many ? `Months ${p.unpaid[0].no}–${upto} aren't` : `Month ${upto} isn't`} marked paid. Paid before the portal? <button class="btn ghost sm" type="button" data-payall="${upto}">Mark ${many ? "them" : "it"} paid</button></div>`); }
+  if (c.active && up) out.push(row(`Next invoice · Month ${up.no}`, `${fmtShort(up.start)} <span class="muted small">in ${dayWord(daysFrom(p.today, up.start))}</span><br><span class="small">${amt(up.ex)} + GST = ${amt(up.inc)}</span>`));
+  if (c.active && cur) { const left = daysFrom(p.today, cur.next), len = daysFrom(cur.start, cur.next); const behind = min && cur.leads < min * ((len - left) / len);
+    out.push(row(`Month ${cur.no} so far<br><span class="small muted">${fmtCal(cur.start)} to ${fmtCal(cur.end)}${cur.ext ? ` · ${cur.ext} extra days` : ""}</span>`, `<span style="color:${behind ? "var(--warn)" : "inherit"}">${cur.leads}${min ? ` of ${min}` : ""} leads</span><br><span class="small muted">${dayWord(left)} left</span>`)); }
+  const short = p.months.filter((m) => m.next <= p.today && min && m.leads < min && !m.ext).pop();
+  if (c.active && short && (!cur || short.no === cur.no - 1)) out.push(`<div class="small mt8" style="color:var(--warn);line-height:1.45">Month ${short.no} finished on ${short.leads} of ${min} leads (uploaded so far). <button class="btn ghost sm" type="button" data-ext="${short.no}">Extend it</button></div>`);
+  const exts = p.months.flatMap((m) => m.exts.map((x) => ({ ...x, no: m.no })));
+  if (exts.length) out.push(`<div class="small mt8" style="line-height:1.6">${exts.map((x) => `<div>Month ${x.no} ran <b>${dayWord(Number(x.days))}</b> longer${x.reason ? ` · ${h(x.reason)}` : ""}${x.created_at ? ` <span class="muted">(${fmtDate(x.created_at)})</span>` : ""} <button class="btn ghost sm" type="button" data-unext="${x.id}" style="padding:2px 8px" aria-label="Remove extension">×</button></div>`).join("")}</div>`);
+  const hist = full ? `<details class="mt12"><summary class="small" style="font-weight:600">Every month (${p.months.length})</summary>${p.months.slice().reverse().map((m) => row(`Month ${m.no}<br><span class="small muted">${fmtCal(m.start)} to ${fmtCal(m.end)}${m.ext ? ` · +${dayWord(m.ext)}` : ""} · ${m.leads} lead${m.leads === 1 ? "" : "s"}</span>`, `<span class="small">${amt(m.inc)}</span><br>${m.pay ? `<span class="small" style="color:var(--good)">Paid${Math.abs(Number(m.pay.amount) - m.inc) > 0.5 ? ` ${amt(m.pay.amount)}` : ""} ${fmtCal(m.pay.paid_on)}</span> <button class="btn ghost sm" type="button" data-unpay="${m.pay.id}" style="padding:2px 8px">Undo</button>` : m.start > p.today ? `<span class="small muted">Upcoming</span>` : `<span class="small" style="color:var(--bad)">Not paid</span>`}`)).join("")}</details>` : "";
+  const extra = Number(c.extra_fee) ? ` · incl. ${h(c.extra_label || "extra")} ${money(c.extra_fee)}` : "";
+  return `<div class="card mt12" data-bill="${c.id}"><div class="row"><div class="grow"><a href="#/admin/client/${c.id}" style="color:inherit;text-decoration:none"><b style="font-size:15px">${h(c.business_name)}</b></a><div class="small muted">${h(c.region)} ${h(trade)} · ${c.active ? (cur ? `Month ${cur.no}` : "starts " + fmtCal(p.anchor)) : "past partner"} · invoiced on the ${ordinal(+ref.start.slice(8, 10))}${extra}</div></div><span class="chip ${st.cls}"><i></i>${st.l}</span></div>
+    ${out.join("")}
+    ${c.active ? `<div class="btn-row mt12"><button class="btn ghost sm" type="button" data-ext="${cur ? cur.no : 1}" style="flex:1">Extend a month</button>${up && !p.unpaid.length ? `<button class="btn ghost sm" type="button" data-pay="${up.no}" style="flex:1">Month ${up.no} paid early</button>` : ""}</div>` : ""}
+    <div data-form></div>${hist}</div>`;
+}
+const payForm = (m, p) => `<div class="card mt8" style="border-color:var(--blue)"><b style="font-size:14px">Month ${m.no} payment</b><div class="two"><label class="fld"><span>Paid on</span><input type="date" name="paid_on" value="${p.today}"></label><label class="fld"><span>Amount incl. GST</span><input type="number" name="amount" step="0.01" value="${m.inc}"></label></div><label class="fld"><span>Note (optional)</span><input name="note" placeholder="e.g. bank transfer"></label><div class="btn-row mt12"><button class="btn ghost sm" type="button" data-cancel style="flex:1">Cancel</button><button class="btn primary sm" type="button" data-savepay="${m.no}" style="flex:1">Save payment</button></div></div>`;
+function extForm(c, p, no) {
+  const min = Number(c.lead_target_min) || 0; const opts = p.months.filter((m) => m.start <= p.today).slice(-3); const m = opts.find((x) => x.no === no) || opts[opts.length - 1];
+  if (!m) return `<p class="small muted mt8">Month 1 hasn't started yet.</p>`;
+  return `<div class="card mt8" style="border-color:var(--blue)"><b style="font-size:14px">Extend a month</b><p class="small muted mt8" style="line-height:1.45">That month runs longer and every later invoice moves back by the same number of days.</p><div class="two"><label class="fld"><span>Month</span><select name="month">${opts.map((x) => `<option value="${x.no}" ${x.no === m.no ? "selected" : ""}>Month ${x.no} · ${x.leads}${min ? ` of ${min}` : ""} leads</option>`).join("")}</select></label><label class="fld"><span>Extra days</span><input type="number" name="days" min="1" max="120" value="7"></label></div><div class="btn-row" style="margin-top:8px">${[3, 7, 14].map((d) => `<button class="btn ghost sm" type="button" data-days="${d}" style="flex:1">${d} days</button>`).join("")}</div><label class="fld"><span>Reason</span><input name="reason" value="${h(min && m.leads < min ? `Under target: ${m.leads} of ${min} leads` : "")}" placeholder="e.g. under target, campaign paused"></label><div class="btn-row mt12"><button class="btn ghost sm" type="button" data-cancel style="flex:1">Cancel</button><button class="btn primary sm" type="button" data-saveext style="flex:1">Extend</button></div></div>`;
+}
+function bindBilling(root, after) {
+  root.addEventListener("click", async (e) => {
+    const b = e.target.closest("button"); const card = e.target.closest("[data-bill]"); if (!b || !card) return;
+    const c = client(card.dataset.bill); const p = billingPlan(c); if (!c || !p) return; const box = card.querySelector("[data-form]"); const val = (n) => { const el = box.querySelector(`[name="${n}"]`); return el ? el.value.trim() : ""; };
+    const save = async (fn, msg) => { b.disabled = true; try { await fn(); await loadBilling(); toast(msg); after(); } catch (ex) { toast(ex.message, true); b.disabled = false; } };
+    if (b.dataset.pay) { box.innerHTML = payForm(p.months.find((m) => m.no === +b.dataset.pay), p); return; }
+    if (b.dataset.ext) { box.innerHTML = extForm(c, p, +b.dataset.ext); return; }
+    if (b.hasAttribute("data-cancel")) { box.innerHTML = ""; return; }
+    if (b.dataset.days) { box.querySelector('[name="days"]').value = b.dataset.days; return; }
+    if (b.dataset.savepay) { const no = +b.dataset.savepay; return save(() => api.savePayments([{ client_id: c.id, month_no: no, amount: Number(val("amount")) || 0, paid_on: val("paid_on") || p.today, note: val("note") }]), `Month ${no} marked paid`); }
+    if (b.dataset.payall) { const ms = p.unpaid.filter((m) => m.no <= +b.dataset.payall); return save(() => api.savePayments(ms.map((m) => ({ client_id: c.id, month_no: m.no, amount: m.inc, paid_on: m.start, note: "Marked paid in bulk" }))), `${ms.length} month${ms.length === 1 ? "" : "s"} marked paid`); }
+    if (b.hasAttribute("data-saveext")) { const no = +val("month"), days = Math.round(Number(val("days"))); if (!(days >= 1 && days <= 120)) { toast("Pick 1 to 120 days", true); return; } return save(() => api.addExtension({ client_id: c.id, month_no: no, days, reason: val("reason") }), `Month ${no} extended by ${dayWord(days)}`); }
+    if (b.dataset.unext) { if (!confirm("Remove this extension? Later invoice dates move forward again.")) return; return save(() => api.deleteExtension(b.dataset.unext), "Extension removed"); }
+    if (b.dataset.unpay) { if (!confirm("Mark this month as not paid?")) return; return save(() => api.deletePayment(b.dataset.unpay), "Payment removed"); }
+  });
+}
+// First time on the Billing page nothing is marked paid. Partners with no payment recorded yet get one
+// setup list: ticked partners have every invoice before their latest marked paid (past partners: all of them).
+const hasPaid = (cid) => (DB.billing.payments || []).some((x) => x.client_id === cid);
+const billingSetupList = () => DB.clients.map((c) => ({ c, p: billingPlan(c) })).filter(({ c, p }) => p && !hasPaid(c.id) && p.unpaid.length >= (c.active ? 2 : 1));
+const setupMonths = ({ c, p }) => (c.active ? p.unpaid.slice(0, -1) : p.unpaid);
+function renderBilling() {
+  const rows = DB.clients.map((c) => ({ c, p: billingPlan(c) })).filter((x) => x.c.active || (x.p && x.p.unpaid.length));
+  const rank = (x) => (!x.p ? 1e7 : x.p.late.length ? -1e6 - x.p.lateDays : x.p.unpaid.length ? -1e5 : x.c.active && x.p.upcoming ? daysFrom(x.p.today, x.p.upcoming.start) : 1e6);
+  rows.sort((a, b) => rank(a) - rank(b) || a.c.business_name.localeCompare(b.c.business_name));
+  const late = rows.filter((x) => x.p && x.p.late.length); const soon = rows.filter((x) => x.p && x.c.active && ((x.p.unpaid.length && !x.p.late.length) || (x.p.upcoming && daysFrom(x.p.today, x.p.upcoming.start) <= 7)));
+  const soonAmt = soon.reduce((a, x) => a + (x.p.unpaid.length && !x.p.late.length ? x.p.unpaid[0].inc : x.p.upcoming.inc), 0);
+  const monthly = rows.filter((x) => x.c.active).reduce((a, x) => a + (Number(x.c.monthly_fee) || 0) + (Number(x.c.extra_fee) || 0), 0);
+  const setup = DB.billingErr ? [] : billingSetupList();
+  app().innerHTML = topBar({ title: "Billing", sub: "Who's due, who's paid, extended months", back: "/admin" }) + `<div class="shell">
+  ${DB.billingErr ? billSetupNote() : ""}
+  <div class="kpis"><div class="kpi"><div class="l">Overdue</div><div class="v" style="color:${late.length ? "var(--bad)" : "inherit"}">${amt(late.reduce((a, x) => a + x.p.lateAmt, 0))}</div><div class="d flat">${late.length} partner${late.length === 1 ? "" : "s"}</div></div><div class="kpi"><div class="l">Due in the next 7 days</div><div class="v">${amt(soonAmt)}</div><div class="d flat">${soon.length} invoice${soon.length === 1 ? "" : "s"} incl. GST</div></div><div class="kpi"><div class="l">Monthly revenue</div><div class="v">${amt(monthly)}</div><div class="d flat">+ GST · ${rows.filter((x) => x.c.active).length} partners</div></div></div>
+  ${setup.length ? `<div class="card mt12" style="border:1.5px solid var(--blue)"><b style="font-size:15px">Set up billing (one time)</b><p class="small mt8" style="line-height:1.5">Nothing is marked paid yet, so old invoices look overdue. <b>Untick anyone who still owes you money.</b> Everyone ticked has their old invoices marked paid, dated the day each was due. Current partners keep their latest invoice open for you to tick off; past partners are cleared completely.</p>
+    <div class="mt8">${setup.map((x) => { const ms = setupMonths(x); return `<label class="rpt-k" style="cursor:pointer;align-items:center"><span><input type="checkbox" data-setup="${x.c.id}" checked style="margin-right:8px;transform:scale(1.2)">${h(x.c.business_name)}${x.c.active ? "" : ` <span class="muted small">(past)</span>`}<br><span class="small muted" style="margin-left:26px">${ms.length === 1 ? `Month ${ms[0].no}` : `Months ${ms[0].no}–${ms[ms.length - 1].no}`} paid${x.c.active ? ` · Month ${x.p.unpaid[x.p.unpaid.length - 1].no} (${fmtCal(x.p.unpaid[x.p.unpaid.length - 1].start)}) left open` : ""}</span></span><b class="small">${amt(ms.reduce((a, m) => a + m.inc, 0))}</b></label>`; }).join("")}</div>
+    <button class="btn primary mt12" type="button" id="b-setup">Mark the ticked ones paid</button></div>` : ""}
+  <div id="bill-root">${rows.map((x) => billCard(x.c, x.p, false)).join("") || `<div class="empty mt12">No partners yet.</div>`}</div>
+  <p class="small muted mt16" style="line-height:1.5">Each month is invoiced on its first day. Billing starts on the partner's start date unless you set a different billing start in their Settings, where the setup fee and extra charges like a website live too. Lead counts come from the data you've uploaded.</p><div style="height:24px"></div></div>`;
+  bindBilling($("bill-root"), () => renderBilling());
+  const sb = $("b-setup"); if (sb) sb.onclick = async () => { const on = new Set([...document.querySelectorAll("[data-setup]")].filter((x) => x.checked).map((x) => x.dataset.setup)); const rowsP = setup.filter((x) => on.has(x.c.id)).flatMap((x) => setupMonths(x).map((m) => ({ client_id: x.c.id, month_no: m.no, amount: m.inc, paid_on: m.start, note: "Paid before the portal" })));
+    if (!rowsP.length) { toast("Nobody is ticked", true); return; } sb.disabled = true;
+    try { await api.savePayments(rowsP); await loadBilling(); toast(`${rowsP.length} old invoices marked paid`); renderBilling(); } catch (ex) { toast(ex.message, true); sb.disabled = false; } };
+}
+
+// Slots: every region + trade line, filled or open. Lines that have had a partner appear by themselves;
+// add new ones (a roofer line you're about to sell) or hide ones you've dropped.
+const TRADE_GROUPS = [["Plumber", "Plumbers"], ["Electrician", "Electricians"], ["Handyman", "Handyman / builder"], ["Builder", "Handyman / builder"], ["Roofer", "Roofers"], ["Locksmith", "Locksmiths"], ["Drainlayer", "Drainlayers"]];
+let PREFILL = null; // a slot's region + trade, carried into the new-partner form
+function slotLines() {
+  const map = new Map(); const key = (country, region, trade) => `${country || "NZ"}|${norm(region)}|${trade}`;
+  const line = (country, region, trade) => { const k = key(country, region, trade); if (!map.has(k)) map.set(k, { key: k, region, trade, country: country || "NZ", partners: [], slot: null }); return map.get(k); };
+  DB.clients.forEach((c) => line(c.country, c.region, nicheWord(c.niche) || "Other").partners.push(c));
+  (DB.billing.slots || []).forEach((s) => (line(s.country, s.region, s.trade).slot = s));
+  return [...map.values()].map((L) => { const cur = L.partners.filter((c) => c.active).sort((a, b) => String(b.started_on || "").localeCompare(String(a.started_on || ""))); const past = L.partners.filter((c) => !c.active).sort((a, b) => String(b.churned_on || "").localeCompare(String(a.churned_on || "")));
+    return { ...L, cur, last: past[0] || null, hidden: !cur.length && !!L.slot && L.slot.active === false }; });
+}
+function avgLeads(cid) { const ms = DB.counts.filter((r) => r.client_id === cid).sort((a, b) => (a.ym < b.ym ? -1 : 1)); const full = ms.length > 2 ? ms.slice(1, -1) : ms; return full.length ? Math.round(full.reduce((a, r) => a + r.leads, 0) / full.length) : 0; }
+function renderSlots() {
+  const lines = slotLines(); const shown = lines.filter((L) => !L.hidden); const open = shown.filter((L) => !L.cur.length); const ready = billingReady() && !DB.billingErr;
+  const groups = []; TRADE_GROUPS.forEach(([t, label]) => { let g = groups.find((x) => x.label === label); if (!g) groups.push((g = { label, trades: [] })); g.trades.push(t); });
+  const known = TRADE_GROUPS.map(([t]) => t); const other = [...new Set(shown.map((L) => L.trade).filter((t) => !known.includes(t)))]; if (other.length) groups.push({ label: "Other", trades: other });
+  const place = (L) => `${h(L.region)}${L.country === "AU" ? " <span class=\"chip\">AU</span>" : ""}`;
+  const lineRow = (L) => { if (L.cur.length) return L.cur.map((c) => { const p = billingPlan(c); const st = billStatus(c, p); return `<div class="rpt-k"><span><b>${place(L)}</b><br><span class="small muted">${h(c.contact_name || "")}${c.contact_name ? " · " : ""}<a href="#/admin/client/${c.id}">${h(c.business_name)}</a></span></span><b class="small" style="text-align:right">since ${fmtCal(c.started_on)}${p && p.upcoming ? `<br>next invoice ${fmtShort(p.upcoming.start)}` : ""}${st.cls === "bad" ? `<br><span style="color:var(--bad)">${st.l}</span>` : ""}</b></div>`; }).join("");
+    const since = L.last && isYmd(L.last.churned_on) ? ymdAddDays(L.last.churned_on, 1) : L.slot ? String(L.slot.created_at || "").slice(0, 10) : ""; const avg = L.last ? avgLeads(L.last.id) : 0;
+    return `<div class="rpt-k"><span><b>${place(L)}</b> <span class="chip warn">Open</span><br><span class="small muted">${isYmd(since) ? `open ${dayWord(Math.max(0, daysFrom(since, ymdOf(new Date()))))}` : "never filled"}${L.last ? ` · ${h(L.last.business_name)} left ${fmtCal(L.last.churned_on)}${avg ? `, was getting ~${avg} leads a month` : ""}` : ""}</span></span><b style="text-align:right;white-space:nowrap"><button class="btn primary sm" type="button" data-fill="${h(L.key)}">Fill</button>${ready ? ` <button class="btn ghost sm" type="button" data-hide="${h(L.key)}">Hide</button>` : ""}</b></div>`; };
+  const hidden = lines.filter((L) => L.hidden);
+  app().innerHTML = topBar({ title: "Slots", sub: `${shown.length - open.length} filled · ${open.length} open`, back: "/admin" }) + `<div class="shell" id="slots-root">
+  ${DB.billingErr ? billSetupNote() : ""}
+  ${groups.map((g) => { const ls = shown.filter((L) => g.trades.includes(L.trade)).sort((a, b) => Number(!a.cur.length) - Number(!b.cur.length) || a.region.localeCompare(b.region)); if (!ls.length) return ""; const o = ls.filter((L) => !L.cur.length).length; return `<div class="sec"><div class="sec-h"><h2>${g.label}</h2><span class="small muted">${ls.length - o} filled${o ? ` · ${o} open` : ""}</span></div><div class="card">${ls.map(lineRow).join("")}</div></div>`; }).join("")}
+  ${ready ? `<div class="sec"><div class="sec-h"><h2>Add a slot</h2></div><div class="card"><p class="small muted" style="line-height:1.45">A region and trade you sell that hasn't had a partner yet. It shows as open until someone takes it.</p><div class="two"><label class="fld"><span>Trade</span><select id="sl-trade">${["Plumber", "Electrician", "Handyman", "Builder", "Roofer", "Locksmith", "Drainlayer"].map((t) => `<option>${t}</option>`).join("")}</select></label><label class="fld"><span>Country</span><select id="sl-country"><option>NZ</option><option>AU</option></select></label></div><label class="fld"><span>Region</span><input id="sl-region" placeholder="e.g. Auckland"></label><button class="btn ghost mt12" type="button" id="sl-add">Add slot</button></div></div>` : ""}
+  ${hidden.length ? `<details class="mt16"><summary class="small" style="font-weight:600">Hidden slots (${hidden.length})</summary><div class="card mt8">${hidden.map((L) => `<div class="rpt-k"><span>${place(L)} ${h(L.trade)}</span><b><button class="btn ghost sm" type="button" data-show="${h(L.key)}">Show again</button></b></div>`).join("")}</div></details>` : ""}
+  <div style="height:24px"></div></div>`;
+  const byKey = (k) => lines.find((L) => L.key === k);
+  const saveSlot = async (b, s, msg) => { b.disabled = true; try { await api.saveSlot(s); await loadBilling(); toast(msg); renderSlots(); } catch (ex) { toast(ex.message, true); b.disabled = false; } };
+  $("slots-root").addEventListener("click", (e) => { const b = e.target.closest("button"); if (!b) return; const L = byKey(b.dataset.fill || b.dataset.hide || b.dataset.show || "");
+    if (b.dataset.fill && L) { PREFILL = { region: L.region, niche: portalNiche(L.trade), country: L.country, timezone: tzForRegion(L.region, L.country), predecessor: L.last ? L.last.id : "" }; go("/admin/newclient"); }
+    else if (b.dataset.hide && L) saveSlot(b, { region: L.region, trade: L.trade, country: L.country, active: false }, `${L.region} ${L.trade} hidden`);
+    else if (b.dataset.show && L) saveSlot(b, { region: L.region, trade: L.trade, country: L.country, active: true }, `${L.region} ${L.trade} is back`);
+    else if (b.id === "sl-add") { const region = $("sl-region").value.trim(); if (!region) { toast("Add the region", true); return; } saveSlot(b, { region, trade: $("sl-trade").value, country: $("sl-country").value, active: true }, `${region} ${$("sl-trade").value} added`); } });
+}
+
 // ───────────────────────────── Bulk data import ─────────────────────────────
 // Drop any number of Nimbata exports and web-enquiry files. Each file (or each tracking number /
 // project / landing page inside it) is matched to a landing page (region + trade), and every call or
@@ -1281,13 +1467,14 @@ async function renderSettings(ctx) {
   const isNew = !ctx.args[0]; const cur = CUR_YM();
   const c = isNew ? { id: "", business_name: "", initials: "", contact_name: "", email: "", phone: "", niche: "Emergency plumber", region: "", country: "NZ", timezone: "Pacific/Auckland", package_name: "Starter", monthly_fee: 1500, lead_target_min: 15, lead_target_max: 25, started_on: ymdOf(new Date()), billing_day: 1, show_cost_per_lead: true, show_ad_spend: false, avg_job_value: 450, active: true } : client(ctx.args[0]);
   if (!c) return go("/admin");
+  const pre = isNew ? PREFILL : null; PREFILL = null; if (pre) Object.assign(c, { region: pre.region, niche: pre.niche, country: pre.country, timezone: pre.timezone });
   const f = (id, l, v, type = "text", extra = "") => `<label class="fld"><span>${l}</span><input id="${id}" type="${type}" value="${h(v ?? "")}" ${extra}></label>`;
   app().innerHTML = topBar({ title: isNew ? "New partner" : "Settings", sub: isNew ? "Creates their login too" : h(c.business_name), back: isNew ? "/admin" : `/admin/client/${c.id}` }) + `<div class="shell">
   <div class="card mt16"><h2 style="font-size:16px;font-weight:600">Business</h2>${f("s-biz", "Business name", c.business_name)}<div class="two">${f("s-contact", "Contact first name", c.contact_name)}${f("s-init", "Initials (avatar)", c.initials)}</div><div class="two">${f("s-phone", "Mobile (number Nimbata forwards to)", c.phone, "tel")}${f("s-email", "Email (their login)", c.email, "email")}</div>
   <div class="two"><label class="fld"><span>Niche</span><select id="s-niche">${["Emergency plumber", "Emergency electrician", "Handyman", "Locksmith", "Roofer", "Drainlayer", "Builder", "Other"].map((n) => `<option ${c.niche === n ? "selected" : ""}>${n}</option>`).join("")}</select></label>${f("s-region", "Region", c.region)}</div>
   <div class="two"><label class="fld"><span>Country</span><select id="s-country"><option ${c.country === "NZ" ? "selected" : ""}>NZ</option><option ${c.country === "AU" ? "selected" : ""}>AU</option></select></label><label class="fld"><span>Time zone</span><select id="s-tz">${TZ_OPTIONS.map((t) => `<option ${(c.timezone || TZ_FOR[c.country]) === t ? "selected" : ""}>${t}</option>`).join("")}</select></label></div>
   ${f("s-started", "Start date (their first day of leads)", c.started_on, "date")}<p class="small muted" style="margin-top:6px">Reports start from this month, and on upload anything before this date is left out, so a previous partner's calls never land here.</p>${!isNew && !c.active ? f("s-end2", "Last day with LeadHive", c.churned_on, "date") : ""}</div>
-  <div class="card mt12"><h2 style="font-size:16px;font-weight:600">Plan</h2><div class="two"><label class="fld"><span>Package</span><select id="s-pkg">${["Starter", "Growth", "Dominator", "Starter (trial)", "Custom"].map((n) => `<option ${c.package_name === n ? "selected" : ""}>${n}</option>`).join("")}</select></label>${f("s-fee", "Monthly fee (ex GST)", c.monthly_fee, "number")}</div><div class="two">${f("s-tmin", "Lead target min", c.lead_target_min, "number")}${f("s-tmax", "Lead target max", c.lead_target_max, "number")}</div><div class="two">${f("s-bill", "Billing day of month", c.billing_day, "number", 'min="1" max="28"')}${f("s-avg", "Average job value (your estimate)", c.avg_job_value, "number")}</div><p class="small muted mt8">Shown as "Est." on every lead that has no estimate of its own. A CSV "Value" column sets per-lead estimates.</p>
+  <div class="card mt12"><h2 style="font-size:16px;font-weight:600">Plan</h2><div class="two"><label class="fld"><span>Package</span><select id="s-pkg">${["Starter", "Growth", "Dominator", "Starter (trial)", "Custom"].map((n) => `<option ${c.package_name === n ? "selected" : ""}>${n}</option>`).join("")}</select></label>${f("s-fee", "Monthly fee (ex GST)", c.monthly_fee, "number")}</div><div class="two">${f("s-tmin", "Lead target min", c.lead_target_min, "number")}${f("s-tmax", "Lead target max", c.lead_target_max, "number")}</div>${billingReady() ? `<div class="two">${f("s-bstart", "Billing start (Month 1 invoice)", c.billing_start || "", "date")}${f("s-avg", "Average job value (your estimate)", c.avg_job_value, "number")}</div><p class="small muted mt8">Leave billing start blank to bill from the start date. Set it if billing began on another day, e.g. after a free trial. Every month is invoiced on its first day; extended months move the dates back on the Billing page.</p><div class="two">${f("s-setup", "Setup fee (Month 1, ex GST)", c.setup_fee || 0, "number")}${f("s-extra", "Extra monthly charge (ex GST)", c.extra_fee || 0, "number")}</div>${f("s-extralabel", "What the extra charge is for", c.extra_label || "", "text", 'placeholder="e.g. Website"')}` : `<div class="two">${f("s-bill", "Billing day of month", c.billing_day, "number", 'min="1" max="28"')}${f("s-avg", "Average job value (your estimate)", c.avg_job_value, "number")}</div>`}<p class="small muted mt8">Average job value shows as "Est." on every lead that has no estimate of its own. A CSV "Value" column sets per-lead estimates.</p>
   <div class="mt12"><div class="switch"><div><b>Show Google Ads spend</b><small>Off by default. Turning this on reveals your margin.</small></div><button class="tog ${c.show_ad_spend ? "on" : ""}" id="s-ads"></button></div></div></div>
   ${isNew ? `<div class="card mt12"><div class="switch" style="border-top:0;padding-top:0;margin-top:0"><div><b>Already finished with LeadHive</b><small>For adding a previous partner's history, e.g. whoever had the region before. No login is created.</small></div><button type="button" class="tog" id="s-past" aria-label="toggle"></button></div><div id="past-box" class="hidden"><div class="two"><label class="fld"><span>Last day with LeadHive</span><input id="s-end" type="date" max="${ymdOf(new Date())}"></label><label class="fld"><span>Why they finished</span><select id="s-endreason">${Object.entries(CHURN_REASONS).map(([k, v]) => `<option value="${k}">${v}</option>`).join("")}</select></label></div><label class="fld"><span>Replaced by (optional)</span><select id="s-succ"><option value="">Nobody yet</option>${DB.clients.filter((x) => x.active).map((x) => `<option value="${x.id}">${h(x.business_name)}${x.region ? " · " + h(x.region) : ""}</option>`).join("")}</select></label><p class="small muted mt8" style="line-height:1.45">Set the start date above to their first day. The partner picked here sees this one's monthly totals as "before you" history, never their callers or recordings.</p></div></div>` : ""}
   ${isNew && DB.clients.some((x) => !x.active) ? `<div class="card mt12" id="takeover-card"><h2 style="font-size:16px;font-weight:600">Replacing a past partner?</h2><p class="small muted mt8">Pick who they're taking over from and the landing page's enquiry connection moves to the new partner, so the page needs no change. Region, trade and plan are copied in to save typing.</p><label class="fld"><span>Takes over from</span><select id="s-takeover"><option value="">Nobody, brand new region</option>${DB.clients.filter((x) => !x.active).map((x) => `<option value="${x.id}">${h(x.business_name)} · ${h(x.region)}</option>`).join("")}</select></label></div>` : ""}
@@ -1306,9 +1493,10 @@ async function renderSettings(ctx) {
     dg.onclick = async () => { if (dn.value.trim() !== c.business_name.trim()) return; dg.disabled = true; dg.textContent = "Deleting…";
       try { await api.deleteClient(c.id); DB.clients = DB.clients.filter((x) => x.id !== c.id); DB.calls = DB.calls.filter((x) => x.client_id !== c.id); DB.enquiries = DB.enquiries.filter((x) => x.client_id !== c.id); DB.loaded = {}; DB.history = {}; DB.keys = {}; await refreshAdmin(); toast(`${c.business_name} deleted`); go("/admin"); }
       catch (ex) { toast(ex.message, true); dg.disabled = false; dg.textContent = "Delete permanently"; } }; }
-  const tk = $("s-takeover"); if (tk) tk.onchange = (e) => { const o = client(e.target.value); if (!o) return; $("s-region").value = o.region || ""; $("s-niche").value = o.niche; $("s-country").value = o.country; $("s-tz").value = o.timezone || TZ_FOR[o.country]; $("s-pkg").value = o.package_name; $("s-fee").value = o.monthly_fee; $("s-tmin").value = o.lead_target_min; $("s-tmax").value = o.lead_target_max; $("s-avg").value = o.avg_job_value; toast(`Copied ${o.business_name}'s region and plan`); };
+  const tk = $("s-takeover"); if (tk && pre && pre.predecessor && [...tk.options].some((o) => o.value === pre.predecessor)) tk.value = pre.predecessor;
+  if (tk) tk.onchange = (e) => { const o = client(e.target.value); if (!o) return; $("s-region").value = o.region || ""; $("s-niche").value = o.niche; $("s-country").value = o.country; $("s-tz").value = o.timezone || TZ_FOR[o.country]; $("s-pkg").value = o.package_name; $("s-fee").value = o.monthly_fee; $("s-tmin").value = o.lead_target_min; $("s-tmax").value = o.lead_target_max; $("s-avg").value = o.avg_job_value; toast(`Copied ${o.business_name}'s region and plan`); };
   $("s-country").onchange = (e) => { $("s-tz").value = TZ_FOR[e.target.value] || "Pacific/Auckland"; };
-  const read = () => ({ business_name: $("s-biz").value.trim(), contact_name: $("s-contact").value.trim(), initials: ($("s-init").value.trim() || $("s-biz").value.trim().split(/\s+/).map((w) => w[0] || "").join("").slice(0, 2)).toUpperCase(), phone: $("s-phone").value.trim(), email: $("s-email").value.trim().toLowerCase() || null, niche: $("s-niche").value, region: $("s-region").value.trim(), country: $("s-country").value, timezone: $("s-tz").value, started_on: $("s-started").value || cur + "-01", package_name: $("s-pkg").value, monthly_fee: Number($("s-fee").value) || 0, lead_target_min: Number($("s-tmin").value) || 0, lead_target_max: Number($("s-tmax").value) || 0, billing_day: Math.min(28, Math.max(1, Number($("s-bill").value) || 1)), avg_job_value: Number($("s-avg").value) || 0, show_ad_spend: $("s-ads").classList.contains("on") });
+  const read = () => ({ business_name: $("s-biz").value.trim(), contact_name: $("s-contact").value.trim(), initials: ($("s-init").value.trim() || $("s-biz").value.trim().split(/\s+/).map((w) => w[0] || "").join("").slice(0, 2)).toUpperCase(), phone: $("s-phone").value.trim(), email: $("s-email").value.trim().toLowerCase() || null, niche: $("s-niche").value, region: $("s-region").value.trim(), country: $("s-country").value, timezone: $("s-tz").value, started_on: $("s-started").value || cur + "-01", package_name: $("s-pkg").value, monthly_fee: Number($("s-fee").value) || 0, lead_target_min: Number($("s-tmin").value) || 0, lead_target_max: Number($("s-tmax").value) || 0, ...(billingReady() ? { billing_start: $("s-bstart").value || null, setup_fee: Number($("s-setup").value) || 0, extra_fee: Number($("s-extra").value) || 0, extra_label: $("s-extralabel").value.trim(), billing_day: Math.min(28, Number(($("s-bstart").value || $("s-started").value || "").slice(8, 10)) || 1) } : { billing_day: Math.min(28, Math.max(1, Number($("s-bill").value) || 1)) }), avg_job_value: Number($("s-avg").value) || 0, show_ad_spend: $("s-ads").classList.contains("on") });
   $("s-save").onclick = async () => { const v = read(); if (!v.business_name) { toast("Business name is needed", true); return; }
     const past = !!(isNew && $("s-past") && $("s-past").classList.contains("on"));
     if (past) { const end = $("s-end").value; if (!/^\d{4}-\d{2}-\d{2}$/.test(end)) { toast("Add their last day with LeadHive", true); $("s-end").focus(); return; } if (v.started_on && end < v.started_on) { toast("The last day is before the start date", true); return; } Object.assign(v, { active: false, churned_on: end, churn_reason: $("s-endreason").value, churn_note: "" }); }
