@@ -1,0 +1,99 @@
+slot                         month    calls forms leads   spend  $/lead
+Auckland Electrician         2026-08      8     2    10     711      71
+Auckland Electrician         2026-09      9     1    10     843      84
+Auckland Electrician         2026-10      0     1     1     224     224
+   >> Auckland Electrician: 2 mature months, avg 10 leads/mo (calls 8), best 10, CPL $78, total 21
+Auckland Handyman            2026-06     11     3    14     350      25
+Auckland Handyman            2026-07     39     8    47     748      16
+Auckland Handyman            2026-08     25    13    38     745      20
+Auckland Handyman            2026-09     39    19    58     757      13
+Auckland Handyman            2026-10      3     2     5     161      32
+   >> Auckland Handyman: 4 mature months, avg 39 leads/mo (calls 28), best 58, CPL $17, total 162
+Auckland Plumber             2026-04      5     0     5     375      75
+Auckland Plumber             2026-05     12     2    14     505      36
+   >> Auckland Plumber: 1 mature months, avg 14 leads/mo (calls 12), best 14, CPL $36, total 19
+Christchurch Electrician     2026-08      8     0     8     420      52
+Christchurch Electrician     2026-09     18     0    18     461      26
+   >> Christchurch Electrician: 2 mature months, avg 13 leads/mo (calls 13), best 18, CPL $34, total 26
+Christchurch Handyman        2026-06     13     3    16     324      20
+Christchurch Handyman        2026-07     25     2    27     755      28
+Christchurch Handyman        2026-08     23     5    28     862      31
+Christchurch Handyman        2026-09     27     6    33     794      24
+Christchurch Handyman        2026-10      4     0     4     147      37
+   >> Christchurch Handyman: 4 mature months, avg 26 leads/mo (calls 22), best 33, CPL $26, total 108
+Christchurch Plumber         2026-02      3     5     8     667      83
+Christchurch Plumber         2026-03     34     1    35     759      22
+Christchurch Plumber         2026-04     21     1    22     625      28
+Christchurch Plumber         2026-05     20     5    25     780      31
+Christchurch Plumber         2026-06     20     0    20     689      34
+Christchurch Plumber         2026-07      5     0     5      32       6
+Christchurch Plumber         2026-08     14     2    16     879      55
+Christchurch Plumber         2026-09      4     1     5     597     119
+   >> Christchurch Plumber: 6 mature months, avg 21 leads/mo (calls 19), best 35, CPL $35, total 136
+Gold Coast Electrician       2026-07      0     1     1       0       0
+Gold Coast Electrician       2026-08      0     1     1       0       0
+Hamilton Electrician         2026-05     18     2    20     653      33
+Hamilton Electrician         2026-06     33     6    39     700      18
+Hamilton Electrician         2026-07     35     2    37     604      16
+Hamilton Electrician         2026-08     28     2    30     736      25
+Hamilton Electrician         2026-09     34     8    42     665      16
+Hamilton Electrician         2026-10      1     2     3      60      20
+   >> Hamilton Electrician: 5 mature months, avg 34 leads/mo (calls 30), best 42, CPL $20, total 171
+Hawkes Bay Plumber           2026-04     13     1    14     388      28
+Hawkes Bay Plumber           2026-05     18     0    18     754      42
+Hawkes Bay Plumber           2026-06     23     1    24     986      41
+Hawkes Bay Plumber           2026-07     26     2    28     547      20
+Hawkes Bay Plumber           2026-08      5     1     6      31       5
+Hawkes Bay Plumber           2026-09      7     0     7       0       0
+Hawkes Bay Plumber           2026-10      1     0     1       0       0
+   >> Hawkes Bay Plumber: 4 mature months, avg 21 leads/mo (calls 20), best 28, CPL $32, total 98
+Northland Handyman           2026-09      3     0     3      53      18
+South Auckland Electrician   2026-08      8     2    10     488      49
+South Auckland Electrician   2026-09     18     2    20    1068      53
+South Auckland Electrician   2026-10      3     1     4     176      44
+   >> South Auckland Electrician: 2 mature months, avg 15 leads/mo (calls 13), best 20, CPL $52, total 34
+South Auckland Handyman      2026-07      6     2     8     105      13
+South Auckland Handyman      2026-08     13    10    23     708      31
+South Auckland Handyman      2026-09     21     4    25     756      30
+South Auckland Handyman      2026-10      1     1     2     153      77
+   >> South Auckland Handyman: 3 mature months, avg 19 leads/mo (calls 13), best 25, CPL $28, total 58
+Tauranga Electrician         2026-05     27     5    32     584      18
+Tauranga Electrician         2026-06     26     1    27     800      30
+Tauranga Electrician         2026-07     43     4    47     752      16
+Tauranga Electrician         2026-08     18     1    19     662      35
+Tauranga Electrician         2026-09      8     0     8     293      37
+Tauranga Electrician         2026-10      2     0     2     136      68
+   >> Tauranga Electrician: 5 mature months, avg 27 leads/mo (calls 24), best 47, CPL $23, total 135
+Tauranga Handyman            2026-09     22    11    33     530      16
+Tauranga Handyman            2026-10      1     2     3      45      15
+   >> Tauranga Handyman: 1 mature months, avg 33 leads/mo (calls 22), best 33, CPL $16, total 36
+Tauranga Plumber             2026-04      3     0     3     275      92
+Tauranga Plumber             2026-05     18     0    18     936      52
+Tauranga Plumber             2026-06     17     0    17     702      41
+Tauranga Plumber             2026-07      6     0     6     124      21
+   >> Tauranga Plumber: 2 mature months, avg 18 leads/mo (calls 18), best 18, CPL $47, total 44
+Townsville Electrician       2026-07      0     1     1       0       0
+Wellington Electrician       2026-05      2     0     2     218     109
+Wellington Electrician       2026-06     46     2    48     971      20
+Wellington Electrician       2026-07     38     4    42     833      20
+Wellington Electrician       2026-08     25     2    27     774      29
+Wellington Electrician       2026-09     34     5    39     713      18
+Wellington Electrician       2026-10      2     0     2     178      89
+   >> Wellington Electrician: 4 mature months, avg 39 leads/mo (calls 36), best 48, CPL $21, total 160
+Wellington Handyman          2026-06     41     9    50     776      16
+Wellington Handyman          2026-07     30    17    47     742      16
+Wellington Handyman          2026-08     16     8    24     214       9
+Wellington Handyman          2026-09     38    11    49     453       9
+Wellington Handyman          2026-10     14     2    16     119       7
+   >> Wellington Handyman: 4 mature months, avg 42 leads/mo (calls 31), best 50, CPL $13, total 186
+Wellington Plumber           2026-03     15     1    16       0       0
+Wellington Plumber           2026-04     40     6    46     197       4
+Wellington Plumber           2026-05      8     8    16     773      48
+Wellington Plumber           2026-06      5     3     8     787      98
+Wellington Plumber           2026-07     31    10    41    1226      30
+Wellington Plumber           2026-08     21     3    24     836      35
+Wellington Plumber           2026-09     49     0    49     868      18
+Wellington Plumber           2026-10      4     0     4     162      40
+   >> Wellington Plumber: 7 mature months, avg 29 leads/mo (calls 24), best 49, CPL $23, total 204
+
+TOTAL calls 1361 answered 1115 forms 249 spend 41599 blended $/lead 26

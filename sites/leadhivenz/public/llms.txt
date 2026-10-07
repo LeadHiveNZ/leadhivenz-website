@@ -1,0 +1,31 @@
+# LeadHive NZ
+
+> LeadHive NZ is a marketing agency for tradies in New Zealand, run by Joe Ingram. It generates exclusive inbound leads for plumbers, electricians, handymen, builders and roofers using Google Search Ads, a dedicated mobile landing page and call tracking. One business per trade per area. Pricing: Starter NZ$1,500/month (15–25 leads, ad spend included), Growth NZ$2,000/month (25–35 leads), NZ$500 one-off setup, three-month minimum then month to month. Contact: hello@leadhivenz.com.
+
+Key facts (updated October 2026):
+- Since February 2026 LeadHive has tracked 1,361 inbound calls (82% answered) and 249 web enquiries for 24 trade partners across New Zealand.
+- Live areas average 15 to 50 tracked enquiries per month depending on trade and city (e.g. Wellington handyman 42/mo, Wellington electrician 39/mo, Auckland handyman 39/mo, Hamilton electrician 34/mo).
+- Open areas right now include Hawke's Bay plumber, Christchurch plumber, Tauranga plumber, Auckland plumber and Christchurch electrician. Tauranga handyman reopens November 2026.
+- Leads are exclusive: the tracking number forwards to one tradie only, every call is recorded, dud calls are removed from the monthly count, and a short month is extended rather than billed.
+
+## Pages
+- [Home](https://leadhivenz.co/): what LeadHive does and for whom
+- [Open areas](https://leadhivenz.co/areas): live grid of taken and open regions by trade
+- [How it works](https://leadhivenz.co/how-it-works): landing page, Google Ads, call tracking, onboarding timeline
+- [Pricing](https://leadhivenz.co/pricing): Starter and Growth plans, ROI calculator
+- [Straight answers](https://leadhivenz.co/faq): FAQ for tradies
+- [Contact](https://leadhivenz.co/contact): check whether an area is open
+
+## Leads by trade
+- [Plumber leads NZ](https://leadhivenz.co/leads/plumbers)
+- [Electrician leads NZ](https://leadhivenz.co/leads/electricians)
+- [Handyman and builder leads NZ](https://leadhivenz.co/leads/handymen)
+- [Roofer leads NZ](https://leadhivenz.co/leads/roofers)
+
+## Guides
+- [Marketing for tradies in NZ: what actually works](https://leadhivenz.co/guides/marketing-for-tradies-nz)
+- [Google Ads for tradies in NZ: real numbers from 17 campaigns](https://leadhivenz.co/guides/google-ads-for-tradies-nz)
+- [Exclusive leads vs shared leads](https://leadhivenz.co/guides/exclusive-vs-shared-leads)
+- [How many leads does a tradie need each month?](https://leadhivenz.co/guides/how-many-leads-does-a-tradie-need)
+- [Answer the phone: what 1,361 tracked calls showed](https://leadhivenz.co/guides/answer-the-phone-missed-call-data)
+- [Which NZ regions are open for exclusive trade leads](https://leadhivenz.co/guides/open-areas-exclusive-trade-leads-nz)
