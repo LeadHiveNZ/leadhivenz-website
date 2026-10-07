@@ -1,0 +1,112 @@
+{
+ "segments": [
+  {
+   "src_in": 0.55,
+   "src_out": 7.9,
+   "out_in": 0.0,
+   "out_out": 7.3500000000000005
+  },
+  {
+   "src_in": 10.2,
+   "src_out": 29.95,
+   "out_in": 7.3500000000000005,
+   "out_out": 27.1
+  },
+  {
+   "src_in": 36.86,
+   "src_out": 58.65,
+   "out_in": 27.1,
+   "out_out": 48.89
+  },
+  {
+   "src_in": 61.2,
+   "src_out": 66.66,
+   "out_in": 48.89,
+   "out_out": 54.349999999999994
+  },
+  {
+   "src_in": 67.62,
+   "src_out": 70.56,
+   "out_in": 54.349999999999994,
+   "out_out": 57.28999999999999
+  },
+  {
+   "src_in": 72.04,
+   "src_out": 117.1,
+   "out_in": 57.28999999999999,
+   "out_out": 102.34999999999998
+  },
+  {
+   "src_in": 123.3,
+   "src_out": 126.3,
+   "out_in": 102.34999999999998,
+   "out_out": 105.34999999999998
+  },
+  {
+   "src_in": 128.3,
+   "src_out": 134.0,
+   "out_in": 105.34999999999998,
+   "out_out": 111.04999999999997
+  }
+ ],
+ "talk_end": 111.05,
+ "total": 113.45,
+ "cards": [
+  {
+   "cid": "card-hook",
+   "start": 0.05,
+   "dur": 7.0
+  },
+  {
+   "cid": "card-connect",
+   "start": 8.15,
+   "dur": 8.6
+  },
+  {
+   "cid": "card-scan",
+   "start": 20.75,
+   "dur": 6.3
+  },
+  {
+   "cid": "card-rank",
+   "start": 30.24,
+   "dur": 11.6
+  },
+  {
+   "cid": "card-crm",
+   "start": 42.24,
+   "dur": 6.6
+  },
+  {
+   "cid": "card-thread",
+   "start": 51.59,
+   "dur": 5.64
+  },
+  {
+   "cid": "card-sheet",
+   "start": 65.25,
+   "dur": 5.7
+  },
+  {
+   "cid": "card-routine",
+   "start": 71.15,
+   "dur": 16.7
+  },
+  {
+   "cid": "card-email",
+   "start": 88.05,
+   "dur": 11.3
+  },
+  {
+   "cid": "card-birthday",
+   "start": 99.55,
+   "dur": 5.8
+  },
+  {
+   "cid": "card-close",
+   "start": 106.75,
+   "dur": 4.3
+  }
+ ],
+ "caption_groups": 110
+}

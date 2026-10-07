@@ -1,0 +1,6 @@
+assets/*.mp4
+assets/*.mov
+renders/
+snapshots*/
+node_modules/
+.hyperframes/

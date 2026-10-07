@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="UTF-8" /><title>card-hook</title></head>
+  <body>
+    <template>
+      <style>
+#root { position:absolute; inset:0; font-family: Montserrat, Inter, sans-serif; color:#fff; }
+.zone { position:absolute; left:80px; right:80px; top:960px; height:300px; display:flex; align-items:flex-end; }
+.card { width:100%; background: rgba(15,26,46,0.94); border-radius:28px; padding:34px 42px; box-sizing:border-box;
+        box-shadow:0 24px 60px rgba(15,26,46,0.28); transform-origin:50% 100%; will-change:transform; }
+.kicker { font-size:26px; font-weight:700; letter-spacing:0.16em; color:#EFA41E; margin-bottom:12px; }
+.title { font-size:48px; font-weight:900; line-height:1.08; letter-spacing:-0.01em; }
+.items { display:flex; flex-wrap:wrap; gap:14px; margin-top:20px; }
+.item { display:inline-flex; align-items:center; gap:12px; background:rgba(255,255,255,0.08); border:2px solid rgba(239,164,30,0.55);
+        border-radius:999px; padding:12px 22px; font-size:30px; font-weight:700; transform-origin:0% 50%; will-change:transform; opacity:0; }
+.item .tick { width:26px; height:26px; border-radius:50%; background:#EFA41E; display:inline-block; position:relative; flex:none; }
+.item .tick::after { content:""; position:absolute; left:8px; top:3px; width:7px; height:13px; border:solid #0F1A2E; border-width:0 4px 4px 0; transform:rotate(45deg); }
+.chips { display:flex; align-items:center; gap:16px; margin-top:16px; flex-wrap:wrap; }
+.chip { background:#fff; color:#0F1A2E; border-radius:18px; padding:16px 26px; font-size:36px; font-weight:900; transform-origin:50% 50%; will-change:transform; opacity:0; }
+.plus { font-size:40px; font-weight:900; color:#EFA41E; opacity:0; }
+.slam { position:absolute; left:80px; right:80px; top:960px; height:300px; display:flex; flex-direction:column; justify-content:flex-end; gap:6px; }
+.slam .line { font-size:92px; font-weight:900; line-height:1; letter-spacing:-0.02em; color:#fff; opacity:0; transform-origin:0% 100%; will-change:transform;
+              text-shadow:0 6px 0 #0F1A2E, 0 0 28px rgba(15,26,46,0.6); }
+.slam .line.gold { color:#EFA41E; }
+.table { margin-top:18px; border-radius:16px; overflow:hidden; background:#fff; color:#0F1A2E; font-family:Inter, sans-serif; }
+.tr { display:grid; grid-template-columns:1.1fr 1.9fr 1fr; padding:12px 18px; font-size:27px; font-weight:400; border-top:2px solid #E5EBF2; }
+.tr.head { background:#EFA41E; color:#0F1A2E; font-weight:700; font-size:22px; letter-spacing:0.08em; border-top:0; }
+.tr.row { opacity:0; transform-origin:0% 50%; will-change:transform; }
+.tl { position:relative; margin-top:30px; height:70px; }
+.tl .bar { position:absolute; left:0; right:0; top:14px; height:10px; border-radius:5px; background:rgba(255,255,255,0.15); overflow:hidden; }
+.tl .fill { position:absolute; left:0; top:0; width:100%; height:100%; background:#EFA41E; transform-origin:0% 50%; transform:scaleX(0); will-change:transform; }
+.tl .node { position:absolute; top:0; width:38px; height:38px; margin-left:-19px; border-radius:50%; background:#0F1A2E; border:5px solid rgba(255,255,255,0.25);
+            box-sizing:border-box; transform-origin:50% 50%; will-change:transform; }
+.tl .lab { position:absolute; top:46px; font-size:24px; font-weight:700; letter-spacing:0.06em; transform:translateX(-50%); color:rgba(255,255,255,0.55); }
+.tail { margin-top:10px; font-size:30px; font-weight:700; color:#EFA41E; opacity:0; transform-origin:0% 50%; will-change:transform; }
+.mail { width:100%; background:#fff; color:#1B2026; border-radius:24px; padding:30px 36px; box-sizing:border-box; font-family:Inter, sans-serif;
+        box-shadow:0 24px 60px rgba(15,26,46,0.28); transform-origin:50% 100%; will-change:transform; }
+.mail .hdr { display:flex; align-items:center; gap:14px; font-size:24px; color:#4A5A6C; margin-bottom:14px; }
+.mail .av { width:40px; height:40px; border-radius:50%; background:#EFA41E; flex:none; }
+.mail .hdr b { color:#1B2026; }
+.mail .ln { font-size:31px; line-height:1.3; font-weight:400; opacity:0; transform-origin:0% 50%; will-change:transform; margin:0 0 6px; }
+.hookwrap { position:absolute; left:80px; right:80px; top:960px; height:300px; display:flex; flex-direction:column; justify-content:flex-end; }
+.hookwrap .kicker { opacity:0; display:inline-block; align-self:flex-start; background:#0F1A2E; color:#EFA41E; padding:10px 18px; border-radius:12px; margin-bottom:18px; }
+.hookwrap .w { display:inline-block; font-size:88px; font-weight:900; line-height:1; letter-spacing:-0.02em; margin-right:22px; opacity:0; will-change:transform;
+               text-shadow:0 6px 0 #0F1A2E, 0 0 28px rgba(15,26,46,0.6); }
+.hookwrap .w.gold { color:#EFA41E; }
+</style>
+      <div id="root" data-composition-id="card-hook" data-width="1080" data-height="1920">
+<div class="hookwrap" id="card-hook-card"><div class="kicker" id="card-hook-k">IF I STILL SOLD CARS</div><div><span class="w" id="card-hook-w0">HOW</span><span class="w" id="card-hook-w1">I&#x27;D</span><span class="w" id="card-hook-w2">USE</span><span class="w" id="card-hook-w3">AI</span><span class="w gold" id="card-hook-w4">TO GET AHEAD</span></div></div>
+      </div>
+      <script>
+        (function () {
+          const tl = gsap.timeline({ paused: true });
+tl.fromTo("#card-hook-k", { opacity: 0, y: 12 }, { opacity: 1, y: 0, duration: 0.3, ease: "power3.out" }, 0.05);
+tl.set("#card-hook-w0", { opacity: 1, y: 80 }, 0.000);
+tl.to("#card-hook-w0", { y: 0, duration: 0.18, ease: "power4.out" }, 0.000);
+tl.set("#card-hook-w1", { opacity: 1, y: 48 }, 0.150);
+tl.to("#card-hook-w1", { y: 0, duration: 0.15, ease: "power4.out" }, 0.150);
+tl.set("#card-hook-w2", { opacity: 1, y: 48 }, 0.300);
+tl.to("#card-hook-w2", { y: 0, duration: 0.15, ease: "power4.out" }, 0.300);
+tl.set("#card-hook-w3", { opacity: 1, y: 48 }, 0.450);
+tl.to("#card-hook-w3", { y: 0, duration: 0.15, ease: "power4.out" }, 0.450);
+tl.set("#card-hook-w4", { opacity: 1, y: 48 }, 0.650);
+tl.to("#card-hook-w4", { y: 0, duration: 0.15, ease: "power4.out" }, 0.650);
+tl.to("#card-hook-card", { opacity: 0, y: -24, duration: 0.28, ease: "power2.in" }, 6.700);
+
+          window.__timelines["card-hook"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>
