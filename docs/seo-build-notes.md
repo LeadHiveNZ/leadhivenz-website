@@ -30,3 +30,17 @@ Added robots.txt, sitemap.xml, llms.txt.
 2. ContentHive canonical assumes https://contenthive.au. Change in `routes/index.tsx`, robots, sitemap.
 3. Add `public/og-leadhive.png` (1200×630) to LeadHiveNZ: the meta tags reference it.
 4. Google Search Console: verify both domains and submit sitemaps. Connect Search Console to Windsor.
+
+## Lovable application log (7 Oct 2026)
+
+| Project | Message | Commit | Credits |
+|---|---|---|---|
+| LeadHiveNZ | Part 1: data, guides, CSS, index.html, robots, sitemap, llms | d8d36ec | 11.4 |
+| LeadHiveNZ | Part 2: components, pages, routes, Hero edits | 0de5a14 | 5.7 |
+| ContentHive AU | Redesign + SEO head + crawl files | da53f70 | 3.6 |
+| **Total** | | | **20.7** |
+
+Both projects build clean (Lovable type-check + production build). Neither was published; review the
+preview in the Lovable editor, then click Publish. Preview URLs:
+- https://id-preview--ec2c7f2f-8d9a-4f32-86be-af4f0900e61b.lovable.app
+- https://id-preview--bfe5c813-1130-4ab7-801f-0871f0ec9c80.lovable.app
