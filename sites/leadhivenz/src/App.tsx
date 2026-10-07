@@ -15,6 +15,7 @@ import SlotPage from "./pages/SlotPage";
 import GuidesPage from "./pages/Guides";
 import GuidePage from "./pages/Guide";
 import NotFound from "./pages/NotFound";
+import WorkshopThanks from "./pages/WorkshopThanks";
 
 const queryClient = new QueryClient();
 
@@ -36,6 +37,7 @@ const App = () => (
             <Route path="/leads/:slug" element={<SlotPage />} />
             <Route path="/guides" element={<GuidesPage />} />
             <Route path="/guides/:slug" element={<GuidePage />} />
+            <Route path="/workshop-thanks" element={<WorkshopThanks />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
