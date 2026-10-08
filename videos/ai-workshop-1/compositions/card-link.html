@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="UTF-8" /><title>card-link</title></head>
+  <body>
+    <template>
+      <style>
+#root { position:absolute; inset:0; font-family: Montserrat, Inter, sans-serif; color:#fff; }
+.pillrow { position:absolute; left:90px; right:90px; top:1625px; height:96px; display:flex; justify-content:center; align-items:center; gap:14px; }
+.pill { display:inline-flex; align-items:center; gap:14px; background:rgba(15,26,46,0.9); border-radius:999px; padding:16px 30px; font-size:34px; font-weight:800;
+        letter-spacing:0.01em; will-change:transform; opacity:0; transform-origin:50% 50%; box-shadow:0 12px 30px rgba(15,26,46,0.3); }
+.pill b { color:#EFA41E; font-weight:900; }
+.dot { width:10px; height:10px; border-radius:50%; background:#EFA41E; display:inline-block; }
+.arrow { display:inline-block; width:0; height:0; border-left:14px solid transparent; border-right:14px solid transparent; border-top:18px solid #EFA41E; margin-left:4px; will-change:transform; }
+</style>
+      <div id="root" data-composition-id="card-link" data-width="1080" data-height="1920">
+<div class="pillrow"><div class="pill" id="card-link-p"><span>Ticket link below</span><span class="arrow" id="card-link-a"></span></div></div>
+      </div>
+      <script>
+        (function () {
+          const tl = gsap.timeline({ paused: true });
+tl.fromTo("#card-link-p", { opacity: 0, scale: 0.9, y: 16 }, { opacity: 1, scale: 1, y: 0, duration: 0.4, ease: "power3.out" }, 0);
+tl.fromTo("#card-link-a", { y: -4 }, { y: 6, duration: 0.5, ease: "sine.inOut", yoyo: true, repeat: 3 }, 0.4);
+tl.to("#card-link-p", { opacity: 0, y: 12, duration: 0.25, ease: "power2.in" }, 2.110);
+
+          window.__timelines["card-link"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>
