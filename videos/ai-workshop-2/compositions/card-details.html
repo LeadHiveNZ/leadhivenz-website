@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en">
-  <head><meta charset="UTF-8" /><title>card-refund</title></head>
+  <head><meta charset="UTF-8" /><title>card-details</title></head>
   <body>
     <template>
       <style>
@@ -12,16 +12,16 @@
 .dot { width:10px; height:10px; border-radius:50%; background:#EFA41E; display:inline-block; }
 .arrow { display:inline-block; width:0; height:0; border-left:14px solid transparent; border-right:14px solid transparent; border-top:18px solid #EFA41E; margin-left:4px; will-change:transform; }
 </style>
-      <div id="root" data-composition-id="card-refund" data-width="1080" data-height="1920">
-<div class="pillrow"><div class="pill" id="card-refund-p"><b>Full refund</b><span>no questions asked</span></div></div>
+      <div id="root" data-composition-id="card-details" data-width="1080" data-height="1920">
+<div class="pillrow"><div class="pill" id="card-details-p"><span>Wed 28 Oct</span><span class="dot"></span><b>7:30pm</b></div></div>
       </div>
       <script>
         (function () {
           const tl = gsap.timeline({ paused: true });
-tl.fromTo("#card-refund-p", { opacity: 0, scale: 0.9, y: 16 }, { opacity: 1, scale: 1, y: 0, duration: 0.4, ease: "power3.out" }, 0);
-tl.to("#card-refund-p", { opacity: 0, y: 12, duration: 0.25, ease: "power2.in" }, 2.340);
+tl.fromTo("#card-details-p", { opacity: 0, scale: 0.9, y: 16 }, { opacity: 1, scale: 1, y: 0, duration: 0.4, ease: "power3.out" }, 0);
+tl.to("#card-details-p", { opacity: 0, y: 12, duration: 0.25, ease: "power2.in" }, 2.690);
 
-          window.__timelines["card-refund"] = tl;
+          window.__timelines["card-details"] = tl;
         })();
       </script>
     </template>

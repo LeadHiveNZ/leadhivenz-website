@@ -1,0 +1,59 @@
+{
+ "segments": [
+  {
+   "src_in": 0.4,
+   "src_out": 7.36,
+   "out_in": 0.0,
+   "out_out": 6.96
+  },
+  {
+   "src_in": 8.2,
+   "src_out": 13.84,
+   "out_in": 6.92,
+   "out_out": 12.56
+  },
+  {
+   "src_in": 14.6,
+   "src_out": 18.72,
+   "out_in": 12.52,
+   "out_out": 16.64
+  },
+  {
+   "src_in": 19.72,
+   "src_out": 22.16,
+   "out_in": 16.6,
+   "out_out": 19.04
+  },
+  {
+   "src_in": 22.44,
+   "src_out": 27.52,
+   "out_in": 19.0,
+   "out_out": 24.08
+  },
+  {
+   "src_in": 28.52,
+   "src_out": 32.97,
+   "out_in": 24.04,
+   "out_out": 28.49
+  }
+ ],
+ "total": 28.49,
+ "cards": [
+  {
+   "cid": "card-details",
+   "start": 4.0,
+   "dur": 2.96
+  },
+  {
+   "cid": "card-refund",
+   "start": 21.01,
+   "dur": 3.07
+  },
+  {
+   "cid": "card-link",
+   "start": 25.77,
+   "dur": 2.72
+  }
+ ],
+ "caption_groups": 22
+}

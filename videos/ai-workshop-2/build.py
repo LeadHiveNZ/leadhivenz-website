@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""HyperFrames composition for 'AI workshop video 1'.
+"""HyperFrames composition for 'AI workshop video 2'.
 
 Kept source ranges (EDL) are joined with hard cuts (D-second audio blend only); the audio is a
 pre-mixed track (assets/mix.m4a) built with matching acrossfades + loudnorm, so
@@ -8,7 +8,7 @@ video clips are muted and the <audio> carries the sound.
 import json, html
 
 W, H = 1080, 1920
-SRC = "assets/workshop.mp4"
+SRC = "assets/workshop2.mp4"
 cfg = json.load(open("edl-in.json"))
 EDL, D = cfg["EDL"], cfg["D"]
 
@@ -45,17 +45,15 @@ def esc(s):
 
 
 # ---- captions -------------------------------------------------------------------
-FIX = {"7.30pm.": "7:30pm.", "Refund": "refund", "analyze": "analyse"}
+FIX = {"7.30": "7:30", "so": "So", "10%": "10%"}
 words = []
 for w in json.load(open("transcript.json")):
     mid = (w["start"] + w["end"]) / 2
     if not kept(mid):
         continue
     txt = FIX.get(w["text"], w["text"])
-    if abs(w["start"] - 28.16) < 0.05 and txt == "out":
-        continue  # uncertain ASR word ("stay out at the end"); drop rather than guess
-    if abs(w["start"] - 20.32) < 0.05 and txt == "to":
-        txt = "To"  # first word after the restart cut
+    if abs(w["start"] - 30.16) < 0.05 and txt == "so":
+        txt = "So"
     words.append({"text": txt, "start": to_out(w["start"]), "end": to_out(w["end"], "prev")})
 
 groups, cur = [], []
@@ -151,19 +149,40 @@ def card(cid, src_a, src_b, inner, extra_js=""):
 
 
 hosts = [
-    card("card-details", 21.25, 25.10, '<span>28 Oct</span><span class="dot"></span><span>7:30pm</span><span class="dot"></span><b>$50</b>'),
-    card("card-refund", 29.55, 32.30, '<b>Full refund</b><span>no questions asked</span>'),
-    card("card-link", 34.45, 36.83, '<span>Ticket link below</span><span class="arrow" id="card-link-a"></span>',
+    card("card-details", 4.40, 7.55, '<span>Wed 28 Oct</span><span class="dot"></span><b>7:30pm</b>'),
+    card("card-refund", 24.45, 27.70, '<b>Full refund</b><span>no questions asked</span>'),
+    card("card-link", 30.25, 32.97, '<span>Ticket link below</span><span class="arrow" id="card-link-a"></span>',
          'tl.fromTo("#card-link-a", { y: -4 }, { y: 6, duration: 0.5, ease: "sine.inOut", yoyo: true, repeat: 3 }, 0.4);\n'),
 ]
 
 # ---- index.html -------------------------------------------------------------------
+SCALE = 1.15
 vids, fades = [], []
 for i, sg in enumerate(segs):
     vids.append(f'      <video id="v{i}" class="clip" src="{SRC}" muted playsinline data-start="{sg["out_in"]:.3f}" '
                 f'data-duration="{sg["out_out"] - sg["out_in"]:.3f}" data-media-start="{sg["src_in"]:.3f}" data-track-index="0"></video>')
     sc = (SCALE if "SCALE" in globals() else 1.15) * (1.0 if i % 2 == 0 else 1.06)
     fades.append(f'      tl.set("#video-wrap", {{ scale: {sc:.3f}, y: -62 }}, {sg["out_in"]:.3f});')
+# --- centring: follow the smoothed face centre with slow, linear x tweens -------------
+face = json.load(open("face.json"))
+pts = []
+for r in face:
+    if not kept(r["t"]):
+        continue
+    dx = (0.5 - r["cx"]) * W * SCALE
+    pts.append((to_out(r["t"]), max(-80, min(80, dx))))
+# smooth: 2s moving average, then keyframe every ~2s
+sm = []
+for i, (t, dx) in enumerate(pts):
+    win = [d for (tt, d) in pts if abs(tt - t) <= 1.0]
+    sm.append((t, sum(win) / len(win)))
+keys = sm[::4] + ([sm[-1]] if sm[-1][0] > sm[::4][-1][0] else [])
+fades.append(f'      tl.set("#video-wrap", {{ x: {keys[0][1]:.1f} }}, 0);')
+for (t0, d0), (t1, d1) in zip(keys, keys[1:]):
+    t0, t1 = round(t0, 3), round(t1, 3)
+    if t1 <= t0:
+        continue
+    fades.append(f'      tl.to("#video-wrap", {{ x: {d1:.1f}, duration: {round(t1 - t0 - 0.003, 3)}, ease: "none" }}, {t0:.3f});')
 fades.append(f'      tl.set({{}}, {{}}, {TOTAL:.3f});')
 card_hosts = "\n".join(
     f'      <div id="{h["cid"]}-host" data-composition-id="{h["cid"]}" data-composition-src="compositions/{h["cid"]}.html" '
@@ -175,7 +194,7 @@ index = f"""<!doctype html>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width={W}, height={H}" />
-    <title>Claude AI workshop for tradies</title>
+    <title>Claude AI workshop for tradies 2</title>
     <script src="assets/vendor/gsap.min.js"></script>
     <style>
       * {{ margin: 0; padding: 0; box-sizing: border-box; }}

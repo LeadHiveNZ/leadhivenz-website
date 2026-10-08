@@ -9,34 +9,37 @@
       * { margin: 0; padding: 0; box-sizing: border-box; }
       html, body { width: 1080px; height: 1920px; overflow: hidden; background: #0F1A2E; }
       #root { position: relative; width: 100%; height: 100%; overflow: hidden; background: #0F1A2E; }
-      #video-wrap { position: absolute; inset: 0; transform: scale(1.12) translateY(-62px); transform-origin: 50% 50%; }
+      #video-wrap { position: absolute; inset: 0; transform-origin: 50% 50%; will-change: transform; }
       #video-wrap video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
     </style>
   </head>
   <body>
-    <div id="root" data-composition-id="main" data-start="0" data-width="1080" data-height="1920" data-duration="30.970">
+    <div id="root" data-composition-id="main" data-start="0" data-width="1080" data-height="1920" data-duration="29.220">
       <div id="video-wrap">
-      <video id="v0" class="clip" src="assets/workshop.mp4" muted playsinline data-start="0.000" data-duration="5.840" data-media-start="0.150" data-track-index="0"></video>
-      <video id="v1" class="clip" src="assets/workshop.mp4" muted playsinline data-start="5.590" data-duration="3.940" data-media-start="6.610" data-track-index="0"></video>
-      <video id="v2" class="clip" src="assets/workshop.mp4" muted playsinline data-start="9.280" data-duration="6.900" data-media-start="10.770" data-track-index="0"></video>
-      <video id="v3" class="clip" src="assets/workshop.mp4" muted playsinline data-start="15.930" data-duration="4.900" data-media-start="19.970" data-track-index="0"></video>
-      <video id="v4" class="clip" src="assets/workshop.mp4" muted playsinline data-start="20.580" data-duration="6.980" data-media-start="25.410" data-track-index="0"></video>
-      <video id="v5" class="clip" src="assets/workshop.mp4" muted playsinline data-start="27.310" data-duration="3.660" data-media-start="33.170" data-track-index="0"></video>
+      <video id="v0" class="clip" src="assets/workshop.mp4" muted playsinline data-start="0.000" data-duration="5.510" data-media-start="0.250" data-track-index="0"></video>
+      <video id="v1" class="clip" src="assets/workshop.mp4" muted playsinline data-start="5.470" data-duration="3.480" data-media-start="6.840" data-track-index="0"></video>
+      <video id="v2" class="clip" src="assets/workshop.mp4" muted playsinline data-start="8.910" data-duration="3.320" data-media-start="11.000" data-track-index="0"></video>
+      <video id="v3" class="clip" src="assets/workshop.mp4" muted playsinline data-start="12.190" data-duration="2.760" data-media-start="14.680" data-track-index="0"></video>
+      <video id="v4" class="clip" src="assets/workshop.mp4" muted playsinline data-start="14.910" data-duration="4.440" data-media-start="20.200" data-track-index="0"></video>
+      <video id="v5" class="clip" src="assets/workshop.mp4" muted playsinline data-start="19.310" data-duration="6.520" data-media-start="25.640" data-track-index="0"></video>
+      <video id="v6" class="clip" src="assets/workshop.mp4" muted playsinline data-start="25.790" data-duration="3.430" data-media-start="33.400" data-track-index="0"></video>
       </div>
-      <audio id="mix" src="assets/mix.m4a" data-start="0" data-duration="30.970" data-track-index="3" data-volume="1"></audio>
-      <div id="card-details-host" data-composition-id="card-details" data-composition-src="compositions/card-details.html" data-start="17.210" data-duration="3.620" data-track-index="2" data-track-kind="graphics" data-width="1080" data-height="1920"></div>
-      <div id="card-refund-host" data-composition-id="card-refund" data-composition-src="compositions/card-refund.html" data-start="24.720" data-duration="2.750" data-track-index="2" data-track-kind="graphics" data-width="1080" data-height="1920"></div>
-      <div id="card-link-host" data-composition-id="card-link" data-composition-src="compositions/card-link.html" data-start="28.590" data-duration="2.380" data-track-index="2" data-track-kind="graphics" data-width="1080" data-height="1920"></div>
-      <div id="captions-host" data-composition-id="captions" data-composition-src="compositions/captions.html" data-start="0" data-duration="30.970" data-track-index="1" data-track-kind="captions" data-width="1080" data-height="1920"></div>
+      <audio id="mix" src="assets/mix.m4a" data-start="0" data-duration="29.220" data-track-index="3" data-volume="1"></audio>
+      <div id="card-details-host" data-composition-id="card-details" data-composition-src="compositions/card-details.html" data-start="15.960" data-duration="3.390" data-track-index="2" data-track-kind="graphics" data-width="1080" data-height="1920"></div>
+      <div id="card-refund-host" data-composition-id="card-refund" data-composition-src="compositions/card-refund.html" data-start="23.220" data-duration="2.610" data-track-index="2" data-track-kind="graphics" data-width="1080" data-height="1920"></div>
+      <div id="card-link-host" data-composition-id="card-link" data-composition-src="compositions/card-link.html" data-start="26.840" data-duration="2.380" data-track-index="2" data-track-kind="graphics" data-width="1080" data-height="1920"></div>
+      <div id="captions-host" data-composition-id="captions" data-composition-src="compositions/captions.html" data-start="0" data-duration="29.220" data-track-index="1" data-track-kind="captions" data-width="1080" data-height="1920"></div>
     </div>
     <script>
       const tl = gsap.timeline({ paused: true });
-      tl.fromTo("#v1", { opacity: 0 }, { opacity: 1, duration: 0.25, ease: "none" }, 5.590);
-      tl.fromTo("#v2", { opacity: 0 }, { opacity: 1, duration: 0.25, ease: "none" }, 9.280);
-      tl.fromTo("#v3", { opacity: 0 }, { opacity: 1, duration: 0.25, ease: "none" }, 15.930);
-      tl.fromTo("#v4", { opacity: 0 }, { opacity: 1, duration: 0.25, ease: "none" }, 20.580);
-      tl.fromTo("#v5", { opacity: 0 }, { opacity: 1, duration: 0.25, ease: "none" }, 27.310);
-      tl.set({}, {}, 30.970);
+      tl.set("#video-wrap", { scale: 1.150, y: -62 }, 0.000);
+      tl.set("#video-wrap", { scale: 1.219, y: -62 }, 5.470);
+      tl.set("#video-wrap", { scale: 1.150, y: -62 }, 8.910);
+      tl.set("#video-wrap", { scale: 1.219, y: -62 }, 12.190);
+      tl.set("#video-wrap", { scale: 1.150, y: -62 }, 14.910);
+      tl.set("#video-wrap", { scale: 1.219, y: -62 }, 19.310);
+      tl.set("#video-wrap", { scale: 1.150, y: -62 }, 25.790);
+      tl.set({}, {}, 29.220);
       window.__timelines["main"] = tl;
       tl.seek(0);
     </script>

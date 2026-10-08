@@ -24,7 +24,7 @@ rather than jumpy, minor animation allowed but not required, as authentic as pos
 
 ## Customizations
 
-- Six kept ranges; every join is a 0.25s picture dissolve matched by the audio crossfade.
+- Seven kept ranges, hard cuts with alternating 1.15/1.22 punch-in; audio joins carry a 40ms blend to avoid clicks.
 - Removed: lead-in, the "To grab a seat," restart, and ~0.9-1.5s pauses tightened to ~0.45s.
 - Captions: 5-word max groups, sentence case, white with gold on the spoken word, no scale pop.
 - Three small pills only: date/time/price, full refund, ticket link below. No cards elsewhere.
