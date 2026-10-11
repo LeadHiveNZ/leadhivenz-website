@@ -36,3 +36,15 @@ space cut, reviewed multiple times before delivery.
 ## Notes
 
 - "stay on the end" captioned verbatim from the transcript; confirm wording.
+
+## Delivery v2 (audio and quality fix)
+
+- Distortion traced to the render step: the renderer raised the supplied mix past 0 dBFS
+  (about 1,100 clipped samples on the $500 ad), and the phone sources decode above 0 dBFS.
+- Audio is now built outside the renderer by ../finalaudio.py in 32-bit float: -6 dB
+  headroom, declip, balanced mono, 80 Hz high-pass, (denoise on the $500 ad only), cuts with
+  40 ms equal-power blends, 3:1 voice compression, -16 LUFS, limiter at -1.5 dBFS touching
+  under 1% of the audio. One AAC-LC 192k stereo encode, muxed with -c:v copy.
+- Picture: source re-made at 1080x1920 (Lanczos + light unsharp) before rendering; render at
+  --video-bitrate 14M. Final: H.264 High, 1080x1920, 30fps, ~14 Mbps, AAC 192k 48 kHz.
+- Deliverables in ../../deliverables/.
