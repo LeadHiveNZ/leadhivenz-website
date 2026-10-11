@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="UTF-8" /><title>card-price</title></head>
+  <body>
+    <template>
+      <style>
+#root { position:absolute; inset:0; font-family: Montserrat, Inter, sans-serif; color:#fff; }
+.pillrow { position:absolute; left:80px; right:80px; top:1176px; height:70px; display:flex; justify-content:center; align-items:center; }
+.pill { display:inline-flex; align-items:center; gap:14px; background:rgba(15,26,46,0.92); border-radius:999px; padding:13px 28px; font-size:32px; font-weight:800;
+        letter-spacing:0.01em; will-change:transform; opacity:0; transform-origin:50% 50%; box-shadow:0 12px 30px rgba(15,26,46,0.3); white-space:nowrap; }
+.pill b { color:#F5B335; font-weight:900; }
+.dot { width:9px; height:9px; border-radius:50%; background:#F5B335; display:inline-block; flex:none; }
+.old { position:relative; display:inline-block; color:rgba(255,255,255,0.75); }
+.strike { position:absolute; left:-4px; right:-4px; top:52%; height:5px; border-radius:3px; background:#E2483D; transform-origin:0% 50%; transform:scaleX(0); will-change:transform; }
+.new { display:none; color:#F5B335; font-weight:900; opacity:0; will-change:transform; transform-origin:0% 50%; }
+  .it { opacity:0; display:none; will-change:transform; }
+.arrow { display:inline-block; width:0; height:0; border-left:13px solid transparent; border-right:13px solid transparent; border-top:17px solid #F5B335; margin-left:2px; will-change:transform; }
+</style>
+      <div id="root" data-composition-id="card-price" data-width="1080" data-height="1920">
+<div class="pillrow"><div class="pill" id="card-price-p"><span class="old" id="card-price-old">$10,000<span class="strike" id="card-price-s"></span></span><span class="new" id="card-price-new">$500</span><span>pay after you see it</span></div></div>
+      </div>
+      <script>
+        (function () {
+          const tl = gsap.timeline({ paused: true });
+tl.fromTo("#card-price-p", { opacity: 0, scale: 0.9, y: 14 }, { opacity: 1, scale: 1, y: 0, duration: 0.35, ease: "power3.out" }, 0);
+tl.fromTo("#card-price-s", { scaleX: 0 }, { scaleX: 1, duration: 0.22, ease: "power2.out" }, 0.760);
+tl.set("#card-price-new", { display: "inline-block" }, 0.920);
+tl.fromTo("#card-price-new", { opacity: 0, scale: 0.6 }, { opacity: 1, scale: 1, duration: 0.3, ease: "power3.out" }, 0.920);
+tl.to("#card-price-p", { opacity: 0, y: 10, duration: 0.22, ease: "power2.in" }, 4.200);
+
+          window.__timelines["card-price"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>
