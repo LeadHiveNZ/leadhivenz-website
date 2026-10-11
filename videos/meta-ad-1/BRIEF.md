@@ -58,3 +58,12 @@ space cut, reviewed multiple times before delivery.
 - Measured vs untreated: pause noise -10 dB (workshop) / -19 dB ($500); birds 2.5-8 kHz
   -11 / -20 dB; whine -17 / -29 dB; voice 300-3000 Hz unchanged; zero added latency.
 - Rebuild: python3 ../finalaudio.py SOURCE edl-in.json OUT --dpdf MODEL --notch HZ
+
+## Delivery v4 (voice untouched, background only)
+
+- Per Joe: do not fix or change the voice; only remove background (airy ambience, birds).
+- Dropped all voice processing (compression, loudness normalisation, EQ, high-pass, declip,
+  mono fold). Built by ../voiceonly.py: original stereo in float, DPDFNet per channel used
+  only as a noise map via ../maskapply.py (knee 0.35), cuts with 40 ms blends, one static trim
+  to keep decoded peaks under -2 dBFS, single AAC 192k stereo encode.
+- Measured vs the untouched recording: -4.0 dB pauses, -4.5 dB birds, -10 dB whine; voice 250-4k 0.00 dB, 4-14k -0.4 to -0.5 dB (mostly removed hiss). Zero timing offset.
