@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <title>Claude AI workshop Meta ad</title>
+    <script src="assets/vendor/gsap.min.js"></script>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      html, body { width: 1080px; height: 1920px; overflow: hidden; background: #0F1A2E; }
+      #root { position: relative; width: 100%; height: 100%; overflow: hidden; background: #0F1A2E; }
+      #video-wrap { position: absolute; inset: 0; transform-origin: 50% 50%; will-change: transform; }
+      #video-wrap video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-width="1080" data-height="1920" data-duration="36.680">
+      <div id="video-wrap">
+      <video id="v0" class="clip" src="assets/source.mp4" muted playsinline data-start="0.000" data-duration="3.320" data-media-start="0.460" data-track-index="0"></video>
+      <video id="v1" class="clip" src="assets/source.mp4" muted playsinline data-start="3.280" data-duration="0.960" data-media-start="4.120" data-track-index="0"></video>
+      <video id="v2" class="clip" src="assets/source.mp4" muted playsinline data-start="4.200" data-duration="6.420" data-media-start="5.680" data-track-index="0"></video>
+      <video id="v3" class="clip" src="assets/source.mp4" muted playsinline data-start="10.580" data-duration="9.660" data-media-start="12.660" data-track-index="0"></video>
+      <video id="v4" class="clip" src="assets/source.mp4" muted playsinline data-start="20.200" data-duration="1.060" data-media-start="22.680" data-track-index="0"></video>
+      <video id="v5" class="clip" src="assets/source.mp4" muted playsinline data-start="21.220" data-duration="5.060" data-media-start="24.120" data-track-index="0"></video>
+      <video id="v6" class="clip" src="assets/source.mp4" muted playsinline data-start="26.240" data-duration="1.040" data-media-start="29.460" data-track-index="0"></video>
+      <video id="v7" class="clip" src="assets/source.mp4" muted playsinline data-start="27.240" data-duration="5.520" data-media-start="30.780" data-track-index="0"></video>
+      <video id="v8" class="clip" src="assets/source.mp4" muted playsinline data-start="32.720" data-duration="3.960" data-media-start="36.820" data-track-index="0"></video>
+      </div>
+      <audio id="mix" src="assets/mix.m4a" data-start="0" data-duration="36.680" data-track-index="3" data-volume="1"></audio>
+      <div id="card-price-host" data-composition-id="card-price" data-composition-src="compositions/card-price.html" data-start="1.380" data-duration="2.860" data-track-index="2" data-track-kind="graphics" data-width="1080" data-height="1920"></div>
+      <div id="card-when-host" data-composition-id="card-when" data-composition-src="compositions/card-when.html" data-start="4.320" data-duration="5.100" data-track-index="2" data-track-kind="graphics" data-width="1080" data-height="1920"></div>
+      <div id="card-promise-host" data-composition-id="card-promise" data-composition-src="compositions/card-promise.html" data-start="12.220" data-duration="3.700" data-track-index="2" data-track-kind="graphics" data-width="1080" data-height="1920"></div>
+      <div id="card-refund-host" data-composition-id="card-refund" data-composition-src="compositions/card-refund.html" data-start="31.060" data-duration="1.700" data-track-index="2" data-track-kind="graphics" data-width="1080" data-height="1920"></div>
+      <div id="card-cta-host" data-composition-id="card-cta" data-composition-src="compositions/card-cta.html" data-start="32.800" data-duration="3.560" data-track-index="2" data-track-kind="graphics" data-width="1080" data-height="1920"></div>
+      <div id="captions-host" data-composition-id="captions" data-composition-src="compositions/captions.html" data-start="0" data-duration="36.680" data-track-index="1" data-track-kind="captions" data-width="1080" data-height="1920"></div>
+    </div>
+    <script>
+      const tl = gsap.timeline({ paused: true });
+      tl.set("#video-wrap", { scale: 1.240, x: 47, y: -225 }, 0.000);
+      tl.set("#video-wrap", { scale: 1.314, x: 47, y: -225 }, 3.280);
+      tl.set("#video-wrap", { scale: 1.240, x: 47, y: -225 }, 4.200);
+      tl.set("#video-wrap", { scale: 1.314, x: 47, y: -225 }, 10.580);
+      tl.set("#video-wrap", { scale: 1.240, x: 47, y: -225 }, 20.200);
+      tl.set("#video-wrap", { scale: 1.314, x: 47, y: -225 }, 21.220);
+      tl.set("#video-wrap", { scale: 1.240, x: 47, y: -225 }, 26.240);
+      tl.set("#video-wrap", { scale: 1.314, x: 47, y: -225 }, 27.240);
+      tl.set("#video-wrap", { scale: 1.240, x: 47, y: -225 }, 32.720);
+      tl.set({}, {}, 36.680);
+      window.__timelines["main"] = tl;
+      tl.seek(0);
+    </script>
+  </body>
+</html>

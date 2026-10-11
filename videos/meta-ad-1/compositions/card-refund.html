@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="UTF-8" /><title>card-refund</title></head>
+  <body>
+    <template>
+      <style>
+#root { position:absolute; inset:0; font-family: Montserrat, Inter, sans-serif; color:#fff; }
+.pillrow { position:absolute; left:80px; right:80px; top:1176px; height:70px; display:flex; justify-content:center; align-items:center; }
+.pill { display:inline-flex; align-items:center; gap:14px; background:rgba(15,26,46,0.92); border-radius:999px; padding:13px 28px; font-size:32px; font-weight:800;
+        letter-spacing:0.01em; will-change:transform; opacity:0; transform-origin:50% 50%; box-shadow:0 12px 30px rgba(15,26,46,0.3); white-space:nowrap; }
+.pill b { color:#F5B335; font-weight:900; }
+.dot { width:9px; height:9px; border-radius:50%; background:#F5B335; display:inline-block; flex:none; }
+.old { position:relative; display:inline-block; color:rgba(255,255,255,0.75); }
+.strike { position:absolute; left:-4px; right:-4px; top:52%; height:5px; border-radius:3px; background:#E2483D; transform-origin:0% 50%; transform:scaleX(0); will-change:transform; }
+.new { display:none; color:#F5B335; font-weight:900; opacity:0; will-change:transform; transform-origin:0% 50%; }
+.arrow { display:inline-block; width:0; height:0; border-left:13px solid transparent; border-right:13px solid transparent; border-top:17px solid #F5B335; margin-left:2px; will-change:transform; }
+</style>
+      <div id="root" data-composition-id="card-refund" data-width="1080" data-height="1920">
+<div class="pillrow"><div class="pill" id="card-refund-p"><b>Full refund</b><span>no questions asked</span></div></div>
+      </div>
+      <script>
+        (function () {
+          const tl = gsap.timeline({ paused: true });
+tl.fromTo("#card-refund-p", { opacity: 0, scale: 0.9, y: 14 }, { opacity: 1, scale: 1, y: 0, duration: 0.35, ease: "power3.out" }, 0);
+tl.to("#card-refund-p", { opacity: 0, y: 10, duration: 0.22, ease: "power2.in" }, 1.460);
+
+          window.__timelines["card-refund"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>
