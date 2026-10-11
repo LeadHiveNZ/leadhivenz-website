@@ -21,7 +21,7 @@ with a 26s vertical talking-head video, sending clicks to a form on leadhivenz.c
 |----------|-----------------------------------|---------------------|
 | Campaign | Tradie Website $500 - NZ          | 120256460133070460  |
 | Ad set   | NZ Tradies - Website Demo Lead    | 120256460133520460  |
-| Ad       | Website offer video v1            | AD_ID               |
+| Ad       | Website offer video v1            | 120256460158410460  |
 | Video    | Tradie Website offer              | 1879131369738619    |
 
 - Objective `OUTCOME_LEADS`, ad set budget **$20/day**, lowest cost, no cap.
@@ -55,6 +55,15 @@ Primary text:
 - Headline: `Your Tradie Website for $500`
 - Description: `Free live demo first. Pay after you see it.`
 - Button: Get offer
+
+## Launch log
+
+- 12/10/2026 (NZT): page published (Lovable commits 5dde153, 2a43a23); live checks returned 200
+  for `/website` and the thumbnail. Test insert accepted, public read returned nothing, test
+  row deleted. Test email ("TEST - Claude launch check") landed in the hello@leadhivenz.com
+  inbox, so the Resend key works.
+- Campaign, ad set and ad switched on at $20/day. The ad goes through Meta review before it
+  delivers.
 
 ## Reading the numbers
 
