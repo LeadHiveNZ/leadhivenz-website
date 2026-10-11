@@ -49,3 +49,13 @@ loudnorm to -14 LUFS and a limiter at -1.5 dBFS.
 - Picture: source re-made at 1080x1920 (Lanczos + light unsharp) before rendering; render at
   --video-bitrate 14M. Final: H.264 High, 1080x1920, 30fps, ~14 Mbps, AAC 192k 48 kHz.
 - Deliverables in ../../deliverables/.
+
+## Delivery v3 (outdoor noise removal)
+
+- Replaced the gentle FFT filter (only ~1.5 dB) with DPDFNet 48 kHz full-band speech
+  enhancement (sherpa-onnx, model dpdfnet2_48khz_hr.onnx from the k2-fsa
+  speech-enhancement-models release), via ../dpdf.py, plus a Q30 -12 dB notch on the steady
+  whine (1201 Hz workshop ad, 1176 Hz $500 ad) and a +2 dB shelf at 7 kHz.
+- Measured vs untreated: pause noise -10 dB (workshop) / -19 dB ($500); birds 2.5-8 kHz
+  -11 / -20 dB; whine -17 / -29 dB; voice 300-3000 Hz unchanged; zero added latency.
+- Rebuild: python3 ../finalaudio.py SOURCE edl-in.json OUT --dpdf MODEL --notch HZ
