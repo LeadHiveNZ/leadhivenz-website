@@ -14,8 +14,8 @@ js/main.js      Nav, scroll reveals, lightbox, form validation
 ```
 
 ## Swap before launch
-- **Phone** `021 000 0000` and **email** `info@elitetilesandstone.co.nz` — appear on every page,
-  in `contact.html`, and in the JSON-LD block in `index.html`.
+- **Phone** `021 000 0000` is still a placeholder — appears on every page, in `contact.html`,
+  and in the JSON-LD block in `index.html`. (Email is the client's real address.)
 - **Domain** `https://www.elitetilesandstone.co.nz` is a guess (used in OG tags + JSON-LD).
 - **Testimonial** on the home page and the "5★ Client rated" stat are placeholders — replace
   with a real review or remove.
