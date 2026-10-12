@@ -47,15 +47,28 @@ Photos Amelia sent on 12/10/2026 (her feedback round):
 |-----------------------|----------------------------------------|-------------------------------------------|
 | `group.jpg`           | Whole group in red and black ponchos   | Home "Who we are"; About gallery          |
 | `mow.jpg`, `meals.jpg`| Two members with a cuppa and kai       | Home Meals on Wheels band; What we do, Meals on Wheels |
-| `outings.jpg`         | Two members at Sheepworld              | What we do, Outings; About gallery        |
-| `companionship.jpg`   | Members seated together outdoors       | What we do, Companionship                 |
+| `g-sheepworld.jpg`    | Two members at Sheepworld              | About gallery                             |
 | `g-street.jpg`        | Same photo, wide                       | About gallery                             |
 | `involved.jpg`, `g-music.jpg` | Members laughing outside Bunnings (cropped to leave out a hazard sign) | Get involved header; About gallery |
+
+Second batch from Amelia (12/10/2026):
+
+| File                  | Photo                                  | Used on                                   |
+|-----------------------|----------------------------------------|-------------------------------------------|
+| `celebration.jpg`     | Big group of members and whānau, many in red | About, wide photo under the header  |
+| `companionship.jpg`   | Member in a red coat with a friend's arm around her | What we do, Companionship    |
+| `outings.jpg`         | Member and a young woman feeding a lamb (from the collage) | What we do, Outings   |
+| `wellbeing.jpg`       | Member in a wheelchair on a garden path (collage) | What we do, Disability & wellbeing |
+| `g-bowls.jpg`, `g-booth.jpg`, `g-selfie.jpg`, `g-group2.jpg` | The other four collage photos | About gallery |
+
+A headshot (woman in a red and black top) also came through but it's not clear who it is, so it
+isn't used yet. Once Amelia confirms, save it as `amelia.jpg` or `korina.jpg` (square) and rebuild:
+it replaces the initials on that person's card.
 
 **More photos:** save JPGs in `site/assets/img/` with these names and run `python3 build.py`.
 Each one replaces the illustration in its slot. Shape is portrait 4:5; on phones they crop to
 landscape, so keep faces near the centre.
-Still open: `digital.jpg`, `advice.jpg`, `wellbeing.jpg`, `amelia.jpg` and `korina.jpg` (square).
+Still open: `digital.jpg`, `advice.jpg`, `amelia.jpg` and `korina.jpg` (square).
 
 ## Built for older readers
 
