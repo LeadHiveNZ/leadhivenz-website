@@ -1,0 +1,63 @@
+  <section class="page-hero">
+    <div class="wrap">
+      <div>
+        <p class="crumbs"><a href="index.html">Home</a><span>/</span>Contact</p>
+        <span class="eyebrow">Contact us</span>
+        <h1>Come and say <em>kia ora.</em></h1>
+        <p class="lead">Whether you'd like to join us, help out or just have a chat about what we do, we'd love to hear from you.</p>
+      </div>
+      <div class="ph-art tone-teal"><svg class="ic" aria-hidden="true"><use href="#i-chat"/></svg></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="wrap contact-grid">
+      <div class="reveal">
+        <div class="methods">
+          <a class="method big" href="{{TEL}}"><span class="tile-ic"><svg class="ic" aria-hidden="true"><use href="#i-phone"/></svg></span><span><small>Call or text {{CONTACT_FIRST}}</small><strong>{{PHONE}}</strong></span></a>
+          <a class="method" href="{{MAILTO}}"><span class="tile-ic t-leaf"><svg class="ic" aria-hidden="true"><use href="#i-mail"/></svg></span><span><small>Email</small><strong>{{EMAIL_WBR}}</strong></span></a>
+          <a class="method" href="{{FACEBOOK}}" target="_blank" rel="noopener"><span class="tile-ic t-teal"><svg class="ic" aria-hidden="true"><use href="#i-fb"/></svg></span><span><small>Facebook</small><strong>Follow us for what's on</strong></span></a>
+          <div class="method"><span class="tile-ic t-gold"><svg class="ic" aria-hidden="true"><use href="#i-pin"/></svg></span><span><small>Based in</small><strong>Flat Bush, Auckland</strong></span></div>
+        </div>
+        <div class="helpful">
+          <h2>Need help right now?</h2>
+          <ul>
+            <li><span>Emergency: police, fire, ambulance</span><a href="tel:111">111</a></li>
+            <li><span>Healthline: free health advice, 24/7</span><a href="tel:0800611116">0800 611 116</a></li>
+            <li><span>Elder Abuse Response Service, 24/7</span><a href="tel:08003266865">0800 32 668 65</a></li>
+            <li><span>Need to talk? Free call or text</span><a href="tel:1737">1737</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="form-card reveal d1">
+        <h2>Send us a message</h2>
+        <p>Fill in what you can and we'll get back to you as soon as we can.</p>
+        <form data-form="Contact" action="{{MAILTO}}?subject=Website%20enquiry" method="post" enctype="text/plain">
+          <p class="form-err" role="alert"></p>
+          <div class="fgrid">
+            <div class="field full"><label for="c-name">Your name</label><input id="c-name" name="name" autocomplete="name" required></div>
+            <div class="field"><label for="c-phone">Phone <small>(or email)</small></label><input id="c-phone" name="phone" type="tel" autocomplete="tel" inputmode="tel"></div>
+            <div class="field"><label for="c-email">Email <small>(or phone)</small></label><input id="c-email" name="email" type="email" autocomplete="email"></div>
+            <div class="field full"><label for="c-who">I am…</label>
+              <select id="c-who" name="who">
+                <option>Interested in joining</option><option>Getting in touch for a family member</option><option>Interested in volunteering</option><option>A donor or funder</option><option>From an organisation</option><option>Something else</option>
+              </select>
+            </div>
+            <fieldset class="field full" style="border:0;padding:0;margin:0 0 1.15rem">
+              <legend style="font-weight:600;margin-bottom:.45rem;padding:0">Best way to reach you</legend>
+              <div class="radios">
+                <label><input type="radio" name="prefer" value="Phone call" checked>Phone call</label>
+                <label><input type="radio" name="prefer" value="Text">Text</label>
+                <label><input type="radio" name="prefer" value="Email">Email</label>
+              </div>
+            </fieldset>
+            <div class="field full"><label for="c-msg">Your message</label><textarea id="c-msg" name="message"></textarea></div>
+          </div>
+          <div class="form-foot">
+            <button class="btn btn-primary" type="submit">Send message <svg class="ic" aria-hidden="true"><use href="#i-arrow"/></svg></button>
+            <p>We only use your details to reply to you.</p>
+          </div>
+        </form>
+      </div>
+    </div>
+  </section>

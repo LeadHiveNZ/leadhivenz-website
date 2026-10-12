@@ -13,9 +13,11 @@ clients/
     README.md                   routes, data sources, pre-launch checks
     screens/                    rendered previews of each page
   aroha-seniors/                Aroha Seniors Charitable Trust (CC63126), Flat Bush, Auckland
-    index.html                  five-page charity website (hash routes), not from a trade template
+    build.py                    builds site/ and preview/ from src/ (run after any edit)
+    src/                        layout, five pages, styles and script
+    site/                       the website to upload: five pages + assets/
+    preview/                    the same pages, each self-contained for previewing alone
     README.md                   content sources, items to confirm, photo slots, launch checklist
-    img/                        drop the trust's photos here (hero.jpg, gatherings.jpg, ...)
     screens/                    rendered previews of each page, desktop and mobile
 ```
 
