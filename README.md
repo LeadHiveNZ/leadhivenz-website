@@ -12,6 +12,11 @@ clients/
     northland-handyman-master.html
     README.md                   routes, data sources, pre-launch checks
     screens/                    rendered previews of each page
+  aroha-seniors/                Aroha Seniors Charitable Trust (CC63126), Flat Bush, Auckland
+    index.html                  five-page charity website (hash routes), not from a trade template
+    README.md                   content sources, items to confirm, photo slots, launch checklist
+    img/                        drop the trust's photos here (hero.jpg, gatherings.jpg, ...)
+    screens/                    rendered previews of each page, desktop and mobile
 ```
 
 Preview any client file directly in a browser; add `?page=<key>` to view a service page.
