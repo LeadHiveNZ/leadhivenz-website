@@ -1,7 +1,9 @@
 # Tradie Website $500 — Meta campaign
 
 Offer: Joe builds a tradie a website for **$500**. A live, personalised demo is built first,
-for free, and nothing is paid until the tradie has seen it. Sold on Meta (Facebook + Instagram)
+for free, and nothing is paid until the tradie has seen it.
+Hosting is **$20/month** on top. Joe's call: it's raised on the sales call, not in the ad or on
+the page. Sold on Meta (Facebook + Instagram)
 with a 26s vertical talking-head video, sending clicks to a form on leadhivenz.co.
 
 ## Landing page
