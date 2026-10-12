@@ -2,6 +2,7 @@
 
 Client: **Aroha Seniors Charitable Trust** (registered charity **CC63126**), Flat Bush, Auckland.
 Contact: **Amelia Kolio**, 022 178 0876, amelia_asct@outlook.com.
+Meals on Wheels orders: **Korina Grace** (Kai Manager), 022 605 2361.
 Lead: LeadHive website demo request, 12/10/2026 (Resend notification to hello@leadhivenz.com).
 
 A five-page charity website in the trust's own branding: their heart logo, kawakawa green and
@@ -23,7 +24,7 @@ screens/              rendered screenshots, desktop and mobile
 |-------------------|------------------------------------------------------------------|
 | `index.html`      | Mission, real photo hero, programmes, how to join, get involved, FAQ |
 | `about.html`      | Logo, story, timeline, banner and values, who we support, people, accountability |
-| `what-we-do.html` | Six programmes, each with an anchor (`what-we-do.html#outings`)  |
+| `what-we-do.html` | Seven programmes incl. Meals on Wheels, each with an anchor (`what-we-do.html#meals`) |
 | `get-involved.html` | Volunteer, donate, partner, interest form (`?i=Donate` preselects it) |
 | `contact.html`    | Call, email, Facebook, contact form, helplines                   |
 
@@ -40,10 +41,21 @@ Made from the two images Joe supplied on 12/10/2026 (their logo, and their banne
 | `hero.jpg`            | Banner photo, three members with poi   | Home page hero                            |
 | `gatherings.jpg`      | Banner photo, two members with poi     | What we do, Friendship gatherings         |
 
+Photos Amelia sent on 12/10/2026 (her feedback round):
+
+| File                  | Photo                                  | Used on                                   |
+|-----------------------|----------------------------------------|-------------------------------------------|
+| `group.jpg`           | Whole group in red and black ponchos   | Home "Who we are"; About gallery          |
+| `mow.jpg`, `meals.jpg`| Two members with a cuppa and kai       | Home Meals on Wheels band; What we do, Meals on Wheels |
+| `outings.jpg`         | Two members at Sheepworld              | What we do, Outings; About gallery        |
+| `companionship.jpg`   | Members seated together outdoors       | What we do, Companionship                 |
+| `g-street.jpg`        | Same photo, wide                       | About gallery                             |
+| `involved.jpg`, `g-music.jpg` | Members laughing outside Bunnings (cropped to leave out a hazard sign) | Get involved header; About gallery |
+
 **More photos:** save JPGs in `site/assets/img/` with these names and run `python3 build.py`.
 Each one replaces the illustration in its slot. Shape is portrait 4:5; on phones they crop to
 landscape, so keep faces near the centre.
-`outings.jpg`, `companionship.jpg`, `digital.jpg`, `advice.jpg`, `wellbeing.jpg`, `amelia.jpg` (square).
+Still open: `digital.jpg`, `advice.jpg`, `wellbeing.jpg`, `amelia.jpg` and `korina.jpg` (square).
 
 ## Built for older readers
 
@@ -72,15 +84,16 @@ policy, so the copy is built from web-search summaries plus the trust's logo and
 - **Their banner**: tagline "To serve with Aroha", "Caring for our seniors, strengthening our community",
   values Manaakitanga, Whanaungatanga, Kotahitanga. The photo shows a poi session, so poi is mentioned
   under Friendship gatherings.
-- **Stat**: "1 in 5 frail older New Zealanders living at home report extreme loneliness"
-  (University of Otago, 2017, home-care assessments).
+- **Amelia's feedback (12/10/2026)**: add Meals on Wheels (fortnightly, ordered through Kai Manager
+  Korina Grace on 022 605 2361) and remove the University of Otago loneliness statistic. Both done.
 - **Helplines**: 111; Healthline 0800 611 116; Elder Abuse Response Service 0800 32 668 65; 1737.
 
 ## Confirm with Amelia before launch
 
 1. **Programmes.** The six programmes follow the register and Open Collective, not a list from the
    trust. Remove or rename any they don't run (`src/pages/what-we-do.html` plus the cards in `src/pages/index.html`).
-2. **Photo permission** for the members shown on the home and What we do pages.
+2. **Meals on Wheels details**: area covered and any cost, if they want those on the site.
+   Also whether to mention Z's Good in the Hood (the sign in the group photo) as a supporter.
 3. **Service area**: "Flat Bush and across South & East Auckland".
 4. **Story wording** on the About page is general. Swap in their real founding story if they have one.
 5. **Amelia's title**: `contact_role` in `build.py` (currently "Your first point of contact").
