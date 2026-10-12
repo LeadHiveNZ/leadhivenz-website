@@ -19,7 +19,8 @@ js/main.js      Nav, scroll reveals, lightbox, form validation
 - **Domain** `https://www.elitetilesandstone.co.nz` is a guess (used in OG tags + JSON-LD).
 - **Testimonial** on the home page and the "5★ Client rated" stat are placeholders — replace
   with a real review or remove.
-- **Project captions** (suburbs Cashmere/Burnside/Ilam/Halswell), featured-project scope and
+- **Project captions** (suburbs Cashmere/Burnside/Ilam/Halswell/Merivale/Riccarton/St Albans/
+  Rolleston/Wigram), featured-project scope and
   "600 × 1200 mm" tile size on Services are plausible placeholders — correct to real jobs.
 - **Form backend**: form currently shows a success message only. Wire to Formspree/Netlify
   Forms — comments in `contact.html` and `js/main.js` mark the spot.
