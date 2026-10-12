@@ -37,7 +37,7 @@ CONFIG = {
     'bank_name': 'Aroha Seniors Charitable Trust',
     'donee_status': False,       # True only once IRD approves donee status (shows the 33.33% tax credit line)
     'form_endpoint': '',         # POST URL for enquiries. Blank opens the visitor's email app instead
-    'credit': ('Website by LeadHive', 'https://leadhivenz.com'),   # set to None to remove
+    'credit': ('Website by LeadHive', 'https://leadhivenz.co'),   # set to None to remove
 }
 
 SITE_NAME = 'Aroha Seniors Charitable Trust'
