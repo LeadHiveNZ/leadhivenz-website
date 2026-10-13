@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900" role="img" aria-label="Map of Taranaki showing Stratford">
+  <defs>
+    <pattern id="grid" width="64" height="64" patternUnits="userSpaceOnUse">
+      <path d="M64 0H0V64" fill="none" stroke="#FFFFFF" stroke-opacity=".03" stroke-width="1"/>
+    </pattern>
+    <radialGradient id="glow" cx="0.625" cy="0.478" r="45%">
+      <stop offset="0" stop-color="#07AAE8" stop-opacity=".22"/>
+      <stop offset=".5" stop-color="#07AAE8" stop-opacity=".04"/>
+      <stop offset="1" stop-color="#07AAE8" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="shade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#17181B"/><stop offset="1" stop-color="#0E0E10"/>
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="900" fill="url(#shade)"/>
+  <rect width="1600" height="900" fill="url(#grid)"/>
+  <ellipse cx="520" cy="400" rx="40" ry="36" fill="none" stroke="#FFFFFF" stroke-opacity="0.110" stroke-width="1.5"/><ellipse cx="526" cy="404" rx="86" ry="78" fill="none" stroke="#FFFFFF" stroke-opacity="0.102" stroke-width="1.5"/><ellipse cx="532" cy="408" rx="132" ry="120" fill="none" stroke="#FFFFFF" stroke-opacity="0.094" stroke-width="1.5"/><ellipse cx="538" cy="412" rx="178" ry="162" fill="none" stroke="#FFFFFF" stroke-opacity="0.086" stroke-width="1.5"/><ellipse cx="544" cy="416" rx="224" ry="204" fill="none" stroke="#FFFFFF" stroke-opacity="0.078" stroke-width="1.5"/><ellipse cx="550" cy="420" rx="270" ry="246" fill="none" stroke="#FFFFFF" stroke-opacity="0.070" stroke-width="1.5"/><ellipse cx="556" cy="424" rx="316" ry="288" fill="none" stroke="#FFFFFF" stroke-opacity="0.062" stroke-width="1.5"/><ellipse cx="562" cy="428" rx="362" ry="330" fill="none" stroke="#FFFFFF" stroke-opacity="0.054" stroke-width="1.5"/><ellipse cx="568" cy="432" rx="408" ry="372" fill="none" stroke="#FFFFFF" stroke-opacity="0.046" stroke-width="1.5"/><ellipse cx="574" cy="436" rx="454" ry="414" fill="none" stroke="#FFFFFF" stroke-opacity="0.038" stroke-width="1.5"/><ellipse cx="580" cy="440" rx="500" ry="456" fill="none" stroke="#FFFFFF" stroke-opacity="0.030" stroke-width="1.5"/><ellipse cx="586" cy="444" rx="546" ry="498" fill="none" stroke="#FFFFFF" stroke-opacity="0.025" stroke-width="1.5"/><ellipse cx="592" cy="448" rx="592" ry="540" fill="none" stroke="#FFFFFF" stroke-opacity="0.025" stroke-width="1.5"/>
+  <path d="M-20 120C200 160 340 90 470 150S700 160 820 110 1100 40 1260 90 1500 70 1620 40" fill="none" stroke="#07AAE8" stroke-opacity=".18" stroke-width="2" stroke-dasharray="2 10" stroke-linecap="round"/>
+  <path d="M1000 -20C990 120 1020 250 1000 430S950 760 990 920" fill="none" stroke="#FFFFFF" stroke-opacity=".14" stroke-width="3"/>
+  <path d="M1000 430C1120 480 1280 520 1620 560" fill="none" stroke="#FFFFFF" stroke-opacity=".08" stroke-width="2"/>
+  <path d="M1000 430C890 390 800 280 700 220" fill="none" stroke="#FFFFFF" stroke-opacity=".08" stroke-width="2"/>
+  <rect width="1600" height="900" fill="url(#glow)"/>
+  <circle cx="1000" cy="430" r="120" fill="none" stroke="#07AAE8" stroke-opacity=".18" stroke-width="1.5"/>
+  <circle cx="1000" cy="430" r="64" fill="none" stroke="#07AAE8" stroke-opacity=".32" stroke-width="1.5"/>
+  <g transform="translate(1000 372) scale(4.6) translate(-12 -12)" fill="#0B0B0C" stroke="#07AAE8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M12 21s-7-6.1-7-11.5a7 7 0 0 1 14 0C19 14.9 12 21 12 21z"/>
+    <circle cx="12" cy="9.5" r="2.5" fill="#07AAE8" stroke="none"/>
+  </g>
+  <circle cx="1000" cy="430" r="5" fill="#07AAE8"/>
+  <text x="520" y="408" text-anchor="middle" font-family="'Barlow Condensed','Arial Narrow','Helvetica Neue',Arial,sans-serif" font-size="20" font-weight="600" letter-spacing="6" fill="#8A9099" fill-opacity=".7">TARANAKI MAUNGA</text>
+  <text x="1000" y="620" text-anchor="middle" font-family="'Barlow Condensed','Arial Narrow','Helvetica Neue',Arial,sans-serif" font-size="44" font-weight="700" letter-spacing="9" fill="#FFFFFF">STRATFORD · TARANAKI</text>
+  <text x="1000" y="662" text-anchor="middle" font-family="'Barlow Condensed','Arial Narrow','Helvetica Neue',Arial,sans-serif" font-size="22" font-weight="600" letter-spacing="6" fill="#8A9099">140 JULIET STREET · 4332</text>
+  <rect x="48.5" y="48.5" width="1503" height="803" rx="6" fill="none" stroke="#FFFFFF" stroke-opacity=".06"/>
+  <path d="M48 84V48H84 M1552 84V48H1516 M48 816V852H84 M1552 816V852H1516" fill="none" stroke="#07AAE8" stroke-opacity=".55" stroke-width="2"/>
+</svg>
