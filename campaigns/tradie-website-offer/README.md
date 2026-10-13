@@ -36,7 +36,7 @@ with a 26s vertical talking-head video, sending clicks to a form on leadhivenz.c
 | Ad       | Website offer video v1            | 120256460158410460  |
 | Video    | Tradie Website offer              | 1879131369738619    |
 
-- Objective `OUTCOME_LEADS`, ad set budget **$20/day**, lowest cost, no cap.
+- Objective `OUTCOME_LEADS`, ad set budget **$25/day** (raised from $20 on 13/10), lowest cost, no cap.
 - Optimisation: website conversions on pixel `2212898842912576`, event `LEAD`.
 - Page: LeadHive NZ (`1232945516571020`).
 - Targeting copied from the live workshop campaign: all of New Zealand (home + recent),
@@ -114,3 +114,10 @@ Baseline before the change: 4 leads from 25 Meta landing page views (16%), or ~1
 the site's own page-view count. Compare the next ~150 landing page views against that. The new
 `WebsiteFormStart` and `WebsiteStep1` events show where people drop: page → start → step 1 →
 lead. Count step-1-only people Joe reaches by phone as leads too.
+
+## Budget log
+
+| Date (NZT) | Daily budget | Why |
+|---|---|---|
+| 12/10/2026 | $20 | Launch |
+| 13/10/2026 7:30pm | $25 | Joe's call after 4 leads at ~$9.65. Next step ~$30 in 2–3 days if cost per lead stays under ~$15 and at least one lead has paid. |
