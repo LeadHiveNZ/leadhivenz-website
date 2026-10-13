@@ -8,14 +8,24 @@ with a 26s vertical talking-head video, sending clicks to a form on leadhivenz.c
 
 ## Landing page
 
-- Live: https://leadhivenz.co/website (Lovable project LeadHiveNZ, `ec2c7f2f-8d9a-4f32-86be-af4f0900e61b`)
+- Live: https://leadhivenz.com/website (Lovable project LeadHiveNZ, `ec2c7f2f-8d9a-4f32-86be-af4f0900e61b`).
+  The site moved from leadhivenz.co to leadhivenz.com on 13/10; .co redirects to .com (302) and
+  keeps the query string, so the ad's utm tags and fbclid still arrive. The ad still links to
+  .co; switch it to .com only when the creative is next changed (a link edit resets learning).
 - Standalone route, noindex, not in nav/footer/sitemap. Same build pattern as `/workshop`.
-- Form fields (all required): name, mobile, email, business name, location (town/city).
-- Saves to the `website_demo_enquiries` table (insert-only public access, no public read)
-  and emails the enquiry to hello@leadhivenz.com via the `send-contact-email` edge function
-  (type `website-demo`). Utm params, fbclid and page URL are stored on each row.
+- Promise on the page: "See your free website demo within 24 hours" (Joe's call, 13/10).
+- Form sits in the hero (first screen on a 390x844 phone) and has two steps (since 13/10,
+  Lovable commit e33f097):
+  - Step 1: name + mobile → saved to `website_demo_starts` (insert-only, no public read).
+  - Step 2: business name, location, email (all required) → saved to `website_demo_enquiries`
+    and emailed to hello@leadhivenz.com via `send-contact-email` (type `website-demo`).
+  - Both rows carry the same `session_id`. Utm params, fbclid and page URL are stored too.
+- "Didn't finish" alert: `notify-unfinished-website-demos` runs every 10 minutes (pg_cron).
+  A step-1 start older than 15 minutes with no matching enquiry gets one email
+  "⏳ Didn't finish the website form: {name}" with a Call now button.
 - Meta pixel `2212898842912576`: `ViewContent` on page load (content_name "Tradie website $500"),
-  `Lead` only after a successful save (content_name "Website demo").
+  custom `WebsiteFormStart` (first field focus) and `WebsiteStep1` (step 1 passed), and
+  `Lead` only after step 2 saves (content_name "Website demo"). Ad set still optimises on `Lead`.
 
 ## Meta Ads (ad account 2069841593323757, NZD)
 
@@ -31,7 +41,7 @@ with a 26s vertical talking-head video, sending clicks to a form on leadhivenz.c
 - Page: LeadHive NZ (`1232945516571020`).
 - Targeting copied from the live workshop campaign: all of New Zealand (home + recent),
   ages 25–65, Advantage+ audience on, Facebook + Instagram, automatic placements.
-- Link: `https://leadhivenz.co/website?utm_source=meta&utm_medium=paid_social&utm_campaign=tradie-website-500&utm_content=video-v1`
+- Link (redirects to .com): `https://leadhivenz.co/website?utm_source=meta&utm_medium=paid_social&utm_campaign=tradie-website-500&utm_content=video-v1`
 
 ### Creative
 
@@ -97,3 +107,10 @@ Judge it on cost per lead and lead quality over 7 days / ~$140, not day by day:
 - Age: Meta credits 3 of 4 leads to 55–64s (14% of spend). Men 25–54 took 66% of spend for 1.
 - Lead mix: 1 tiler, 1 charity, 2 to qualify. No spam; every lead came from an ad click.
 - Rankings still UNKNOWN (not enough data). No edits made to the ad set.
+
+## Form change 13/10/2026: how to judge it
+
+Baseline before the change: 4 leads from 25 Meta landing page views (16%), or ~10% against
+the site's own page-view count. Compare the next ~150 landing page views against that. The new
+`WebsiteFormStart` and `WebsiteStep1` events show where people drop: page → start → step 1 →
+lead. Count step-1-only people Joe reaches by phone as leads too.
