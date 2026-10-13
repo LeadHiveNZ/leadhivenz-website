@@ -246,7 +246,8 @@
         <div class="form-card reveal" style="--d:1" id="quote">
           <h2 class="form-card__title">Request a quote</h2>
           <p class="form-card__intro">Tell us about the job and we'll get back to you. Urgent? Call 06 765 8423.</p>
-          <form class="form" data-quote-form novalidate>
+          <form class="form" name="quote" method="POST" action="/contact.html" data-netlify="true" netlify-honeypot="company_website" data-quote-form novalidate>
+            <input type="hidden" name="form-name" value="quote">
             <div class="form__grid">
               <div class="field">
                 <label class="field__label" for="q-name">Name <span class="field__req" aria-hidden="true">*</span></label>

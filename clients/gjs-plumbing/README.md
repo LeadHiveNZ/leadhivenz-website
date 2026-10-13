@@ -31,6 +31,11 @@ Shared: `styles.css`, `main.js`, `assets/`.
 - 24/7 call-out service (stated on their Facebook page). "Stratford based, Taranaki wide".
 - Facebook: https://www.facebook.com/GJS.NZ.LTD/
 
+## Deploy (Netlify)
+
+Drag the contents of this folder (or `gjs-plumbing-website.zip` unzipped) onto Netlify → Sites → Add new site → Deploy manually.
+`index.html` must be at the root of the upload. No build command. Then set the form notification email (see below) and attach the domain.
+
 ## Build notes
 
 - `styles.css` holds the whole design system (sections 1–33) plus a page-specific section (34) at the end.
@@ -58,6 +63,6 @@ client photo. Search the HTML for `images.unsplash.com` (and `PLACEHOLDER PHOTO`
 - **Team**: Graham is shown as "Owner & Plumber", Scott as "Plumber". Confirm titles and whether they want photos.
 - **Claims to check**: council drainage inspections booked and as-builts supplied; septic and sewer connections; gas leak repairs; LPG and natural gas; rental/property-manager maintenance; "we install Ecospring and other systems"; after-hours call-out charges (worded softly, no figures); travel charges (FAQ says confirmed when booking).
 - **Place names** use macrons (Ōākura, Pātea, Ōkato, Hāwera, Ōpunake). Change if Graham prefers otherwise.
-- **Form**: the quote form shows a success message only; wire it to the Lovable `/api/public/enquiry` route (Resend) when the site is built out, or a Formspree/Netlify endpoint if hosted statically.
+- **Form**: wired to **Netlify Forms** (`data-netlify="true"`, form name `quote`, honeypot `company_website`). After the first deploy, open Netlify → Forms → quote → Notifications and add grahamgjs@xtra.co.nz (and hello@leadhivenz.com). Off Netlify the form only shows the success panel.
 - **Tracking**: add Google Analytics / Ads tags in the `<head>` of every page before launch.
 - **Nimbata**: if this site is used for LeadHive ads, the tracked number must replace 06 765 8423 on every page (`a[href="tel:+6467658423"]`).

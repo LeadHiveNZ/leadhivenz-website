@@ -5,7 +5,7 @@
    3. Mobile menu (aria-expanded, Escape, focus trap, scroll lock)
    4. Services dropdown (hover on desktop, click/tap on touch, keyboard)
    5. Reveal on scroll (IntersectionObserver, graceful fallback)
-   6. Quote form validation + success panel (no network call yet)
+   6. Quote form validation, Netlify Forms submission + success panel
    7. FAQ accordion ([data-accordion] = one open at a time)
    8. Gallery lightbox ([data-lightbox])
    9. Copyright year ([data-year])
@@ -328,27 +328,44 @@
 
       var hp = form.querySelector('[name="company_website"]');
       var isBot = hp && hp.value;
+      var btn = form.querySelector('button[type="submit"]');
+      var card = form.closest('.form-card') || form.parentNode;
+      var note = form.querySelector('.form__note') || card.querySelector('.form__note');
+
+      function showSuccess() {
+        var panel = successPanel(form);
+        form.parentNode.replaceChild(panel, form);
+        panel.focus({ preventScroll: true });
+        if (panel.scrollIntoView) panel.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' });
+      }
+      function showSendError() {
+        if (btn) { btn.disabled = false; btn.textContent = btn.getAttribute('data-label') || 'Send quote request'; }
+        if (note) {
+          note.innerHTML = 'Sorry, that didn\u2019t send. Please call <a href="tel:+6467658423">06 765 8423</a> or email <a href="mailto:grahamgjs@xtra.co.nz">grahamgjs@xtra.co.nz</a>.';
+          note.setAttribute('role', 'alert');
+        }
+      }
 
       /* ----------------------------------------------------------------
-         ENDPOINT GOES HERE. When a backend / form service is chosen
-         (e.g. Formspree, Netlify Forms, a LeadHive webhook), send the data
-         before showing the success panel, e.g.:
-
-         fetch('https://formspree.io/f/XXXXXXX', {
-           method: 'POST',
-           body: new FormData(form),
-           headers: { Accept: 'application/json' }
-         }).then(function (r) { if (!r.ok) throw r; showSuccess(); })
-           .catch(function () { show an error and the phone number });
-
-         Until then nothing is sent and the page does not navigate.
+         Submission. On Netlify the form is picked up by Netlify Forms
+         (data-netlify="true" on the <form>): we POST it in the background
+         and show the success panel. Set the notification email in the
+         Netlify dashboard (Forms -> quote -> Notifications).
+         Off Netlify (local preview, file://) nothing is sent.
          ---------------------------------------------------------------- */
-      if (isBot) { /* silently drop spam */ }
+      if (isBot) { showSuccess(); return; }
+      var onNetlify = form.hasAttribute('data-netlify') && /^https?:$/.test(location.protocol);
+      if (!onNetlify) { showSuccess(); return; }
 
-      var panel = successPanel(form);
-      form.parentNode.replaceChild(panel, form);
-      panel.focus({ preventScroll: true });
-      if (panel.scrollIntoView) panel.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' });
+      if (btn) { btn.setAttribute('data-label', btn.textContent); btn.disabled = true; btn.textContent = 'Sending\u2026'; }
+      fetch(form.getAttribute('action') || location.pathname, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams(new FormData(form)).toString()
+      }).then(function (r) { if (!r.ok) throw r; showSuccess(); })
+        .catch(showSendError);
+      return;
+
     });
   });
 
