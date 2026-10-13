@@ -20,25 +20,6 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&amp;family=Inter:wght@400;500;600;700&amp;display=swap">
   <link rel="stylesheet" href="styles.css">
-  <style>
-    /* PAGE-SPECIFIC: consolidate into styles.css */
-    .area-group { position: relative; display: flex; flex-direction: column; transition: border-color var(--t) var(--ease), box-shadow var(--t) var(--ease); }
-    .area-group::before { content: ""; position: absolute; top: -1px; left: 24px; right: 24px; height: 1px; background: linear-gradient(90deg, transparent, var(--blue) 30%, var(--blue) 70%, transparent); }
-    .area-group:hover { border-color: rgba(7, 170, 232, .45); box-shadow: var(--c-shadow); }
-    .area-group__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
-    .area-group__num { font-family: var(--font-display); font-size: clamp(2.75rem, 2.4rem + 1.4vw, 3.75rem); font-weight: 800; line-height: .85; color: transparent; -webkit-text-stroke: 1px rgba(6, 115, 159, .55); }
-    .area-group__title { margin-top: var(--sp-3); }
-    .area-group__list--grid { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 20px; }
-    .area-group__list--grid li { justify-content: flex-start; gap: 10px; min-width: 0; font-size: var(--fs-sm); }
-    .area-group__list--grid li::before { content: ""; flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--c-border-strong); transition: background-color var(--t) var(--ease); }
-    .area-group:hover .area-group__list--grid li::before { background: var(--c-accent); }
-    .area-group__list--grid .is-home { grid-column: 1 / -1; margin-top: 12px; padding: 12px 14px; border: 1px solid rgba(7, 170, 232, .45); border-radius: var(--r-sm); background: rgba(7, 170, 232, .07); font-size: 1rem; }
-    .area-group__list--grid .is-home::before, .area-group:hover .is-home::before { background: var(--blue); box-shadow: 0 0 0 3px rgba(7, 170, 232, .22); }
-    .area-group__list--grid .is-home small { margin-left: auto; }
-    .area-group__foot { display: flex; align-items: center; gap: 8px; margin-top: auto; padding-top: var(--sp-3); font-size: var(--fs-xs); color: var(--c-muted); }
-    .area-group__foot .icon { width: 16px; height: 16px; color: var(--c-accent-text); }
-    @media (max-width: 899px) and (min-width: 560px) { .area-group__list--grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-  </style>
   <script>document.documentElement.classList.add('js');</script>
   <script src="main.js" defer></script>
 </head>
@@ -233,13 +214,13 @@
             <span class="area-group__num" aria-hidden="true">02</span>
           </div>
           <h3 class="area-group__title" id="area-north">North Taranaki</h3>
-          <p class="area-group__text">New Plymouth and the northern coast, from Waitara round to Oakura and Ōkato.</p>
+          <p class="area-group__text">New Plymouth and the northern coast, from Waitara round to Ōākura and Ōkato.</p>
           <ul class="area-group__list area-group__list--grid">
             <li>New Plymouth</li>
             <li>Bell Block</li>
             <li>Waitara</li>
             <li>Ōkato</li>
-            <li>Oakura</li>
+            <li>Ōākura</li>
           </ul>
           <p class="area-group__foot"><svg class="icon" aria-hidden="true"><use href="#i-pin"/></svg>City, suburbs &amp; coastal settlements</p>
         </section>
@@ -250,7 +231,7 @@
             <span class="area-group__num" aria-hidden="true">03</span>
           </div>
           <h3 class="area-group__title" id="area-south">South Taranaki</h3>
-          <p class="area-group__text">Eltham and Kaponga, out to Ōpunake and Manaia on the coast, and down SH3 to Patea and Waverley.</p>
+          <p class="area-group__text">Eltham and Kaponga, out to Ōpunake and Manaia on the coast, and down SH3 to Pātea and Waverley.</p>
           <ul class="area-group__list area-group__list--grid">
             <li>Eltham</li>
             <li>Kaponga</li>
@@ -258,7 +239,7 @@
             <li>Hāwera</li>
             <li>Normanby</li>
             <li>Manaia</li>
-            <li>Patea</li>
+            <li>Pātea</li>
             <li>Waverley</li>
           </ul>
           <p class="area-group__foot"><svg class="icon" aria-hidden="true"><use href="#i-pin"/></svg>Inland towns &amp; Surf Highway 45</p>
@@ -354,7 +335,7 @@
         </details>
         <details class="faq__item">
           <summary class="faq__q">Do you work in New Plymouth?<span class="faq__icon" aria-hidden="true"></span></summary>
-          <div class="faq__a"><p>We do. New Plymouth and North Taranaki are part of our patch — including Bell Block, Waitara, Oakura and Ōkato — for homeowners, landlords, builders and businesses. Call <a class="link" href="tel:+6467658423">06 765 8423</a> or <a class="link" href="contact.html#quote">send a quote request</a> and we'll book a time that suits.</p></div>
+          <div class="faq__a"><p>We do. New Plymouth and North Taranaki are part of our patch — including Bell Block, Waitara, Ōākura and Ōkato — for homeowners, landlords, builders and businesses. Call <a class="link" href="tel:+6467658423">06 765 8423</a> or <a class="link" href="contact.html#quote">send a quote request</a> and we'll book a time that suits.</p></div>
         </details>
       </div>
     </div>

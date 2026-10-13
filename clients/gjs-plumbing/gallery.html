@@ -20,18 +20,6 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&amp;family=Inter:wght@400;500;600;700&amp;display=swap">
   <link rel="stylesheet" href="styles.css">
-  <style>
-    /* PAGE-SPECIFIC: consolidate into styles.css */
-    html:not(.js) .gallery-filter { display: none; }
-    .gallery-filter { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; margin-bottom: var(--sp-4); }
-    .gallery-filter__count { margin-left: auto; font-size: var(--fs-xs); color: var(--c-muted); }
-    @media (max-width: 599px) { .gallery-filter__count { flex-basis: 100%; margin-left: 0; } }
-    .gallery-cta { flex-wrap: wrap; align-items: center; margin-top: var(--sp-6); }
-    .gallery-cta > div { flex: 1 1 320px; }
-    .gallery-cta .callout__title { font-family: var(--font-display); font-size: var(--fs-h3); text-transform: uppercase; }
-    .gallery-cta .btn-row { flex: 0 1 auto; }
-    @media (max-width: 599px) { .gallery-cta { flex-direction: column; align-items: flex-start; } .gallery-cta > div { flex-basis: auto; } .gallery-cta .btn-row, .gallery-cta .btn { width: 100%; } }
-  </style>
   <script>document.documentElement.classList.add('js');</script>
   <script src="main.js" defer></script>
 </head>

@@ -20,17 +20,6 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&amp;family=Inter:wght@400;500;600;700&amp;display=swap">
   <link rel="stylesheet" href="styles.css">
-  <style>
-    /* PAGE-SPECIFIC: consolidate into styles.css */
-    .contact-layout { display: grid; grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); gap: clamp(24px, 1rem + 2vw, 48px); align-items: start; }
-    @media (max-width: 1023px) { .contact-layout { grid-template-columns: minmax(0, 1fr); } }
-    @media (min-width: 640px) and (max-width: 1023px) { .contact-rows { grid-template-columns: repeat(2, minmax(0, 1fr)); } .contact-rows > li:last-child:nth-child(odd) { grid-column: 1 / -1; } .contact-meta { grid-template-columns: 1fr 1fr; } }
-    .contact-card__intro { margin: -8px 0 var(--sp-3); font-size: var(--fs-sm); color: var(--c-muted); }
-    .contact-meta a { color: var(--c-heading); text-decoration: underline; text-decoration-color: var(--c-border-strong); text-underline-offset: 3px; }
-    .contact-meta a:hover { color: var(--c-accent-text); text-decoration-color: currentColor; }
-    .contact-meta__social { display: inline-flex; align-items: center; gap: 8px; }
-    .contact-meta__social .icon { width: 18px; height: 18px; color: var(--c-accent-text); }
-  </style>
   <script>document.documentElement.classList.add('js');</script>
   <script src="main.js" defer></script>
   <script type="application/ld+json">
@@ -56,7 +45,7 @@
       { "@type": "ContactPoint", "contactType": "customer service", "telephone": "+64 6 765 8423", "areaServed": "NZ" },
       { "@type": "ContactPoint", "contactType": "emergency", "telephone": "+64 6 765 8423", "areaServed": "NZ", "hoursAvailable": "Mo-Su 00:00-23:59" }
     ],
-    "areaServed": ["Stratford", "Midhurst", "Toko", "Inglewood", "Eltham", "Kaponga", "Ōpunake", "Hāwera", "Normanby", "Manaia", "New Plymouth", "Bell Block", "Waitara", "Ōkato", "Egmont Village", "Waverley", "Patea", "Taranaki"],
+    "areaServed": ["Stratford", "Midhurst", "Toko", "Inglewood", "Eltham", "Kaponga", "Ōpunake", "Hāwera", "Normanby", "Manaia", "New Plymouth", "Bell Block", "Waitara", "Ōkato", "Egmont Village", "Waverley", "Pātea", "Taranaki"],
     "memberOf": { "@type": "Organization", "name": "Master Plumbers, Gasfitters and Drainlayers NZ" },
     "sameAs": ["https://www.facebook.com/GJS.NZ.LTD/"]
   }

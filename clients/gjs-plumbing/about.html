@@ -20,20 +20,6 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&amp;family=Inter:wght@400;500;600;700&amp;display=swap">
   <link rel="stylesheet" href="styles.css">
-  <style>
-    /* PAGE-SPECIFIC: consolidate into styles.css */
-    /* Fleet photo is very wide: keep a landscape crop on small screens too */
-    @media (max-width: 899px) { .about-story .split__media .media__img { aspect-ratio: 16 / 9; } }
-    @media (max-width: 599px) {
-      .split__media .media__tag { position: static; max-width: none; margin-top: 12px; }
-    }
-    .mp-badge { width: min(100%, 260px); height: auto; margin: var(--sp-3) auto 0; }
-    .workshop-strip .section-head { margin-bottom: 0; align-items: center; }
-    @media (max-width: 1023px) {
-      .workshop-strip .section-head { flex-direction: column; align-items: flex-start; }
-      .team-grid { grid-template-columns: minmax(0, 1fr); }
-    }
-  </style>
   <script>document.documentElement.classList.add('js');</script>
   <script src="main.js" defer></script>
 </head>
