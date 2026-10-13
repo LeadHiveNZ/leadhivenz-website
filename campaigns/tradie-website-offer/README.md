@@ -75,3 +75,25 @@ Judge it on cost per lead and lead quality over 7 days / ~$140, not day by day:
 - Cost per lead under ~$25 and real businesses in the form: keep running, add a second video.
 - No leads after ~$100: check the form email arrives, then test a new first 3 seconds of video.
 - Lots of leads but junk (no real business name): add a "What trade are you?" field.
+
+## Audit 13/10/2026 (first ~36 hours, Windsor + leads table)
+
+| Metric | Value |
+|---|---|
+| Spend | $35.66 |
+| Impressions / frequency | 1,329 / ~1.2 |
+| CPM | $26.83 |
+| 3-second view rate (hook) | 28% (373 views) |
+| Link clicks / CTR | 28 / 2.1% |
+| Landing page views | 25 (89% of clicks) |
+| Leads (pixel = table = inbox) | 4 |
+| Page view → lead | 16% |
+| Cost per lead | $8.92 |
+
+- Video: 54% of 3s viewers reach 25% (6.5s), 33% reach 50% (13s). The $500 offer lands at
+  ~9.8s, so fewer than half of the people who stop hear the price.
+- Placements: Facebook Reels took 62% of spend for 1 lead; Facebook + Instagram feeds took
+  22% for 3 leads. Too few leads to cut anything; recheck at 10 leads.
+- Age: Meta credits 3 of 4 leads to 55–64s (14% of spend). Men 25–54 took 66% of spend for 1.
+- Lead mix: 1 tiler, 1 charity, 2 to qualify. No spam; every lead came from an ad click.
+- Rankings still UNKNOWN (not enough data). No edits made to the ad set.
