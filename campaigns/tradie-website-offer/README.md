@@ -132,7 +132,8 @@ Fonts (Montserrat, Barlow, SIL OFL) and Joe's headshot (frame at 23s of the vide
 
 **v2 (14/10, Joe's pick):** `static/website-offer-static-v2-1080x1350.png`, same layout with Joe's
 website photo (`static/assets/joe-site.jpg`) instead of the video frame, shown slightly larger.
-Use v2, not v1.
+**v3 (14/10, Joe's pick):** `static/website-offer-static-v3-1080x1350.png`, as v2 but the
+crossed-out "Typical agency" price is $5,000 instead of $10,000. Use v3.
 
 Plan: add it as a second ad in the existing ad set alongside the video, not as a replacement,
 and stop it after ~$40 with no leads. Not uploaded yet: Windsor lost its Meta connection on
