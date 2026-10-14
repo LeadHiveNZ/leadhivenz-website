@@ -130,6 +130,10 @@ produced 3 of the first 4 leads). Source is `static/website-offer-static-v1.html
 Fonts (Montserrat, Barlow, SIL OFL) and Joe's headshot (frame at 23s of the video) are in
 `static/assets/`. The phone shows a generic "Your Business" plumber site, no real client.
 
+**v2 (14/10, Joe's pick):** `static/website-offer-static-v2-1080x1350.png`, same layout with Joe's
+website photo (`static/assets/joe-site.jpg`) instead of the video frame, shown slightly larger.
+Use v2, not v1.
+
 Plan: add it as a second ad in the existing ad set alongside the video, not as a replacement,
 and stop it after ~$40 with no leads. Not uploaded yet: Windsor lost its Meta connection on
 14/10 and needs reconnecting before ads can be added.
