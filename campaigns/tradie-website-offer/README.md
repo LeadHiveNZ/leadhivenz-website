@@ -154,3 +154,21 @@ and stop it after ~$40 with no leads. Not uploaded yet: Windsor lost its Meta co
   description "Free demo in 24 hours. Pay after you see it.", button Get offer.
 - Blocked until Lovable credits are topped up: southmaintenance.co.nz proof link on /website, and
   the /website page still says "For NZ tradies" to Australian visitors.
+
+### Update 15/10/2026 (NZT)
+
+- Lovable credits topped up. Live on leadhivenz.com: southmaintenance.co.nz proof link under the
+  /website price cards (fires custom pixel event `WebsiteExampleClick`), new `/privacy` page
+  (also in the site footer and sitemap; needed for Meta instant forms), and both graphics hosted
+  at `/ads/website-offer-static-v3-nz.png` and `/ads/website-offer-static-v3-au.png`
+  (byte-identical to the repo files). Joe asked to keep Lovable credit use to a minimum.
+- NZ: ad **Website offer static v3 NZ** (`120256505927950460`) created active in the NZ ad set,
+  alongside the video. Links straight to leadhivenz.com (no .co redirect).
+- AU: Joe wants a Meta instant form (least friction; he calls from an AU number), not the website.
+  New ad set **AU Tradies - Instant Form** (`120256505853880460`, ON_AD, LEAD_GENERATION, page
+  promoted object, all of AU, 25–65, $20/day, paused). The earlier website ad set was renamed
+  **AU Tradies - Website (unused, paused)**. Windsor cannot create instant forms, so Joe builds
+  the form in Meta (spec in chat: "More volume", prefilled name/phone/email/city + "What's your
+  business name?", privacy URL leadhivenz.com/privacy) and sends the form ID; then the AU ad is
+  created with the AU graphic and switched on.
+- Instant-form leads land in Meta Leads Center, not the inbox. Joe to enable lead notifications.
