@@ -1,0 +1,131 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+@font-face { font-family: "Montserrat"; font-weight: 800; src: url(assets/montserrat-latin-800-normal.woff2); }
+@font-face { font-family: "Montserrat"; font-weight: 900; src: url(assets/montserrat-latin-900-normal.woff2); }
+@font-face { font-family: "Barlow"; font-weight: 500; src: url(assets/barlow-latin-500-normal.woff2); }
+@font-face { font-family: "Barlow"; font-weight: 600; src: url(assets/barlow-latin-600-normal.woff2); }
+@font-face { font-family: "Barlow"; font-weight: 700; src: url(assets/barlow-latin-700-normal.woff2); }
+
+:root { --navy: #0A1628; --navy2: #12223D; --gold: #F5A623; --white: #FFFFFF; --muted: #B6C2D4; --red: #FF6B5E; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1080px; height: 1350px; overflow: hidden; }
+body {
+  position: relative; background: var(--navy); color: var(--white); font-family: "Barlow", sans-serif;
+  background-image:
+    radial-gradient(900px 700px at 85% 70%, rgba(245,166,35,.16), transparent 60%),
+    radial-gradient(700px 600px at 0% 0%, rgba(0,119,192,.18), transparent 60%);
+}
+
+/* top bar */
+.top { position: absolute; left: 72px; right: 72px; top: 64px; display: flex; justify-content: space-between; align-items: center; }
+.mark { font-family: "Montserrat"; font-weight: 900; font-size: 38px; letter-spacing: .5px; }
+.mark b { color: var(--gold); font-weight: 900; }
+.pill { font-family: "Barlow"; font-weight: 700; font-size: 26px; letter-spacing: 3px; text-transform: uppercase; color: var(--gold); border: 2px solid var(--gold); border-radius: 999px; padding: 10px 24px; }
+
+/* headline */
+.h1 { position: absolute; left: 72px; top: 164px; font-family: "Montserrat"; font-weight: 900; font-size: 92px; line-height: 1.0; letter-spacing: -1px; }
+
+/* price block */
+.was { position: absolute; left: 72px; top: 300px; font-family: "Barlow"; font-weight: 600; font-size: 30px; color: var(--muted); }
+.was span { position: relative; display: inline-block; font-family: "Montserrat"; font-weight: 800; font-size: 64px; color: var(--muted); margin-left: 6px; vertical-align: -6px; }
+.was span::after { content: ""; position: absolute; left: -6px; right: -6px; top: 52%; height: 8px; background: var(--red); border-radius: 4px; transform: rotate(-8deg); }
+.now { position: absolute; left: 62px; top: 384px; font-family: "Montserrat"; font-weight: 900; font-size: 196px; line-height: 1; color: var(--gold); letter-spacing: -5px; }
+.pay { position: absolute; left: 72px; top: 618px; font-family: "Montserrat"; font-weight: 800; font-size: 50px; line-height: 1.12; }
+
+/* checklist */
+.list { position: absolute; left: 72px; top: 770px; list-style: none; }
+.list li { display: flex; align-items: center; gap: 18px; font-family: "Barlow"; font-weight: 600; font-size: 38px; margin-bottom: 22px; }
+.tick { width: 44px; height: 44px; border-radius: 50%; background: var(--gold); display: grid; place-items: center; flex: none; }
+.tick svg { width: 26px; height: 26px; }
+
+/* CTA + Joe */
+.cta { position: absolute; left: 72px; top: 1012px; background: var(--gold); color: var(--navy); font-family: "Montserrat"; font-weight: 900; font-size: 38px; padding: 28px 40px; border-radius: 14px; box-shadow: 0 14px 40px rgba(245,166,35,.35); }
+.joe { position: absolute; left: 72px; top: 1168px; display: flex; align-items: center; gap: 20px; }
+.joe img { width: 104px; height: 104px; border-radius: 50%; border: 4px solid var(--gold); object-fit: cover; }
+.joe p { font-family: "Barlow"; font-weight: 700; font-size: 32px; line-height: 1.2; }
+.joe p span { display: block; font-weight: 500; color: var(--muted); font-size: 28px; }
+
+/* phone */
+.phone { position: absolute; left: 668px; top: 318px; width: 400px; height: 860px; border-radius: 60px; background: #05080F; padding: 15px; transform: rotate(3deg); box-shadow: 0 40px 90px rgba(0,0,0,.55), 0 0 0 3px #26324A inset; }
+.screen { width: 100%; height: 100%; border-radius: 50px; overflow: hidden; background: #F5F7FA; position: relative; color: #0F1A2E; }
+.notch { position: absolute; top: 14px; left: 50%; transform: translateX(-50%); width: 130px; height: 34px; background: #05080F; border-radius: 20px; z-index: 3; }
+.status { height: 62px; background: #0F1A2E; }
+.nav { display: flex; align-items: center; justify-content: space-between; padding: 14px 20px; background: #0F1A2E; color: #fff; }
+.logo { display: flex; align-items: center; gap: 10px; font-family: "Montserrat"; font-weight: 800; font-size: 19px; }
+.logo i { width: 34px; height: 34px; border-radius: 8px; background: #0077C0; display: grid; place-items: center; font-style: normal; font-size: 15px; font-weight: 900; }
+.callbtn { background: var(--gold); color: #0F1A2E; font-family: "Barlow"; font-weight: 700; font-size: 16px; padding: 8px 14px; border-radius: 8px; }
+.hero { padding: 30px 22px 28px; color: #fff; background: linear-gradient(160deg, #0077C0 0%, #0F1A2E 100%); }
+.hero h3 { font-family: "Montserrat"; font-weight: 900; font-size: 34px; line-height: 1.08; margin-bottom: 12px; }
+.hero p { font-family: "Barlow"; font-weight: 500; font-size: 19px; color: #D9E4F2; margin-bottom: 20px; }
+.hbtn { display: flex; align-items: center; gap: 10px; background: var(--gold); color: #0F1A2E; font-family: "Barlow"; font-weight: 700; font-size: 21px; padding: 14px 18px; border-radius: 10px; width: fit-content; }
+.hbtn svg { width: 20px; height: 20px; }
+.reviews { display: flex; align-items: center; gap: 10px; padding: 16px 22px; background: #fff; border-bottom: 1px solid #E3E8EF; font-family: "Barlow"; font-weight: 700; font-size: 18px; }
+.stars { color: #F5A623; font-size: 22px; letter-spacing: 2px; }
+.cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; padding: 18px; }
+.card { background: #fff; border-radius: 12px; padding: 16px 14px; box-shadow: 0 2px 8px rgba(15,26,46,.08); font-family: "Barlow"; font-weight: 700; font-size: 18px; }
+.card b { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 9px; background: #E6F1FA; margin-bottom: 10px; }
+.card b svg { width: 22px; height: 22px; }
+.quote { margin: 4px 18px; background: #fff; border-radius: 12px; padding: 16px; font-family: "Barlow"; font-weight: 500; font-size: 17px; color: #334155; box-shadow: 0 2px 8px rgba(15,26,46,.08); }
+.fld { display: block; height: 30px; border-radius: 7px; background: #EEF2F7; border: 1px solid #DCE3EC; margin-top: 8px; }
+.quote strong { display: block; margin-top: 8px; color: #0F1A2E; font-weight: 700; }
+
+/* sticker on phone */
+.sticker { position: absolute; left: 818px; top: 262px; background: var(--white); color: var(--navy); font-family: "Montserrat"; font-weight: 900; font-size: 30px; line-height: 1.05; text-align: center; padding: 18px 22px; border-radius: 16px; transform: rotate(7deg); box-shadow: 0 16px 40px rgba(0,0,0,.4); z-index: 5; }
+.sticker small { display: block; font-family: "Barlow"; font-weight: 700; font-size: 20px; color: #0077C0; letter-spacing: 1px; margin-top: 4px; }
+</style>
+</head>
+<body>
+  <div class="top">
+    <div class="mark">LEAD<b>HIVE</b> NZ</div>
+    <div class="pill">For NZ tradies</div>
+  </div>
+
+  <div class="h1">Your website.</div>
+
+  <div class="was">Typical agency <span>$10,000</span></div>
+  <div class="now">$500</div>
+  <div class="pay">Pay after<br>you see it.</div>
+
+  <ul class="list">
+    <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="#0A1628" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>Free live demo in 24 hours</li>
+    <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="#0A1628" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>Shows up on Google</li>
+    <li><span class="tick"><svg viewBox="0 0 24 24" fill="none" stroke="#0A1628" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>Made for your business</li>
+  </ul>
+
+  <div class="cta">Get my free demo &rarr;</div>
+
+  <div class="joe">
+    <img src="assets/joe.jpg" alt="">
+    <p>Joe Ingram<span>Founder, LeadHive NZ</span></p>
+  </div>
+
+  <div class="sticker">YOUR SITE<br>HERE<small>LIVE DEMO</small></div>
+
+  <div class="phone">
+    <div class="screen">
+      <div class="notch"></div>
+      <div class="status"></div>
+      <div class="nav">
+        <div class="logo"><i>YB</i>Your Business</div>
+        <div class="callbtn">Call now</div>
+      </div>
+      <div class="hero">
+        <h3>Local plumber you can count on</h3>
+        <p>Fast quotes. Tidy work. Right here in your town.</p>
+        <div class="hbtn"><svg viewBox="0 0 24 24" fill="#0F1A2E"><path d="M6.6 10.8a15.1 15.1 0 006.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.1.4 2.3.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1A17 17 0 013 4c0-.6.4-1 1-1h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.3 0 .7-.2 1l-2.3 2.2z"/></svg>Call 021 000 0000</div>
+      </div>
+      <div class="reviews"><span class="stars">&#9733;&#9733;&#9733;&#9733;&#9733;</span> Your Google reviews</div>
+      <div class="cards">
+        <div class="card"><b><svg viewBox="0 0 24 24" fill="none" stroke="#0077C0" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h16M6 8v4a6 6 0 0012 0V8M12 18v3"/></svg></b>Blocked drains</div>
+        <div class="card"><b><svg viewBox="0 0 24 24" fill="none" stroke="#0077C0" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c3 4 6 6.5 6 10a6 6 0 01-12 0c0-2 1-3.5 2-4.5 0 2 1 3 2 3 0-3 1-6 2-8.5z"/></svg></b>Hot water</div>
+        <div class="card"><b><svg viewBox="0 0 24 24" fill="none" stroke="#0077C0" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3s6 6.5 6 11a6 6 0 01-12 0c0-4.5 6-11 6-11z"/></svg></b>Leak repairs</div>
+        <div class="card"><b><svg viewBox="0 0 24 24" fill="none" stroke="#0077C0" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18v2a5 5 0 01-5 5H8a5 5 0 01-5-5v-2zM6 12V6a2 2 0 014 0M7 19l-1 2M17 19l1 2"/></svg></b>Bathrooms</div>
+      </div>
+      <div class="quote"><strong style="margin:0 0 10px">Get a free quote</strong><span class="fld"></span><span class="fld"></span></div>
+    </div>
+  </div>
+</body>
+</html>

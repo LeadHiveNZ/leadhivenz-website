@@ -121,3 +121,15 @@ lead. Count step-1-only people Joe reaches by phone as leads too.
 |---|---|---|
 | 12/10/2026 | $20 | Launch |
 | 13/10/2026 7:30pm | $25 | Joe's call after 4 leads at ~$9.65. Next step ~$30 in 2–3 days if cost per lead stays under ~$15 and at least one lead has paid. |
+
+## Static graphic v1 (14/10/2026)
+
+`static/website-offer-static-v1-1080x1350.png` (4:5, built for Facebook + Instagram feeds, which
+produced 3 of the first 4 leads). Source is `static/website-offer-static-v1.html`; re-render with
+`node static/render.js static/website-offer-static-v1.html out.png 1080 1350` (needs Playwright).
+Fonts (Montserrat, Barlow, SIL OFL) and Joe's headshot (frame at 23s of the video) are in
+`static/assets/`. The phone shows a generic "Your Business" plumber site, no real client.
+
+Plan: add it as a second ad in the existing ad set alongside the video, not as a replacement,
+and stop it after ~$40 with no leads. Not uploaded yet: Windsor lost its Meta connection on
+14/10 and needs reconnecting before ads can be added.
