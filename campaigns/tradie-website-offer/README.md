@@ -138,3 +138,19 @@ crossed-out "Typical agency" price is $5,000 instead of $10,000. Use v3.
 Plan: add it as a second ad in the existing ad set alongside the video, not as a replacement,
 and stop it after ~$40 with no leads. Not uploaded yet: Windsor lost its Meta connection on
 14/10 and needs reconnecting before ads can be added.
+
+## Australia + NZ static ads (14/10/2026)
+
+- `static/website-offer-static-v3-NZ-1080x1350.png` ("For NZ tradies", NZ mobile in mockup) and
+  `static/website-offer-static-v3-AU-1080x1350.png` ("For Aussie tradies", wordmark "LEADHIVE",
+  "Founder, LeadHive", AU mobile in mockup). Source HTML alongside each.
+- New campaign **Tradie Website $500 - AU** (`120256505428790460`), ad set
+  **AU Tradies - Website Demo Lead** (`120256505429230460`): all of Australia, 25–65, home + recent,
+  Advantage+ audience, Facebook + Instagram, $20/day (account currency NZD), optimising for `LEAD`
+  on pixel `2212898842912576`. Created paused; switched on once the AU ad exists.
+- NZ graphic goes into the existing NZ ad set next to the video.
+- Static ad copy (both countries): "Tradies, how much did your website cost you? Most agencies
+  charge $5,000 or more. I'll build yours for $500…", headline "Your Website for $500",
+  description "Free demo in 24 hours. Pay after you see it.", button Get offer.
+- Blocked until Lovable credits are topped up: southmaintenance.co.nz proof link on /website, and
+  the /website page still says "For NZ tradies" to Australian visitors.
