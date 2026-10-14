@@ -1,0 +1,8 @@
+# DOMAIN PLACEHOLDER: update the Sitemap URL when the real domain is confirmed.
+User-agent: *
+Disallow: /thanks/
+Disallow: /PAGE-TEMPLATE.html
+Disallow: /COMPONENTS.html
+Disallow: /CONVENTIONS.md
+
+Sitemap: https://centralspouting.co.nz/sitemap.xml

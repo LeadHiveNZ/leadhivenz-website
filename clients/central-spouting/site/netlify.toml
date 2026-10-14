@@ -1,0 +1,46 @@
+# Central Spouting Ltd — Netlify config. Drag-and-drop deploy: the site root is this folder.
+[build]
+  publish = "."
+
+# ---------- Security headers (all routes) ----------
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()"
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains"
+    Cross-Origin-Opener-Policy = "same-origin"
+    # No inline scripts are used (JSON-LD is data, not script). Inline style attributes are used for CSS variables.
+    Content-Security-Policy = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'self'; object-src 'none'; upgrade-insecure-requests"
+
+# ---------- Caching ----------
+# File names are not fingerprinted, so CSS/JS are cached for a day and revalidated in the background.
+[[headers]]
+  for = "/css/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400, stale-while-revalidate=604800"
+[[headers]]
+  for = "/js/*"
+  [headers.values]
+    Cache-Control = "public, max-age=86400, stale-while-revalidate=604800"
+[[headers]]
+  for = "/images/*"
+  [headers.values]
+    Cache-Control = "public, max-age=2592000, stale-while-revalidate=604800"
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=2592000, stale-while-revalidate=604800"
+[[headers]]
+  for = "/favicon.svg"
+  [headers.values]
+    Cache-Control = "public, max-age=2592000"
+
+# ---------- 404 ----------
+# Netlify serves /404.html automatically; this rule makes it explicit. Real files always win (not forced).
+[[redirects]]
+  from = "/*"
+  to = "/404.html"
+  status = 404

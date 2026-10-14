@@ -1,0 +1,33 @@
+# Central Spouting Ltd — redirects (processed before netlify.toml rules)
+
+# Internal build files: never public
+/CONVENTIONS.md        /404.html   404!
+/PAGE-TEMPLATE.html    /404.html   404!
+/COMPONENTS.html       /404.html   404!
+/images/README.md      /404.html   404!
+
+# Short, memorable URLs (handy for print, vans and Facebook)
+/quote                 /contact/#quote   301
+/facebook              https://www.facebook.com/profile.php?id=61571118375658  302
+
+# Likely guesses → the right page
+/spouting              /services/spouting-replacement/   301
+/guttering             /services/                        301
+/gutters               /services/                        301
+/continuous-spouting   /services/new-spouting-fascia/    301
+/services/continuous-spouting/  /services/new-spouting-fascia/  301
+/services/spouting-installation/  /services/spouting-replacement/  301
+/services/gutter-guard/  /services/gutter-cleaning/  301
+
+# Town names → the region page that covers them
+/areas/feilding/       /areas/manawatu/        301
+/areas/levin/          /areas/manawatu/        301
+/areas/ashhurst/       /areas/manawatu/        301
+/areas/foxton/         /areas/manawatu/        301
+/areas/marton/         /areas/rangitikei/      301
+/areas/bulls/          /areas/rangitikei/      301
+/areas/taihape/        /areas/rangitikei/      301
+/areas/hawera/         /areas/south-taranaki/  301
+/areas/patea/          /areas/south-taranaki/  301
+/areas/new-plymouth/   /areas/south-taranaki/  301
+/areas/wanganui/       /areas/whanganui/       301

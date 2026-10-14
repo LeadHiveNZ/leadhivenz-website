@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#F6F4EF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 140 110"><g opacity=".5">
+<rect class="ill-fine" x="8" y="10" width="14" height="74" opacity=".55"/>
+<path class="ill-fine" opacity=".35" d="M11 20v54M17 26v44" stroke-dasharray="2 6"/>
+<path class="ill-accent" style="stroke:#C8A24A" stroke-width="2" d="M22 16V80H110V24H104V30"/>
+<path class="ill-accent" style="stroke:#C8A24A" stroke-width="1.25" opacity=".6" d="M110 24 116 20"/>
+<path class="ill-water" style="stroke:#C8A24A" opacity=".45" d="M26 58H106" stroke-dasharray="4 4"/>
+<path class="ill-dim" opacity=".45" d="M22 96H110M22 92v8M110 92v8"/>
+</g></svg>

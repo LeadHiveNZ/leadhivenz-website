@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 140 110" class="ill ill-profile" role="img" aria-labelledby="pf-qr-t"><title id="pf-qr-t">Quarter round spouting profile</title>
+<rect class="ill-fine" x="8" y="10" width="14" height="74" opacity=".55"/>
+<path class="ill-fine" opacity=".35" d="M11 20v54M17 26v44" stroke-dasharray="2 6"/>
+<path class="ill-accent" style="stroke:var(--ill-accent,currentColor)" stroke-width="2" d="M22 18V78H62A50 50 0 0 0 112 28V24"/>
+<circle class="ill-accent" style="stroke:var(--ill-accent,currentColor)" cx="112" cy="20.5" r="3" stroke-width="1.6"/>
+<path class="ill-water" style="stroke:var(--ill-accent,currentColor)" opacity=".45" d="M26 58H100" stroke-dasharray="4 4"/>
+<path class="ill-dim" opacity=".45" d="M22 96H115M22 92v8M115 92v8"/>
+</svg>

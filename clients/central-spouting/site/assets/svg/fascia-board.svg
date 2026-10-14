@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 320 200" class="ill ill-fascia" role="img" aria-labelledby="ill-fa-t"><title id="ill-fa-t">Fascia board fixed across rafter ends</title>
+<path class="ill-fine" opacity=".6" d="M56 40L96 20V64L56 84ZM136 40L176 20V64L136 84ZM216 40L256 20V64L216 84Z"/>
+<path class="ill-fine" opacity=".6" d="M96 20H118M176 20H198M256 20H278"/>
+<path class="ill-line" d="M20 96L300 56V112L20 152Z"/>
+<path class="ill-line" d="M20 96L36 88L310 50L300 56"/>
+<path class="ill-line" d="M300 56L310 50V106L300 112"/>
+<path class="ill-fine" opacity=".4" d="M40 110L280 76M40 126L250 96M60 138L290 105" stroke-dasharray="3 9"/>
+<path class="ill-accent" style="stroke:var(--ill-accent,currentColor)" stroke-width="2" d="M16 150L304 110M16 150V162L304 122V110"/>
+<circle class="ill-fine" cx="76" cy="118" r="2"/><circle class="ill-fine" cx="156" cy="107" r="2"/><circle class="ill-fine" cx="236" cy="96" r="2"/>
+<path class="ill-dim" opacity=".45" d="M20 172L300 132M20 166V178M300 126V138"/>
+</svg>
