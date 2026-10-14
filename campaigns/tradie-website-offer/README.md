@@ -172,3 +172,17 @@ and stop it after ~$40 with no leads. Not uploaded yet: Windsor lost its Meta co
   business name?", privacy URL leadhivenz.com/privacy) and sends the form ID; then the AU ad is
   created with the AU graphic and switched on.
 - Instant-form leads land in Meta Leads Center, not the inbox. Joe to enable lead notifications.
+
+### Live setup 15/10/2026 (Joe: both graphics to the website offer, both $20/day)
+
+| Country | Campaign | Ad set | Budget | Ads (all link to leadhivenz.com/website) |
+|---|---|---|---|---|
+| NZ | Tradie Website $500 - NZ (`120256460133070460`) | NZ Tradies - Website Demo Lead (`120256460133520460`) | $20/day (cut from $25) | Video v1 (`120256460158410460`), static v3 NZ (`120256505927950460`) |
+| AU | Tradie Website $500 - AU (`120256505428790460`) | AU Tradies - Website Demo Lead (`120256505429230460`) | $20/day | static v3 AU (`120256506045560460`) |
+
+- Instant form route dropped for now; **AU Tradies - Instant Form (unused, paused)**
+  (`120256505853880460`) left paused with no ads.
+- AU links carry `utm_campaign=tradie-website-500-au&utm_content=static-v3-au`, so AU leads are
+  identifiable in `website_demo_enquiries`.
+- Known gap: /website still says "For NZ tradies" and uses Tauranga as the placeholder, which
+  Australian visitors will see.
