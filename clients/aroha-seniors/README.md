@@ -46,7 +46,6 @@ Photos Amelia sent on 12/10/2026 (her feedback round):
 | File                  | Photo                                  | Used on                                   |
 |-----------------------|----------------------------------------|-------------------------------------------|
 | `group.jpg`           | Whole group in red and black ponchos   | Home "Who we are"; About gallery          |
-| `mow.jpg`, `meals.jpg`| Two members with a cuppa and kai       | Home Meals on Wheels band; What we do, Meals on Wheels |
 | `g-sheepworld.jpg`    | Two members at Sheepworld              | About gallery                             |
 | `g-street.jpg`        | Same photo, wide                       | About gallery                             |
 | `involved.jpg`, `g-music.jpg` | Members laughing outside Bunnings (cropped to leave out a hazard sign) | Get involved header; About gallery |
@@ -61,14 +60,23 @@ Second batch from Amelia (12/10/2026):
 | `wellbeing.jpg`       | Member in a wheelchair on a garden path (collage) | What we do, Disability & wellbeing |
 | `g-bowls.jpg`, `g-booth.jpg`, `g-selfie.jpg`, `g-group2.jpg` | The other four collage photos | About gallery |
 
-A headshot (woman in a red and black top) also came through but it's not clear who it is, so it
-isn't used yet. Once Amelia confirms, save it as `amelia.jpg` or `korina.jpg` (square) and rebuild:
-it replaces the initials on that person's card.
+A headshot (woman in a red and black top) also came through. It turned out to be Korina (see below).
+
+Korina Grace's promo graphic from the trust (14/10/2026). Joe asked for her photo in the Meals on
+Wheels section in place of the cuppa photo, which is no longer on the site:
+
+| File                  | Photo                                  | Used on                                   |
+|-----------------------|----------------------------------------|-------------------------------------------|
+| `mow.jpg`, `meals.jpg`| Korina, cut from the left of the graphic (logo, text and "Made with AI" tag left out) | Home Meals on Wheels band; What we do, Meals on Wheels |
+| `korina.jpg`          | Same photo, square head and shoulders  | About, Korina's card (replaces her initials) |
+
+Her graphic gives her title as "Kai Services Manager". The site uses "Kai Manager", from Amelia's
+email. Change `kai_role` in `build.py` (and the "our Kai Manager" wording in the pages) if they prefer the longer title.
 
 **More photos:** save JPGs in `site/assets/img/` with these names and run `python3 build.py`.
 Each one replaces the illustration in its slot. Shape is portrait 4:5; on phones they crop to
 landscape, so keep faces near the centre.
-Still open: `digital.jpg`, `advice.jpg`, `amelia.jpg` and `korina.jpg` (square).
+Still open: `digital.jpg`, `advice.jpg` and `amelia.jpg` (square).
 
 ## Built for older readers
 

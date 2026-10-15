@@ -215,7 +215,7 @@ h1 em,h2 em{font-style:italic;font-weight:500;color:var(--leaf);letter-spacing:-
 /* ---------- MEALS ON WHEELS ---------- */
 .mow{background:var(--green);color:var(--cream);border-radius:var(--r-xl);display:grid;grid-template-columns:.95fr 1.05fr;overflow:hidden}
 .mow-photo{margin:0;position:relative;min-height:340px}
-.mow-photo img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.mow-photo img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:45% 12%}
 .mow-body{padding:clamp(2rem,5vw,3.5rem)}
 .mow h2{color:#fff;font-size:clamp(2rem,4vw,3rem);margin-bottom:1rem}
 .mow p{color:rgba(248,246,238,.92);font-size:1.12rem;margin:0}
@@ -384,6 +384,7 @@ a.card:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg);border-color
 .prog-art::after{content:"";position:absolute;left:50%;top:50%;width:62%;aspect-ratio:1;border-radius:50%;background:rgba(255,255,255,.12);transform:translate(-50%,-50%)}
 .prog-art .ic{width:34%;height:auto;color:#fff;stroke-width:1.1;position:relative;z-index:1}
 .prog-art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 28%;z-index:2}
+#meals .prog-art img{object-position:45% 34%}
 .prog .num{font-family:var(--serif);font-size:1.1rem;color:var(--gold-ink);font-weight:600;letter-spacing:.04em;display:block;margin-bottom:.6rem}
 .prog h2{font-size:clamp(1.9rem,3.4vw,2.7rem);margin-bottom:1rem}
 .prog p{color:var(--ink-2);font-size:1.1rem}
