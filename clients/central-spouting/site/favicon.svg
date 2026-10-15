@@ -3,6 +3,6 @@
   <g fill="none" stroke-linecap="round" stroke-linejoin="round" transform="translate(6 7) scale(1.6)">
     <path d="M5 9V22H14A13 13 0 0 0 27 9" stroke="#F6F4EF" stroke-width="2.4"/>
     <circle cx="27" cy="6.5" r="1.6" stroke="#F6F4EF" stroke-width="1.8"/>
-    <path d="M14 4.5C14 4.5 16.5 7.4 16.5 9.2A2.5 2.5 0 0 1 11.5 9.2C11.5 7.4 14 4.5 14 4.5Z" stroke="#C8A24A" stroke-width="1.9"/>
+    <path d="M14 4.5C14 4.5 16.5 7.4 16.5 9.2A2.5 2.5 0 0 1 11.5 9.2C11.5 7.4 14 4.5 14 4.5Z" stroke="#3D9FE0" stroke-width="1.9"/>
   </g>
 </svg>

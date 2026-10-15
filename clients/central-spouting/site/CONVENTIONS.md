@@ -27,7 +27,7 @@ site/
   css/site.css   js/site.js   favicon.svg
   assets/svg/…               illustrations + icons (paste inline)
   assets/svg/ph/…            placeholder art used by CSS only (do not paste)
-  assets/og-image.png  assets/logo-512.png  assets/apple-touch-icon.png
+  assets/og-image.jpg  assets/logo-512.png  assets/apple-touch-icon.png
   images/…                   client photos (see images/README.md)
   netlify.toml  _redirects  robots.txt  sitemap.xml
   PAGE-TEMPLATE.html  COMPONENTS.html  CONVENTIONS.md   ← internal; 404'd on Netlify by _redirects
@@ -103,8 +103,14 @@ Phone links are always `href="tel:+64204709967"`, displayed as `020 470 9967`. N
 ## 4. Design tokens (use these, never raw values)
 
 - **Colours:** ironsand `--ink-900 #121416`, `--ink-800 #1F2225`, paper `--paper #F6F4EF`, stone `--paper-2 #EDEAE2`.
-  **One accent: brass `--brass #C8A24A`** (`--brass-ink #7D5F18` for text on paper). Use brass sparingly:
+  **One accent: the logo's electric blue `--blue #0078C8`**, in four tokens: `--blue` (fills: primary buttons with white text 4.65:1,
+  dots, focus rings, map pin), `--blue-hover #0068AE` (button hover, white 5.85:1), `--blue-ink #005A99` (blue text/icons on paper 6.54:1,
+  stone 5.98:1, white 7.19:1) and `--blue-lite #3D9FE0` (blue text/icons on ironsand 6.36:1, ink-800 5.51:1). For text and icons use
+  `var(--accent-text)`, which resolves to the right one for the section's theme. Use blue sparingly:
   primary buttons, eyebrow numerals, one italic `<em>` per headline, small icons. No orange, no second accent.
+- **Logo:** `/assets/logo.png` (400×169, white type + blue on transparent; cropped from `brand/logo-mark-name.png` without the
+  Dylan / phone line). Header 50px high (40px under 600px), footer 56px. Only ever on a dark background.
+  The favicon stays the SVG house mark (`favicon.svg`), recoloured blue. Client originals live in `brand/`.
 - Components read theme variables (`--bg --fg --fg-muted --line --surface --accent-text`), so they adapt to the section they sit in.
 - **Type:** display `Source Serif 4` (variable, optical sizes) for headings; `Inter` for everything else.
   Classes: `.display` (home H1 only) · `.page-hero__title` (inner H1) · `.h2` · `.h3` · `.h4` · `.lede` · `.eyebrow` · `.micro`.
@@ -158,14 +164,14 @@ Motion: add `data-reveal` to an element, or `data-reveal-stagger="90"` to a pare
 Don't use them in heroes (above the fold). Reduced-motion users see everything immediately.
 
 Icons and illustrations: paste the SVG from `assets/svg/icons/*.svg` or `assets/svg/*.svg` inline (all `currentColor`, 1.5px strokes;
-the brass highlight comes from `--ill-accent`). For a decorative copy, remove `<title>`/`role="img"` and wrap it in `aria-hidden="true"`.
+the blue highlight comes from `--ill-accent`). For a decorative copy, remove `<title>`/`role="img"` and wrap it in `aria-hidden="true"`.
 If you use the same illustration twice on a page, suffix its internal `id`s so they stay unique.
 
 ## 7. Image slots (photos that may not exist yet)
 
 ```html
 <figure class="slot" data-ph="fascia" data-label="Photo · Fascia replacement">
-  <img src="/images/services/fascia.jpg" alt="New steel fascia on a Whanganui villa" width="1600" height="1200" loading="lazy" decoding="async">
+  <img src="/images/services/fascia.jpg" alt="Grey weatherboard villa with dark grey fascia and white window trims" width="1600" height="1200" loading="lazy" decoding="async">
 </figure>
 ```
 

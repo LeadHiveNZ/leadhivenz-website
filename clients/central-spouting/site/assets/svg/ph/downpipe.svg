@@ -1,15 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" fill="none" stroke="#F6F4EF" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 220 360"><g opacity=".5">
 <path class="ill-fine" opacity=".35" d="M0 40H220M0 76H220M0 112H220M0 148H220M0 184H220M0 220H220M0 256H220M0 292H220M0 328H220"/>
 <path class="ill-line" d="M0 8H170L176 26H0"/>
-<path class="ill-accent" style="stroke:#C8A24A" stroke-width="2" d="M12 26V40H168L174 26"/>
-<path class="ill-accent" style="stroke:#C8A24A" d="M118 40V54"/>
-<path class="ill-accent" style="stroke:#C8A24A" stroke-width="2" d="M96 54H156L148 104L136 116H116L104 104Z"/>
-<path class="ill-accent" style="stroke:#C8A24A" opacity=".55" d="M100 64H152"/>
-<path class="ill-accent" style="stroke:#C8A24A" stroke-width="2" d="M116 116V300M136 116V300"/>
+<path class="ill-accent" style="stroke:#3D9FE0" stroke-width="2" d="M12 26V40H168L174 26"/>
+<path class="ill-accent" style="stroke:#3D9FE0" d="M118 40V54"/>
+<path class="ill-accent" style="stroke:#3D9FE0" stroke-width="2" d="M96 54H156L148 104L136 116H116L104 104Z"/>
+<path class="ill-accent" style="stroke:#3D9FE0" opacity=".55" d="M100 64H152"/>
+<path class="ill-accent" style="stroke:#3D9FE0" stroke-width="2" d="M116 116V300M136 116V300"/>
 <path class="ill-line" d="M112 150H140V160H112ZM112 230H140V240H112Z"/>
 <path class="ill-fine" d="M106 155H112M140 155H146M106 235H112M140 235H146"/>
-<path class="ill-accent" style="stroke:#C8A24A" stroke-width="2" d="M116 300C116 318 104 326 88 328H76M136 300C136 330 116 344 88 344H76"/>
+<path class="ill-accent" style="stroke:#3D9FE0" stroke-width="2" d="M116 300C116 318 104 326 88 328H76M136 300C136 330 116 344 88 344H76"/>
 <path class="ill-line" d="M40 336H80V356H40Z"/>
 <path class="ill-fine" opacity=".6" d="M44 344H76M44 350H76" stroke-dasharray="2 4"/>
-<path class="ill-water" style="stroke:#C8A24A" opacity=".6" d="M126 70V96M126 128V146M126 170V200" stroke-dasharray="2 6"/>
+<path class="ill-water" style="stroke:#3D9FE0" opacity=".6" d="M126 70V96M126 128V146M126 170V200" stroke-dasharray="2 6"/>
 </g></svg>

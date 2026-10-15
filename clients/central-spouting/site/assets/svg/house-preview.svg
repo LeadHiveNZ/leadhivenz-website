@@ -10,7 +10,7 @@
 <rect x="34" y="132" width="412" height="22" fill="url(#hp-soffit)"/>
 <rect x="82" y="166" width="96" height="70" fill="#1d2124"/><rect x="82" y="166" width="96" height="70" fill="none" stroke="#F6F4EF" stroke-width="5"/><path d="M130 166V236" stroke="#F6F4EF" stroke-width="4"/><path d="M90 176 l26 0" stroke="#fff" stroke-opacity=".18" stroke-width="6"/>
 <rect x="300" y="166" width="96" height="70" fill="#1d2124"/><rect x="300" y="166" width="96" height="70" fill="none" stroke="#F6F4EF" stroke-width="5"/><path d="M348 166V236" stroke="#F6F4EF" stroke-width="4"/><path d="M308 176 l26 0" stroke="#fff" stroke-opacity=".18" stroke-width="6"/>
-<rect x="214" y="170" width="52" height="110" fill="#3B4045"/><rect x="214" y="170" width="52" height="110" fill="none" stroke="#F6F4EF" stroke-width="4"/><circle cx="256" cy="228" r="2.5" fill="#C8A24A"/>
+<rect x="214" y="170" width="52" height="110" fill="#3B4045"/><rect x="214" y="170" width="52" height="110" fill="none" stroke="#F6F4EF" stroke-width="4"/><circle cx="256" cy="228" r="2.5" fill="#3D9FE0"/>
 <rect x="26" y="118" width="428" height="16" style="fill:var(--swatch,#413E3A)"/>
 <rect x="26" y="118" width="428" height="16" fill="#000" fill-opacity=".18"/>
 <rect class="hp-gutter" x="20" y="114" width="440" height="17" rx="3" style="fill:var(--swatch,#413E3A)"/>

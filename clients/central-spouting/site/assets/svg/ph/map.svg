@@ -32,7 +32,7 @@
 <g class="map-pin" data-town="hawera"><circle cx="96.4" cy="150.1" r="4" fill="#F6F4EF" stroke="none"/></g>
 <g class="map-pin" data-town="patea"><circle cx="124.3" cy="181.8" r="3" fill="#F6F4EF" stroke="none"/></g>
 <g class="map-pin" data-town="waverley"><circle cx="146.8" cy="183" r="3" fill="#F6F4EF" stroke="none"/></g>
-<g class="map-pin map-pin--home" data-town="whanganui"><circle class="map-pulse" cx="207.8" cy="214.7" r="14" style="stroke:#C8A24A" opacity=".35"/><circle cx="207.8" cy="214.7" r="6.5" fill="#C8A24A" stroke="none" style="fill:#C8A24A"/></g>
+<g class="map-pin map-pin--home" data-town="whanganui"><circle class="map-pulse" cx="207.8" cy="214.7" r="14" style="stroke:#3D9FE0" opacity=".35"/><circle cx="207.8" cy="214.7" r="6.5" fill="#3D9FE0" stroke="none" style="fill:#3D9FE0"/></g>
 <g class="map-pin" data-town="taihape"><circle cx="316.1" cy="166.6" r="4" fill="#F6F4EF" stroke="none"/></g>
 <g class="map-pin" data-town="hunterville"><circle cx="283.4" cy="215.8" r="3" fill="#F6F4EF" stroke="none"/></g>
 <g class="map-pin" data-town="marton"><circle cx="255.8" cy="241.3" r="4" fill="#F6F4EF" stroke="none"/></g>

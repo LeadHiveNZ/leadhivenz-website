@@ -22,3 +22,20 @@ no house numbers or number plates.
 | `before-after/01-before.jpg` + `01-after.jpg` (02, 03 …) | before/after sliders | 3:2, 1800×1200, same framing |
 
 Only use photos of Central Spouting's own work. Never use stock photos or photos from other spouting companies.
+
+## Filled so far (Oct 2026)
+
+| File | Photo |
+|---|---|
+| `hero.jpg` | White rendered bungalow, new black spouting and downpipe (scaffold at right edge is cropped out in CSS) |
+| `gallery/01.jpg` = `services/spouting-replacement.jpg` | Same bungalow, wider: new black spouting, fascia and downpipe |
+| `gallery/02.jpg` = `services/fascia.jpg` | Two-storey grey weatherboard villa, dark grey fascia, bay window |
+| `gallery/03.jpg` | Brick beach house at sunset, long run of spouting along the eave |
+| `gallery/04.jpg` = `services/new-spouting-fascia.jpg` | Supplier display of spouting profiles (half round, Old Gothic, box, copper) |
+| `gallery/05.jpg` = `services/downpipes.jpg` | Close detail of the black downpipe offset and fascia on the bungalow |
+| `gallery/06.jpg` | Sunset eave line, new spouting against the sky |
+| `areas/whanganui.jpg` | Brick beach house at sunset (16:9); location to be confirmed |
+
+Still empty (placeholders show): `about-dylan.jpg`, `gallery/07.jpg`–`12.jpg`, all `before-after/` pairs,
+`services/spouting-repairs.jpg`, `services/gutter-cleaning.jpg`, and the other four `areas/` photos.
+The client's logo files are in `/brand/`; the site uses `/assets/logo.png` cropped from `brand/logo-mark-name.png`.

@@ -81,6 +81,15 @@ reasonable assumption that needs a yes from Dylan. Each one is also marked `<!--
 - Colour picker: 8 verified COLORSTEEL colours + 6 commonly listed ones (Gull Grey, Thunder Grey, Mist Green,
   Permanent Green, Pioneer Red, Scoria, marked `data-confirm`). Delete any he can't supply.
 
+**Photos and services (added Oct 2026, with the logo and first photos)**
+- Gallery captions and alt text for photos 01–06 (home teaser and `/gallery/`) describe only what is visible. Confirm the job
+  details with Dylan before adding any town or service claim. Photo 01 is captioned "New black COLORSTEEL® spouting": confirm the product.
+- `images/areas/whanganui.jpg` is the brick beach house at sunset; confirm the job is in Whanganui, or swap it for one that is.
+- `images/gallery/04.jpg` (also `services/new-spouting-fascia.jpg`) is a supplier's display stand, not a job. Fine as a
+  "profiles" shot; replace it on the new-builds page with a real new-build job when one is available.
+- "Fascia prep and paint" (sand, prime, repaint sound timber) is now listed as a fascia option (home, `/services/`,
+  `/services/fascia/`) because it is on Dylan's logo. Confirm the scope (paint system, whole runs vs touch-ups).
+
 **Travel and areas**
 - Whanganui home base; Manawatū, Rangitīkei and South Taranaki regularly; New Plymouth for larger jobs only.
   Confirm travel limits and any minimum job size (Palmerston North "about an hour", New Plymouth "about 2.5 hours").
@@ -102,7 +111,9 @@ The Stripe connector was not authorised in the build session, so the payment lin
 
 - Pure HTML/CSS/JS, no build step, no CDN scripts. Google Fonts (Source Serif 4 + Inter) via `<link>`.
   Fraunces was dropped because its Google Fonts build breaks macron vowels (Manawatū, Rangitīkei, Hāwera, Pātea).
-- Accent: brass `#C8A24A` on ironsand `#121416` / paper `#F6F4EF`. All text pairs meet WCAG AA.
+- Accent: the logo's electric blue `#0078C8` on ironsand `#121416` / paper `#F6F4EF` (replaced the original brass in Oct 2026,
+  when the client supplied the logo). Text uses `#005A99` on light and `#3D9FE0` on dark; white on `#0078C8` buttons.
+  All text pairs meet WCAG AA. Logo: `site/assets/logo.png` (from `site/brand/`); favicon is the SVG mark in blue.
 - Design rules, components and the page skeleton: `site/CONVENTIONS.md`, `site/PAGE-TEMPLATE.html`,
   `site/COMPONENTS.html` (internal; `_redirects` 404s them on Netlify and they are left out of the zip).
 - JSON-LD on every page (LocalBusiness + Breadcrumb + Service/FAQPage where relevant). No `aggregateRating`
