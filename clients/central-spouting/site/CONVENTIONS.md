@@ -66,7 +66,7 @@ The head-common block (fonts, CSS, favicon, no-JS slot fallback) is identical on
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400..700;1,8..60,400..600&amp;family=Inter:wght@400..700&amp;display=swap">
-<link rel="stylesheet" href="/css/site.css">
+<link rel="stylesheet" href="/css/site.css?v=20261015b">
 <noscript><style>.slot img{opacity:1}</style></noscript>
 ```
 

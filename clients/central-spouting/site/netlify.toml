@@ -16,15 +16,16 @@
     Content-Security-Policy = "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'self'; object-src 'none'; upgrade-insecure-requests"
 
 # ---------- Caching ----------
-# File names are not fingerprinted, so CSS/JS are cached for a day and revalidated in the background.
+# CSS and JS are not fingerprinted, so they are always revalidated (Netlify ETags make this cheap).
+# Pages reference them with a ?v= query; bump it in every HTML file when either changes.
 [[headers]]
   for = "/css/*"
   [headers.values]
-    Cache-Control = "public, max-age=86400, stale-while-revalidate=604800"
+    Cache-Control = "public, max-age=0, must-revalidate"
 [[headers]]
   for = "/js/*"
   [headers.values]
-    Cache-Control = "public, max-age=86400, stale-while-revalidate=604800"
+    Cache-Control = "public, max-age=0, must-revalidate"
 [[headers]]
   for = "/images/*"
   [headers.values]
