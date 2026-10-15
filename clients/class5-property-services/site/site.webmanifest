@@ -1,0 +1,21 @@
+{
+  "name": "Class 5 Property Services",
+  "short_name": "Class 5",
+  "description": "Owner-operated property maintenance in Christchurch. TV wall mounting, plaster and GIB repairs, cabinetry, decks, fences, gates and rental property maintenance.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0B0B0D",
+  "theme_color": "#0B0B0D",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
