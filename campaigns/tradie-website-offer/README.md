@@ -186,3 +186,24 @@ and stop it after ~$40 with no leads. Not uploaded yet: Windsor lost its Meta co
   identifiable in `website_demo_enquiries`.
 - Known gap: /website still says "For NZ tradies" and uses Tauranga as the placeholder, which
   Australian visitors will see.
+
+## Audit 18/10/2026 (11–18 Oct, Windsor + leads table)
+
+| | NZ | AU |
+|---|---|---|
+| Spend | $152.80 | $37.13 (campaign now PAUSED, not by Claude) |
+| CPM | $24.20 | $57.48 |
+| Link clicks / CTR | 79 / 1.25% | 7 / 1.08% |
+| Landing page views | 60 | 5 |
+| Leads (table / pixel) | 11 / 10 | 0 |
+| Cost per lead | $13.89 | – |
+
+- All 11 NZ leads came from the video (utm_content video-v1). Meta gave the NZ static $2.15
+  (86 impressions); it is not getting delivery next to the video.
+- Page → lead: 15% before the two-step form (27 LPV → 4), 21% after (33 → 7), 26% for 14–18 Oct.
+  Every step-1 start finished step 2 (7/7); no "didn't finish" alerts fired.
+- Daily link CTR fell from 2.3% (11 Oct) to ~0.7% (16–18 Oct); frequency ~2.0 on 3,169 people.
+  Cost per lead held (~$13–14) only because the page converts better. New video needed.
+- Placements flipped vs the 13 Oct audit (Reels now best, feeds worst), so the split is noise.
+- Leads: 7 of 11 in Auckland; ~7 clear trades (tiler, painter, builder x2, property services,
+  aircon/heat pump, hardscapes), 1 charity, 3 unclear.
