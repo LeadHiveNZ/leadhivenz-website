@@ -13,9 +13,9 @@
   --paper-2:#EAE6DE;      /* alt section */
   --card:#FFFFFF;
   --stone:#CFCAC0;        /* placeholder photo tone */
-  --amber:#E89B2C;        /* single accent */
-  --amber-2:#C97F12;
-  --amber-soft:rgba(232,155,44,.14);
+  --amber:#FCB912;        /* brand yellow, sampled from the logo */
+  --amber-2:#B8860B;
+  --amber-soft:rgba(252,185,18,.16);
   --ok:#1F8A4C;
   --ok-soft:#E3F3E9;
   --radius:18px; --radius-s:12px;
@@ -69,7 +69,7 @@ p{max-width:64ch}
 .btn:active{transform:translateY(0)}
 .btn svg{width:18px;height:18px;flex:none}
 .btn-amber{background:var(--amber);color:var(--ink)}
-.btn-amber:hover{background:#F2A93A}
+.btn-amber:hover{background:#FFC63A}
 .btn-ink{background:var(--ink);color:#fff}
 .btn-ink:hover{background:#000}
 .btn-ghost{border-color:var(--ink);color:var(--ink);background:transparent}
@@ -472,3 +472,19 @@ h1+.lede,h2+.lede,h3+.lede{margin-top:16px}   /* spacing when a lede follows a h
 /* ticks: block layout so inline <b> + text flow as one line (flex split them into columns) */
 .ticks li{display:block;position:relative;padding-left:34px}
 .ticks li::before{position:absolute;left:0;top:1px}
+
+/* ---------- real brand logo ---------- */
+.brand img.logo{height:46px;width:auto;display:block}
+.ftr .brand img.logo{height:56px}
+.mnav .brand img.logo{height:40px}
+@media(max-width:480px){.brand img.logo{height:38px}}
+.logos .lg{border-style:solid;border-color:transparent;min-width:0}
+.logos .lg img{height:40px;max-width:150px;filter:none;opacity:.9}
+.logos .lg.has-img{font-size:0}
+.hero-img .badge{z-index:4}
+.logos .wrap{gap:clamp(14px,2.6vw,36px)}
+.logos .lg img{height:44px;max-width:160px}
+.logos .lg{font-size:12.5px;color:var(--ink-3)}
+.logos .wrap{gap:clamp(12px,2.2vw,30px)}
+.logos .lg img{height:38px;max-width:140px}
+.logos .lg.txt{font-size:12px;line-height:1.25;white-space:nowrap;text-align:center}

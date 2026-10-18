@@ -162,7 +162,30 @@ suburb and spec line with a real job from Adam / Facebook, then drop its photo a
 | `assets/img/contact-site-visit.jpg` | Contact hero: Adam measuring up on a quote visit |
 | `assets/img/service-area-map.jpg` | Service area map. Better: replace the `<figure>` with a Google Maps `<iframe loading="lazy">` centred on Porirua (comment in the file marks the spot) |
 
-## Blocked in this session
+## Real assets now in place (18 Oct 2026)
+
+The old site (a Duda build) was crawled from a separate session once the environment allowed the domain. Everything
+it had is in `assets/img/_from-old-site/` (78 originals + `manifest.tsv` + the saved page HTML) and
+`OLD-SITE-INVENTORY.md` (every page's text verbatim, five reviews, partner list, proposed mapping).
+
+What was placed:
+- Real logo (`assets/img/logo.png`, dark-background variant `logo-dark.png`) in the header, footer and mobile menu.
+  Brand yellow `#FCB912` sampled from the logo is now the site accent.
+- 59 photo slots filled from the old gallery and service pages (cropped to each slot's ratio, max 1600 px, JPEG q82).
+- Six partner logos from the old "Our Partners" page: AM Hire, RGS Reeve Gunite Services, TOA ITM, OTS, HireWays,
+  ZWB Zane White Business is shown as a text label (the old site only had a business-card screenshot; ask for a proper logo file, then add it as partners/partner-6.png).
+- All five reviews verbatim (John MacKay, Gill & Terry, Keith Nicol, Joel Johnson, Laura Jefferies).
+- Project tiles retitled to describe what is actually in each photo. The old gallery had **no captions or suburbs**,
+  so suburb names were removed rather than invented.
+
+Still placeholders (grey tiles): `adam.jpg`-style slots now show the crew (no photo of Adam exists on the old
+site), `team/*.jpg`, `retaining-block-wall-whitby.jpg`, `deck-hillside-balustrade.jpg`, `service-area-map.jpg`.
+The old site has **no sponsors**, so the sponsorship section was removed from about.html.
+The old site also has a Partners page at `/hardscaping-services-wellington`; 301 it to `/about.html`.
+Facebook: the page is `facebook.com/p/Porirua-Hardscapes-61576109378291/` (668 followers); nothing on it is
+reachable without a login. Update `SITE.facebook` in `assets/js/site.js` to that URL before launch.
+
+## Blocked in this session (superseded, kept for the record)
 
 The build environment's network policy **denied poriruahardscapes.co.nz,
 poriruahardscapes.com and facebook.com**. So none of the following could be pulled, and the site
@@ -218,7 +241,7 @@ source URL). Then rename the good ones into the paths above. Don't publish `_fro
       placeholder in an HTML comment flagged CONFIRM WITH ADAM. Remove the question if he can't supply one.
 - [ ] **Google review link**: `projects.html` "Review on Google" is `href="#"`. Set up / claim the
       Google Business Profile and paste its review link (`https://g.page/r/…/review`).
-- [ ] **Facebook handle**: `https://www.facebook.com/poriruahardscapes` is assumed (site.js
+- [ ] **Facebook handle**: `https://www.facebook.com/p/Porirua-Hardscapes-61576109378291/` is assumed (site.js
       `SITE.facebook` and the projects page). Confirm the real URL. Add Instagram to `SITE.instagram` if he has one.
 - [ ] **Sponsorships**: about page has 4 sponsor slots and "[Clubs we support]". Fill or remove the section.
 - [ ] **Suppliers / partners**: 6 logo slots. Fill or delete empty ones.

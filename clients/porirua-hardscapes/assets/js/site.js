@@ -8,7 +8,7 @@
     phone: "027 244 4501",            // the number Nimbata is configured to REPLACE
     phoneHref: "tel:+64272444501",
     email: "adam@poriruahardscapes.co.nz",
-    facebook: "https://www.facebook.com/poriruahardscapes",   // confirm handle before launch
+    facebook: "https://www.facebook.com/p/Porirua-Hardscapes-61576109378291/",   // confirm handle before launch
     instagram: "",
     hours: "7 days · 7am – 7pm",
     endpoint: "/api/public/enquiry"
@@ -25,8 +25,7 @@
     x:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
     fb:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M13.5 22v-8h2.7l.4-3.2h-3.1V8.8c0-.9.3-1.6 1.6-1.6h1.7V4.4c-.3 0-1.3-.1-2.5-.1-2.5 0-4.1 1.5-4.1 4.2v2.3H7.4V14h2.8v8h3.3z"/></svg>',
     ig:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor"/></svg>',
-    mark:'<svg viewBox="0 0 32 32" fill="none"><rect x="3" y="18" width="12" height="9" rx="1.5" fill="#E89B2C"/><rect x="17" y="18" width="12" height="9" rx="1.5" fill="#E89B2C" opacity=".55"/><rect x="10" y="7" width="12" height="9" rx="1.5" fill="#fff"/></svg>',
-    concrete:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 20L9 4h6l6 16H3z"/><path d="M7 14h10"/></svg>',
+        concrete:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><path d="M3 20L9 4h6l6 16H3z"/><path d="M7 14h10"/></svg>',
     wall:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"><rect x="3" y="5" width="18" height="4"/><rect x="3" y="10" width="18" height="4"/><rect x="3" y="15" width="18" height="4"/><path d="M9 5v4M15 10v4M9 15v4"/></svg>',
     digger:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18h12M4 15h9v3M13 15V9h-4l-3 6"/><path d="M13 11l5-6 3 2-4 6"/><circle cx="6" cy="18" r="2"/><circle cx="12" cy="18" r="2"/></svg>',
     deck:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 10h18M3 14h18M3 18h18M6 10V6M12 10V4M18 10V6"/></svg>',
@@ -43,8 +42,8 @@
     {k:"demolition",t:"Residential demolition",      s:"Houses, garages, sheds, clear-outs",p:"services/demolition.html",         i:"demo"}
   ];
 
-  function brand(){
-    return '<a class="brand" href="'+R("index.html")+'"><span class="mk">'+ICON.mark+'</span><span class="nm">Porirua Hardscapes<small>'+SITE.tag+'</small></span></a>';
+  function brand(dark){
+    return '<a class="brand" href="'+R("index.html")+'" aria-label="Porirua Hardscapes home"><img class="logo" src="'+R(dark?"assets/img/logo-dark.png":"assets/img/logo.png")+'" alt="Porirua Hardscapes" width="900" height="427"></a>';
   }
   function on(k){ return page===k ? ' class="on"' : ''; }
 
@@ -65,7 +64,7 @@
     '<a class="btn btn-amber btn-sm" href="'+R("contact.html")+'">Get a free quote</a>'+
     '<button class="burger" type="button" aria-label="Open menu" id="burger">'+ICON.burger+'</button></div>'+
     '</div></header>'+
-    '<div class="mnav" id="mnav" aria-hidden="true"><div class="mnav-top">'+brand()+'<button class="x" type="button" aria-label="Close menu" id="mclose">'+ICON.x+'</button></div>'+
+    '<div class="mnav" id="mnav" aria-hidden="true"><div class="mnav-top">'+brand(true)+'<button class="x" type="button" aria-label="Close menu" id="mclose">'+ICON.x+'</button></div>'+
     '<a class="l1" href="'+R("index.html")+'">Home</a>'+
     '<div class="l2"><div class="t">Services</div>'+SERVICES.map(function(s){return '<a href="'+R(s.p)+'">'+s.t+'</a>';}).join("")+'<a href="'+R("services/index.html")+'">All services →</a></div>'+
     '<a class="l1" href="'+R("projects.html")+'">Projects</a>'+
@@ -79,7 +78,7 @@
     var y = new Date().getFullYear();
     return ''+
     '<footer class="ftr"><div class="wrap"><div class="cols">'+
-    '<div>'+brand()+'<p>Concrete, retaining walls, excavation, decks, fences and landscape construction across Porirua, Wellington and the Hutt Valley. Locally owned and operated from Whitby, with 36+ years in the trade.</p>'+
+    '<div>'+brand(true)+'<p>Concrete, retaining walls, excavation, decks, fences and landscape construction across Porirua, Wellington and the Hutt Valley. Locally owned and operated from Whitby, with 36+ years in the trade.</p>'+
     '<div class="soc">'+(SITE.facebook?'<a href="'+SITE.facebook+'" aria-label="Facebook" target="_blank" rel="noopener">'+ICON.fb+'</a>':'')+(SITE.instagram?'<a href="'+SITE.instagram+'" aria-label="Instagram" target="_blank" rel="noopener">'+ICON.ig+'</a>':'')+'</div></div>'+
     '<div><h4>Services</h4><ul>'+SERVICES.map(function(s){return '<li><a href="'+R(s.p)+'">'+s.t+'</a></li>';}).join("")+'</ul></div>'+
     '<div><h4>Company</h4><ul><li><a href="'+R("about.html")+'">About us</a></li><li><a href="'+R("projects.html")+'">Projects</a></li><li><a href="'+R("contact.html")+'#pricing">Pricing guide</a></li><li><a href="'+R("contact.html")+'#faq">FAQs</a></li><li><a href="'+R("contact.html")+'">Contact &amp; quotes</a></li></ul></div>'+
