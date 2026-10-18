@@ -288,7 +288,7 @@ Not yet created. When porting:
 ## Launch checklist
 
 1. Work through "Confirm with Adam" and replace every placeholder project, name and logo slot.
-2. Run `fetch-assets.sh`, drop the photos into their paths, add `og.jpg`.
+2. Run `fetch-assets.sh`, drop the photos into their paths. A branded `og.jpg` is already in place; swap it for a real driveway shot when you have one.
 3. Publish, attach `www.poriruahardscapes.co.nz`, set the .com → .co.nz and old-slug 301s.
 4. Create the Nimbata project (027 244 4501 as the number to replace) and confirm the swap live.
 5. Send a test enquiry and confirm it lands at hello@leadhivenz.com (and Adam, if added).

@@ -468,3 +468,7 @@ a.card:hover .more svg{transform:translateX(4px)}
 .card .ticks li{font-size:14.5px;gap:10px}
 .card .ticks li::before{width:18px;height:18px;background-size:11px}
 @media(max-width:980px){.side .side-nav{order:2}}
+h1+.lede,h2+.lede,h3+.lede{margin-top:16px}   /* spacing when a lede follows a heading outside .sec-head */
+/* ticks: block layout so inline <b> + text flow as one line (flex split them into columns) */
+.ticks li{display:block;position:relative;padding-left:34px}
+.ticks li::before{position:absolute;left:0;top:1px}
