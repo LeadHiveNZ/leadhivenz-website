@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /assets/img/_from-old-site/
+
+Sitemap: https://www.poriruahardscapes.co.nz/sitemap.xml
