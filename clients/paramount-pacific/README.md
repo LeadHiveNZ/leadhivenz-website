@@ -123,6 +123,22 @@ hide automatically. Delete the `<span class="ph-label">` too. Suggested size: 16
 | `hero-paving-driveways` | services/paving-driveways | Exposed aggregate driveway to a new home (hero backdrop) | cover |
 | `paving-exposed-aggregate` | services/paving-driveways | Exposed aggregate driveway, Papakura | 4:3 |
 | `paving-patio-pavers` | services/paving-driveways | Paved patio and path, North Shore | 4:3 |
+| `about-hero` | about | Willie and the crew on site (hero backdrop) | cover |
+| `portrait-willie` | about | Portrait of Willie Tasmania, on site or in front of a finished job | 3:4 (4:3 below 900px) |
+| `team` | about | The Paramount Pacific team together (no names needed) | 4:3 |
+| `services-hero` | services | Framing crew on a new build (hero backdrop) | cover |
+| `projects-hero` | projects | Finished renovation, street view (hero backdrop) | cover |
+| `project-1` | projects | Kitchen & living renovation, Papakura (renovations) | 4:3 (16:9 at 640–899px) |
+| `project-2` | projects | Four-bedroom family home, Pukekohe (new builds) | 4:3 |
+| `project-3` | projects | Exposed aggregate driveway, Howick (concrete) | 4:3 |
+| `project-4` | projects | Cedar slat fence & sliding gate, Takapuna (fencing) | 4:3 |
+| `project-5` | projects | Bathroom rebuild, Henderson (renovations) | 4:3 |
+| `project-6` | projects | Retaining wall & steps, Titirangi (concrete) | 4:3 |
+| `project-7` | projects | Two-bedroom minor dwelling, Manurewa (new builds) | 4:3 |
+| `project-8` | projects | Aluminium pool fence & gate, Orewa (fencing) | 4:3 |
+| `project-9` | projects | Re-roof & new spouting, Waiheke Island (other) | 4:3 |
+| `areas-hero` | areas | Hauraki Gulf coastline (hero backdrop) | cover |
+| `contact-hero` | contact | Willie on site at a quote visit (hero backdrop) | cover |
 <!-- Phase 2 agents: append your pages' data-photo keys to this table. -->
 
 Project captions on the home teaser (suburbs, job types) are illustrative. Replace them with real jobs.
@@ -148,6 +164,13 @@ The site deliberately avoids these claims. Where one would naturally sit, it use
   Don't claim registration.
 - Response-time promises (the form success message says "in touch soon", not a specific time)
 - Real project counts, client numbers, years in business beyond "20+"
+- **Free site visit:** the renovations/concrete FAQ blocks and the contact page say the first visit
+  and quote carry "no charge". Free *quotes* are safe; confirm Willie is happy to also do a free
+  on-site measure-up, or soften to "free written quote" only.
+- **Business name spelling:** the client's own blurb reads "Paramount Pacifix" and the brief read
+  "Paramount Pacifics". The site uses **Paramount Pacific** / Paramount Pacific Property Development
+  Ltd. Confirm the registered name (check the Companies Office) and, if different, search-and-replace
+  `Paramount Pacific` across the site plus `brand`/`legalName` in `assets/js/config.js`.
 
 ## Components cheat sheet (see comments in site.css)
 - Bands: `band-paper` | `band-sand` | `band-ink` | `band-teal` (+ `has-motif` on dark bands). Each section uses one.
@@ -197,3 +220,24 @@ every `.ph` element (keys in the table above). Photo captions and suburbs are il
   the application with you". Confirm with Willie before making it firmer.
 - **Roofing:** no material brands, pitch limits, timeframes in days or warranty claims. "Days rather than weeks" for a
   typical re-roof and driveway are general; confirm with Willie.
+
+### Top-level pages (about, services, projects, areas, contact): placeholder notes
+- **Projects (`projects.html`)**: all 9 tiles are placeholders, each marked `<!-- PLACEHOLDER PROJECT -->`. The job types,
+  suburbs and one-line notes are illustrative. Replace each tile with a real job (photo, title, suburb, note) and keep its
+  `data-cat` (`renovations` | `new-builds` | `concrete` | `fencing` | `other`) so the filter works. Then update the count
+  in each filter button (`<span class="count">`) and the "Showing all 9 projects" text. The filter is a small inline
+  script at the bottom of `projects.html`.
+- **Reviews**: `projects.html` repeats the three home-page testimonials, so each carries `<!-- PLACEHOLDER REVIEW -->`. Replace them in both files.
+- **Stats (`about.html`)**: no PLACEHOLDER STAT was needed. The band shows "20+ years" (client's own figure), "8" services and
+  "9" areas (counts of the client's own lists) and "Free" quotes.
+- **About copy**: Willie's story is the client's own text, polished, in first person ("Hi, I'm Willie"). Have Willie read it before launch.
+  The team section says the crew are "builders, concreters and fencers who have worked alongside each other for years"
+  (from the brief, no names). Confirm that's accurate.
+- **Services overview**: the "One team" band says the foundations, concrete, framing, roofing, fencing and paving are done by
+  the team and that plumbing and drainlaying is *scheduled into the same programme* (deliberately not claiming in-house
+  registered plumbers or drainlayers; see the do-not-claim list).
+- **Areas**: the place names shown as chips under each area are examples of suburbs and towns within it, not a list of past jobs.
+- **Contact**: the GeneralContractor JSON-LD is a copy of the one in `index.html`. Update both when real details arrive.
+- **CSS added for these pages** (section 25 at the end of `site.css`, additive only): `.stat-row.cols-4`, chips inside
+  `.service-card` / `.area-card`, `.areas-grid.with-chips`, `.filter-bar` / `.filter-btn`, `.hero-page.hero-compact`,
+  `.contact-layout` / `.contact-aside` / `.form-card-head`, `.steps.steps-vertical`.
