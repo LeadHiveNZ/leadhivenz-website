@@ -37,6 +37,10 @@
     .diagram__legend h3 { font-size: 1.0625rem; padding-top: 4px; }
     .diagram__legend p { font-size: .9375rem; color: var(--ink-soft); }
     @media (max-width: 719.98px) { .diagram__label { display: none; } }
+    /* Steps carrying a .step__tag: pin the tags to one line across each row */
+    .steps .step { display: flex; flex-direction: column; align-items: flex-start; }
+    .steps .step p { margin-bottom: 16px; }
+    .steps .step .step__tag { margin-top: auto; }
   </style>
 
   <script type="application/ld+json">
@@ -251,10 +255,10 @@
           <p class="lead">A ducted heat pump works like a high wall with the indoor part moved into the roof. All you see is a slim vent in each ceiling and a controller on the wall.</p>
         </div>
         <figure class="diagram">
-        <svg viewBox="0 0 760 340" role="img" aria-label="Diagram of a ducted heat pump: an outdoor unit beside the house is piped to a fan coil in the roof space, which sends air through ducts to a vent in each room’s ceiling." focusable="false">
+        <svg viewBox="20 48 724 294" role="img" aria-label="Diagram of a ducted heat pump: an outdoor unit beside the house is piped to a fan coil in the roof space, which sends air through ducts to a vent in each room’s ceiling." focusable="false">
       <title>How a ducted heat pump works</title>
       <desc>The outdoor unit sits beside the house and connects by refrigerant pipe to a fan coil in the roof space. Ducts run from the fan coil across the roof space to a vent in the ceiling of the living room and each bedroom.</desc>
-      <line x1="16" y1="320" x2="744" y2="320" style="stroke:var(--line)" stroke-width="2" stroke-linecap="round"/>
+      <line x1="28" y1="320" x2="740" y2="320" style="stroke:var(--line)" stroke-width="2" stroke-linecap="round"/>
       <polygon points="180,170 180,140 280,60 620,60 720,140 720,170" style="fill:var(--cloud)"/>
       <rect x="180" y="170" width="540" height="150" style="fill:var(--white)"/>
       <g fill="none" style="stroke:var(--navy)" stroke-linecap="round" stroke-linejoin="round">
@@ -269,8 +273,8 @@
         <text x="300" y="302">LIVING</text><text x="495" y="302">BEDROOM</text><text x="645" y="302">BEDROOM</text><text x="440" y="100">ROOF SPACE</text><text x="92" y="342" dy="-6">OUTDOOR</text>
       </g>
       <polyline points="148,272 174,272 174,154 222,154" fill="none" style="stroke:var(--coral)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-      <g fill="none" style="stroke:var(--blue)" stroke-width="13" stroke-linecap="round"><line x1="322" y1="136" x2="645" y2="136"/><line x1="360" y1="136" x2="360" y2="164"/><line x1="495" y1="136" x2="495" y2="164"/><line x1="645" y1="136" x2="645" y2="164"/></g>
-      <g fill="none" style="stroke:var(--blue-sky)" stroke-width="7" stroke-linecap="round"><line x1="322" y1="136" x2="645" y2="136"/><line x1="360" y1="136" x2="360" y2="164"/><line x1="495" y1="136" x2="495" y2="164"/><line x1="645" y1="136" x2="645" y2="164"/></g>
+      <g fill="none" style="stroke:var(--blue)" stroke-width="16" stroke-linecap="round"><line x1="322" y1="136" x2="645" y2="136"/><line x1="360" y1="136" x2="360" y2="164"/><line x1="495" y1="136" x2="495" y2="164"/><line x1="645" y1="136" x2="645" y2="164"/></g>
+      <g fill="none" style="stroke:var(--blue-sky)" stroke-width="10" stroke-linecap="round"><line x1="322" y1="136" x2="645" y2="136"/><line x1="360" y1="136" x2="360" y2="164"/><line x1="495" y1="136" x2="495" y2="164"/><line x1="645" y1="136" x2="645" y2="164"/></g>
       <g style="stroke:var(--navy)" fill="none" stroke-linecap="round">
         <rect x="222" y="116" width="100" height="46" rx="6" stroke-width="2.5" style="fill:var(--white)"/>
         <circle cx="250" cy="139" r="12" stroke-width="2" style="stroke:var(--blue)"/>
@@ -344,18 +348,18 @@
               <caption class="visually-hidden">Indicative ducted unit prices, GST inclusive</caption>
               <thead><tr><th scope="col">System</th><th scope="col">Unit price</th></tr></thead>
               <tbody>
-              <tr><td><strong>Daikin 6 kW ducted</strong><br><span class="muted small">Smaller homes, or one zone of a larger home</span></td><td class="price">from $3,640</td></tr>
-              <tr><td><strong>Daikin 10 kW ducted</strong><br><span class="muted small">Mid-size family homes</span></td><td class="price">from $4,810</td></tr>
-              <tr><td><strong>Fujitsu (GENERAL Airstage) 14 kW ducted</strong><br><span class="muted small">Larger homes and big open-plan spaces</span></td><td class="price">from $5,499</td></tr>
+              <tr><td><strong>Daikin 6&nbsp;kW ducted</strong><br><span class="muted small">Smaller homes, or one zone of a larger home</span></td><td class="price">from $3,640</td></tr>
+              <tr><td><strong>Daikin 10&nbsp;kW ducted</strong><br><span class="muted small">Typical family homes</span></td><td class="price">from $4,810</td></tr>
+              <tr><td><strong>Fujitsu (GENERAL Airstage) 14&nbsp;kW ducted</strong><br><span class="muted small">Larger homes and big living areas</span></td><td class="price">from $5,499</td></tr>
               </tbody>
             </table>
           </div>
-          <p class="aside-note"><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg><span>Ducted installs across Auckland commonly run $8k–18k all up, and the unit is a big part of that. Starting from warehouse unit pricing is where the saving comes from.</span></p>
+          <div class="aside-note"><svg class="icon" aria-hidden="true"><use href="#i-info"/></svg><span>Ducted installs across Auckland commonly run $8k–18k all up, and the unit is a big part of that. Starting from warehouse unit pricing is where the saving comes from.</span></div>
         </div>
         <div class="stack">
         <div class="price-note">
           <svg class="icon" aria-hidden="true"><use href="#i-info"/></svg>
-          <p>Prices incl. GST. Installed prices assume a standard back-to-back installation with up to 3 m of pipe, single storey. Your free quote confirms a fixed price.</p>
+          <p>Prices incl. GST. Installed prices assume a standard back-to-back installation with up to 3&nbsp;m of pipe, single storey. Your free quote confirms a fixed price.</p>
         </div>
           <div class="btn-row">
             <a class="btn btn-primary" href="#quote">Book a site visit <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a>
@@ -463,7 +467,7 @@
           <span class="badge step__tag">Usually 1–3 days</span>
         </li>
         <li class="step" data-reveal>
-          <h3>Commissioning and walk-through</h3>
+          <h3>Commissioning</h3>
           <p>We test every zone, check airflow at each vent, and show you the controller and app before we leave.</p>
           <span class="badge step__tag">Walk-through included</span>
         </li>
@@ -477,7 +481,7 @@
       <div class="section-head">
         <p class="eyebrow">FAQ</p>
         <h2 id="faq-title">Ducted questions</h2>
-        <p class="lead">Still weighing it up? Call <a class="text-link" href="tel:+6492159544">09 215 9544</a>, 7 days, 8am–8pm.</p>
+        <p class="lead">Still weighing it up? Call <a class="text-link" href="tel:+6492159544">09 215 9544</a>, 7&nbsp;days, 8am–8pm.</p>
       </div>
       <div class="faq">
         <details>

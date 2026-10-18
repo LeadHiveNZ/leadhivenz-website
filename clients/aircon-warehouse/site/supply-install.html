@@ -25,6 +25,13 @@
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@700;800&display=swap">
   <link rel="stylesheet" href="styles.css">
   <script src="main.js" defer></script>
+  <!-- page-local css: candidate for styles.css -->
+  <style>
+    /* Steps carrying a .step__tag: pin the tags to one line across each row */
+    .steps .step { display: flex; flex-direction: column; align-items: flex-start; }
+    .steps .step p { margin-bottom: 16px; }
+    .steps .step .step__tag { margin-top: auto; }
+  </style>
 
   <script type="application/ld+json">
   {
@@ -215,7 +222,7 @@
       <div class="page-hero__inner">
         <ol class="breadcrumb" role="list"><li><a href="index.html">Home</a></li><li aria-current="page">Supply &amp; Install</li></ol>
         <p class="eyebrow">Supply &amp; install packages</p>
-        <h1 id="page-title">Pick the unit. We handle the rest.</h1>
+        <h1 id="page-title">Pick the unit. We&nbsp;handle the rest.</h1>
         <p class="lead">Warehouse pricing on the unit, our own installers, one invoice and one warranty contact.</p>
         <div class="btn-row btn-row--stack">
           <a class="btn btn-primary btn-lg" href="#quote">Get a free quote <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a>
@@ -243,7 +250,7 @@
             <h3>Included as standard</h3>
             <ul class="checklist" role="list">
               <li>Back-to-back install, indoor and outdoor units on the same wall</li>
-              <li>Up to 3 m of pipe</li>
+              <li>Up to 3&nbsp;m of pipe</li>
               <li>Standard wall bracket or ground pad</li>
               <li>Condensate drain</li>
               <li>Electrical connection to an existing suitable circuit</li>
@@ -264,7 +271,7 @@
             </ul>
           </div>
         </div>
-        <p class="aside-note"><svg class="icon" aria-hidden="true"><use href="#i-receipt"/></svg><span>Anything extra is on your quote before we start, never added on install day.</span></p>
+        <div class="aside-note"><svg class="icon" aria-hidden="true"><use href="#i-receipt"/></svg><span>Anything extra is on your quote before we start, never added on install day.</span></div>
       </section>
 
       <!-- 2. Package pricing -->
@@ -279,17 +286,17 @@
             <caption class="visually-hidden">Indicative supply and install package prices, GST inclusive</caption>
             <thead><tr><th scope="col">Package</th><th scope="col">Installed</th></tr></thead>
             <tbody>
-              <tr><td><strong>Fujitsu (GENERAL Airstage) 2.5 kW high wall</strong><br><span class="muted small">Bedrooms up to about 20 m²</span></td><td class="price">$1,799</td></tr>
-              <tr><td><strong>Daikin 3 kW Lite high wall</strong><br><span class="muted small">Bedrooms and studies</span></td><td class="price">from $1,950</td></tr>
-              <tr><td><strong>Daikin 5.2 kW high wall</strong><br><span class="muted small">Living areas, 35–50 m²</span></td><td class="price">from $2,550</td></tr>
-              <tr><td><strong>Daikin 4.7–10.3 kW range</strong><br><span class="muted small">Larger bedrooms through to big open-plan living</span></td><td class="price">about $1,750–$4,100</td></tr>
+              <tr><td><strong>Fujitsu (GENERAL Airstage) 2.5&nbsp;kW high wall</strong><br><span class="muted small">Bedrooms up to about 20&nbsp;m²</span></td><td class="price">$1,799</td></tr>
+              <tr><td><strong>Daikin 3&nbsp;kW Lite high wall</strong><br><span class="muted small">Bedrooms and studies</span></td><td class="price">from $1,950</td></tr>
+              <tr><td><strong>Daikin 5.2&nbsp;kW high wall</strong><br><span class="muted small">Living areas, 35–50&nbsp;m²</span></td><td class="price">from $2,550</td></tr>
+              <tr><td><strong>Daikin 4.7–10.3&nbsp;kW range</strong><br><span class="muted small">Larger bedrooms through to big living areas, up to about $4,100 at 10.3&nbsp;kW</span></td><td class="price">from about $1,750</td></tr>
             </tbody>
           </table>
         </div>
         <div class="stack">
         <div class="price-note">
           <svg class="icon" aria-hidden="true"><use href="#i-info"/></svg>
-          <p>Prices incl. GST. Installed prices assume a standard back-to-back installation with up to 3 m of pipe, single storey. Your free quote confirms a fixed price.</p>
+          <p>Prices incl. GST. Installed prices assume a standard back-to-back installation with up to 3&nbsp;m of pipe, single storey. Your free quote confirms a fixed price.</p>
         </div>
           <div class="btn-row">
             <a class="btn btn-primary" href="#quote">Get a fixed quote <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a>
@@ -302,7 +309,7 @@
       <section class="card" aria-labelledby="unit-only-title">
         <span class="icon-chip" aria-hidden="true"><svg class="icon"><use href="#i-package"/></svg></span>
         <h2 class="h3" id="unit-only-title">Buy the unit only</h2>
-        <p>Trade customers and DIY-savvy owners with their own installer can buy supply-only at warehouse pricing: Haier 3.2 kW from $963, Fujitsu (GENERAL Airstage) 2.5 kW $1,185 and Daikin 3 kW Lite from $1,244, unit only.</p>
+        <p>Trade customers and DIY-savvy owners with their own installer can buy supply-only at warehouse pricing: Haier 3.2&nbsp;kW from $963, Fujitsu (GENERAL Airstage) 2.5&nbsp;kW $1,185 and Daikin 3&nbsp;kW Lite from $1,244, unit only.</p>
         <p>Whoever installs it, the work needs to meet NZ electrical and refrigerant requirements.</p>
         <div class="btn-row">
           <a class="btn btn-ghost" href="commercial.html">Trade accounts <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a>
@@ -357,7 +364,8 @@
     <div class="container">
       <div class="section-head" data-reveal>
         <p class="eyebrow">Timeline</p>
-        <h2 id="timeline-title">Quote within one business day. Most high-wall installs done in 3–5 hours.</h2>
+        <h2 id="timeline-title">Quote within one business day.</h2>
+        <p class="lead">Most high-wall installs are done in 3–5 hours, start to finish.</p>
       </div>
       <ol class="steps" data-reveal-stagger>
         <li class="step" data-reveal>
@@ -389,8 +397,8 @@
     <div class="container faq-layout">
       <div class="section-head">
         <p class="eyebrow">FAQ</p>
-        <h2 id="faq-title">Supply and install questions</h2>
-        <p class="lead">Still unsure? Call <a class="text-link" href="tel:+6492159544">09 215 9544</a>, 7 days, 8am–8pm.</p>
+        <h2 id="faq-title">Package questions</h2>
+        <p class="lead">Still unsure? Call <a class="text-link" href="tel:+6492159544">09 215 9544</a>, 7&nbsp;days, 8am–8pm.</p>
       </div>
       <div class="faq">
         <details>
