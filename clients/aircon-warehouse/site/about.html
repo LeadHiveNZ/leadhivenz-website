@@ -65,6 +65,7 @@
     /* About: facts in the navy panel lead with an icon instead of a number */
     .fact-list .stat { grid-template-columns: 56px minmax(0, 1fr); gap: 4px 20px; }
     .fact-list .icon-chip { color: var(--coral-hot); }
+    .story-copy .section-head { margin-bottom: var(--space-4); }
     /* Service area: suburb grid beside the map runs 3-up on desktop */
     @media (min-width: 1024px) { .area-layout .suburb-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4) var(--space-3); } }
     /* Schematic service-area map + legend */
@@ -74,6 +75,7 @@
     .area-map figcaption span { display: inline-flex; align-items: center; gap: 8px; }
     .area-map .key { width: 10px; height: 10px; border-radius: 50%; background: var(--coral); box-shadow: 0 0 0 4px rgba(237, 21, 84, .16); }
     .area-map figcaption .icon { width: 16px; height: 16px; color: var(--navy); }
+    @media (max-width: 719.98px) { .area-map__labels { font-size: 19px; } .area-map__pill { font-size: 15px; } }
   </style>
 </head>
 <body>
@@ -190,7 +192,7 @@
       <div class="page-hero__inner">
         <ol class="breadcrumb" role="list"><li><a href="index.html">Home</a></li><li aria-current="page">About</li></ol>
         <p class="eyebrow">About Aircon Warehouse</p>
-        <h1 id="page-title">Auckland’s one-stop heat pump shop.</h1>
+        <h1 id="page-title">Auckland’s one-&#8288;stop heat pump shop.</h1>
         <p class="lead">A warehouse in Wiri, installers across Auckland, open seven days.</p>
         <div class="btn-row btn-row--stack">
           <a class="btn btn-primary btn-lg" href="contact.html">Get a free quote <svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a>
@@ -204,7 +206,7 @@
   <section class="band" aria-labelledby="story-title">
     <div class="container">
       <div class="split split-top">
-        <div class="stack" data-reveal>
+        <div class="stack story-copy" data-reveal>
           <div class="section-head">
             <p class="eyebrow">Our story</p>
             <h2 id="story-title">Built around one simple idea</h2>
@@ -226,7 +228,7 @@
           <ul class="stat-list fact-list">
             <li class="stat">
               <span class="icon-chip icon-chip--dark icon-chip--lg" aria-hidden="true"><svg class="icon"><use href="#i-pin"/></svg></span>
-              <span class="stat__label">Based in Wiri, Manukau<span>Showroom and warehouse at 7/51 Ash Road</span></span>
+              <span class="stat__label">Based in Wiri, Manukau<span>Showroom and warehouse on Ash Road</span></span>
             </li>
             <li class="stat">
               <span class="icon-chip icon-chip--dark icon-chip--lg" aria-hidden="true"><svg class="icon"><use href="#i-clock"/></svg></span>
@@ -287,7 +289,7 @@
         <h2 id="area-title">Across Auckland</h2>
         <p class="lead">Warehouse in Wiri. Installers across Auckland. If your suburb isn’t listed, ask us.</p>
       </div>
-      <div class="split split-reverse area-layout">
+      <div class="split split-even split-reverse split-top area-layout">
         <figure class="area-map" data-reveal>
           <svg class="area-map__svg" viewBox="0 0 480 430" width="480" height="430" role="img" aria-labelledby="map-title map-desc">
             <title id="map-title">Aircon Warehouse service area</title>
@@ -302,24 +304,24 @@
               <path d="M408.2 332.8C409.4 341.7 403.9 352.8 395 361.1C386 369.4 369.4 376.8 354.4 382.4C339.5 388 322.2 391.5 305.4 394.5C288.6 397.4 270.9 399.7 253.5 399.9C236 400 215.9 399 200.6 395.3C185.3 391.5 170.3 384.6 161.8 377.2C153.3 369.8 149.6 359.7 149.6 350.8C149.7 341.9 154.7 332.1 162.3 323.8C170 315.4 181.7 306.8 195.5 300.5C209.2 294.3 227.6 289 244.8 286.2C261.9 283.5 281.5 283.2 298.5 284.1C315.6 285.1 332.2 287.9 347 291.8C361.9 295.7 377.2 300.9 387.4 307.7C397.6 314.5 406.9 323.9 408.2 332.8Z"/>
             </g>
             <g fill="none" stroke="#111433" stroke-opacity=".5" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="0 6">
-              <path d="M296 331.6Q244.8 211.0 244 80"/>
+              <path d="M296 331.6Q237.8 212.4 230 80"/>
               <path d="M296 331.6Q201.1 242.4 76 206"/>
               <path d="M296 331.6Q240.2 276.4 210 204"/>
-              <path d="M296 331.6Q357.0 275.6 386 198"/>
+              <path d="M296 331.6Q353.0 274.6 378 198"/>
               <path d="M296 331.6Q236.9 319.8 186 352"/>
             </g>
-            <g font-family="Plus Jakarta Sans, Segoe UI, Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#111433">
-              <circle cx="244" cy="80" r="11" fill="#ED1554" fill-opacity=".16"/><circle cx="244" cy="80" r="5.5" fill="#ED1554" stroke="#fff" stroke-width="2"/><text x="260" y="85">North Shore</text>
+            <g class="area-map__labels" font-family="Plus Jakarta Sans, Segoe UI, Helvetica, Arial, sans-serif" font-size="15" font-weight="700" fill="#111433">
+              <circle cx="230" cy="80" r="11" fill="#ED1554" fill-opacity=".16"/><circle cx="230" cy="80" r="5.5" fill="#ED1554" stroke="#fff" stroke-width="2"/><text x="246" y="85">North Shore</text>
               <circle cx="76" cy="206" r="11" fill="#ED1554" fill-opacity=".16"/><circle cx="76" cy="206" r="5.5" fill="#ED1554" stroke="#fff" stroke-width="2"/><text x="92" y="211">West</text>
               <circle cx="210" cy="204" r="11" fill="#ED1554" fill-opacity=".16"/><circle cx="210" cy="204" r="5.5" fill="#ED1554" stroke="#fff" stroke-width="2"/><text x="226" y="209">Central</text>
-              <circle cx="386" cy="198" r="11" fill="#ED1554" fill-opacity=".16"/><circle cx="386" cy="198" r="5.5" fill="#ED1554" stroke="#fff" stroke-width="2"/><text x="402" y="203">East</text>
+              <circle cx="378" cy="198" r="11" fill="#ED1554" fill-opacity=".16"/><circle cx="378" cy="198" r="5.5" fill="#ED1554" stroke="#fff" stroke-width="2"/><text x="394" y="203">East</text>
               <circle cx="186" cy="352" r="11" fill="#ED1554" fill-opacity=".16"/><circle cx="186" cy="352" r="5.5" fill="#ED1554" stroke="#fff" stroke-width="2"/><text x="202" y="357">South</text>
             </g>
             <ellipse cx="296" cy="352" rx="9" ry="3" fill="#111433" fill-opacity=".2"/>
             <path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z" transform="translate(276.8 316.4) scale(1.6)" fill="#111433"/>
             <circle cx="296" cy="331.6" r="4" fill="#fff"/>
-            <rect x="314" y="317.6" width="122" height="28" rx="14" fill="#111433"/>
-            <text x="375" y="336.1" text-anchor="middle" font-family="Inter, system-ui, Arial, sans-serif" font-size="12.5" font-weight="600" fill="#fff">Wiri warehouse</text>
+            <rect x="314" y="316.6" width="134" height="30" rx="15" fill="#111433"/>
+            <text class="area-map__pill" x="381" y="336.1" text-anchor="middle" font-family="Inter, system-ui, Arial, sans-serif" font-size="12.5" font-weight="600" fill="#fff">Wiri warehouse</text>
           </svg>
           <figcaption>
             <span><span class="key" aria-hidden="true"></span>Areas we install in</span>
@@ -360,7 +362,7 @@
           <div class="section-head">
             <p class="eyebrow">Visit the warehouse</p>
             <h2 id="visit-title">Talk it through in person</h2>
-            <p class="lead">Our showroom and warehouse is in Wiri, a few minutes from Manukau. Call ahead and we’ll make sure the right person is free.</p>
+            <p class="lead">Come and see us at our showroom and warehouse in Wiri. Call ahead and we’ll make sure the right person is free.</p>
           </div>
           <ul class="info-list" role="list">
             <li><div class="icon-chip" aria-hidden="true"><svg class="icon"><use href="#i-pin"/></svg></div><div><strong>Address</strong><span>7/51 Ash Road, Wiri, Manukau, Auckland 2104</span></div></li>
