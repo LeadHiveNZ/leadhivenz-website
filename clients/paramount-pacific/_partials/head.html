@@ -1,0 +1,39 @@
+<!--
+  CANONICAL <head> + page skeleton. Replace {R} with "" (top-level) or "../" (services/).
+  Every page: unique <title> + meta description; canonical/og:url = https://paramountpacific.co.nz/<path>
+  (siteUrl placeholder — matches PP_CONFIG.siteUrl). Body order: header partial, <main id="main">, footer partial, scripts.
+-->
+<!doctype html>
+<html lang="en-NZ">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{PAGE TITLE} | Paramount Pacific</title>
+  <meta name="description" content="{META DESCRIPTION, 140-160 chars}">
+  <link rel="canonical" href="https://paramountpacific.co.nz/{path, e.g. about.html or services/concrete.html}">
+  <meta name="theme-color" content="#0F1115">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="en_NZ">
+  <meta property="og:site_name" content="Paramount Pacific">
+  <meta property="og:title" content="{PAGE TITLE} | Paramount Pacific">
+  <meta property="og:description" content="{META DESCRIPTION, 140-160 chars}">
+  <meta property="og:url" content="https://paramountpacific.co.nz/{path, e.g. about.html or services/concrete.html}">
+  <meta property="og:image" content="https://paramountpacific.co.nz/assets/img/og-image.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <link rel="icon" href="{R}assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Sora:wght@700;800&amp;display=swap">
+  <link rel="stylesheet" href="{R}assets/css/site.css">
+  <!-- JSON-LD here: GeneralContractor on contact.html (copy from index.html), BreadcrumbList on services/*.html (copy from services/renovations.html). -->
+</head>
+<body>
+  <!-- header partial -->
+  <main id="main">
+    <!-- sections: each full-width section gets ONE band class: band-paper | band-sand | band-ink | band-teal -->
+  </main>
+  <!-- footer partial -->
+<script src="{R}assets/js/config.js" defer></script>
+<script src="{R}assets/js/site.js" defer></script>
+</body>
+</html>

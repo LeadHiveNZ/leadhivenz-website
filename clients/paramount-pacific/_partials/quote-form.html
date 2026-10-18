@@ -1,0 +1,50 @@
+<!--
+  CANONICAL QUOTE FORM — paste inside a .form-card on contact.html (or any page).
+  site.js handles submit for any form[data-pp-form]:
+    - PP_CONFIG.formEndpoint set  -> JSON POST {name, phone, email, suburb, service, message, page, submitted}
+    - formEndpoint blank          -> opens a pre-filled mailto: to PP_CONFIG.email
+  The service <select> is auto-filled from PP_CONFIG.services when it only holds the placeholder option.
+  "company_website" is a honeypot: keep it, keep it hidden.
+  No path differences: this markup has no relative links.
+-->
+<form class="form" data-pp-form novalidate>
+  <div class="field-row">
+    <div class="field">
+      <label for="f-name">Name <span class="req" aria-hidden="true">*</span></label>
+      <input id="f-name" name="name" type="text" autocomplete="name" required>
+    </div>
+    <div class="field">
+      <label for="f-phone">Phone <span class="req" aria-hidden="true">*</span></label>
+      <input id="f-phone" name="phone" type="tel" autocomplete="tel" inputmode="tel" required>
+    </div>
+  </div>
+  <div class="field-row">
+    <div class="field">
+      <label for="f-email">Email</label>
+      <input id="f-email" name="email" type="email" autocomplete="email">
+    </div>
+    <div class="field">
+      <label for="f-suburb">Suburb <span class="req" aria-hidden="true">*</span></label>
+      <input id="f-suburb" name="suburb" type="text" autocomplete="address-level2" placeholder="e.g. Papakura" required>
+    </div>
+  </div>
+  <div class="field">
+    <label for="f-service">What do you need?</label>
+    <select id="f-service" name="service" data-config-options="services">
+      <option value="">Choose a service</option>
+    </select>
+  </div>
+  <div class="field">
+    <label for="f-message">Tell us about the job <span class="req" aria-hidden="true">*</span></label>
+    <textarea id="f-message" name="message" rows="5" placeholder="What you're planning, rough size, and when you'd like it done." required></textarea>
+  </div>
+  <div class="hp" aria-hidden="true">
+    <label for="f-company">Leave this empty</label>
+    <input id="f-company" name="company_website" type="text" tabindex="-1" autocomplete="off">
+  </div>
+  <div class="form-foot">
+    <button class="btn btn-accent btn-lg" type="submit">Send my quote request <svg class="icon-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+    <p class="small">Free and no obligation. We&rsquo;ll get back to you soon.</p>
+  </div>
+  <p class="form-status" role="status" aria-live="polite" hidden></p>
+</form>

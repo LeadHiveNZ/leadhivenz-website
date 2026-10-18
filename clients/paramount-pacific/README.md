@@ -1,0 +1,158 @@
+# Paramount Pacific: website
+
+Client: **Paramount Pacific Property Development Ltd** (brand on site: **Paramount Pacific**).
+Owner: Uele (Willie) Tasmania. Auckland building company, 20+ years, new builds and renovations.
+Specialties: major renovations, concreting, fencing.
+
+A premium multi-page brochure site. Static HTML/CSS/JS: no framework, no build step, no libraries.
+It opens straight from the file system and works on any static host, including in a sub-folder,
+because every path is relative.
+
+## Preview
+
+- Open `index.html` in a browser (double-click works; `file://` is fine).
+- Or serve the folder: `cd clients/paramount-pacific && python3 -m http.server 8000`, then open http://localhost:8000
+- Check at 375, 768, 1280 and 1600 px wide.
+
+## File map
+
+```
+index.html                      Home
+about.html                      About / Willie and the team                 (phase 2)
+services.html                   Services overview, links to the 8 pages     (phase 2)
+services/
+  renovations.html              Major renovations: THE PATTERN for every service page
+  residential-building.html     (phase 2)
+  concrete.html                 (phase 2)
+  fencing-gates.html            (phase 2)
+  foundations.html              (phase 2)
+  roofing.html                  (phase 2)
+  plumbing-drainlaying.html     (phase 2) Plumbing + Drainlaying on one page
+  paving-driveways.html         (phase 2)
+projects.html                   Recent work gallery                         (phase 2)
+areas.html                      9 service areas                             (phase 2)
+contact.html                    Contact + quote form                        (phase 2)
+assets/css/site.css             The ONE stylesheet. Design tokens at the top, sections numbered 01–24
+assets/js/config.js             window.PP_CONFIG: the ONE file to edit for business details
+assets/js/site.js               Config fill, header, mobile nav, reveal, current page, quote form
+assets/img/logo-placeholder.svg        Monogram "PP", amber tile (header)
+assets/img/logo-placeholder-light.svg  Monogram, off-white outline (dark footer)
+assets/img/favicon.svg                 Favicon (amber PP on charcoal)
+assets/img/motif.svg                   Abstract Pacific geometric tile (used by CSS)
+assets/img/og-image.png                1200x630 social share image (brand placeholder)
+_partials/                      Canonical markup to copy into new pages (not linked from the site)
+  head.html                     <head> boilerplate + page skeleton
+  header.html / footer.html     For top-level pages
+  header.services.html / footer.services.html   For pages inside services/
+  quote-form.html               The quote form (contact page)
+```
+
+### Path rules
+- Top-level pages: `assets/...`, `index.html`, `about.html`, `services/<key>.html`.
+- Pages in `services/`: `../assets/...`, `../index.html`, `../about.html`, siblings as `./<key>.html`.
+- Never use a leading `/`.
+
+## Placeholders: what to swap when the client sends real details
+
+### 1. Business details: `assets/js/config.js` (one file)
+| Key | Placeholder | Notes |
+|---|---|---|
+| `phone` | `021 000 0000` | `phoneHref` (tel:+64…) is derived automatically |
+| `email` | `info@paramountpacific.co.nz` | |
+| `address` | `Auckland, New Zealand` | |
+| `hours` | `Mon–Fri 7am–5pm, Sat by appointment` | |
+| `social.facebook` / `social.instagram` | blank | blank hides the footer icons |
+| `logoUrl` / `logoLightUrl` | blank | blank shows the PP monogram |
+| `formEndpoint` | blank | blank makes the quote form open a pre-filled email instead (mailto) |
+| `siteUrl` | `https://paramountpacific.co.nz` | domain not confirmed |
+
+These values are ALSO hard-coded in a few places that JavaScript can't (or shouldn't) fill.
+Update them too:
+- The **JSON-LD** blocks in `index.html` and `contact.html` (telephone `+64210000000`, email, address, url).
+- `canonical` / `og:url` / `og:image` on every page (domain).
+- The literal fallback text inside `[data-config]` elements (search for `021 000 0000`). Only seen without JS.
+
+### 2. Logo
+Put the real file in `assets/img/` and set `logoUrl: "assets/img/logo.svg"` (site-root relative;
+`site.js` adds `../` on service pages). The wordmark text hides automatically when a logo is set.
+Add `logoLightUrl` if a reversed version exists for the dark footer.
+Then update the favicon and `og-image.png`.
+
+### 3. Photos: `.ph` placeholders
+Every photo slot is a designed placeholder with a `data-photo` key and a corner label naming the
+intended shot. To go live, drop an `<img>` inside the element and remove `aria-hidden="true"`:
+```html
+<figure class="ph ph-4x3" data-photo="reno-kitchen">
+  <img src="../assets/img/photos/reno-kitchen.jpg" alt="Renovated kitchen with central island, Howick" loading="lazy">
+</figure>
+```
+The aspect ratio is locked by the class. The image covers the box, and the placeholder art and label
+hide automatically. Delete the `<span class="ph-label">` too. Suggested size: 1600px on the long edge, WebP or JPG.
+
+| data-photo key | Page | Intended shot | Ratio |
+|---|---|---|---|
+| `home-hero` | index | Finished new build exterior at dusk (full-bleed hero, text sits bottom-left) | cover (16:9-ish) |
+| `home-why-willie` | index | Willie on site with the crew | 3:4 (4:3 below 900px) |
+| `home-spec-renovations` | index | Kitchen renovation | 4:3 |
+| `home-spec-concrete` | index | Exposed aggregate driveway | 4:3 |
+| `home-spec-fencing` | index | Slat fence and gate | 4:3 |
+| `home-project-1` | index | Open-plan renovation, Manukau | large tile |
+| `home-project-2` | index | Exposed aggregate driveway, Papakura | tile |
+| `home-project-3` | index | Cedar fence + automatic gate, North Shore | tile |
+| `reno-hero` | services/renovations | Renovated open-plan living (hero backdrop) | cover |
+| `reno-kitchen` | services/renovations | Kitchen renovation, Howick | 4:3 |
+| `reno-extension` | services/renovations | Living extension, North Shore | 4:3 |
+<!-- Phase 2 agents: append your pages' data-photo keys to this table. -->
+
+Project captions on the home teaser (suburbs, job types) are illustrative. Replace them with real jobs.
+
+### 4. Reviews
+The three home-page testimonials are **placeholders** (marked `<!-- PLACEHOLDER REVIEW -->` in the HTML).
+Replace them with verbatim reviews, using the client's permission and their preferred attribution (e.g. first name + suburb).
+
+### 5. Stats
+- "20+ years" is real (client's own words).
+- The home page uses no other numbers. "8 trades" and "9 areas" come straight from the client's own lists.
+- Any other figure added later (projects completed, etc.) must carry `<!-- PLACEHOLDER STAT: confirm with Willie -->` and be listed here.
+
+## Do NOT claim until confirmed with Willie
+The site deliberately avoids these claims. Where one would naturally sit, it uses neutral wording
+("experienced, professional team"). Add them only once they're confirmed in writing:
+- Licensed Building Practitioner (LBP) status, and which licence class
+- Master Builders / Certified Builders membership, or any Master Build guarantee
+- Public liability or contract works insurance
+- Any guarantee or warranty period (e.g. "10-year warranty")
+- **Plumbing & drainlaying:** whether this is done by in-house registered/certifying plumbers and
+  drainlayers or by licensed subcontractors. Copy currently says the work is coordinated with the build.
+  Don't claim registration.
+- Response-time promises (the form success message says "in touch soon", not a specific time)
+- Real project counts, client numbers, years in business beyond "20+"
+
+## Components cheat sheet (see comments in site.css)
+- Bands: `band-paper` | `band-sand` | `band-ink` | `band-teal` (+ `has-motif` on dark bands). Each section uses one.
+- Section spacing: `section`, `section-sm`, `section-lg`. Container: `container`, `container-narrow`.
+- Heads: `section-head` (+ `split-head` or `text-center`) > `eyebrow` + `h2` + `lede`.
+- Buttons: `btn` + `btn-accent` / `btn-ghost` / `btn-dark`, sizes `btn-sm` / `btn-lg`. Text link: `link-arrow`.
+- Hero: `hero` (home) / `hero hero-page` (inner pages, with `breadcrumb`). The first child `.ph` is the backdrop.
+- Photo: `ph` + `ph-hero|ph-square|ph-4x3|ph-3x4|ph-16x9` (+ `ph-warm|ph-teal`), `ph-label`, `ph-caption`.
+- Cards and lists: `service-grid` (+`cols-3`) > `service-card`; `feature-list`; `feature-grid`; `check-list` (+`cols-2`);
+  `steps` > `step`; `specialty-grid` > `specialty`; `project-grid` (+`even`) > `project-tile` (+`tile-lg`);
+  `testimonial-grid` > `testimonial`; `area-list`; `areas-grid` > `area-card`; `chips` > `chip`;
+  `faq` > `details`; `photo-pair`; `split`; `media-stack` + `media-badge`; `pull-quote`; `stat-row` > `stat`.
+- Forms: `form-card` > `form[data-pp-form]` (see `_partials/quote-form.html`); `contact-list`.
+- CTA: `cta-band band-teal has-motif` > `container cta-inner`.
+- Motion: add `reveal` (optional `d1`–`d3` delays) to blocks below the fold. Never in the hero.
+- Config hooks: `data-config="phone|email|hours|address|legalName|brand|owner"`,
+  `data-config-href="phone|email|social.facebook|social.instagram"`, `data-year`,
+  `select[data-config-options="services"]`, `[data-nav-link]`.
+
+## Lovable port notes
+- Each HTML file becomes a route: `/`, `/about`, `/services`, `/services/:key` (one `ServicePage` template
+  fed from the services data; `renovations.html` is the reference layout), `/projects`, `/areas`, `/contact`.
+- `site.css` becomes the global stylesheet (or `index.css`). The `:root` tokens map 1:1 to CSS variables or a Tailwind theme.
+  Keep the band custom-property pattern.
+- `PP_CONFIG` becomes `src/site-config.ts` (same shape). Replace the `data-config` runtime fill with direct imports.
+- `_partials/header*.html` / `footer*.html` become `<SiteHeader/>` / `<SiteFooter/>`. Use router links and drop the path variants.
+- `site.js` behaviours turn into small hooks: header scroll class, mobile nav state, IntersectionObserver reveal.
+  The form posts to the Lovable enquiry endpoint instead of `formEndpoint` / mailto.
+- `.ph` placeholders become an `<Img>` component that renders the placeholder when `src` is empty.
