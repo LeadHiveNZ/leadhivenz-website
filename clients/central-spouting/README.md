@@ -100,12 +100,13 @@ reasonable assumption that needs a yes from Dylan. Each one is also marked `<!--
 - Biographical lines on `/about/` (why he started, that he answers the phone, quotes and installs personally).
 - Dylan is the privacy officer; no analytics or pixels installed; how long form submissions are kept.
 
-## Stripe (not done yet)
+## Stripe
 
-The Stripe connector was not authorised in the build session, so the payment link does not exist yet. Spec:
-- Product 1: "Website setup — Central Spouting" one-off **NZ$500**.
-- Product 2: "Website hosting & care" recurring **NZ$20 / month**.
-- One Payment Link with both line items (one-off + subscription), customer collects name, email, business name.
+Created 18 Oct 2026 on the LeadHiveNZ live account, same structure as the GJS Plumbing deal.
+- Payment link (both items, NZD): https://buy.stripe.com/eVqfZh2zJ97z5gw7F5fw407
+- Product "Central Spouting website — build & setup": NZ$500 one-off (`prod_VSxaYZz8jpE8YV`, `price_1US24EFmmZSfVmopnNyrWNqB`)
+- Product "Central Spouting website — hosting & care plan": NZ$20/month (`prod_VSxaXk3GPCb7vN`, `price_1US29mFmmZSfVmopHlcM1Wtq`)
+- Preview email to Dylan drafted in Gmail (centralspouting@outlook.co.nz), not sent. Paste the Netlify preview URL and Joe's number before sending.
 
 ## Build notes
 
