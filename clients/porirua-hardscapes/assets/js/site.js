@@ -10,7 +10,7 @@
     email: "adam@poriruahardscapes.co.nz",
     facebook: "https://www.facebook.com/p/Porirua-Hardscapes-61576109378291/",   // confirm handle before launch
     instagram: "",
-    hours: "7 days · 7am – 7pm",
+    hours: "7 days · 7am – 6pm",
     endpoint: "/api/public/enquiry"
   };
   var root = document.body.getAttribute("data-root") || "";
