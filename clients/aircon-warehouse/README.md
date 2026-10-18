@@ -25,8 +25,8 @@ rebuilt in Lovable, same pattern as the handyman sites.
 
 ## Preview
 Open `site/index.html` in a browser. Everything links relatively. Screens of each page (desktop full page
-and mobile first screen) are in `screens/`. A shareable preview is published as a Claude artifact (link in the
-session notes); it is the same files with `../assets/` rewritten to `assets/`.
+and mobile first screen) are in `screens/`. A shareable preview is published at https://claude.ai/artifact/KSJQ726hVKCznbYY9skySf (private until shared
+from its Share menu); it is the same files with `../assets/` rewritten to `assets/`.
 
 ## Build notes
 - Shared `site/styles.css` and `site/main.js`; each page is plain HTML. `site/_partials.md` explains how to
