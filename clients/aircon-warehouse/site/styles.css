@@ -13,6 +13,7 @@
      06 Header + menu     13 Stat panel           20 Suburbs, CTA band, photo slot, media
      07 Bottom bar/footer 14 Pricing + steps      21 Prose, tables, misc
                                                   22 Motion, focus, print
+                                                  23 Photography
    ========================================================================== */
 
 /* 01 TOKENS ---------------------------------------------------------------- */
@@ -1161,4 +1162,94 @@ legend.form-group__title + * { clear: both; }
   a[href^="http"]::after { content: " (" attr(href) ")"; font-size: .8em; }
   .js-reveal [data-reveal] { opacity: 1; transform: none; }
   details > *:not(summary) { display: block; }
+}
+
+/* 23 PHOTOGRAPHY ----------------------------------------------------------- */
+/* Every photo: fills its frame, cropped with object-fit. Set a focal point per
+   image with style="--focus: 50% 30%" (x y) so heads and products stay in frame.
+   Space is reserved with aspect-ratio, so nothing shifts while images load. */
+.media img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: var(--focus, 50% 50%); }
+.media--4x3 img { aspect-ratio: 4 / 3; }
+.media--3x4 img { aspect-ratio: 3 / 4; }
+.media--1x1 img { aspect-ratio: 1 / 1; }
+.media--wide img { aspect-ratio: 16 / 9; } /* 16:9 at every width (.media--16x9 is 4:3 until 1024px) */
+.media-caption { margin-top: 10px; font-size: .75rem; font-weight: 600; color: var(--ink-soft); }
+
+/* Image header on a card (.service-card, .card, .price-tile): bleeds to the card edges */
+.service-card__media {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 4 / 3;
+  margin: -28px -28px 0;
+  border-radius: calc(var(--r-md) - 1px) calc(var(--r-md) - 1px) 0 0;
+  background: var(--cloud);
+}
+:is(.service-card, .price-tile) > .service-card__media { margin-top: -32px; }
+.price-tile > .service-card__media { margin-bottom: 24px; border-radius: calc(var(--r-lg) - 1px) calc(var(--r-lg) - 1px) 0 0; }
+.service-card__media--wide { aspect-ratio: 16 / 9; }
+.service-card__media img { width: 100%; height: 100%; object-fit: cover; object-position: var(--focus, 50% 50%); transition: transform .7s var(--ease); }
+:is(.card, .price-tile):hover > .service-card__media img { transform: scale(1.045); }
+/* Large icon chip overlaps the bottom edge of the photo */
+.service-card__media + .icon-chip--lg { position: relative; margin-top: -44px; margin-left: 2px; box-shadow: 0 0 0 4px var(--white); }
+
+/* Homepage hero photo. Phones/tablets: a full-bleed band between the copy and the
+   quote card. Desktop: a layer under an ~85% navy gradient so white type stays AA. */
+.hero__photo { position: relative; overflow: hidden; margin-inline: calc(-1 * var(--gutter)); aspect-ratio: 16 / 10; }
+.hero__photo img { width: 100%; height: 100%; object-fit: cover; object-position: var(--focus, 50% 50%); }
+.hero__photo::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, rgba(17, 20, 51, .5) 0%, rgba(17, 20, 51, 0) 28%, rgba(17, 20, 51, 0) 72%, rgba(17, 20, 51, .5) 100%);
+}
+@media (min-width: 1024px) {
+  .hero__photo { position: absolute; inset: 0; z-index: -2; margin: 0; aspect-ratio: auto; }
+  .hero__photo::after { background: linear-gradient(100deg, rgba(17, 20, 51, .93) 0%, rgba(17, 20, 51, .88) 45%, rgba(17, 20, 51, .78) 100%); }
+}
+
+/* Inner page hero photo. Phones/tablets: a band flush with the bottom of the hero.
+   Desktop: fills the right of the hero and fades into the navy under the copy. */
+.page-hero__photo {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  margin-top: var(--space-5);
+  margin-bottom: calc(-1 * clamp(3.5rem, 7vw, 6rem));
+}
+.page-hero__photo img { width: 100%; height: 100%; object-fit: cover; object-position: var(--focus, 50% 50%); }
+.page-hero__photo::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(17, 20, 51, .6) 0%, rgba(17, 20, 51, .1) 40%, rgba(17, 20, 51, 0) 100%); }
+@media (min-width: 1024px) {
+  .page-hero--photo .page-hero__inner { max-width: 700px; }
+  .page-hero__photo {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    left: 40%;
+    z-index: -2;
+    margin: 0;
+    aspect-ratio: auto;
+    -webkit-mask-image: linear-gradient(90deg, transparent 0%, #000 50%);
+    mask-image: linear-gradient(90deg, transparent 0%, #000 50%);
+  }
+  .page-hero__photo::after { background: linear-gradient(90deg, rgba(17, 20, 51, .75) 0%, rgba(17, 20, 51, .5) 50%, rgba(17, 20, 51, .35) 100%); }
+}
+
+/* Promise / feature list beside a heading + photo (index promise, ducted zoning) */
+.promise-layout { display: grid; gap: var(--space-5); grid-template-columns: minmax(0, 1fr); }
+.promise-layout > * { min-width: 0; }
+.promise-layout .section-head { margin-bottom: var(--space-4); }
+@media (min-width: 1024px) {
+  .promise-layout { grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: clamp(3rem, 5vw, 5rem); align-items: start; }
+  .promise-grid--2 { grid-template-columns: repeat(2, minmax(0, 1fr)); border-bottom: 0; }
+  .promise-grid--2 > .promise { padding: 32px 0; border-left: 0; border-bottom: 1px solid var(--line); }
+  .promise-grid--2 > .promise:nth-child(odd) { padding-right: 32px; border-right: 1px solid var(--line); }
+  .promise-grid--2 > .promise:nth-child(even) { padding-left: 32px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :is(.card, .price-tile):hover > .service-card__media img { transform: none; }
+}
+@media print {
+  .hero__photo, .page-hero__photo, .service-card__media { display: none; }
 }

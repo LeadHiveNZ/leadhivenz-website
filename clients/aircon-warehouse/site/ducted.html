@@ -226,8 +226,7 @@
 <main id="main">
 
   <!-- PAGE HERO -->
-  <section class="page-hero" aria-labelledby="page-title">
-    <img class="page-hero__mark" src="../assets/logo-mark.png" alt="" aria-hidden="true" width="379" height="379">
+  <section class="page-hero page-hero--photo" aria-labelledby="page-title">
     <div class="container">
       <div class="page-hero__inner">
         <ol class="breadcrumb" role="list"><li><a href="index.html">Home</a></li><li aria-current="page">Ducted</li></ol>
@@ -240,6 +239,9 @@
         </div>
       </div>
     </div>
+    <figure class="page-hero__photo">
+      <img src="../assets/stock/modern-home-exterior-1600.jpg" srcset="../assets/stock/modern-home-exterior-800.jpg 800w, ../assets/stock/modern-home-exterior-1600.jpg 1600w" sizes="(min-width: 1024px) 60vw, 100vw" alt="Dark modern single-storey home with a covered deck beside a mown lawn" width="1600" height="1068" style="--focus: 60% 50%">
+    </figure>
   </section>
 
   <!-- MAIN CONTENT + STICKY QUICK QUOTE -->
@@ -412,12 +414,18 @@
   <!-- 4. ZONING AND CONTROL -->
   <section class="band band-cloud" aria-labelledby="zoning-title">
     <div class="container">
-      <div class="section-head" data-reveal>
-        <p class="eyebrow">Zoning and control</p>
-        <h2 id="zoning-title">Heat the rooms you’re in, not the whole house</h2>
-        <p class="lead">Zoning splits the house so living areas and bedrooms run on their own settings, all from one outdoor unit.</p>
+      <div class="promise-layout">
+      <div data-reveal>
+        <div class="section-head">
+          <p class="eyebrow">Zoning and control</p>
+          <h2 id="zoning-title">Heat the rooms you’re in, not the whole house</h2>
+          <p class="lead">Zoning splits the house so living areas and bedrooms run on their own settings, all from one outdoor unit.</p>
+        </div>
+        <figure class="media media--4x3">
+          <img src="../assets/stock/wall-thermostat-1600.jpg" srcset="../assets/stock/wall-thermostat-800.jpg 800w, ../assets/stock/wall-thermostat-1600.jpg 1600w" sizes="(min-width: 1024px) 460px, 100vw" alt="Slim white wall controller showing the room temperature" width="1600" height="1067" loading="lazy" style="--focus: 58% 50%">
+        </figure>
       </div>
-      <ul class="promise-grid" role="list" data-reveal-stagger>
+      <ul class="promise-grid promise-grid--2" role="list" data-reveal-stagger>
         <li class="promise" data-reveal>
           <span class="icon-chip" aria-hidden="true"><svg class="icon"><use href="#i-home"/></svg></span>
           <h3>Living and sleeping zones</h3>
@@ -439,6 +447,7 @@
           <p>One outdoor unit runs the whole system, placed with your neighbours in mind.</p>
         </li>
       </ul>
+      </div>
     </div>
   </section>
 

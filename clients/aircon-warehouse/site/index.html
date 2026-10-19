@@ -183,7 +183,7 @@
 <main id="main">
 
   <!-- 1. HERO -->
-  <section class="hero" aria-labelledby="hero-title">
+  <section class="hero hero--photo" aria-labelledby="hero-title">
     <img class="hero__mark" src="../assets/logo-mark.png" alt="" aria-hidden="true" width="379" height="379">
     <div class="container hero__grid">
       <div class="hero__copy">
@@ -201,6 +201,10 @@
           <li><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Quote within one business day</li>
         </ul>
       </div>
+
+      <figure class="hero__photo">
+        <img src="../assets/stock/living-room-heat-pump-1600.jpg" srcset="../assets/stock/living-room-heat-pump-800.jpg 800w, ../assets/stock/living-room-heat-pump-1600.jpg 1600w" sizes="100vw" alt="Modern living room with a white high-wall heat pump above a lounge suite" width="1600" height="1068" fetchpriority="high" style="--focus: 62% 30%">
+      </figure>
 
       <div class="quote-card" id="quote">
         <div class="quote-card__head">
@@ -263,24 +267,28 @@
       </div>
       <div class="grid-4" data-reveal-stagger>
         <article class="card service-card" data-reveal>
+          <div class="service-card__media"><img src="../assets/stock/bedroom-heat-pump-bright-1600.jpg" srcset="../assets/stock/bedroom-heat-pump-bright-800.jpg 800w, ../assets/stock/bedroom-heat-pump-bright-1600.jpg 1600w" sizes="(min-width: 1024px) 290px, (min-width: 720px) 50vw, 100vw" alt="Sunny bedroom with a high-wall heat pump mounted between two windows" width="1600" height="1068" loading="lazy" style="--focus: 50% 30%"></div>
           <span class="icon-chip icon-chip--lg" aria-hidden="true"><svg class="icon"><use href="#i-highwall"/></svg></span>
           <h3><a href="heat-pumps.html">Bedroom &amp; living room heat pumps</a></h3>
           <p>High-wall units sized to the room. Quiet, efficient, and usually installed in a single visit.</p>
           <div class="service-card__meta"><span>From $1,799 installed</span><span class="arrow" aria-hidden="true"><svg class="icon"><use href="#i-arrow"/></svg></span></div>
         </article>
         <article class="card service-card" data-reveal>
+          <div class="service-card__media"><img src="../assets/stock/modern-home-exterior-1600.jpg" srcset="../assets/stock/modern-home-exterior-800.jpg 800w, ../assets/stock/modern-home-exterior-1600.jpg 1600w" sizes="(min-width: 1024px) 290px, (min-width: 720px) 50vw, 100vw" alt="Dark modern single-storey home with a covered deck beside a mown lawn" width="1600" height="1068" loading="lazy" style="--focus: 65% 50%"></div>
           <span class="icon-chip icon-chip--lg" aria-hidden="true"><svg class="icon"><use href="#i-ducted"/></svg></span>
           <h3><a href="ducted.html">Ducted whole-home systems</a></h3>
           <p>Every room warm or cool from discreet ceiling vents, zoned the way you actually live.</p>
           <div class="service-card__meta"><span>Units from $3,640</span><span class="arrow" aria-hidden="true"><svg class="icon"><use href="#i-arrow"/></svg></span></div>
         </article>
         <article class="card service-card" data-reveal>
+          <div class="service-card__media"><img src="../assets/stock/technician-outdoor-unit-1600.jpg" srcset="../assets/stock/technician-outdoor-unit-800.jpg 800w, ../assets/stock/technician-outdoor-unit-1600.jpg 1600w" sizes="(min-width: 1024px) 290px, (min-width: 720px) 50vw, 100vw" alt="Technician checking pressures with manifold gauges on a rooftop outdoor unit" width="1600" height="1137" loading="lazy" style="--focus: 40% 50%"></div>
           <span class="icon-chip icon-chip--lg" aria-hidden="true"><svg class="icon"><use href="#i-package"/></svg></span>
           <h3><a href="supply-install.html">Supply &amp; install packages</a></h3>
           <p>Pick the unit. We handle the rest. One price, one team, one phone number for the warranty.</p>
           <div class="service-card__meta"><span>Priced up front</span><span class="arrow" aria-hidden="true"><svg class="icon"><use href="#i-arrow"/></svg></span></div>
         </article>
         <article class="card service-card" data-reveal>
+          <div class="service-card__media"><img src="../assets/site-banner-1000.jpg" srcset="../assets/site-banner-1000.jpg 1000w, ../assets/site-banner-1600.jpg 1600w" sizes="(min-width: 1024px) 290px, (min-width: 720px) 50vw, 100vw" alt="Aircon Warehouse banner on the scaffolding of a multi-unit build in Auckland" width="1000" height="750" loading="lazy" style="--focus: 62% 30%"></div>
           <span class="icon-chip icon-chip--lg" aria-hidden="true"><svg class="icon"><use href="#i-building"/></svg></span>
           <h3><a href="commercial.html">Trade &amp; commercial</a></h3>
           <p>Trade pricing, quick quotes and dedicated support for builders, developers and property managers.</p>
@@ -493,12 +501,18 @@
   <!-- 9. CUSTOMER PROMISE -->
   <section class="band" aria-labelledby="promise-title">
     <div class="container">
-      <div class="section-head" data-reveal>
-        <p class="eyebrow">Our promise</p>
-        <h2 id="promise-title">What customers can expect</h2>
-        <p class="lead">Four things we hold ourselves to on every job, from a single bedroom to a forty-unit build.</p>
+      <div class="promise-layout">
+      <div data-reveal>
+        <div class="section-head">
+          <p class="eyebrow">Our promise</p>
+          <h2 id="promise-title">What customers can expect</h2>
+          <p class="lead">Four things we hold ourselves to on every job, from a single bedroom to a forty-unit build.</p>
+        </div>
+        <figure class="media media--wide">
+          <img src="../assets/stock/technician-inspecting-outdoor-unit-1600.jpg" srcset="../assets/stock/technician-inspecting-outdoor-unit-800.jpg 800w, ../assets/stock/technician-inspecting-outdoor-unit-1600.jpg 1600w" sizes="(min-width: 1024px) 460px, 100vw" alt="Technician inspecting an outdoor heat pump unit with a torch beside a weatherboard house" width="1600" height="1067" loading="lazy" style="--focus: 50% 0%">
+        </figure>
       </div>
-      <ul class="promise-grid" role="list" data-reveal-stagger>
+      <ul class="promise-grid promise-grid--2" role="list" data-reveal-stagger>
         <li class="promise" data-reveal>
           <span class="icon-chip" aria-hidden="true"><svg class="icon"><use href="#i-receipt"/></svg></span>
           <h3>Fixed quotes, no surprise extras</h3>
@@ -520,6 +534,7 @@
           <p>A walk-through of the remote and app on install day, a filter-clean reminder, and one number to call.</p>
         </li>
       </ul>
+      </div>
       <div class="promise-foot">
         <p>Don’t take our word for it. See what Auckland customers say.</p>
         <a class="btn btn-ghost" href="https://www.google.com/search?q=Aircon+Warehouse+Manukau" target="_blank" rel="noopener">Read our Google reviews <svg class="icon" aria-hidden="true"><use href="#i-external"/></svg><span class="visually-hidden"> (opens in a new tab)</span></a>
