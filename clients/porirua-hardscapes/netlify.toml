@@ -1,0 +1,61 @@
+# Porirua Hardscapes — Netlify config
+# Drag the deploy zip onto https://app.netlify.com/drop, or connect the repo with base directory
+# clients/porirua-hardscapes and publish directory "." (no build step).
+[build]
+  publish = "."
+
+[build.processing.html]
+  pretty_urls = true          # /services/retaining-walls.html is served as /services/retaining-walls
+
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# ---- 301s from the old Duda site's slugs (keep these when the real domain moves over) ----
+[[redirects]]
+  from = "/concrete-services-wellington"
+  to = "/services/concrete-driveways"
+  status = 301
+[[redirects]]
+  from = "/retaining-wall-construction-wellington"
+  to = "/services/retaining-walls"
+  status = 301
+[[redirects]]
+  from = "/excavator-hire-services-wellington"
+  to = "/services/excavation-truck-hire"
+  status = 301
+[[redirects]]
+  from = "/fencing-services-wellington"
+  to = "/services/decks-fences"
+  status = 301
+[[redirects]]
+  from = "/landscaping-services-wellington"
+  to = "/services/landscaping"
+  status = 301
+[[redirects]]
+  from = "/construction-demolition-services-wellington"
+  to = "/services/demolition"
+  status = 301
+[[redirects]]
+  from = "/new-landscaping-projects-wellington"
+  to = "/projects"
+  status = 301
+[[redirects]]
+  from = "/hardscaping-services-wellington"
+  to = "/about"
+  status = 301
+[[redirects]]
+  from = "/landscaping-and-construction-quotes"
+  to = "/contact"
+  status = 301
+[[redirects]]
+  from = "/t/*"
+  to = "/contact"
+  status = 301
+
+# ---- DEMO ONLY: keep the preview out of Google. Delete this block when the real domain goes live. ----
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Robots-Tag = "noindex"
