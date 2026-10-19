@@ -1204,7 +1204,7 @@ legend.form-group__title + * { clear: both; }
 }
 @media (min-width: 1024px) {
   .hero__photo { position: absolute; inset: 0; z-index: -2; margin: 0; aspect-ratio: auto; }
-  .hero__photo::after { background: linear-gradient(100deg, rgba(17, 20, 51, .93) 0%, rgba(17, 20, 51, .88) 45%, rgba(17, 20, 51, .78) 100%); }
+  .hero__photo::after { background: linear-gradient(100deg, rgba(17, 20, 51, .94) 0%, rgba(17, 20, 51, .89) 45%, rgba(17, 20, 51, .78) 100%); }
 }
 
 /* Inner page hero photo. Phones/tablets: a band flush with the bottom of the hero.
