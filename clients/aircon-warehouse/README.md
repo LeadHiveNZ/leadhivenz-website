@@ -33,6 +33,7 @@ from its Share menu); it is the same files with `../assets/` rewritten to `asset
   add a page. A few pages carry a small page-local `<style>` block marked "candidate for styles.css".
 - Forms: any `form[data-quote-form]` is validated by `main.js` and swaps to a success panel. There is no
   endpoint yet.
+- Stock placeholder photos (Pexels) are in `assets/stock/` with `assets/stock/CREDITS.md`. They are placeholders only and must be swapped for the client's own job and team photos before launch.
 - No third-party embeds (no map iframe) so the preview works inside the artifact sandbox; the address links
   out to Google Maps instead.
 - Fujitsu is written "Fujitsu (GENERAL Airstage)" because Fujitsu General NZ renamed to GENERAL in January 2026.
