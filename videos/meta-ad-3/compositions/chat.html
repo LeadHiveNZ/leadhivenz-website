@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="UTF-8" /><title>chat</title></head>
+  <body>
+    <template>
+      <style>@font-face { font-family: 'Noto Color Emoji'; src: url('assets/fonts/NotoColorEmoji.ttf'); }
+#root { position:absolute; inset:0; font-family:Montserrat, 'Noto Color Emoji', sans-serif; }
+.head { position:absolute; left:70px; right:70px; top:1112px; height:146px; display:flex; flex-direction:column;
+        justify-content:flex-end; text-align:center; font-size:48px; font-weight:800; line-height:1.14; color:#F5F2EA; opacity:0;
+        text-shadow:0 3px 14px rgba(0,0,0,0.6), 0 1px 3px rgba(0,0,0,0.7); will-change:transform; }
+.head .g { color:#FFB900; }
+.panel { position:absolute; left:96px; right:96px; top:1270px; height:256px; background:#0A1628;
+         border-radius:40px; padding:26px 30px; box-sizing:border-box; display:flex; flex-direction:column; gap:18px;
+         box-shadow:0 22px 50px rgba(0,0,0,0.35); opacity:0; will-change:transform; }
+.r1 { display:flex; justify-content:flex-end; }
+.voice { display:inline-flex; align-items:center; gap:16px; background:#FFB900; color:#0A1628; border-radius:28px 28px 8px 28px;
+         padding:14px 22px; font-size:30px; font-weight:800; opacity:0; will-change:transform; }
+.wave { display:flex; align-items:center; gap:5px; height:44px; }
+.bar { display:block; width:6px; height:40px; border-radius:3px; background:#0A1628; transform:scaleY(0.25); transform-origin:50% 50%; will-change:transform; }
+.r2 { display:flex; justify-content:flex-start; }
+.reply { position:relative; width:640px; height:96px; background:#16243C; color:#F5F2EA; border-radius:28px 28px 28px 8px;
+         padding:16px 22px; box-sizing:border-box; opacity:0; will-change:transform; }
+.line { position:absolute; left:22px; right:22px; top:14px; font-size:32px; font-weight:800; white-space:nowrap; }
+.ch { opacity:0; }
+.l2, .l3 { opacity:0; }
+.l3 { display:flex; align-items:center; gap:14px; color:#FFB900; top:20px; font-size:38px; }
+.track { position:absolute; left:22px; right:22px; bottom:18px; height:10px; border-radius:5px; background:rgba(245,242,234,0.18); overflow:hidden; }
+.fill { display:block; width:100%; height:100%; background:#FFB900; transform:scaleX(0); transform-origin:0% 50%; will-change:transform; }
+.mini { width:44px; height:44px; flex:none; }
+</style>
+      <div id="root" data-composition-id="chat" data-width="1080" data-height="1920">
+
+<div class="head" id="chat-head"><div>This ad was edited and posted by Claude. <span class="g">One voice prompt.</span></div></div>
+<div class="panel" id="chat-panel">
+  <div class="r1"><div class="voice" id="chat-voice"><span>🎙️ Voice prompt</span><span class="wave"><span class="bar" id="chat-bar-0"></span><span class="bar" id="chat-bar-1"></span><span class="bar" id="chat-bar-2"></span><span class="bar" id="chat-bar-3"></span><span class="bar" id="chat-bar-4"></span><span class="bar" id="chat-bar-5"></span><span class="bar" id="chat-bar-6"></span><span class="bar" id="chat-bar-7"></span><span class="bar" id="chat-bar-8"></span><span class="bar" id="chat-bar-9"></span><span class="bar" id="chat-bar-10"></span><span class="bar" id="chat-bar-11"></span><span class="bar" id="chat-bar-12"></span><span class="bar" id="chat-bar-13"></span><span class="bar" id="chat-bar-14"></span><span class="bar" id="chat-bar-15"></span></span></div></div>
+  <div class="r2"><div class="reply" id="chat-reply">
+    <div class="line l1" id="chat-l1"><span class="ch" id="chat-ch-0">E</span><span class="ch" id="chat-ch-1">d</span><span class="ch" id="chat-ch-2">i</span><span class="ch" id="chat-ch-3">t</span><span class="ch" id="chat-ch-4">i</span><span class="ch" id="chat-ch-5">n</span><span class="ch" id="chat-ch-6">g</span><span class="ch" id="chat-ch-7">&nbsp;</span><span class="ch" id="chat-ch-8">y</span><span class="ch" id="chat-ch-9">o</span><span class="ch" id="chat-ch-10">u</span><span class="ch" id="chat-ch-11">r</span><span class="ch" id="chat-ch-12">&nbsp;</span><span class="ch" id="chat-ch-13">a</span><span class="ch" id="chat-ch-14">d</span><span class="ch" id="chat-ch-15">…</span></div>
+    <div class="line l2" id="chat-l2">Posting to Facebook…</div>
+    <div class="line l3" id="chat-l3"><svg class="mini" viewBox="0 0 64 64"><circle cx="32" cy="32" r="30" fill="#FFB900"/><path d="M18 33 l9 9 l19 -20" fill="none" stroke="#0A1628" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Posted ✓</span></div>
+    <div class="track" id="chat-track"><span class="fill" id="chat-fill"></span></div>
+  </div></div>
+</div>
+      </div>
+      <script>
+        (function () {
+          const tl = gsap.timeline({ paused: true });
+tl.fromTo("#chat-panel", { opacity: 0, y: 60 }, { opacity: 1, y: 0, duration: 0.3, ease: "power3.out" }, 0);
+tl.fromTo("#chat-head", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.3, ease: "power3.out" }, 0.05);
+tl.fromTo("#chat-voice", { opacity: 0, scale: 0.85 }, { opacity: 1, scale: 1, duration: 0.22, ease: "power3.out" }, 0.300);
+tl.to("#chat-bar-0", { scaleY: 0.95, duration: 0.16, ease: "sine.inOut" }, 0.400);
+tl.to("#chat-bar-0", { scaleY: 0.35, duration: 0.16, ease: "sine.inOut" }, 0.565);
+tl.to("#chat-bar-0", { scaleY: 0.95, duration: 0.16, ease: "sine.inOut" }, 0.730);
+tl.to("#chat-bar-0", { scaleY: 0.47, duration: 0.16, ease: "sine.inOut" }, 0.895);
+tl.to("#chat-bar-0", { scaleY: 0.83, duration: 0.16, ease: "sine.inOut" }, 1.060);
+tl.to("#chat-bar-0", { scaleY: 0.59, duration: 0.16, ease: "sine.inOut" }, 1.225);
+tl.to("#chat-bar-0", { scaleY: 0.25, duration: 0.15, ease: "sine.out" }, 1.390);
+tl.to("#chat-bar-1", { scaleY: 0.59, duration: 0.16, ease: "sine.inOut" }, 0.400);
+tl.to("#chat-bar-1", { scaleY: 0.83, duration: 0.16, ease: "sine.inOut" }, 0.565);
+tl.to("#chat-bar-1", { scaleY: 0.47, duration: 0.16, ease: "sine.inOut" }, 0.730);
+tl.to("#chat-bar-1", { scaleY: 0.95, duration: 0.16, ease: "sine.inOut" }, 0.895);
+tl.to("#chat-bar-1", { scaleY: 0.35, duration: 0.16, ease: "sine.inOut" }, 1.060);
+tl.to("#chat-bar-1", { scaleY: 0.95, duration: 0.16, ease: "sine.inOut" }, 1.225);
+tl.to("#chat-bar-1", { scaleY: 0.25, duration: 0.15, ease: "sine.out" }, 1.390);
+tl.to("#chat-bar-2", { scaleY: 0.59, duration: 0.16, ease: "sine.inOut" }, 0.400);
+tl.to("#chat-bar-2", { scaleY: 0.71, duration: 0.16, ease: "sine.inOut" }, 0.565);
+tl.to("#chat-bar-2", { scaleY: 0.71, duration: 0.16, ease: "sine.inOut" }, 0.730);
+tl.to("#chat-bar-2", { scaleY: 0.59, duration: 0.16, ease: "sine.inOut" }, 0.895);
+tl.to("#chat-bar-2", { scaleY: 0.83, duration: 0.16, ease: "sine.inOut" }, 1.060);
+tl.to("#chat-bar-2", { scaleY: 0.47, duration: 0.16, ease: "sine.inOut" }, 1.225);
+tl.to("#chat-bar-2", { scaleY: 0.25, duration: 0.15, ease: "sine.out" }, 1.390);
+tl.to("#chat-bar-3", { scaleY: 0.95, duration: 0.16, ease: "sine.inOut" }, 0.400);
+tl.to("#chat-bar-3", { scaleY: 0.47, duration: 0.16, ease: "sine.inOut" }, 0.565);
+tl.to("#chat-bar-3", { scaleY: 0.83, duration: 0.16, ease: "sine.inOut" }, 0.730);
+tl.to("#chat-bar-3", { scaleY: 0.59, duration: 0.16, ease: "sine.inOut" }, 0.895);
+tl.to("#chat-bar-3", { scaleY: 0.71, duration: 0.16, ease: "sine.inOut" }, 1.060);
+tl.to("#chat-bar-3", { scaleY: 0.71, duration: 0.16, ease: "sine.inOut" }, 1.225);
+tl.to("#chat-bar-3", { scaleY: 0.25, duration: 0.15, ease: "sine.out" }, 1.390);
+tl.to("#chat-bar-4", { scaleY: 0.47, duration: 0.16, ease: "sine.inOut" }, 0.400);
+tl.to("#chat-bar-4", { scaleY: 0.95, duration: 0.16, ease: "sine.inOut" }, 0.565);
+tl.to("#chat-bar-4", { scaleY: 0.35, duration: 0.16, ease: "sine.inOut" }, 0.730);
+tl.to("#chat-bar-4", { scaleY: 0.95, duration: 0.16, ease: "sine.inOut" }, 0.895);
+tl.to("#chat-bar-4", { scaleY: 0.47, duration: 0.16, ease: "sine.inOut" }, 1.060);
+tl.to("#chat-bar-4", { scaleY: 0.83, duration: 0.16, ease: "sine.inOut" }, 1.225);
+tl.to("#chat-bar-4", { scaleY: 0.25, duration: 0.15, ease: "sine.out" }, 1.390);
+tl.to("#chat-bar-5", { scaleY: 0.71, duration: 0.16, ease: "sine.inOut" }, 0.400);
+tl.to("#chat-bar-5", { scaleY: 0.59, duration: 0.16, ease: "sine.inOut" }, 0.565);
+tl.to("#chat-bar-5", { scaleY: 0.83, duration: 0.16, ease: "sine.inOut" }, 0.730);
+tl.to("#chat-bar-5", { scaleY: 0.47, duration: 0.16, ease: "sine.inOut" }, 0.895);
+tl.to("#chat-bar-5", { scaleY: 0.95, duration: 0.16, ease: "sine.inOut" }, 1.060);
+tl.to("#chat-bar-5", { scaleY: 0.35, duration: 0.16, ease: "sine.inOut" }, 1.225);
+tl.to("#chat-bar-5", { scaleY: 0.25, duration: 0.15, ease: "sine.out" }, 1.390);
+tl.to("#chat-bar-6", { scaleY: 0.83, duration: 0.16, ease: "sine.inOut" }, 0.400);
+tl.to("#chat-bar-6", { scaleY: 0.59, duration: 0.16, ease: "sine.inOut" }, 0.565);
+tl.to("#chat-bar-6", { scaleY: 0.71, duration: 0.16, ease: "sine.inOut" }, 0.730);
+tl.to("#chat-bar-6", { scaleY: 0.71, duration: 0.16, ease: "sine.inOut" }, 0.895);
+tl.to("#chat-bar-6", { scaleY: 0.59, duration: 0.16, ease: "sine.inOut" }, 1.060);
+tl.to("#chat-bar-6", { scaleY: 0.83, duration: 0.16, ease: "sine.inOut" }, 1.225);
+tl.to("#chat-bar-6", { scaleY: 0.25, duration: 0.15, ease: "sine.out" }, 1.390);
+tl.to("#chat-bar-7", { scaleY: 0.35, duration: 0.16, ease: "sine.inOut" }, 0.400);
+tl.to("#chat-bar-7", { scaleY: 0.95, duration: 0.16, ease: "sine.inOut" }, 0.565);
+tl.to("#chat-bar-7", { scaleY: 0.47, duration: 0.16, ease: "sine.inOut" }, 0.730);
+tl.to("#chat-bar-7", { scaleY: 0.83, duration: 0.16, ease: "sine.inOut" }, 0.895);
+tl.to("#chat-bar-7", { scaleY: 0.59, duration: 0.16, ease: "sine.inOut" }, 1.060);
+tl.to("#chat-bar-7", { scaleY: 0.71, duration: 0.16, ease: "sine.inOut" }, 1.225);
+tl.to("#chat-bar-7", { scaleY: 0.25, duration: 0.15, ease: "sine.out" }, 1.390);
+tl.to("#chat-bar-8", { scaleY: 0.83, duration: 0.16, ease: "sine.inOut" }, 0.400);
+tl.to("#chat-bar-8", { scaleY: 0.47, duration: 0.16, ease: "sine.inOut" }, 0.565);
+tl.to("#chat-bar-8", { scaleY: 0.95, duration: 0.16, ease: "sine.inOut" }, 0.730);
+tl.to("#chat-bar-8", { scaleY: 0.35, duration: 0.16, ease: "sine.inOut" }, 0.895);
+tl.to("#chat-bar-8", { scaleY: 0.95, duration: 0.16, ease: "sine.inOut" }, 1.060);
+tl.to("#chat-bar-8", { scaleY: 0.47, duration: 0.16, ease: "sine.inOut" }, 1.225);
+tl.to("#chat-bar-8", { scaleY: 0.25, duration: 0.15, ease: "sine.out" }, 1.390);
+tl.to("#chat-bar-9", { scaleY: 0.71, duration: 0.16, ease: "sine.inOut" }, 0.400);
+tl.to("#chat-bar-9", { scaleY: 0.71, duration: 0.16, ease: "sine.inOut" }, 0.565);
+tl.to("#chat-bar-9", { scaleY: 0.59, duration: 0.16, ease: "sine.inOut" }, 0.730);
+tl.to("#chat-bar-9", { scaleY: 0.83, duration: 0.16, ease: "sine.inOut" }, 0.895);
+tl.to("#chat-bar-9", { scaleY: 0.47, duration: 0.16, ease: "sine.inOut" }, 1.060);
+tl.to("#chat-bar-9", { scaleY: 0.95, duration: 0.16, ease: "sine.inOut" }, 1.225);
+tl.to("#chat-bar-9", { scaleY: 0.25, duration: 0.15, ease: "sine.out" }, 1.390);
+tl.to("#chat-bar-10", { scaleY: 0.47, duration: 0.16, ease: "sine.inOut" }, 0.400);
+tl.to("#chat-bar-10", { scaleY: 0.83, duration: 0.16, ease: "sine.inOut" }, 0.565);
+tl.to("#chat-bar-10", { scaleY: 0.59, duration: 0.16, ease: "sine.inOut" }, 0.730);
+tl.to("#chat-bar-10", { scaleY: 0.71, duration: 0.16, ease: "sine.inOut" }, 0.895);
+tl.to("#chat-bar-10", { scaleY: 0.71, duration: 0.16, ease: "sine.inOut" }, 1.060);
+tl.to("#chat-bar-10", { scaleY: 0.59, duration: 0.16, ease: "sine.inOut" }, 1.225);
+tl.to("#chat-bar-10", { scaleY: 0.25, duration: 0.15, ease: "sine.out" }, 1.390);
+tl.to("#chat-bar-11", { scaleY: 0.95, duration: 0.16, ease: "sine.inOut" }, 0.400);
+tl.to("#chat-bar-11", { scaleY: 0.35, duration: 0.16, ease: "sine.inOut" }, 0.565);
+tl.to("#chat-bar-11", { scaleY: 0.95, duration: 0.16, ease: "sine.inOut" }, 0.730);
+tl.to("#chat-bar-11", { scaleY: 0.47, duration: 0.16, ease: "sine.inOut" }, 0.895);
+tl.to("#chat-bar-11", { scaleY: 0.83, duration: 0.16, ease: "sine.inOut" }, 1.060);
+tl.to("#chat-bar-11", { scaleY: 0.59, duration: 0.16, ease: "sine.inOut" }, 1.225);
+tl.to("#chat-bar-11", { scaleY: 0.25, duration: 0.15, ease: "sine.out" }, 1.390);
+tl.to("#chat-bar-12", { scaleY: 0.59, duration: 0.16, ease: "sine.inOut" }, 0.400);
+tl.to("#chat-bar-12", { scaleY: 0.83, duration: 0.16, ease: "sine.inOut" }, 0.565);
+tl.to("#chat-bar-12", { scaleY: 0.47, duration: 0.16, ease: "sine.inOut" }, 0.730);
+tl.to("#chat-bar-12", { scaleY: 0.95, duration: 0.16, ease: "sine.inOut" }, 0.895);
+tl.to("#chat-bar-12", { scaleY: 0.35, duration: 0.16, ease: "sine.inOut" }, 1.060);
+tl.to("#chat-bar-12", { scaleY: 0.95, duration: 0.16, ease: "sine.inOut" }, 1.225);
+tl.to("#chat-bar-12", { scaleY: 0.25, duration: 0.15, ease: "sine.out" }, 1.390);
+tl.to("#chat-bar-13", { scaleY: 0.59, duration: 0.16, ease: "sine.inOut" }, 0.400);
+tl.to("#chat-bar-13", { scaleY: 0.71, duration: 0.16, ease: "sine.inOut" }, 0.565);
+tl.to("#chat-bar-13", { scaleY: 0.71, duration: 0.16, ease: "sine.inOut" }, 0.730);
+tl.to("#chat-bar-13", { scaleY: 0.59, duration: 0.16, ease: "sine.inOut" }, 0.895);
+tl.to("#chat-bar-13", { scaleY: 0.83, duration: 0.16, ease: "sine.inOut" }, 1.060);
+tl.to("#chat-bar-13", { scaleY: 0.47, duration: 0.16, ease: "sine.inOut" }, 1.225);
+tl.to("#chat-bar-13", { scaleY: 0.25, duration: 0.15, ease: "sine.out" }, 1.390);
+tl.to("#chat-bar-14", { scaleY: 0.95, duration: 0.16, ease: "sine.inOut" }, 0.400);
+tl.to("#chat-bar-14", { scaleY: 0.47, duration: 0.16, ease: "sine.inOut" }, 0.565);
+tl.to("#chat-bar-14", { scaleY: 0.83, duration: 0.16, ease: "sine.inOut" }, 0.730);
+tl.to("#chat-bar-14", { scaleY: 0.59, duration: 0.16, ease: "sine.inOut" }, 0.895);
+tl.to("#chat-bar-14", { scaleY: 0.71, duration: 0.16, ease: "sine.inOut" }, 1.060);
+tl.to("#chat-bar-14", { scaleY: 0.71, duration: 0.16, ease: "sine.inOut" }, 1.225);
+tl.to("#chat-bar-14", { scaleY: 0.25, duration: 0.15, ease: "sine.out" }, 1.390);
+tl.to("#chat-bar-15", { scaleY: 0.47, duration: 0.16, ease: "sine.inOut" }, 0.400);
+tl.to("#chat-bar-15", { scaleY: 0.95, duration: 0.16, ease: "sine.inOut" }, 0.565);
+tl.to("#chat-bar-15", { scaleY: 0.35, duration: 0.16, ease: "sine.inOut" }, 0.730);
+tl.to("#chat-bar-15", { scaleY: 0.95, duration: 0.16, ease: "sine.inOut" }, 0.895);
+tl.to("#chat-bar-15", { scaleY: 0.47, duration: 0.16, ease: "sine.inOut" }, 1.060);
+tl.to("#chat-bar-15", { scaleY: 0.83, duration: 0.16, ease: "sine.inOut" }, 1.225);
+tl.to("#chat-bar-15", { scaleY: 0.25, duration: 0.15, ease: "sine.out" }, 1.390);
+tl.fromTo("#chat-reply", { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: 0.2, ease: "power3.out" }, 1.400);
+tl.set("#chat-ch-0", { opacity: 1 }, 1.520);
+tl.set("#chat-ch-1", { opacity: 1 }, 1.554);
+tl.set("#chat-ch-2", { opacity: 1 }, 1.589);
+tl.set("#chat-ch-3", { opacity: 1 }, 1.623);
+tl.set("#chat-ch-4", { opacity: 1 }, 1.657);
+tl.set("#chat-ch-5", { opacity: 1 }, 1.692);
+tl.set("#chat-ch-6", { opacity: 1 }, 1.726);
+tl.set("#chat-ch-7", { opacity: 1 }, 1.761);
+tl.set("#chat-ch-8", { opacity: 1 }, 1.795);
+tl.set("#chat-ch-9", { opacity: 1 }, 1.829);
+tl.set("#chat-ch-10", { opacity: 1 }, 1.864);
+tl.set("#chat-ch-11", { opacity: 1 }, 1.898);
+tl.set("#chat-ch-12", { opacity: 1 }, 1.933);
+tl.set("#chat-ch-13", { opacity: 1 }, 1.967);
+tl.set("#chat-ch-14", { opacity: 1 }, 2.001);
+tl.set("#chat-ch-15", { opacity: 1 }, 2.036);
+tl.fromTo("#chat-fill", { scaleX: 0 }, { scaleX: 1, duration: 0.85, ease: "power1.inOut" }, 1.520);
+tl.set("#chat-l1", { opacity: 0 }, 2.450);
+tl.set("#chat-l2", { opacity: 1 }, 2.450);
+tl.set("#chat-fill", { scaleX: 0 }, 2.450);
+tl.to("#chat-fill", { scaleX: 1, duration: 0.55, ease: "power1.in" }, 2.460);
+tl.set(["#chat-l2", "#chat-track"], { opacity: 0 }, 3.050);
+tl.fromTo("#chat-l3", { opacity: 0, scale: 0.8 }, { opacity: 1, scale: 1, duration: 0.22, ease: "power3.out" }, 3.050);
+tl.set({}, {}, 3.830);
+          window.__timelines["chat"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>

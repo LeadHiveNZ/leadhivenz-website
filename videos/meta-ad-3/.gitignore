@@ -1,0 +1,9 @@
+assets/*.mp4
+assets/*.mov
+assets/*.m4a
+assets/*.jpg
+assets/fonts/
+renders/
+snapshots*/
+node_modules/
+.hyperframes/

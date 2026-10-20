@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="UTF-8" /><title>card-booked</title></head>
+  <body>
+    <template>
+      <style>
+#root { position:absolute; inset:0; font-family:Montserrat, sans-serif; color:#F5F2EA; }
+.row { position:absolute; left:60px; right:60px; top:404px; display:flex; justify-content:center; }
+.card { display:inline-flex; align-items:center; gap:22px; background:rgba(10,22,40,0.90); border-radius:30px; padding:22px 40px;
+        font-weight:800; white-space:nowrap; box-shadow:0 18px 40px rgba(0,0,0,0.28); opacity:0; will-change:transform; transform-origin:50% 50%; }
+.g { color:#FFB900; }
+.big { font-size:110px; letter-spacing:-0.02em; line-height:1; }
+.mid { font-size:66px; line-height:1.05; }
+.pop { display:none; opacity:0; will-change:transform; transform-origin:50% 60%; }
+.tick { width:62px; height:62px; flex:none; }
+</style>
+      <div id="root" data-composition-id="card-booked" data-width="1080" data-height="1920">
+<div class="row"><div class="card" id="card-booked-c"><span class="mid"><span class="g">40</span> tradies booked</span></div></div>
+      </div>
+      <script>
+        (function () {
+          const tl = gsap.timeline({ paused: true });
+tl.fromTo("#card-booked-c", { opacity: 0, scale: 0.86, y: 18 }, { opacity: 1, scale: 1, y: 0, duration: 0.32, ease: "power3.out" }, 0);
+tl.to("#card-booked-c", { opacity: 0, y: -12, duration: 0.2, ease: "power2.in" }, 1.460);
+
+          window.__timelines["card-booked"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>

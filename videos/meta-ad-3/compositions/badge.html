@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head><meta charset="UTF-8" /><title>badge</title></head>
+  <body>
+    <template>
+      <style>@font-face { font-family: 'Noto Color Emoji'; src: url('assets/fonts/NotoColorEmoji.ttf'); }
+#root { position:absolute; inset:0; font-family:Montserrat, 'Noto Color Emoji', sans-serif; }
+.badge { position:absolute; top:292px; right:56px; background:#0A1628; color:#FFB900; font-size:34px; font-weight:800;
+         letter-spacing:0.02em; padding:13px 24px; border-radius:18px; white-space:nowrap; box-shadow:0 10px 26px rgba(0,0,0,0.30); }
+</style>
+      <div id="root" data-composition-id="badge" data-width="1080" data-height="1920">
+<div class="badge" id="badge-b">📅 WED 28 OCT · 7:30PM NZT</div>
+      </div>
+      <script>
+        (function () {
+          const tl = gsap.timeline({ paused: true });
+tl.set({}, {}, 36.340);
+          window.__timelines["badge"] = tl;
+        })();
+      </script>
+    </template>
+  </body>
+</html>
