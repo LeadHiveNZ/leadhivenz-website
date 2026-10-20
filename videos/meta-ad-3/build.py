@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""HyperFrames composition for the Claude AI workshop Meta ad v3 (main take + P.S. in one file).
+"""HyperFrames composition for the Claude AI workshop Meta ad v3 (main take only; P.S. removed).
 
 Inputs: edl-in.json (cut lists in source seconds), transcript.json (Parakeet words), assets/.
 Writes index.html, compositions/*.html, edl.json. Audio is built separately by audio.py and
@@ -18,7 +18,7 @@ EMOJI_FACE = "@font-face { font-family: 'Noto Color Emoji'; src: url('assets/fon
 SRC = "assets/source.mp4"
 
 c = json.load(open("edl-in.json"))
-D, PS_CARD, HOLD, END_CARD = c["D"], c["ps_card"], c["hold"], c["end_card"]
+D, END_CARD = c["D"], c["end_card"]
 
 # ---- timeline layout ----------------------------------------------------------------
 segs, t = [], 0.0
@@ -27,15 +27,7 @@ for i, (a, b) in enumerate(c["main"]):
     segs.append(dict(src_in=a, src_out=b, out_in=round(s, 3), out_out=round(s + b - a, 3), part="main"))
     t = s + b - a
 MAIN_END = round(t, 3)
-PS_CARD_AT = MAIN_END
-t = MAIN_END + PS_CARD
-PS_START = round(t, 3)
-for i, (a, b) in enumerate(c["ps"]):
-    s = t if i == 0 else t - D
-    segs.append(dict(src_in=a, src_out=b, out_in=round(s, 3), out_out=round(s + b - a, 3), part="ps"))
-    t = s + b - a
-PS_END = round(t, 3)
-END_AT = round(PS_END + HOLD, 3)
+END_AT = MAIN_END  # end card follows the last main line
 TOTAL = round(END_AT + END_CARD, 3)
 
 
@@ -55,8 +47,8 @@ FIX = {"50.": "$50.", "7.30pm.": "7:30pm."}
 ASR_LAG = 0.05
 words = []
 for w in json.load(open("transcript.json")):
-    if any(a <= w["start"] <= b for a, b in c["drop"]):
-        continue  # intentionally removed line
+    if any(a <= w["start"] <= b for a, b in c["drop"]) or w["start"] > c["main"][-1][1]:
+        continue  # intentionally removed line, or the P.S. take
     txt = FIX.get(w["text"], w["text"])
     s0 = w["start"] + ASR_LAG
     k = next((sg for sg in segs if sg["src_in"] <= s0 <= sg["src_out"]), None)
@@ -69,28 +61,19 @@ for w in json.load(open("transcript.json")):
             os_ = nxt[0]["out_in"] + 0.02
     else:
         os_ = k["out_in"] + (s0 - k["src_in"])
-    words.append(dict(text=txt, start=round(os_, 3), part="ps" if w["start"] >= c["ps"][0][0] - 0.1 else "main"))
+    words.append(dict(text=txt, start=round(os_, 3), part="main"))
 words[0]["start"] = max(words[0]["start"], to_out(0.24))
 for i in range(1, len(words)):
     if words[i]["start"] < words[i - 1]["start"] + 0.06:
         words[i]["start"] = round(words[i - 1]["start"] + 0.06, 3)
 for i, w in enumerate(words):
-    nxt = words[i + 1]["start"] if i + 1 < len(words) else PS_END
+    nxt = words[i + 1]["start"] if i + 1 < len(words) else MAIN_END
     w["end"] = round(min(nxt, w["start"] + 0.6), 3)
-
-# ---- chat panel timing (P.S.): "Posted" lands as the last word ends -------------------
-SPEECH_END = to_out(36.88)
-T_POSTED = SPEECH_END - 0.02
-T_POSTING = T_POSTED - 0.60
-T_EDIT = T_POSTING - 1.05
-T_VOICE = T_EDIT - 1.10
-T_PANEL = T_VOICE - 0.30
 
 # ---- caption groups --------------------------------------------------------------------
 STOP = set("a an the and or of to for in on at it is it's i i'm i'll my your you you're if can even do just that this with by be have has are was will".split())
 PRIORITY = set("""thousand bucks $50. 40 tradies booked seats. 90 minutes claude heavy lifting business. promise automate five hours admin
-win 10% jobs refund. tech skills recording. wednesday 28th october 7:30pm. last chance tickets. wondering edited video
-created ad voice prompt. absolute full""".split())
+win 10% jobs refund. tech skills recording. wednesday 28th october 7:30pm. last chance tickets. absolute full""".split())
 
 
 def key_index(g):
@@ -108,7 +91,7 @@ def key_index(g):
 
 
 groups, cur = [], []
-cap_words = [w for w in words if w["start"] < T_PANEL]  # captions hand over to the headline once the chat panel is up
+cap_words = words
 for i, w in enumerate(cap_words):
     cur.append(w)
     nxt = cap_words[i + 1] if i + 1 < len(cap_words) else None
@@ -156,9 +139,8 @@ while changed:
 GROUPS = []
 for gi, g in enumerate(folded):
     s = g[0]["start"]
-    nxt_s = folded[gi + 1][0]["start"] if gi + 1 < len(folded) else T_PANEL
-    limit = MAIN_END if g[-1]["part"] == "main" else T_PANEL
-    e = min(g[-1]["start"] + 0.55, nxt_s - 0.03, limit)
+    nxt_s = folded[gi + 1][0]["start"] if gi + 1 < len(folded) else MAIN_END
+    e = min(g[-1]["start"] + 0.55, nxt_s - 0.03, MAIN_END)
     GROUPS.append(dict(start=s, end=round(e, 3), words=g, key=key_index(g)))
 
 CAP_BOTTOM = 1528
@@ -257,84 +239,6 @@ badge_css = EMOJI_FACE + f"""
 open("compositions/badge.html", "w").write(sub_file("badge", badge_css,
     '<div class="badge" id="badge-b">📅 WED 28 OCT · 7:30PM NZT</div>', f"tl.set({{}}, {{}}, {TOTAL:.3f});"))
 
-# ---- P.S. card ---------------------------------------------------------------------------------
-open("compositions/ps-card.html", "w").write(sub_file("ps-card", f"""
-#root {{ position:absolute; inset:0; background:{CREAM}; display:flex; align-items:center; justify-content:center; font-family:{FONT}; }}
-.ps {{ font-size:300px; font-weight:800; color:{GOLD}; letter-spacing:-0.02em; line-height:1; }}
-""", '<div class="ps" id="ps-t">P.S.</div>', f"tl.set({{}}, {{}}, {PS_CARD:.3f});"))
-
-# ---- chat panel + headline (P.S.) ---------------------------------------------------------------
-PANEL_TOP, PANEL_BOTTOM = 1270, 1526
-HEAD_TOP, HEAD_BOTTOM = 1112, 1258
-assert PANEL_BOTTOM <= BOTTOM_SAFE and HEAD_BOTTOM < PANEL_TOP
-chat_start = round(T_PANEL, 3)
-chat_dur = round(END_AT - chat_start, 3)
-L = lambda t_: round(t_ - chat_start, 3)
-BARS = 16
-bars = "".join(f'<span class="bar" id="chat-bar-{i}"></span>' for i in range(BARS))
-typed = "Editing your ad…"
-chars = "".join(f'<span class="ch" id="chat-ch-{i}">{esc(ch) if ch != " " else "&nbsp;"}</span>' for i, ch in enumerate(typed))
-chat_css = EMOJI_FACE + f"""
-#root {{ position:absolute; inset:0; font-family:{EMOJI_FONT}; }}
-.head {{ position:absolute; left:70px; right:70px; top:{HEAD_TOP}px; height:{HEAD_BOTTOM - HEAD_TOP}px; display:flex; flex-direction:column;
-        justify-content:flex-end; text-align:center; font-size:48px; font-weight:800; line-height:1.14; color:{CREAM}; opacity:0;
-        text-shadow:0 3px 14px rgba(0,0,0,0.6), 0 1px 3px rgba(0,0,0,0.7); will-change:transform; }}
-.head .g {{ color:{GOLD}; }}
-.panel {{ position:absolute; left:96px; right:96px; top:{PANEL_TOP}px; height:{PANEL_BOTTOM - PANEL_TOP}px; background:{NAVY};
-         border-radius:40px; padding:26px 30px; box-sizing:border-box; display:flex; flex-direction:column; gap:18px;
-         box-shadow:0 22px 50px rgba(0,0,0,0.35); opacity:0; will-change:transform; }}
-.r1 {{ display:flex; justify-content:flex-end; }}
-.voice {{ display:inline-flex; align-items:center; gap:16px; background:{GOLD}; color:{NAVY}; border-radius:28px 28px 8px 28px;
-         padding:14px 22px; font-size:30px; font-weight:800; opacity:0; will-change:transform; }}
-.wave {{ display:flex; align-items:center; gap:5px; height:44px; }}
-.bar {{ display:block; width:6px; height:40px; border-radius:3px; background:{NAVY}; transform:scaleY(0.25); transform-origin:50% 50%; will-change:transform; }}
-.r2 {{ display:flex; justify-content:flex-start; }}
-.reply {{ position:relative; width:640px; height:96px; background:#16243C; color:{CREAM}; border-radius:28px 28px 28px 8px;
-         padding:16px 22px; box-sizing:border-box; opacity:0; will-change:transform; }}
-.line {{ position:absolute; left:22px; right:22px; top:14px; font-size:32px; font-weight:800; white-space:nowrap; }}
-.ch {{ opacity:0; }}
-.l2, .l3 {{ opacity:0; }}
-.l3 {{ display:flex; align-items:center; gap:14px; color:{GOLD}; top:20px; font-size:38px; }}
-.track {{ position:absolute; left:22px; right:22px; bottom:18px; height:10px; border-radius:5px; background:rgba(245,242,234,0.18); overflow:hidden; }}
-.fill {{ display:block; width:100%; height:100%; background:{GOLD}; transform:scaleX(0); transform-origin:0% 50%; will-change:transform; }}
-.mini {{ width:44px; height:44px; flex:none; }}
-"""
-chat_body = f"""
-<div class="head" id="chat-head"><div>This ad was edited and posted by Claude. <span class="g">One voice prompt.</span></div></div>
-<div class="panel" id="chat-panel">
-  <div class="r1"><div class="voice" id="chat-voice"><span>🎙️ Voice prompt</span><span class="wave">{bars}</span></div></div>
-  <div class="r2"><div class="reply" id="chat-reply">
-    <div class="line l1" id="chat-l1">{chars}</div>
-    <div class="line l2" id="chat-l2">Posting to Facebook…</div>
-    <div class="line l3" id="chat-l3">{TICK_SVG.replace('class="tick"', 'class="mini"')}<span>Posted ✓</span></div>
-    <div class="track" id="chat-track"><span class="fill" id="chat-fill"></span></div>
-  </div></div>
-</div>"""
-cjs = []
-cjs.append('tl.fromTo("#chat-panel", { opacity: 0, y: 60 }, { opacity: 1, y: 0, duration: 0.3, ease: "power3.out" }, 0);')
-cjs.append('tl.fromTo("#chat-head", { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: 0.3, ease: "power3.out" }, 0.05);')
-cjs.append(f'tl.fromTo("#chat-voice", {{ opacity: 0, scale: 0.85 }}, {{ opacity: 1, scale: 1, duration: 0.22, ease: "power3.out" }}, {L(T_VOICE):.3f});')
-# waveform: deterministic per-bar heights pulsing for ~1s
-for i in range(BARS):
-    seq = [0.35 + 0.6 * abs(((i * 7 + k * 5) % 11) / 10 - 0.5) * 2 for k in range(6)]
-    t0 = L(T_VOICE) + 0.1
-    for k, v in enumerate(seq):
-        cjs.append(f'tl.to("#chat-bar-{i}", {{ scaleY: {min(1.0, v):.2f}, duration: 0.16, ease: "sine.inOut" }}, {t0 + k * 0.165:.3f});')
-    cjs.append(f'tl.to("#chat-bar-{i}", {{ scaleY: 0.25, duration: 0.15, ease: "sine.out" }}, {t0 + 6 * 0.165:.3f});')
-cjs.append(f'tl.fromTo("#chat-reply", {{ opacity: 0, y: 14 }}, {{ opacity: 1, y: 0, duration: 0.2, ease: "power3.out" }}, {L(T_EDIT):.3f});')
-type_span = 0.55
-for i in range(len(typed)):
-    cjs.append(f'tl.set("#chat-ch-{i}", {{ opacity: 1 }}, {L(T_EDIT) + 0.12 + i * type_span / len(typed):.3f});')
-cjs.append(f'tl.fromTo("#chat-fill", {{ scaleX: 0 }}, {{ scaleX: 1, duration: 0.85, ease: "power1.inOut" }}, {L(T_EDIT) + 0.12:.3f});')
-cjs.append(f'tl.set("#chat-l1", {{ opacity: 0 }}, {L(T_POSTING):.3f});')
-cjs.append(f'tl.set("#chat-l2", {{ opacity: 1 }}, {L(T_POSTING):.3f});')
-cjs.append(f'tl.set("#chat-fill", {{ scaleX: 0 }}, {L(T_POSTING):.3f});')
-cjs.append(f'tl.to("#chat-fill", {{ scaleX: 1, duration: 0.55, ease: "power1.in" }}, {L(T_POSTING) + 0.01:.3f});')
-cjs.append(f'tl.set(["#chat-l2", "#chat-track"], {{ opacity: 0 }}, {L(T_POSTED):.3f});')
-cjs.append(f'tl.fromTo("#chat-l3", {{ opacity: 0, scale: 0.8 }}, {{ opacity: 1, scale: 1, duration: 0.22, ease: "power3.out" }}, {L(T_POSTED):.3f});')
-cjs.append(f"tl.set({{}}, {{}}, {chat_dur:.3f});")
-open("compositions/chat.html", "w").write(sub_file("chat", chat_css, chat_body, "\n".join(cjs)))
-
 # ---- end card -----------------------------------------------------------------------------------
 open("compositions/endcard.html", "w").write(sub_file("endcard", f"""
 #root {{ position:absolute; inset:0; background:{NAVY}; font-family:{FONT}; color:{CREAM}; display:flex; flex-direction:column;
@@ -355,15 +259,12 @@ open("compositions/endcard.html", "w").write(sub_file("endcard", f"""
 ORIGIN = (528, 1051)   # face centre in the 1080x1920 source: punch-ins keep the face where it is
 S, TX, TY, PUNCH = 1.17, 12, -147, 1.08
 # change points (source seconds): sentence starts, plus a mid-sentence point wherever a sentence runs past ~3 s
-CHANGE_SRC = [3.55, 5.92, 7.95, 9.60, 12.24, 13.68, 15.76, 18.16, 21.06, 22.32, 24.53, 27.76, 30.03, 32.56]
+CHANGE_SRC = [3.55, 5.92, 7.95, 9.60, 12.24, 13.68, 15.76, 18.16, 21.06, 22.32, 24.53, 27.76]
 changes = sorted({to_out(s) for s in CHANGE_SRC} | {0.0})
 tl_lines, zoom = [], False
 for i, tc in enumerate(changes):
-    if tc >= T_PANEL:
-        break
     zoom = (i % 2 == 1) if tc > 0 else True  # first line punched in, then alternate
     tl_lines.append(f'      tl.set("#video-wrap", {{ scale: {S * (PUNCH if zoom else 1):.4f}, x: {TX}, y: {TY} }}, {tc:.3f});')
-tl_lines.append(f'      tl.set("#video-wrap", {{ scale: {S:.4f}, x: {TX}, y: {TY} }}, {T_PANEL:.3f});')  # base framing while the panel covers the lower frame
 tl_lines.append(f"      tl.set({{}}, {{}}, {TOTAL:.3f});")
 gaps = [b - a for a, b in zip(changes, changes[1:])]
 
@@ -371,7 +272,6 @@ vids = []
 for i, sg in enumerate(segs):
     vids.append(f'        <video id="v{i}" class="clip" src="{SRC}" muted playsinline data-start="{sg["out_in"]:.3f}" '
                 f'data-duration="{sg["out_out"] - sg["out_in"]:.3f}" data-media-start="{sg["src_in"]:.3f}" data-track-index="0"></video>')
-vids.append(f'        <img id="freeze" class="clip" src="assets/last.jpg" data-start="{PS_END:.3f}" data-duration="{HOLD:.3f}" data-track-index="0" alt="" />')
 
 
 def host(cid, start, dur, track, kind):
@@ -380,8 +280,7 @@ def host(cid, start, dur, track, kind):
 
 
 host_lines = [host(h["cid"], h["start"], h["dur"], 3, "graphics") for h in hosts]
-host_lines += [host("ps-card", PS_CARD_AT, PS_CARD, 4, "graphics"), host("chat", chat_start, chat_dur, 4, "graphics"),
-               host("endcard", END_AT, END_CARD, 4, "graphics"), host("captions", 0, TOTAL, 2, "captions"),
+host_lines += [host("endcard", END_AT, END_CARD, 4, "graphics"), host("captions", 0, TOTAL, 2, "captions"),
                host("badge", 0, TOTAL, 5, "graphics")]
 
 index = f"""<!doctype html>
@@ -416,11 +315,8 @@ index = f"""<!doctype html>
 </html>
 """
 open("index.html", "w").write(index)
-json.dump(dict(segments=segs, main_end=MAIN_END, ps_start=PS_START, ps_end=PS_END, end_at=END_AT, total=TOTAL,
-               chat=dict(panel=T_PANEL, voice=T_VOICE, edit=T_EDIT, posting=T_POSTING, posted=T_POSTED, speech_end=SPEECH_END),
-               cards=hosts, groups=len(GROUPS), change_gaps=gaps), open("edl.json", "w"), indent=1)
-print(f"total {TOTAL}s | main 0-{MAIN_END} | P.S. card {PS_CARD_AT}-{PS_START} | P.S. {PS_START}-{PS_END} | hold -> {END_AT} | end card -> {TOTAL}")
-print(f"chat: panel {T_PANEL:.2f} voice {T_VOICE:.2f} edit {T_EDIT:.2f} posting {T_POSTING:.2f} posted {T_POSTED:.2f} (speech ends {SPEECH_END:.2f})")
+json.dump(dict(segments=segs, main_end=MAIN_END, end_at=END_AT, total=TOTAL, cards=hosts, groups=len(GROUPS), change_gaps=gaps), open("edl.json", "w"), indent=1)
+print(f"total {TOTAL}s | main 0-{MAIN_END} | end card {END_AT} -> {TOTAL}")
 print(f"frame changes every {min(gaps):.2f}-{max(gaps):.2f}s; first word at {words[0]['start']:.2f}s")
 for h in hosts:
     print(f"  {h['cid']:12s} {h['start']:6.2f} +{h['dur']:.2f}")

@@ -2,9 +2,8 @@
 """Build the ad's audio: the original recording, cut, nothing else.
 
 usage: audio.py SOURCE OUT_M4A
-Main take and P.S. are each cut with 40 ms equal-power blends at the joins (click-free),
-separated by silence under the P.S. card, followed by silence under the freeze hold and end
-card. No EQ, compression, normalisation, denoise, speed or pitch change. Single AAC encode.
+The main take is cut with 40 ms equal-power blends at the joins (click-free), followed by
+silence under the end card. (The P.S. take is no longer used.) No EQ, compression, normalisation, denoise, speed or pitch change. Single AAC encode.
 """
 import json, subprocess, sys
 
@@ -23,12 +22,10 @@ def chain(ranges, tag):
 
 
 m, mo = chain(c["main"], "m")
-p, po = chain(c["ps"], "p")
-fc = (m + p
-      + f"aevalsrc=0:c=stereo:s=48000:d={c['ps_card']}[gap];"
-      + f"aevalsrc=0:c=stereo:s=48000:d={c['hold'] + c['end_card']}[tail];"
-      + f"[{mo}]aresample=48000[ma];[{po}]aresample=48000[pa];"
-      + "[ma][gap][pa][tail]concat=n=4:v=0:a=1[o]")
+fc = (m
+      + f"aevalsrc=0:c=stereo:s=48000:d={c['end_card']}[tail];"
+      + f"[{mo}]aresample=48000[ma];"
+      + "[ma][tail]concat=n=2:v=0:a=1[o]")
 subprocess.run(["ffmpeg", "-v", "error", "-y", "-i", src, "-filter_complex", fc, "-map", "[o]",
                 "-c:a", "aac", "-b:a", "192k", "-ar", "48000", "-ac", "2", out], check=True)
 d = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0", out],
