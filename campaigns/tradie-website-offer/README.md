@@ -207,3 +207,19 @@ and stop it after ~$40 with no leads. Not uploaded yet: Windsor lost its Meta co
 - Placements flipped vs the 13 Oct audit (Reels now best, feeds worst), so the split is noise.
 - Leads: 7 of 11 in Auckland; ~7 clear trades (tiler, painter, builder x2, property services,
   aircon/heat pump, hardscapes), 1 charity, 3 unclear.
+
+## Video v2 short (21/10/2026)
+
+- Source: Drive "Website build ad - short version - PREVIEW.mp4" (`127_TJOXB6eMENqFsDWBRMWIXPll0iAqA`),
+  1080x1920, 29s. Opens on three real builds (contenthiveau.com, poriruahardscapes.co.nz,
+  aroha-seniors.nz) with "WEBSITES FROM $500"; overlays $5,000 struck through, live demo first,
+  form graphic, "FREE · within 24 hours". No watermark seen despite "PREVIEW" in the file name.
+- Meta video `1749715549426802`, uploaded via Windsor `create_ad_video` from the Drive download URL.
+- Ad **Video v2 short - Website build** (`120256590774210460`), ACTIVE in NZ Tradies - Website Demo
+  Lead (`120256460133520460`); budget unchanged at $20/day. Thumbnail is the hosted static v3 NZ PNG
+  (no Lovable credits).
+- Link: `leadhivenz.com/website?...&utm_content=video-v2-short`. Headline "Your Tradie Website for
+  $500"; description "Free demo in 24 hours. Pay after you see it."; CTA Get offer; primary text
+  matches the v3 static copy.
+- NZ ad set now: video v1, static v3 NZ, video v2 short. Per scripts/video-v2.md: after ~3 days,
+  pause v1 if v2 is taking spend and producing leads at or under ~$14.
