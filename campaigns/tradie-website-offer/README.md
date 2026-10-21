@@ -223,3 +223,5 @@ and stop it after ~$40 with no leads. Not uploaded yet: Windsor lost its Meta co
   matches the v3 static copy.
 - NZ ad set now: video v1, static v3 NZ, video v2 short. Per scripts/video-v2.md: after ~3 days,
   pause v1 if v2 is taking spend and producing leads at or under ~$14.
+- 21/10: static v3 NZ (`120256505927950460`) PAUSED at Joe's request (~$2 delivery in a week), so
+  the NZ ad set is a clean v1 vs v2 video test.
