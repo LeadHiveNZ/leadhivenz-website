@@ -327,7 +327,10 @@
         </div>
 
         <div class="form-panel" data-reveal>
-          <form class="form" data-quote-form aria-label="Trade account application">
+          <form name="trade-account" method="POST" data-netlify="true" netlify-honeypot="bot-field" class="form" data-quote-form aria-label="Trade account application">
+          <input type="hidden" name="form-name" value="trade-account">
+          <input type="hidden" name="page" value="commercial.html">
+          <p class="hp" hidden aria-hidden="true"><label>Leave this empty <input name="bot-field" tabindex="-1" autocomplete="off"></label></p>
             <fieldset class="form-group">
               <legend class="form-group__title"><span class="step-num">1</span>About your business</legend>
               <div class="form-grid">

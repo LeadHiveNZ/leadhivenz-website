@@ -355,7 +355,10 @@
           <h2>Quick quote</h2>
           <p>We reply within one business day.</p>
         </div>
-        <form class="form form--compact" data-quote-form aria-label="Quick quote">
+        <form name="quick-quote" method="POST" data-netlify="true" netlify-honeypot="bot-field" class="form form--compact" data-quote-form aria-label="Quick quote">
+          <input type="hidden" name="form-name" value="quick-quote">
+          <input type="hidden" name="page" value="heat-pumps.html">
+          <p class="hp" hidden aria-hidden="true"><label>Leave this empty <input name="bot-field" tabindex="-1" autocomplete="off"></label></p>
                 <div class="form-grid">
                   <div class="field">
                     <label for="hp-name">Name</label>

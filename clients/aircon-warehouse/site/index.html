@@ -210,7 +210,10 @@
           <h2>Get a free quote</h2>
           <p>Tell us a little about the job. We reply within one business day.</p>
         </div>
-        <form class="form form--compact" data-quote-form aria-label="Quick quote">
+        <form name="quick-quote" method="POST" data-netlify="true" netlify-honeypot="bot-field" class="form form--compact" data-quote-form aria-label="Quick quote">
+          <input type="hidden" name="form-name" value="quick-quote">
+          <input type="hidden" name="page" value="index.html">
+          <p class="hp" hidden aria-hidden="true"><label>Leave this empty <input name="bot-field" tabindex="-1" autocomplete="off"></label></p>
           <div class="form-grid">
             <div class="field">
               <label for="hq-name">Name</label>

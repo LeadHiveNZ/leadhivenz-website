@@ -219,7 +219,10 @@
             <h2 id="form-title">Request a free quote</h2>
             <p>Takes about a minute. We reply within one business day.</p>
           </div>
-          <form class="form" data-quote-form aria-label="Free quote request">
+          <form name="quote" method="POST" data-netlify="true" netlify-honeypot="bot-field" class="form" data-quote-form aria-label="Free quote request">
+          <input type="hidden" name="form-name" value="quote">
+          <input type="hidden" name="page" value="contact.html">
+          <p class="hp" hidden aria-hidden="true"><label>Leave this empty <input name="bot-field" tabindex="-1" autocomplete="off"></label></p>
             <fieldset class="form-group">
               <legend class="form-group__title"><span class="step-num">1</span>About the job</legend>
               <div class="form-grid">

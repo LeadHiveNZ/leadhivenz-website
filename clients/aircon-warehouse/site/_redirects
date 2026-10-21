@@ -1,0 +1,13 @@
+# Old WooCommerce URLs on airconwarehouse.co.nz -> new pages (Netlify format)
+/products/*                       /heat-pumps        301
+/product-category/ducted*         /ducted            301
+/product-category/supply-install* /supply-install    301
+/product-category/*               /heat-pumps        301
+/product/*                        /supply-install    301
+/product-tag/*                    /heat-pumps        301
+/trade-account/*                  /commercial        301
+/contact/                         /contact           301
+/shop/*                           /heat-pumps        301
+/cart/*                           /contact           301
+/checkout/*                       /contact           301
+/my-account/*                     /commercial        301

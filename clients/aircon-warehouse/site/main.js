@@ -268,13 +268,26 @@
         var first = nameField ? nameField.value.trim().split(/\s+/)[0] : '';
         first = first ? first.charAt(0).toUpperCase() + first.slice(1) : 'there';
 
-        var panel = successPanel(first);
-        form.parentNode.replaceChild(panel, form);
-        panel.focus({ preventScroll: true });
-        var rect = panel.getBoundingClientRect();
-        if (rect.top < 80 || rect.bottom > window.innerHeight) {
-          panel.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' });
+        var submitBtn = form.querySelector('[type="submit"]');
+        function showSuccess() {
+          var panel = successPanel(first);
+          form.parentNode.replaceChild(panel, form);
+          panel.focus({ preventScroll: true });
+          var rect = panel.getBoundingClientRect();
+          if (rect.top < 80 || rect.bottom > window.innerHeight) {
+            panel.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' });
+          }
         }
+        // On Netlify the form is captured by Netlify Forms (data-netlify). Post it there as
+        // urlencoded data, then show the success panel. In a local preview (file://) or when the
+        // request fails, still show the panel so the demo flow works; the console notes it.
+        var canPost = form.hasAttribute('data-netlify') && /^https?:$/.test(location.protocol) && window.fetch;
+        if (!canPost) { showSuccess(); return; }
+        if (submitBtn) { submitBtn.disabled = true; submitBtn.setAttribute('aria-busy', 'true'); }
+        var body = new URLSearchParams(new FormData(form)).toString();
+        fetch(location.pathname, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: body })
+          .catch(function (err) { if (window.console) console.warn('[aircon-warehouse] form post failed', err); })
+          .then(function () { showSuccess(); });
       });
     });
   }
