@@ -21,8 +21,13 @@ email as the "Check my area" form.
 | Ad | Wellington Sparkies - Joe video | 120256589884960460 |
 | Ad | Hamilton Sparkies - Joe video | 120256589885370460 |
 | Ad | Christchurch Sparkies - Joe video | 120256589885750460 |
+| Ad (edited cut) | Wellington Sparkies - Joe video (edited cut) | 120256590181770460 |
+| Ad (edited cut) | Hamilton Sparkies - Joe video (edited cut) | 120256590181930460 |
+| Ad (edited cut) | Christchurch Sparkies - Joe video (edited cut) | 120256590182070460 |
 | Video (raw "Sparkies" from Drive, 1080x1920, 53s) | Sparkies - LeadHive NZ (Oct 2026) | 1590949935448010 |
-| Thumbnail image hash | sparkies-thumb.jpg (frame at 1s) | 9056e963229e12be5caef3a39a6bc0ee |
+| Video (edited cut with captions + report graphics, 26s) | Sparkies - edited - LeadHive NZ (Oct 2026) | 901234829620690 |
+| Thumbnail image hash (raw) | sparkies-thumb.jpg (frame at 1s) | 9056e963229e12be5caef3a39a6bc0ee |
+| Thumbnail image hash (edited) | sparkies-edited-thumb.jpg ("1 electrician per region" badge frame) | 34d8155f8fb12e98262c4d71e7ec9536 |
 
 ## Ad set settings (all three)
 
@@ -71,10 +76,10 @@ copy tells them Joe will call within one working day.
 
 1. Open https://leadhivenz.com/sparkies?region=hamilton on a phone, submit a test enquiry, confirm the
    email arrives and the Lead event shows in Events Manager (pixel 2212898842912576).
-2. "Sparkies - edited - PREVIEW.mp4" in Drive is still private to hello@leadhivenz.com, so only the
-   raw "Sparkies" video is in the ad account. Set the edited file to "Anyone with the link", then
-   upload it (Windsor `create_ad_video` with the Drive direct-download URL) and add it as a second
-   ad in each ad set for an A/B test.
+2. Each ad set now holds two ads: the raw 53s cut and the edited 26s cut (captions, Wellington
+   37-lead and Tauranga 25-lead report graphics, "Unlike Builderscrack", "Guaranteed"). Same copy
+   and link, `utm_content` ends in `-video-edited` for the second. Let both run; expect the edited
+   cut to win on hook rate and pause the loser per city after ~1,000 impressions each.
 3. Enable the campaign (`enable_campaign` 120256589869770460); ad sets and ads were created paused
    too, so enable those (or just the cities that are open).
 4. Budget is $20 NZD/day CBO across three cities. The old electrician campaign ran $10/day on one
