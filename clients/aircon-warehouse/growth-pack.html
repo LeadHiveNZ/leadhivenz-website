@@ -1,0 +1,754 @@
+<!doctype html>
+<html lang="en-NZ">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Aircon Warehouse Trade Growth Pack</title>
+  <meta name="description" content="Trade Growth Pack for Aircon Warehouse, prepared by LeadHive: the trade-partner offer, Meta ad setup and copy, video template, commercial-first website and in-house hosting.">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#111433">
+  <link rel="icon" href="assets/icon-64.png" sizes="64x64">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@700;800&display=swap">
+  <style>
+    /* Tokens: Aircon Warehouse design system (site/styles.css, 01 Tokens) */
+    :root {
+      color-scheme: light;
+      --navy: #111433;
+      --navy-deep: #0B0E24;
+      --ink: #1B1F3B;
+      --ink-soft: #4A4F6B;
+      --line: #E3E6F0;
+      --cloud: #F4F6FB;
+      --white: #FFFFFF;
+      --coral: #ED1554;
+      --coral-deep: #D80E49;
+      --sunset: #F7935A;
+      --blue: #1F62A9;
+      --blue-deep: #0A4F9A;
+      --blue-sky: #E7F0FB;
+      --success: #15A36B;
+      --grad-navy: linear-gradient(160deg, #1A1F4D 0%, #111433 55%, #0B0E24 100%);
+      --grad-cta: linear-gradient(135deg, #F7935A -45%, #ED1554 38%, #D80E49 100%);
+      --rule: linear-gradient(90deg, var(--coral) 0 50%, var(--blue) 50% 100%);
+      --on-dark: rgba(255, 255, 255, .92);
+      --on-dark-soft: rgba(255, 255, 255, .72);
+      --on-dark-line: rgba(255, 255, 255, .14);
+      --font-display: "Plus Jakarta Sans", "Segoe UI", Helvetica, Arial, sans-serif;
+      --font-body: "Inter", system-ui, -apple-system, Arial, sans-serif;
+      --fs-h1: clamp(2rem, 3vw + 1rem, 2.75rem);
+      --fs-h2: clamp(1.6rem, 1.6vw + 1rem, 2.1rem);
+      --fs-h3: clamp(1.15rem, .6vw + .95rem, 1.3rem);
+      --fs-body: 1.0625rem;
+      --fs-small: .9rem;
+      --fs-eyebrow: .75rem;
+      --r-lg: 20px;
+      --r-md: 14px;
+      --r-sm: 10px;
+      --r-pill: 999px;
+      --focus-ring: 0 0 0 3px rgba(31, 98, 169, .45);
+      --ease: cubic-bezier(.2, .7, .2, 1);
+      --column: 760px;
+      --gutter: 20px;
+    }
+
+    /* Reset */
+    *, *::before, *::after { box-sizing: border-box; }
+    * { margin: 0; }
+    html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; scroll-behavior: smooth; scroll-padding-top: 20px; }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+    body {
+      min-height: 100vh;
+      background: var(--cloud);
+      color: var(--ink);
+      font-family: var(--font-body);
+      font-size: var(--fs-body);
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      overflow-x: clip;
+    }
+    img { display: block; max-width: 100%; height: auto; }
+    button { font: inherit; cursor: pointer; }
+    p, li, h1, h2, h3, h4, td, th, dd, dt { overflow-wrap: break-word; }
+    strong, b { font-weight: 600; }
+    a { color: var(--blue); text-decoration: underline; text-decoration-thickness: 1px; text-underline-offset: 3px; text-decoration-color: rgba(31, 98, 169, .35); }
+    a:hover { color: var(--blue-deep); text-decoration-color: currentColor; }
+    :focus-visible { outline: none; box-shadow: var(--focus-ring); border-radius: 6px; }
+
+    .skip-link { position: absolute; left: 16px; top: -100px; z-index: 10; padding: 12px 18px; border-radius: var(--r-pill); background: var(--white); color: var(--navy); font-weight: 600; text-decoration: none; }
+    .skip-link:focus { top: 12px; }
+
+    /* Typography */
+    h1, h2, h3, h4 { font-family: var(--font-display); color: var(--navy); text-wrap: balance; }
+    h1 { font-size: var(--fs-h1); line-height: 1.08; letter-spacing: -.02em; font-weight: 800; }
+    h2 { font-size: var(--fs-h2); line-height: 1.12; letter-spacing: -.015em; font-weight: 800; }
+    h3 { font-size: var(--fs-h3); line-height: 1.3; letter-spacing: -.01em; font-weight: 700; }
+    h4 { font-size: 1rem; line-height: 1.35; font-weight: 700; }
+    p { text-wrap: pretty; }
+    .muted { color: var(--ink-soft); }
+    .small { font-size: var(--fs-small); }
+
+    .eyebrow {
+      display: inline-flex; flex-direction: column; align-items: flex-start; gap: 10px;
+      font-size: var(--fs-eyebrow); font-weight: 600; letter-spacing: .14em; line-height: 1.3;
+      text-transform: uppercase; color: var(--blue);
+    }
+    .eyebrow::after { content: ""; width: 44px; height: 3px; border-radius: 3px; background: var(--rule); }
+
+    /* Layout: one reading column */
+    .wrap {
+      width: 100%;
+      max-width: calc(var(--column) + 2 * var(--gutter));
+      margin-inline: auto;
+      padding-left: max(16px, env(safe-area-inset-left, 0px));
+      padding-right: max(16px, env(safe-area-inset-right, 0px));
+    }
+    @media (min-width: 720px) {
+      .wrap { padding-left: max(var(--gutter), env(safe-area-inset-left, 0px)); padding-right: max(var(--gutter), env(safe-area-inset-right, 0px)); }
+    }
+
+    /* Header band */
+    .doc-header { background: var(--grad-navy); color: var(--on-dark); padding: 28px 0 44px; }
+    .doc-header .logo { width: 190px; height: auto; margin-bottom: 36px; }
+    .doc-header .eyebrow { color: var(--on-dark-soft); margin-bottom: 14px; }
+    .doc-header h1 { color: var(--white); }
+    .doc-header .meta { margin-top: 14px; color: var(--on-dark-soft); font-size: var(--fs-small); }
+    .doc-header .meta strong { color: var(--white); }
+    .doc-header .purpose { margin-top: 18px; max-width: 60ch; color: var(--on-dark); }
+
+    main { padding-bottom: 56px; }
+
+    /* Cards */
+    .card {
+      background: var(--white);
+      border: 1px solid var(--line);
+      border-radius: var(--r-md);
+      padding: 22px;
+    }
+    @media (min-width: 720px) { .card { padding: 28px; } }
+    .card > * + * { margin-top: 14px; }
+
+    .agenda { margin-top: -24px; position: relative; box-shadow: 0 20px 50px -24px rgba(17, 20, 51, .35); }
+    .agenda h2 { font-size: 1.35rem; }
+    .agenda .time { display: inline-block; margin-left: 4px; padding: 1px 9px; border-radius: var(--r-pill); background: var(--blue-sky); color: var(--blue-deep); font-size: .78rem; font-weight: 600; white-space: nowrap; vertical-align: 1px; }
+
+    .contents { margin-top: 20px; }
+    .contents h2 { font-size: var(--fs-eyebrow); font-family: var(--font-body); font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); }
+    .contents ol { list-style: none; padding: 0; margin-top: 10px; display: grid; gap: 2px; counter-reset: toc; }
+    .contents li { counter-increment: toc; }
+    .contents a {
+      display: grid; grid-template-columns: 28px minmax(0, 1fr); align-items: baseline; gap: 6px;
+      padding: 9px 0; border-bottom: 1px solid var(--line);
+      color: var(--navy); font-weight: 600; text-decoration: none;
+    }
+    .contents li:last-child a { border-bottom: 0; }
+    .contents a::before { content: counter(toc); color: var(--coral); font-family: var(--font-display); font-weight: 800; }
+    .contents a:hover { color: var(--blue); }
+
+    /* Sections */
+    .doc-section { margin-top: 56px; }
+    .doc-section > * + * { margin-top: 16px; }
+    .doc-section > h2 { margin-top: 12px; }
+    .doc-section > h3 { margin-top: 32px; }
+    .doc-section > h3 + * { margin-top: 10px; }
+    .doc-section ul, .doc-section ol, .card ul, .card ol { padding-left: 1.3em; display: grid; gap: 8px; }
+    li::marker { color: var(--blue); font-weight: 600; }
+    li > ul { margin-top: 8px; }
+
+    .label { display: block; font-size: var(--fs-eyebrow); font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-soft); }
+
+    /* Coral callouts (used sparingly) */
+    .callout {
+      border-left: 4px solid var(--coral);
+      background: rgba(237, 21, 84, .06);
+      border-radius: 0 var(--r-sm) var(--r-sm) 0;
+      padding: 14px 18px;
+      color: var(--navy);
+    }
+    .callout strong { color: var(--coral-deep); }
+    .quote-offer {
+      background: var(--navy); color: var(--white);
+      border-radius: var(--r-md); padding: 22px;
+      font-family: var(--font-display); font-weight: 700; font-size: 1.2rem; line-height: 1.4;
+      border-left: 5px solid var(--coral);
+    }
+    .quote-offer .label { color: var(--on-dark-soft); font-family: var(--font-body); margin-bottom: 8px; }
+
+    .badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      padding: 5px 12px; border-radius: var(--r-pill);
+      background: var(--blue-sky); color: var(--blue-deep);
+      font-size: .75rem; font-weight: 600; letter-spacing: .04em;
+    }
+    .badge--warm { background: var(--grad-cta); color: var(--white); }
+    .badge--muted { background: var(--cloud); color: var(--ink-soft); }
+
+    .card--recommended { border: 2px solid var(--coral); box-shadow: 0 18px 40px -26px rgba(216, 14, 73, .55); }
+    .card-head { display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: center; justify-content: space-between; }
+    .card-head h3 { margin: 0; }
+
+    .never { border: 1px solid var(--line); background: var(--white); border-radius: var(--r-sm); padding: 14px 18px; }
+
+    /* Tables */
+    .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--white); }
+    .table { width: 100%; border-collapse: collapse; font-size: .9375rem; }
+    .table caption { text-align: left; padding: 14px 18px 0; font-weight: 600; color: var(--navy); }
+    .table th, .table td { padding: 13px 16px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }
+    .table thead th { background: var(--cloud); font-size: var(--fs-eyebrow); font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-soft); }
+    .table tbody th { width: 30%; min-width: 7.5em; font-weight: 600; color: var(--navy); }
+    .table tbody tr:last-child > * { border-bottom: 0; }
+    .table ul { padding-left: 1.1em; gap: 4px; }
+
+    .table td { overflow-wrap: anywhere; }
+    @media (max-width: 559.98px) {
+      .table--kv thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
+      .table--kv, .table--kv tbody, .table--kv tr, .table--kv th, .table--kv td { display: block; width: auto; }
+      .table--kv tbody th { width: auto !important; min-width: 0; padding: 14px 16px 2px; border-bottom: 0; font-size: var(--fs-eyebrow); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-soft); }
+      .table--kv td { padding: 2px 16px 14px; }
+      .table--kv tbody tr { border-bottom: 1px solid var(--line); }
+      .table--kv tbody tr:last-child { border-bottom: 0; }
+      .table--kv tbody tr > * { border-bottom: 0; }
+    }
+
+    /* Ad copy blocks */
+    .ad { padding: 0; overflow: hidden; }
+    .ad > * + * { margin-top: 0; }
+    .ad-head { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; padding: 18px 18px 14px; border-bottom: 1px solid var(--line); }
+    .ad-head h3 { font-size: 1.1rem; }
+    .ad-head .muted { font-size: var(--fs-small); margin-top: 2px; }
+    .ad .table-wrap { border: 0; border-radius: 0; }
+    .ad .table tbody th { width: 28%; }
+    .copy-btn {
+      flex: none;
+      display: inline-flex; align-items: center; gap: 8px;
+      min-height: 40px; padding: 8px 16px;
+      border: 1.5px solid var(--navy); border-radius: var(--r-pill);
+      background: transparent; color: var(--navy);
+      font-size: .875rem; font-weight: 600; line-height: 1;
+      transition: background .2s var(--ease), color .2s var(--ease), border-color .2s var(--ease);
+    }
+    .copy-btn:hover { background: var(--navy); color: var(--white); }
+    .copy-btn.is-done { background: var(--success); border-color: var(--success); color: var(--white); }
+    .copy-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .copy-btn:focus-visible { border-radius: var(--r-pill); }
+    .cta-pill { display: inline-block; padding: 3px 12px; border-radius: 6px; background: var(--blue); color: var(--white); font-size: .85rem; font-weight: 600; }
+
+    .hooks { list-style: none; padding: 0 !important; gap: 10px !important; }
+    .hooks li { font-family: var(--font-display); font-weight: 800; font-size: 1.1rem; color: var(--navy); line-height: 1.3; padding: 12px 16px; background: var(--white); border: 1px solid var(--line); border-radius: var(--r-sm); }
+
+    /* Figures */
+    figure { margin: 0; }
+    .photo { border-radius: var(--r-md); overflow: hidden; background: var(--white); border: 1px solid var(--line); }
+    .photo img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; }
+    .photo figcaption, .creative figcaption { padding: 12px 16px; font-size: var(--fs-small); color: var(--ink-soft); }
+    .photo figcaption strong, .creative figcaption strong { color: var(--navy); }
+
+    .creatives { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); }
+    @media (min-width: 600px) { .creatives { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; } }
+    .creative { background: var(--white); border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; }
+    .creative img { width: 100%; aspect-ratio: 1080 / 1350; object-fit: cover; background: var(--navy); color: var(--on-dark-soft); font-size: .8rem; }
+    @media (max-width: 599.98px) { .creatives { max-width: 420px; } }
+
+    /* Video timeline */
+    .timeline { list-style: none; padding: 0 !important; gap: 0 !important; counter-reset: none; }
+    .timeline li { position: relative; display: grid; grid-template-columns: 76px minmax(0, 1fr); gap: 14px; padding-bottom: 18px; }
+    .timeline li::before { content: ""; position: absolute; left: 37px; top: 30px; bottom: 0; width: 2px; background: var(--line); }
+    .timeline li:last-child { padding-bottom: 0; }
+    .timeline li:last-child::before { display: none; }
+    .timeline .ts {
+      position: relative; z-index: 1; align-self: start;
+      display: inline-flex; justify-content: center; align-items: center;
+      height: 30px; padding: 0 8px; border-radius: var(--r-pill);
+      background: var(--navy); color: var(--white);
+      font-size: .8rem; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap;
+    }
+    .timeline li:first-child .ts, .timeline li:last-child .ts { background: var(--coral); }
+    .timeline .beat { padding-top: 3px; }
+    .timeline .cue { display: block; font-size: var(--fs-small); color: var(--ink-soft); margin-bottom: 2px; }
+    .timeline q { quotes: "\201C" "\201D"; color: var(--navy); font-weight: 500; }
+
+    /* Option cards */
+    .options { display: grid; gap: 16px; }
+    .options .card h3 { font-size: 1.15rem; }
+
+    .steps { counter-reset: step; list-style: none; padding: 0 !important; gap: 14px !important; }
+    .steps > li { counter-increment: step; display: grid; grid-template-columns: 32px minmax(0, 1fr); gap: 12px; }
+    .steps > li::before {
+      content: counter(step);
+      display: inline-grid; place-items: center; width: 30px; height: 30px; border-radius: 50%;
+      background: var(--blue-sky); color: var(--blue-deep); font-weight: 700; font-size: .9rem;
+    }
+
+    .checklist { list-style: none; padding: 0 !important; }
+    .checklist li { position: relative; padding-left: 34px; }
+    .checklist li::before {
+      content: ""; position: absolute; left: 0; top: 3px; width: 22px; height: 22px; border-radius: 50%;
+      background: var(--blue-sky) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%231F62A9' stroke-width='2.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / 12px no-repeat;
+    }
+
+    .doc-footer { background: var(--navy); color: var(--on-dark-soft); padding: 28px 0 calc(28px + env(safe-area-inset-bottom, 0px)); font-size: var(--fs-small); }
+    .doc-footer strong { color: var(--white); }
+    .doc-footer a { color: var(--white); }
+
+    @media print {
+      body { background: var(--white); }
+      .copy-btn, .skip-link { display: none; }
+      .doc-section { break-inside: auto; }
+      .card, figure, .table-wrap { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#agenda">Skip to the agenda</a>
+
+  <header class="doc-header">
+    <div class="wrap">
+      <img class="logo" src="assets/logo-full-white.png" width="1520" height="384" alt="Aircon Warehouse">
+      <p class="eyebrow">Prepared by LeadHive</p>
+      <h1>Trade Growth Pack</h1>
+      <p class="meta">For <strong>Darren Vernon, Aircon Warehouse</strong> &middot; Prepared by Joe at LeadHive &middot; October 2026</p>
+      <p class="purpose">Everything you need to win trade partners (builders, developers, property managers, electricians and plumbers) and run your own website in-house. Written to be read on a phone in ten minutes.</p>
+    </div>
+  </header>
+
+  <main>
+    <div class="wrap">
+
+      <!-- 0. Agenda -->
+      <section class="card agenda" id="agenda" aria-labelledby="agenda-title">
+        <p class="eyebrow">Before the call</p>
+        <h2 id="agenda-title">Agenda for the 10-minute Zoom with Joe</h2>
+        <ol>
+          <li>Where the leads come from now, and where trade work should come from <span class="time">2 min</span></li>
+          <li>The Meta ad for trade partners: show the creative, agree the offer and budget <span class="time">3 min</span></li>
+          <li>The website: commercial-first changes, and moving hosting in-house on Netlify <span class="time">3 min</span></li>
+          <li>AI automation: the three things to automate first <span class="time">2 min</span>
+            <ul>
+              <li><strong>Quote follow-up:</strong> every quote gets a text at day 2 and day 7 automatically.</li>
+              <li><strong>Lead intake:</strong> website and ad leads land in one inbox or sheet with a text alert to Darren.</li>
+              <li><strong>Reviews:</strong> a review request text goes out the day after every install.</li>
+            </ul>
+          </li>
+        </ol>
+        <p class="callout"><strong>Outcome of the call:</strong> agree the ad budget, who shoots the video, and the hosting move.</p>
+      </section>
+
+      <nav class="card contents" aria-labelledby="contents-title">
+        <h2 id="contents-title">Contents</h2>
+        <ol>
+          <li><a href="#offer">The trade-partner offer</a></li>
+          <li><a href="#campaign">Meta ad: campaign setup</a></li>
+          <li><a href="#ad-copy">Meta ad copy (three variants)</a></li>
+          <li><a href="#video">Video template for Darren</a></li>
+          <li><a href="#website">Commercial-first website</a></li>
+          <li><a href="#hosting">Hosting it in-house</a></li>
+          <li><a href="#next">What Joe needs after the Zoom</a></li>
+        </ol>
+      </nav>
+
+      <!-- 1. Offer -->
+      <section class="doc-section" id="offer" aria-labelledby="offer-title">
+        <p class="eyebrow">01 &middot; What the ad sells</p>
+        <h2 id="offer-title">The trade-partner offer</h2>
+        <p>The ad sells one thing: a <strong>trade account</strong>. Not &ldquo;contact us&rdquo;, not &ldquo;learn more&rdquo;.</p>
+        <div class="quote-offer">
+          <span class="label">The offer</span>
+          &ldquo;Trade pricing on Daikin, Fujitsu (GENERAL Airstage) and Haier. Supply only or supply and install. Quotes from your plans within one business day. Open 7 days.&rdquo;
+        </div>
+
+        <h3>Proof points</h3>
+        <ul class="checklist">
+          <li>Warehouse in Wiri.</li>
+          <li>Multi-unit developments already supplied and installed (the three-storey apartment build photo).</li>
+          <li>One contact for the whole job.</li>
+          <li>7-day availability.</li>
+        </ul>
+
+        <figure class="photo">
+          <img src="assets/site-banner-1600.jpg" width="1600" height="1200" loading="lazy" alt="Darren standing in front of a three-storey apartment build under scaffolding, with an Aircon Warehouse banner on the scaffold">
+          <figcaption><strong>Proof:</strong> the three-storey apartment build, with the Aircon Warehouse banner on the scaffold.</figcaption>
+        </figure>
+
+        <h3>Who it is for</h3>
+        <ul>
+          <li><strong>Builders and developers:</strong> new builds, townhouses, apartments.</li>
+          <li><strong>Property managers and body corporates:</strong> portfolios, Healthy Homes heating.</li>
+          <li><strong>Electricians and plumbers</strong> who want to resell or sub-contract heat pump installs.</li>
+          <li><strong>Commercial fit-out companies:</strong> offices, retail, hospitality.</li>
+        </ul>
+
+        <div class="never">
+          <span class="label">What we never claim</span>
+          <p>Accreditations, warranty years, ratings, &ldquo;cheapest in Auckland&rdquo;, &ldquo;#1&rdquo;.</p>
+        </div>
+      </section>
+
+      <!-- 2. Campaign setup -->
+      <section class="doc-section" id="campaign" aria-labelledby="campaign-title">
+        <p class="eyebrow">02 &middot; Ads Manager</p>
+        <h2 id="campaign-title">Meta ad: campaign setup</h2>
+        <p class="muted">Darren or Joe builds this in Ads Manager.</p>
+
+        <p class="callout"><strong>Budget: $25 a day (NZD), 14 days, then review.</strong> Expect trade leads between $30 and $80 each in Auckland.</p>
+
+        <h3>Campaign settings</h3>
+        <div class="table-wrap">
+          <table class="table table--kv">
+            <thead><tr><th scope="col">Setting</th><th scope="col">What to choose</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">Objective</th><td>Leads.</td></tr>
+              <tr><th scope="row">Conversion location</th><td>Instant forms (lowest friction for tradies on a phone). Second ad set later: Website, sending to airconwarehouse.co.nz/commercial (the trade form), once the site is live.</td></tr>
+              <tr><th scope="row">Location</th><td>Auckland, 40 km radius around Manukau (covers South, East, Central, West; add North Shore as a second pin if budget allows).</td></tr>
+              <tr><th scope="row">Age</th><td>25&ndash;60.</td></tr>
+              <tr><th scope="row">Audience</th><td>Advantage+ audience ON with these as suggestions: interests Construction, Home construction, Building (construction), Property management, Real estate development, Electrician, Plumbing, HVAC; behaviours Small business owners, Facebook Page admins. Exclude current customers if a list exists.</td></tr>
+              <tr><th scope="row">Placements</th><td>Advantage+ placements. Facebook feed, Instagram feed and Reels will carry most of it.</td></tr>
+              <tr><th scope="row">Budget</th><td>$25 a day (NZD), 14 days, then review. Expect trade leads between $30 and $80 each in Auckland; anything under $80 for a builder or property manager is a win given the lifetime value.</td></tr>
+              <tr><th scope="row">Creative</th><td>One video (Darren to camera, <a href="#video">script below</a>) and two static images (supplied). Run all three in one ad set and let Meta find the winner; kill anything with a cost per lead over $120 after 7 days.</td></tr>
+              <tr><th scope="row">Tracking</th><td>Meta Pixel on the website (one tag in the head of every page), lead notifications to info@airconwarehouse.co.nz plus a text alert (Zapier or Make: &ldquo;New Meta lead&rdquo; &rarr; SMS).</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>Instant form: &ldquo;Trade account application&rdquo;</h3>
+        <div class="table-wrap">
+          <table class="table table--kv">
+            <thead><tr><th scope="col">Part</th><th scope="col">Content</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">Form name</th><td>Trade account application</td></tr>
+              <tr><th scope="row">Intro</th><td>&ldquo;Trade pricing for builders, developers and property managers. Tell us about your next job and we&rsquo;ll come back within one business day.&rdquo;</td></tr>
+              <tr><th scope="row">Fields</th><td>
+                <ul>
+                  <li>Full name</li>
+                  <li>Phone</li>
+                  <li>Email</li>
+                  <li>Company name</li>
+                  <li>&ldquo;What do you build or manage?&rdquo; (multiple choice: New builds / Renovations / Rental portfolio / Commercial fit-outs / Electrical or plumbing / Other)</li>
+                  <li>&ldquo;Units you&rsquo;d expect in the next 6 months&rdquo; (multiple choice: 1&ndash;5 / 6&ndash;20 / 20+)</li>
+                </ul>
+              </td></tr>
+              <tr><th scope="row">Thank-you screen</th><td>&ldquo;Thanks. Darren will call you within one business day. Need it sooner? <a href="tel:+6492159544">09 215 9544</a>.&rdquo; with a Call button.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- 3. Ad copy -->
+      <section class="doc-section" id="ad-copy" aria-labelledby="adcopy-title">
+        <p class="eyebrow">03 &middot; Copy and creative</p>
+        <h2 id="adcopy-title">Meta ad copy (three variants)</h2>
+        <p class="muted">Tap Copy to grab the primary text, headline and description in one go, ready to paste into Ads Manager.</p>
+
+        <article class="card ad" aria-labelledby="va-title">
+          <div class="ad-head">
+            <div>
+              <h3 id="va-title">Variant A: Builders and developers</h3>
+              <p class="muted">Lead with scale.</p>
+            </div>
+            <button type="button" class="copy-btn" data-copy="va" aria-label="Copy Variant A ad copy"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg><span>Copy</span></button>
+          </div>
+          <div class="table-wrap">
+            <table class="table table--kv" id="va">
+              <tbody>
+                <tr><th scope="row">Primary text</th><td data-field="Primary text">Building townhouses or apartments in Auckland? Get trade pricing on Daikin, Fujitsu and Haier heat pumps, supplied and installed by the same team, floor by floor as your trades finish. We price every unit off your plans and come back within one business day. Warehouse in Wiri. Open 7 days. Apply for a trade account.</td></tr>
+                <tr><th scope="row">Headline</th><td data-field="Headline">Trade pricing on heat pumps. Quotes from your plans.</td></tr>
+                <tr><th scope="row">Description</th><td data-field="Description">Supply only or supply &amp; install. Auckland-wide.</td></tr>
+                <tr><th scope="row">CTA button</th><td><span class="cta-pill">Apply Now</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="card ad" aria-labelledby="vb-title">
+          <div class="ad-head">
+            <div>
+              <h3 id="vb-title">Variant B: Property managers and landlords</h3>
+              <p class="muted">Lead with Healthy Homes and portfolios.</p>
+            </div>
+            <button type="button" class="copy-btn" data-copy="vb" aria-label="Copy Variant B ad copy"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg><span>Copy</span></button>
+          </div>
+          <div class="table-wrap">
+            <table class="table table--kv" id="vb">
+              <tbody>
+                <tr><th scope="row">Primary text</th><td data-field="Primary text">Managing rentals in Auckland? One supplier for heat pumps across your whole portfolio: sized for the main living room using the Heating Assessment Tool method, installed around your tenants, with the invoice and unit details for every tenancy file. Trade pricing on Daikin, Fujitsu and Haier. Open 7 days.</td></tr>
+                <tr><th scope="row">Headline</th><td data-field="Headline">Portfolio pricing on heat pumps. One contact, every property.</td></tr>
+                <tr><th scope="row">Description</th><td data-field="Description">Trade accounts for property managers. Apply in 60 seconds.</td></tr>
+                <tr><th scope="row">CTA button</th><td><span class="cta-pill">Apply Now</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <article class="card ad" aria-labelledby="vc-title">
+          <div class="ad-head">
+            <div>
+              <h3 id="vc-title">Variant C: Electricians, plumbers and other trades</h3>
+              <p class="muted">Lead with margin.</p>
+            </div>
+            <button type="button" class="copy-btn" data-copy="vc" aria-label="Copy Variant C ad copy"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg><span>Copy</span></button>
+          </div>
+          <div class="table-wrap">
+            <table class="table table--kv" id="vc">
+              <tbody>
+                <tr><th scope="row">Primary text</th><td data-field="Primary text">Sparky or plumber getting asked about heat pumps? Add them to your jobs without the headache. Trade pricing on the unit, we install or you do, one warranty contact. Warehouse in Wiri, 7 days. Open a trade account and quote your next one tomorrow.</td></tr>
+                <tr><th scope="row">Headline</th><td data-field="Headline">Add heat pumps to your jobs. Trade pricing, 7 days.</td></tr>
+                <tr><th scope="row">Description</th><td data-field="Description">Supply only or supply &amp; install. Auckland.</td></tr>
+                <tr><th scope="row">CTA button</th><td><span class="cta-pill">Apply Now</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+
+        <h3>Hook lines for the static images</h3>
+        <p class="muted">Short, big type.</p>
+        <ul class="hooks">
+          <li>&ldquo;Trade pricing. Quotes from your plans.&rdquo;</li>
+          <li>&ldquo;40 units? Same team, floor by floor.&rdquo;</li>
+          <li>&ldquo;Heat pumps for your whole portfolio. One contact.&rdquo;</li>
+          <li>&ldquo;Warehouse in Wiri. Open 7 days.&rdquo;</li>
+        </ul>
+
+        <h3>The creatives</h3>
+        <div class="creatives">
+          <figure class="creative">
+            <img src="ads/trade-ad-builders-1080x1350.png" width="1080" height="1350" loading="lazy" alt="Variant A ad creative for builders and developers: trade pricing on heat pumps, quotes from your plans">
+            <figcaption><strong>Variant A</strong> &middot; Builders and developers</figcaption>
+          </figure>
+          <figure class="creative">
+            <img src="ads/trade-ad-property-1080x1350.png" width="1080" height="1350" loading="lazy" alt="Variant B ad creative for property managers: heat pumps for your whole portfolio, one contact">
+            <figcaption><strong>Variant B</strong> &middot; Property managers</figcaption>
+          </figure>
+          <figure class="creative">
+            <img src="ads/trade-ad-trades-1080x1350.png" width="1080" height="1350" loading="lazy" alt="Variant C ad creative for electricians and plumbers: add heat pumps to your jobs with trade pricing">
+            <figcaption><strong>Variant C</strong> &middot; Electricians and plumbers</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <!-- 4. Video -->
+      <section class="doc-section" id="video" aria-labelledby="video-title">
+        <p class="eyebrow">04 &middot; Shoot on a phone</p>
+        <h2 id="video-title">Video template for Darren</h2>
+        <p><span class="badge">35&ndash;45 seconds</span> <span class="badge">Vertical 1080x1920</span></p>
+
+        <h3>Setup</h3>
+        <p>Phone on a tripod or propped at chest height, vertical, 1080x1920. Film in the warehouse with units on racks behind you, then on a job site. Natural light, no music needed, captions on. Wear the Aircon Warehouse shirt if you have one. Two takes of each line is plenty.</p>
+
+        <h3>Shot list (B-roll, 3&ndash;5 seconds each)</h3>
+        <ul>
+          <li>Racks of boxed units in the warehouse.</li>
+          <li>A unit being loaded into the van.</li>
+          <li>The van arriving at the apartment build.</li>
+          <li>An outdoor unit on brackets.</li>
+          <li>An installer at the ceiling vent.</li>
+          <li>A handshake, or you pointing at the banner on the scaffold (the photo you already have).</li>
+        </ul>
+
+        <h3>Script</h3>
+        <p class="muted">Say it, don&rsquo;t read it.</p>
+        <ol class="timeline">
+          <li><span class="ts">0&ndash;3 s</span><div class="beat"><span class="cue">Hook, to camera</span><q>If you&rsquo;re building or managing property in Auckland, here&rsquo;s how to get heat pumps at trade pricing.</q></div></li>
+          <li><span class="ts">3&ndash;12 s</span><div class="beat"><q>I&rsquo;m Darren from Aircon Warehouse in Wiri. We supply Daikin, Fujitsu and Haier at warehouse pricing and install them with our own team. Supply only, or supply and install, your call.</q></div></li>
+          <li><span class="ts">12&ndash;22 s</span><div class="beat"><span class="cue">Over B-roll of the apartment build</span><q>We&rsquo;ve done whole developments: pricing every unit off the plans, installing floor by floor as the trades ahead of us finish, one contact for the whole job.</q></div></li>
+          <li><span class="ts">22&ndash;30 s</span><div class="beat"><q>For property managers, we size every living room properly, work around your tenants, and send the paperwork for the tenancy file.</q></div></li>
+          <li><span class="ts">30&ndash;38 s</span><div class="beat"><span class="cue">To camera</span><q>Send us your plans or your portfolio and you&rsquo;ll have a price within one business day. We&rsquo;re open seven days.</q></div></li>
+          <li><span class="ts">38&ndash;42 s</span><div class="beat"><span class="cue">CTA, on-screen text matches</span><q>Tap apply, or call 09 215 9544. Aircon Warehouse.</q></div></li>
+        </ol>
+
+        <h3>On-screen captions and text cards</h3>
+        <p>Auto-captions in CapCut or Instagram, then fix the brand names. Overlay these text cards:</p>
+        <div class="table-wrap">
+          <table class="table table--kv">
+            <thead><tr><th scope="col">At</th><th scope="col">Text card</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">5 s</th><td>Trade pricing &middot; Daikin &middot; Fujitsu &middot; Haier</td></tr>
+              <tr><th scope="row">30 s</th><td>Quotes from your plans in 1 business day</td></tr>
+              <tr><th scope="row">38 s</th><td>09 215 9544 &middot; Open 7 days</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h3>Edit</h3>
+        <p>CapCut (free). Cut dead air, add captions, export 1080x1920 and a 4:5 crop (1080x1350) for feeds. Also export a 15-second cut: hook + &ldquo;trade pricing, supply and install, one business day&rdquo; + CTA.</p>
+
+        <div class="never">
+          <span class="label">Don&rsquo;ts</span>
+          <p>No music with lyrics, no claims about ratings or warranties, no competitor names, no prices on screen (prices go on the website, not in the ad).</p>
+        </div>
+      </section>
+
+      <!-- 5. Website -->
+      <section class="doc-section" id="website" aria-labelledby="website-title">
+        <p class="eyebrow">05 &middot; The website</p>
+        <h2 id="website-title">Commercial-first website: the recommended option</h2>
+        <p>Darren wants more commercial and trade work than residential. The site is built to flip that way without a rebuild. Three options, with a recommendation.</p>
+
+        <div class="options">
+          <article class="card card--recommended" aria-labelledby="opt1-title">
+            <div class="card-head">
+              <h3 id="opt1-title">Option 1: Re-angle the current site, add four pages</h3>
+              <span class="badge badge--warm">Recommended</span>
+            </div>
+            <p><span class="badge">About 2 days</span></p>
+            <ul>
+              <li><strong>Navigation becomes:</strong> Trade &amp; Commercial &middot; New Builds &amp; Developers &middot; Property Managers &middot; Heat Pumps &middot; Ducted &middot; About &middot; Contact (residential pages stay, trade comes first).</li>
+              <li><strong>Homepage hero</strong> becomes a two-door hero: &ldquo;Builders, developers &amp; property managers&rdquo; (primary, coral) and &ldquo;Homeowners&rdquo; (secondary), with the trade stats under it (units supplied, developments completed; real numbers from Darren).</li>
+              <li><strong>New pages:</strong>
+                <ul>
+                  <li>New Builds &amp; Developers (plan-stage advice, rough-in, staged installs, a case study of the apartment build with numbers).</li>
+                  <li>Property Managers &amp; Body Corporates (portfolio pricing, Healthy Homes sizing, tenancy paperwork, scheduling).</li>
+                  <li>Commercial Fit-outs (offices, retail, hospitality; high wall, cassette, ducted).</li>
+                  <li>Projects (three to six case studies with photos, suburb, system and unit count).</li>
+                </ul>
+              </li>
+              <li><strong>Trade account page</strong> gets a pricing-tier table (Bronze / Silver / Gold by annual volume) once Darren sets the tiers, and a downloadable trade price list PDF behind the form.</li>
+              <li><strong>Tracking:</strong> Meta Pixel and a Google Ads tag on every page; the trade form posts to Darren&rsquo;s inbox and a sheet.</li>
+            </ul>
+            <p class="callout"><strong>What it costs:</strong> Joe to price. Suggested $750 one-off for the four pages and re-angle, on top of the $500 build already quoted, or $1,000 bundled if paid together.</p>
+          </article>
+
+          <article class="card" aria-labelledby="opt2-title">
+            <div class="card-head">
+              <h3 id="opt2-title">Option 2: Trade portal</h3>
+              <span class="badge badge--muted">Later</span>
+            </div>
+            <p>A sub-site at trade.airconwarehouse.co.nz with login, live trade pricing, order forms and job tracking. Build it when there are 20+ active trade accounts. Lovable or a WooCommerce B2B plugin on the old site are the two paths. Not now.</p>
+          </article>
+
+          <article class="card" aria-labelledby="opt3-title">
+            <div class="card-head">
+              <h3 id="opt3-title">Option 3: Full commercial-only rebuild</h3>
+              <span class="badge badge--muted">Not recommended</span>
+            </div>
+            <p>Residential still pays the bills and the current site already converts it; dropping it throws away the Google traffic the old shop pages have.</p>
+          </article>
+        </div>
+      </section>
+
+      <!-- 6. Hosting -->
+      <section class="doc-section" id="hosting" aria-labelledby="hosting-title">
+        <p class="eyebrow">06 &middot; Own your website</p>
+        <h2 id="hosting-title">Hosting it in-house: the recommendation</h2>
+        <p>Darren wants to own and run the website himself. The site is plain HTML, CSS and JavaScript, which is the easiest possible thing to self-host. No WordPress, no plugins, nothing to update, nothing to get hacked.</p>
+
+        <article class="card card--recommended" aria-labelledby="netlify-title">
+          <div class="card-head">
+            <h3 id="netlify-title">Netlify (free plan)</h3>
+            <span class="badge badge--warm">Recommended</span>
+          </div>
+          <p><strong>Why:</strong> drag-and-drop deploys, free SSL, a global CDN so it loads fast on a phone in Manukau or Albany, and Netlify Forms, which means the quote and trade forms on the site already work the moment it&rsquo;s deployed (100 submissions a month free; the forms are already tagged for it). Zero monthly cost until the site is busy enough to need the $19 plan.</p>
+          <h4>Steps <span class="badge">30 minutes</span></h4>
+          <ol class="steps">
+            <li><div>Create a free Netlify account at netlify.com with info@airconwarehouse.co.nz.</div></li>
+            <li><div><strong>Sites &rarr; Add new site &rarr; Deploy manually</strong> &rarr; drag the aircon-warehouse-netlify.zip onto the box. The site is live on a netlify.app address in about 20 seconds.</div></li>
+            <li><div><strong>Site configuration &rarr; Forms:</strong> turn Form detection on, then redeploy once. <strong>Forms &amp; notifications</strong> &rarr; add an email notification to info@airconwarehouse.co.nz for every submission (and a second one to a phone via the &ldquo;Slack/SMS&rdquo; integrations if wanted).</div></li>
+            <li><div><strong>Domain management &rarr; Add a domain</strong> &rarr; airconwarehouse.co.nz. Netlify shows two DNS records. Log in to wherever the domain is registered (the old WordPress host or the registrar), replace the A/CNAME records with Netlify&rsquo;s, and wait up to an hour. Turn on HTTPS (automatic).</div></li>
+            <li><div><strong>Before switching DNS,</strong> keep the old WooCommerce site reachable for a week on a sub-domain (old.airconwarehouse.co.nz) in case anything on it is still needed, and set up redirects for the old /products/ and /product-category/ URLs to the new pages (a _redirects file; Joe will supply it).</div></li>
+          </ol>
+        </article>
+
+        <h3>Making changes yourself</h3>
+        <p>The pages are text files. Open the file in any editor (VS Code is free), change the words or prices, save, and drag the folder onto Netlify again.</p>
+        <p>Or, the in-house way Joe will show on the Zoom: paste the page into Claude, say what to change, paste the result back and redeploy. Ten minutes a change, no developer.</p>
+        <p>If Darren would rather have a visual editor, the honest alternatives are: Webflow (NZ$20&ndash;30 a month, the site would be rebuilt in it) or keeping the site on Netlify and adding a free CMS (Decap) later.</p>
+
+        <div class="never">
+          <span class="label">Not recommended</span>
+          <p>Moving the new site back into WordPress. It would be rebuilt as a theme, cost more than the site did, and bring back updates, plugins and hosting bills.</p>
+        </div>
+
+        <h3>Also connect</h3>
+        <ul>
+          <li>Google Business Profile (the $500 Local Search Setup).</li>
+          <li>Google Search Console (submit the sitemap).</li>
+          <li>A Meta Pixel.</li>
+        </ul>
+        <p class="muted">Netlify Analytics is $9 a month if he wants traffic numbers without Google Analytics.</p>
+      </section>
+
+      <!-- 7. Next -->
+      <section class="doc-section" id="next" aria-labelledby="next-title">
+        <p class="eyebrow">07 &middot; After the call</p>
+        <h2 id="next-title">What Joe needs from Darren after the Zoom</h2>
+        <div class="card">
+          <ul class="checklist">
+            <li><strong>Decision on the Meta ad budget</strong> ($25/day for 14 days) and who builds it (Joe can, at a set fee, or Darren with the setup above).</li>
+            <li><strong>The video,</strong> shot on his phone from the template, within a week.</li>
+            <li><strong>Real numbers for the trade stats:</strong> units supplied this year, developments completed, trade accounts open.</li>
+            <li><strong>Trade pricing tiers</strong> if he wants them on the site.</li>
+            <li><strong>Photos:</strong> the warehouse, the van, two finished installs, one team shot.</li>
+            <li><strong>Netlify account created,</strong> or permission for Joe to set it up on info@airconwarehouse.co.nz and hand over.</li>
+          </ul>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <footer class="doc-footer">
+    <div class="wrap">
+      <p><strong>Aircon Warehouse Trade Growth Pack</strong> &middot; Prepared by LeadHive (Joe) for Darren Vernon, October 2026.</p>
+      <p>Aircon Warehouse: <a href="tel:+6492159544">09 215 9544</a> &middot; info@airconwarehouse.co.nz</p>
+    </div>
+  </footer>
+
+  <script>
+    (function () {
+      function textFor(id) {
+        var table = document.getElementById(id);
+        if (!table) return '';
+        var parts = [];
+        table.querySelectorAll('td[data-field]').forEach(function (td) {
+          parts.push(td.getAttribute('data-field') + ':\n' + td.textContent.trim());
+        });
+        return parts.join('\n\n');
+      }
+      function fallbackCopy(text, table) {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed';
+        ta.style.top = '0';
+        ta.style.left = '0';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        ta.setSelectionRange(0, text.length);
+        var ok = false;
+        try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+        document.body.removeChild(ta);
+        if (!ok && table) {
+          var range = document.createRange();
+          range.selectNodeContents(table);
+          var sel = window.getSelection();
+          sel.removeAllRanges();
+          sel.addRange(range);
+        }
+        return ok;
+      }
+      function flash(btn, label) {
+        var span = btn.querySelector('span');
+        span.textContent = label;
+        btn.classList.toggle('is-done', label === 'Copied');
+        clearTimeout(btn._t);
+        btn._t = setTimeout(function () { span.textContent = 'Copy'; btn.classList.remove('is-done'); }, 2000);
+      }
+      document.querySelectorAll('.copy-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var id = btn.getAttribute('data-copy');
+          var text = textFor(id);
+          var table = document.getElementById(id);
+          if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(text).then(function () { flash(btn, 'Copied'); }, function () {
+              flash(btn, fallbackCopy(text, table) ? 'Copied' : 'Selected');
+            });
+          } else {
+            flash(btn, fallbackCopy(text, table) ? 'Copied' : 'Selected');
+          }
+        });
+      });
+    })();
+  </script>
+</body>
+</html>
