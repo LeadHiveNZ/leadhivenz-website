@@ -225,16 +225,13 @@ js.append(f'tl.fromTo(".toggle", {{ backgroundColor: "rgba(255,255,255,0.25)" }}
 # ------------------------------------------------------------------ 6. CTA (seg 7)
 s7 = segs[7]
 t_click, t_area7 = word_t("click", 7), word_t("area", 7)
-over.append(f'<div class="cta" id="cta"><i>{ICON["down"]}</i>LINK BELOW</div>')
-show("#cta", t_click - 0.05, TOTAL + 0.2)
-js.append(f'tl.to("#cta i", {{ y: 10, duration: 0.3, repeat: 7, yoyo: true, ease: "sine.inOut" }}, {T(t_click + 0.2)});')
-areas = [("Wellington", False), ("Hamilton", False), ("Tauranga", False), ("Your area?", True)]
-chips = "".join(f'<div class="achip{" open" if op else ""}" id="ac{j}"><i>{ICON["check" if op else "x"]}</i>{esc(n)}<span>{"AVAILABLE?" if op else "TAKEN"}</span></div>' for j, (n, op) in enumerate(areas))
-over.append(f'<div class="top" id="avail"><div class="atitle" id="at">IS YOUR AREA AVAILABLE?</div><div class="agrid">{chips}</div></div>')
-show("#at", word_t("fill", 7) - 0.05, TOTAL + 0.2)
-for j in range(4):
-    show(f"#ac{j}", word_t("fill", 7) + 0.1 + 0.12 * j, TOTAL + 0.2)
-js.append(f'tl.fromTo("#ac3", {{ scale: 1 }}, {{ scale: 1.08, duration: 0.3, repeat: 3, yoyo: true, ease: "sine.inOut", immediateRender: false }}, {T(t_area7)});')
+t_fill = word_t("fill", 7)
+over.append(f'<div class="top" id="avail"><div class="atitle" id="at">SEEING THIS AD?</div>'
+            f'<div class="pill gold big" id="aok"><i>{ICON["check"]}</i>YOUR AREA IS AVAILABLE</div><div class="aring" id="aring"></div></div>')
+show("#at", t_click - 0.05, TOTAL + 0.2, frm="{ opacity: 0, y: 20, scale: 1.3 }", ease="power3.out")
+show("#aok", t_fill - 0.05, TOTAL + 0.2, frm="{ opacity: 0, y: 30, scale: 0.6 }", ease="back.out(2.4)")
+js.append(f'tl.fromTo("#aring", {{ opacity: 0.9, scale: 0.85 }}, {{ opacity: 0, scale: 1.35, duration: 0.7, ease: "power2.out" }}, {T(t_fill + 0.2)});')
+js.append(f'tl.fromTo("#aok", {{ scale: 1 }}, {{ scale: 1.06, duration: 0.35, repeat: 3, yoyo: true, ease: "sine.inOut", immediateRender: false }}, {T(t_area7 - 0.1)});')
 
 # ------------------------------------------------------------------ captions
 cb = []
@@ -270,6 +267,8 @@ html, body {{ width:{W}px; height:{H}px; overflow:hidden; background:#000; }}
 .pill i, .cta i, .areatag i, .achip i, .spk i {{ display:inline-flex; width:44px; height:44px; }}
 .pill i svg, .cta i svg, .areatag i svg, .achip i svg, .spk i svg {{ width:100%; height:100%; }}
 .pill.gold {{ background:{GOLD}; color:{NAVY}; }}
+.pill.big {{ font-size:52px; padding:22px 40px; }}
+.aring {{ position:absolute; left:50%; top:96px; width:820px; height:110px; margin-left:-410px; border-radius:999px; border:5px solid {GOLD}; opacity:0; }}
 .pill.dark {{ background:rgba(17,26,46,0.92); color:#fff; border:2px solid rgba(255,255,255,0.12); }}
 .pill i.g {{ color:{GOLD}; }}
 .pill i.ok {{ color:{GREEN}; }}
@@ -287,7 +286,7 @@ html, body {{ width:{W}px; height:{H}px; overflow:hidden; background:#000; }}
 .cta {{ position:absolute; left:50%; top:1170px; transform:translateX(-50%); display:flex; align-items:center; gap:16px; padding:18px 40px;
   border-radius:999px; background:{GOLD}; color:{NAVY}; font-family:{CAPF}; font-weight:800; font-size:46px; letter-spacing:0.04em; opacity:0;
   box-shadow:0 16px 40px rgba(0,0,0,0.35); }}
-.atitle {{ font-family:{CAPF}; font-weight:800; font-size:46px; color:#fff; opacity:0; text-shadow:0 4px 18px rgba(0,0,0,0.6); }}
+.atitle {{ font-family:{CAPF}; font-weight:800; font-size:58px; color:#fff; opacity:0; text-shadow:0 4px 18px rgba(0,0,0,0.6); }}
 .agrid {{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }}
 .achip {{ display:flex; align-items:center; gap:12px; padding:14px 22px; border-radius:22px; background:rgba(17,26,46,0.92); color:#fff;
   font-family:{CAPF}; font-weight:800; font-size:34px; opacity:0; box-shadow:0 10px 24px rgba(0,0,0,0.3); }}
