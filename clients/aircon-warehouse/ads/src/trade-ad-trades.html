@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en-NZ" class="feed">
+<head>
+<meta charset="utf-8">
+<title>Trade ad: electricians and plumbers</title>
+<meta name="viewport" content="width=1080">
+<script>
+  /* Size switch: ?size=feed (1080x1350, default) | square (1080x1080) | story (1080x1920) */
+  (function () {
+    var s = new URLSearchParams(location.search).get('size');
+    if (s === 'square' || s === 'story' || s === 'feed') document.documentElement.className = s;
+  })();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600&family=Plus+Jakarta+Sans:wght@700;800&display=block" rel="stylesheet">
+<link rel="stylesheet" href="ads.css">
+<style>
+/* Concept C: technician at the outdoor unit. Keep his face and hands in frame. */
+html.feed   { --obj-pos: 20% 0%; --zoom: 1; }
+html.square { --obj-pos: 20% 0%; --zoom: 1; }
+html.story  { --obj-pos: 24% 0%; --zoom: 1; }
+</style>
+</head>
+<body>
+<main class="ad">
+  <div class="photo"><img src="img/technician.jpg" alt="Technician checking an outdoor heat pump unit with gauges"></div>
+  <div class="shade"></div>
+  <img class="motif" src="img/logo-mark.png" alt="">
+  <img class="logo" src="img/logo-full-white.png" alt="Aircon Warehouse">
+  <section class="copy">
+    <span class="badge">Warehouse in Wiri &middot; 7 days</span>
+    <h1>Add heat pumps to <span class="accent">your jobs<span class="stop">.</span></span></h1>
+    <p class="sub">Trade pricing on the unit. We install, or you do.<br> One warranty contact.</p>
+    <div class="cta">
+      <span class="btn">Apply for a trade account <span class="arrow">&rarr;</span></span>
+      <span class="contact">09 215 9544<span class="dot">&middot;</span>airconwarehouse.co.nz</span>
+    </div>
+  </section>
+</main>
+</body>
+</html>

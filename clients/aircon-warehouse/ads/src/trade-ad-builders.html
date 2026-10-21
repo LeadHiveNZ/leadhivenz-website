@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en-NZ" class="feed">
+<head>
+<meta charset="utf-8">
+<title>Trade ad: builders and developers</title>
+<meta name="viewport" content="width=1080">
+<script>
+  /* Size switch: ?size=feed (1080x1350, default) | square (1080x1080) | story (1080x1920) */
+  (function () {
+    var s = new URLSearchParams(location.search).get('size');
+    if (s === 'square' || s === 'story' || s === 'feed') document.documentElement.className = s;
+  })();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600&family=Plus+Jakarta+Sans:wght@700;800&display=block" rel="stylesheet">
+<link rel="stylesheet" href="ads.css">
+<style>
+/* Concept A: real apartment-build photo. Darren and the banner sit on the right, copy on the left,
+   so the shade comes in from the bottom-left corner instead of straight up. */
+.shade { background:
+  linear-gradient(62deg, rgba(11,14,36,.96) 0%, rgba(11,14,36,.88) 30%, rgba(17,20,51,.45) 52%, rgba(17,20,51,0) 68%),
+  linear-gradient(to top, rgba(11,14,36,.55) 0%, rgba(11,14,36,0) 40%),
+  linear-gradient(to bottom, rgba(11,14,36,.5) 0%, rgba(11,14,36,0) 22%); }
+.motif { display: none; }
+html.feed   { --obj-pos: 52% 0%; --h1-fs: 88px; --sub-max: 700px; }
+html.square { --obj-pos: 26% 0%; --h1-fs: 74px; --sub-max: 640px; }
+html.story  { --obj-pos: 66% 0%; --h1-fs: 104px; --sub-max: 720px; }
+</style>
+</head>
+<body>
+<main class="ad">
+  <div class="photo"><img src="img/apartment-build.jpg" alt="Darren from Aircon Warehouse pointing at the company banner on a three-storey apartment build under scaffolding"></div>
+  <div class="shade"></div>
+  <img class="motif" src="img/logo-mark.png" alt="">
+  <img class="logo" src="img/logo-full-white.png" alt="Aircon Warehouse">
+  <section class="copy">
+    <span class="badge">Supply only or supply &amp; install</span>
+    <h1>40 units?<br>Same team,<br><span class="accent">floor by floor<span class="stop">.</span></span></h1>
+    <p class="sub">Trade pricing on Daikin, Fujitsu &amp; Haier.<br> Quotes from your plans in 1&nbsp;business&nbsp;day.</p>
+    <div class="cta">
+      <span class="btn">Apply for a trade account <span class="arrow">&rarr;</span></span>
+      <span class="contact">09 215 9544<span class="dot">&middot;</span>airconwarehouse.co.nz</span>
+    </div>
+  </section>
+</main>
+</body>
+</html>
