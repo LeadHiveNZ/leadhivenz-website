@@ -232,3 +232,36 @@ and stop it after ~$40 with no leads. Not uploaded yet: Windsor lost its Meta co
   (`120256506045560460`) PAUSED (0 leads on $37, CPM ~$57). Ad set and campaign
   (`120256505428790460`) switched back ON at $20/day; the campaign had been paused since ~18 Oct.
 - Still open for AU: /website says "For NZ tradies" with a Tauranga placeholder.
+
+## AU moved to ContentHive (21/10/2026)
+
+Joe: run the AU ad from ContentHive's Facebook page, pointing at a ContentHive copy of the NZ
+/website page. contenthiveau.com itself is a Next.js site on Vercel whose code isn't reachable
+from here, so the page lives in the Lovable project **ContentHive Homepage Build**
+(`bfe5c813-1130-4ab7-801f-0871f0ec9c80`), published at `https://shoot-and-grow-co.lovable.app`.
+
+- Page: `https://shoot-and-grow-co.lovable.app/website`. Same layout, copy and 2-step form as
+  leadhivenz.com/website, in ContentHive black/yellow, "For Aussie tradies", Geelong placeholder,
+  "Joe Ingram, ContentHive", AU phone 0450 925 145, privacy link to contenthiveau.com/privacy,
+  noindex, no site nav. Built with **one** Lovable prompt (Joe's rule: one prompt, minimum credits);
+  the prompt carried the finished code, so the agent only pasted it in.
+- Leads go to the **LeadHive** database (`website_demo_starts` / `website_demo_enquiries`) through
+  its public anon key, and fire the same `send-contact-email` (website-demo) alert and the
+  10-minute "didn't finish" alert. Identify ContentHive leads by `page_url` containing
+  `shoot-and-grow-co.lovable.app` or `utm_content=video-v2-short-contenthive`.
+- Meta Pixel `2212898842912576` loads on this page only and fires PageView, ViewContent,
+  WebsiteFormStart, WebsiteStep1 and Lead, so the AU ad set keeps optimising for Lead.
+- Verified 21/10: a raw insert from outside leadhivenz.com returned 201 (test row deleted); a
+  Playwright run on the live page with Supabase mocked sent the correct payloads to all three
+  endpoints with AU UTMs, and all five pixel events fired (one test Lead with no ad click reached
+  the pixel; it is not attributed to any ad).
+- Images in the Lovable project: `public/joe.jpg`, `public/ads/website-video-thumb.jpg`
+  (= `thumb-v2-short.jpg` here, the 0.6s frame of the v2 video).
+- Ad **Video v2 short - ContentHive AU** (`120256590988390460`), page ContentHive
+  (`1264700826728952`), video `1749715549426802`, ACTIVE in AU Tradies - Website Demo Lead
+  (`120256505429230460`), $20/day. Link tagged
+  `utm_campaign=tradie-website-500-au&utm_content=video-v2-short-contenthive`; primary text signed
+  "Joe, ContentHive".
+- PAUSED the LeadHive-branded AU video ad (`120256590836790460`); the AU static stays paused.
+- Next: connect a ContentHive subdomain (e.g. websites.contenthiveau.com) to the Lovable project.
+  Swapping the ad's link afterwards means a new ad (Meta creatives can't be edited).
