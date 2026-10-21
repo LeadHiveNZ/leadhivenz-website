@@ -16,15 +16,19 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600&family=Plus+Jakarta+Sans:wght@700;800&display=block" rel="stylesheet">
 <link rel="stylesheet" href="ads.css">
 <style>
-/* Concept C: technician at the outdoor unit. Keep his face and hands in frame. */
-html.feed   { --obj-pos: 20% 0%; --zoom: 1; }
-html.square { --obj-pos: 20% 0%; --zoom: 1; }
-html.story  { --obj-pos: 24% 0%; --zoom: 1; }
+/* Concept C: clean indoor high-wall unit. The photo only fills the top of the frame and fades
+   into the navy, so the unit sits in the upper half and the copy has a quiet field below. */
+:root { --photo-mask: linear-gradient(to bottom, #000 72%, transparent 100%); --top-veil: .62; --top-veil-end: 24%; }
+html.feed   { --photo-h: 860px;  --obj-pos: 100% 0%; }
+html.square { --photo-h: 720px;  --obj-pos: 70% 0%; }
+/* story: drop the photo below the logo so the white unit never sits behind it; fade it in at the top too */
+html.story  { --photo-top: 400px; --photo-h: 820px; --obj-pos: 75% 0%;
+  --photo-mask: linear-gradient(to bottom, transparent 0%, #000 22%, #000 68%, transparent 100%); }
 </style>
 </head>
 <body>
 <main class="ad">
-  <div class="photo"><img src="img/technician.jpg" alt="Technician checking an outdoor heat pump unit with gauges"></div>
+  <div class="photo"><img src="img/indoor-unit.jpg" alt="Clean white high-wall heat pump unit mounted below a ceiling"></div>
   <div class="shade"></div>
   <img class="motif" src="img/logo-mark.png" alt="">
   <img class="logo" src="img/logo-full-white.png" alt="Aircon Warehouse">

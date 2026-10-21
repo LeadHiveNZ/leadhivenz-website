@@ -48,7 +48,8 @@ body { font-family: var(--font-body); color: #fff; -webkit-font-smoothing: antia
 .ad { position: relative; width: var(--W); height: var(--H); overflow: hidden; background: var(--navy); isolation: isolate; }
 
 /* Photo: object-position and zoom come from the concept file, per size */
-.photo { position: absolute; inset: 0; z-index: 0; overflow: hidden; }
+.photo { position: absolute; top: var(--photo-top, 0); left: 0; right: 0; height: var(--photo-h, 100%); z-index: 0; overflow: hidden;
+  -webkit-mask-image: var(--photo-mask, none); mask-image: var(--photo-mask, none); }
 .photo img {
   width: 100%; height: 100%; object-fit: cover; display: block;
   object-position: var(--obj-pos, 50% 50%);
@@ -71,9 +72,9 @@ html.story .shade { --top-veil-end: 26%; }
 /* Brand asterisk as a faint motif behind the copy */
 .motif { position: absolute; z-index: 1; pointer-events: none;
   width: var(--motif-w, 520px); right: var(--motif-r, -150px); bottom: var(--motif-b, -150px);
-  opacity: var(--motif-o, .11); transform: rotate(-8deg); }
+  opacity: var(--motif-o, .08); transform: rotate(-8deg); }
 html.square .motif { --motif-w: 440px; --motif-r: -130px; --motif-b: -130px; }
-html.story .motif { --motif-w: 600px; --motif-r: -170px; --motif-b: 110px; }
+html.story .motif { --motif-w: 600px; --motif-r: -190px; --motif-b: -120px; }
 
 .logo { position: absolute; z-index: 3; top: var(--pad-top); left: var(--pad-x); width: var(--logo-w); height: auto; display: block; }
 
@@ -97,6 +98,7 @@ h1 .accent { background: var(--grad-accent); -webkit-background-clip: text; back
   color: rgba(255, 255, 255, .84); max-width: var(--sub-max); text-wrap: balance; }
 /* Pull the full stop in: Jakarta's period has a wide side bearing next to tight tracking */
 h1 .stop { margin-left: -.05em; }
+h1 .nowrap { white-space: nowrap; }
 
 .cta { margin-top: var(--cta-gap); display: flex; flex-direction: column; align-items: flex-start; gap: .78em; font-size: var(--contact-fs); }
 .btn { display: inline-flex; align-items: center; gap: .55em;
