@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en-NZ" class="feed">
+<head>
+<meta charset="utf-8">
+<title>Trade ad: trade account card</title>
+<meta name="viewport" content="width=1080">
+<script>
+  /* Size switch: ?size=feed (1080x1350, default) | square (1080x1080) | story (1080x1920) */
+  (function () {
+    var s = new URLSearchParams(location.search).get('size');
+    if (s === 'square' || s === 'story' || s === 'feed') document.documentElement.className = s;
+  })();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@500;600&family=Plus+Jakarta+Sans:wght@700;800&display=block" rel="stylesheet">
+<link rel="stylesheet" href="ads.css">
+<style>
+/* Concept D: a trade account card lying on a set of plans. No photo: the surface is the navy
+   brand field with faint drawing linework, so the card is the only object in the frame. */
+.ad { background:
+  radial-gradient(70% 45% at 55% 28%, #1c2257 0%, rgba(28,34,87,0) 100%),
+  linear-gradient(180deg, #141842 0%, #111433 45%, #0B0E24 100%); }
+/* Drafting grid: 24 px minor, 120 px major */
+.grid { position: absolute; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    linear-gradient(rgba(120,160,235,.07) 1px, transparent 1px) 0 0 / 120px 120px,
+    linear-gradient(90deg, rgba(120,160,235,.07) 1px, transparent 1px) 0 0 / 120px 120px,
+    linear-gradient(rgba(120,160,235,.035) 1px, transparent 1px) 0 0 / 24px 24px,
+    linear-gradient(90deg, rgba(120,160,235,.035) 1px, transparent 1px) 0 0 / 24px 24px; }
+.plan { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; pointer-events: none;
+  -webkit-mask-image: linear-gradient(to bottom, #000 32%, rgba(0,0,0,.15) 46%, rgba(0,0,0,.05) 60%);
+          mask-image: linear-gradient(to bottom, #000 32%, rgba(0,0,0,.15) 46%, rgba(0,0,0,.05) 60%); }
+/* Shade: keeps the copy on clean navy, lets the plan show round the card */
+.shade { background:
+  linear-gradient(to top, rgba(11,14,36,.96) 0%, rgba(11,14,36,.9) var(--shade-solid), rgba(11,14,36,.45) var(--shade-mid), rgba(11,14,36,0) var(--shade-end)),
+  radial-gradient(120% 80% at 50% 40%, rgba(11,14,36,0) 50%, rgba(11,14,36,.6) 100%); }
+.motif { display: none; }
+html.square .br-wide { display: none; }   /* square sets the headline on one line */
+
+html.feed   { --card-fs: 15.5px; --card-x: 608px; --card-y: 352px; --card-rot: -6deg;
+              --h1-fs: 84px; --check-fs: 27px; --checks-gap: 24px; --check-row-gap: .42em; --cta-gap: 34px;
+              --shade-solid: 30%; --shade-mid: 48%; --shade-end: 60%; }
+html.square { --card-fs: 12.8px; --card-x: 652px; --card-y: 292px; --card-rot: -6deg;
+              --h1-fs: 70px; --check-fs: 23px; --checks-gap: 20px; --cta-gap: 28px;
+              --shade-solid: 34%; --shade-mid: 52%; --shade-end: 62%; }
+html.story  { --card-fs: 16px;   --card-x: 560px; --card-y: 612px; --card-rot: -6deg;
+              --h1-fs: 96px; --check-fs: 29px; --checks-gap: 24px; --check-row-gap: .42em; --cta-gap: 40px;
+              --shade-solid: 26%; --shade-mid: 42%; --shade-end: 52%; }
+</style>
+</head>
+<body>
+<main class="ad">
+  <div class="grid"></div>
+  <!-- Faint floor plan: two units off a corridor, with heat pump positions and pipe runs marked in coral -->
+  <svg class="plan" viewBox="0 0 1080 1920" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+    <g fill="none" stroke="rgba(130,170,240,.26)" stroke-width="3">
+      <rect x="60" y="180" width="960" height="1560"/>
+      <path d="M500 180V1740M580 180V1740M60 620H500M60 1000H500M60 1360H500M580 560H1020M580 900H1020M580 1300H1020M300 620V1000M800 900V1300"/>
+    </g>
+    <g fill="none" stroke="rgba(130,170,240,.18)" stroke-width="1.5">
+      <!-- door swings -->
+      <path d="M500 700A80 80 0 0 0 420 620M500 700H420"/>
+      <path d="M500 1080A80 80 0 0 1 420 1000"/>
+      <path d="M580 640A80 80 0 0 1 660 560M580 640H660"/>
+      <path d="M580 980A80 80 0 0 0 660 900"/>
+      <path d="M500 1440A80 80 0 0 0 420 1360"/>
+      <path d="M580 1380A80 80 0 0 1 660 1300"/>
+      <!-- windows on the outer wall -->
+      <path d="M140 174V186M300 174V186M140 180H300M700 174V186M900 174V186M700 180H900M54 360V500M66 360V500M54 1120V1260M66 1120V1260M1014 680V820M1026 680V820M1014 1460V1600M1026 1460V1600M200 1734V1746M380 1734V1746M200 1740H380M700 1734V1746M880 1734V1746M700 1740H880"/>
+      <!-- dimension lines -->
+      <path d="M60 120H500M500 120H580M580 120H1020M60 112V128M500 112V128M580 112V128M1020 112V128"/>
+      <path d="M18 180V620M18 620V1000M18 1000V1360M18 1360V1740M10 180H26M10 620H26M10 1000H26M10 1360H26M10 1740H26"/>
+      <path d="M1062 180V560M1062 560V900M1062 900V1300M1062 1300V1740M1054 180H1070M1054 560H1070M1054 900H1070M1054 1300H1070M1054 1740H1070"/>
+      <path d="M60 1800H500M580 1800H1020M60 1792V1808M500 1792V1808M580 1792V1808M1020 1792V1808"/>
+    </g>
+    <!-- heat pump heads (coral) and dashed pipe runs to the outside wall -->
+    <g fill="rgba(237,21,84,.10)" stroke="rgba(247,147,90,.42)" stroke-width="2">
+      <rect x="110" y="630" width="120" height="20" rx="4"/>
+      <rect x="110" y="1010" width="120" height="20" rx="4"/>
+      <rect x="850" y="570" width="120" height="20" rx="4"/>
+      <rect x="850" y="1310" width="120" height="20" rx="4"/>
+      <rect x="330" y="1370" width="120" height="20" rx="4"/>
+    </g>
+    <g fill="none" stroke="rgba(247,147,90,.32)" stroke-width="2" stroke-dasharray="8 7">
+      <path d="M110 640H60M110 1020H60M970 580H1020M970 1320H1020M450 1380H480V1740"/>
+    </g>
+  </svg>
+  <div class="shade"></div>
+  <img class="motif" src="img/logo-mark.png" alt="">
+  <img class="logo" src="img/logo-full-white.png" alt="Aircon Warehouse">
+
+  <div class="card-wrap" aria-label="Aircon Warehouse trade account card">
+    <div class="card">
+      <img class="card-emboss" src="img/logo-mark.png" alt="">
+      <div class="card-top">
+        <img class="card-logo" src="img/logo-full-white.png" alt="">
+        <div class="card-id">
+          <span class="card-label">Trade account</span>
+          <span class="card-sub">Aircon Warehouse &middot; Wiri</span>
+        </div>
+      </div>
+      <div class="card-chip"></div>
+      <div class="card-num">AW26 0000 0000 0001</div>
+      <div class="card-meta">
+        <div><span class="card-small">Account holder</span><span class="card-value">Your company</span></div>
+        <div><span class="card-small">Member since</span><span class="card-value">2026</span></div>
+      </div>
+      <div class="card-stripe"></div>
+      <div class="card-foot"><span>Trade pricing &middot; Daikin &middot; Fujitsu &middot; Haier</span></div>
+    </div>
+  </div>
+
+  <section class="copy">
+    <span class="badge">No minimum order</span>
+    <h1>Your trade account<span class="stop">.</span><br class="br-wide"> <span class="accent nowrap">Sorted<span class="stop">.</span></span></h1>
+    <ul class="checks">
+      <li>Priced off your plans, 1&nbsp;business&nbsp;day</li>
+      <li>Supply only or supply &amp; install</li>
+      <li>Rough-in, pre-line and fit-off booked to your programme</li>
+      <li>Variations in writing before we start</li>
+      <li>Commissioning paperwork and model/serial list on handover</li>
+    </ul>
+    <div class="cta">
+      <span class="btn">Apply for a trade account <span class="arrow">&rarr;</span></span>
+      <span class="contact">09 215 9544<span class="dot">&middot;</span>airconwarehouse.co.nz</span>
+    </div>
+  </section>
+</main>
+</body>
+</html>

@@ -246,7 +246,7 @@
     .photo figcaption strong, .creative figcaption strong { color: var(--navy); }
 
     .creatives { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); }
-    @media (min-width: 600px) { .creatives { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; } }
+    @media (min-width: 600px) { .creatives { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; } }
     .creative { background: var(--white); border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; }
     .creative img { width: 100%; aspect-ratio: 1080 / 1350; object-fit: cover; background: var(--navy); color: var(--on-dark-soft); font-size: .8rem; }
     @media (max-width: 599.98px) { .creatives { max-width: 420px; } }
@@ -500,6 +500,26 @@
           </div>
         </article>
 
+        <article class="card ad" aria-labelledby="vd-title">
+          <div class="ad-head">
+            <div>
+              <h3 id="vd-title">Variant D: The trade card (all trade audiences)</h3>
+              <p class="muted">Lead with the account itself, in site language.</p>
+            </div>
+            <button type="button" class="copy-btn" data-copy="vd" aria-label="Copy Variant D ad copy"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg><span>Copy</span></button>
+          </div>
+          <div class="table-wrap">
+            <table class="table table--kv" id="vd">
+              <tbody>
+                <tr><th scope="row">Primary text</th><td data-field="Primary text">Builders, sparkies, plumbers, property managers: open a trade account with Aircon Warehouse and get trade pricing on Daikin, Fujitsu and Haier, priced off your plans within one business day. Supply only or supply and install, rough-in to fit-off booked to your programme, variations in writing, commissioning paperwork on handover. Warehouse in Wiri, open 7 days. No minimum order.</td></tr>
+                <tr><th scope="row">Headline</th><td data-field="Headline">Your trade account. Sorted.</td></tr>
+                <tr><th scope="row">Description</th><td data-field="Description">Trade pricing &middot; Quotes from plans in 1 business day</td></tr>
+                <tr><th scope="row">CTA button</th><td><span class="cta-pill">Apply Now</span></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+
         <h3>Hook lines for the static images</h3>
         <p class="muted">Short, big type.</p>
         <ul class="hooks">
@@ -507,6 +527,7 @@
           <li>&ldquo;40 units? Same team, floor by floor.&rdquo;</li>
           <li>&ldquo;Heat pumps for your whole portfolio. One contact.&rdquo;</li>
           <li>&ldquo;Warehouse in Wiri. Open 7 days.&rdquo;</li>
+          <li>&ldquo;Your trade account. Sorted.&rdquo;</li>
         </ul>
 
         <h3>The creatives</h3>
@@ -522,6 +543,10 @@
           <figure class="creative">
             <img src="ads/trade-ad-trades-1080x1350.png" width="1080" height="1350" loading="lazy" alt="Variant C ad creative for electricians and plumbers: add heat pumps to your jobs with trade pricing">
             <figcaption><strong>Variant C</strong> &middot; Electricians and plumbers</figcaption>
+          </figure>
+          <figure class="creative">
+            <img src="ads/trade-ad-card-1080x1350.png" width="1080" height="1350" loading="lazy" alt="Variant D ad creative: a navy Aircon Warehouse trade account card on a set of plans, with the headline Your trade account, sorted">
+            <figcaption><strong>Variant D</strong> &middot; The trade card</figcaption>
           </figure>
         </div>
       </section>

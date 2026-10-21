@@ -108,3 +108,78 @@ h1 .nowrap { white-space: nowrap; }
 .btn .arrow { display: inline-block; width: 1em; text-align: center; font-weight: 600; }
 .contact { font: 500 var(--contact-fs)/1.2 var(--font-body); color: rgba(255, 255, 255, .72); letter-spacing: .01em; padding-left: .2em; }
 .contact .dot { color: var(--coral); padding: 0 .35em; }
+
+/* ---------------------------------------------------------------------------------------------
+   Additions for Concept D (trade card). New classes only, so A, B and C render exactly as before.
+   --------------------------------------------------------------------------------------------- */
+
+/* Checklist: one trade term per line, coral check disc */
+.checks { list-style: none; margin-top: var(--checks-gap, 26px); display: flex; flex-direction: column; gap: var(--check-row-gap, .5em);
+  font: 500 var(--check-fs, 27px)/1.22 var(--font-body); letter-spacing: -.006em; color: rgba(255, 255, 255, .9); }
+.checks li { display: flex; align-items: flex-start; gap: .62em; }
+.checks li::before { content: ""; flex: none; width: 1.02em; height: 1.02em; margin-top: .1em; border-radius: 50%;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M6.4 12.6l3.7 3.6 7.6-8' fill='none' stroke='%23fff' stroke-width='2.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / 76% no-repeat, var(--grad-cta);
+  box-shadow: 0 4px 12px -4px rgba(237, 21, 84, .7); }
+
+/* Trade account card. Sized in em from --card-fs (16px gives a 720 x 454 card, ISO CR80 ratio).
+   Placed by its centre (--card-x, --card-y) and turned by --card-rot. */
+.card-wrap { position: absolute; z-index: 2; left: var(--card-x, 50%); top: var(--card-y, 30%);
+  font-size: var(--card-fs, 16px); width: 45em; height: 28.375em;
+  transform: translate(-50%, -50%) rotate(var(--card-rot, -7deg)); }
+/* Contact shadow on the surface: tight and dark close in, soft and wide further out */
+.card-wrap::before { content: ""; position: absolute; inset: 4% 1% -3% 3%; border-radius: 2em; z-index: -1;
+  background: rgba(2, 3, 12, .9); filter: blur(1.3em); transform: translate(1em, 1.7em); }
+.card-wrap::after { content: ""; position: absolute; inset: 10% -4% -14% 0; border-radius: 3em; z-index: -2;
+  background: rgba(3, 4, 14, .6); filter: blur(4em); transform: translate(2em, 3.6em); }
+.card { position: absolute; inset: 0; border-radius: 1.55em; overflow: hidden; color: #fff;
+  padding: 2.3em 2.5em 0;
+  background:
+    linear-gradient(118deg, rgba(255,255,255,0) 30%, rgba(255,255,255,.07) 44%, rgba(255,255,255,.015) 56%, rgba(255,255,255,0) 64%),
+    radial-gradient(120% 90% at 0% 0%, #23295f 0%, rgba(35,41,95,0) 60%),
+    linear-gradient(160deg, #1a1f4c 0%, #131739 48%, #0c0f28 100%);
+  box-shadow:
+    inset 0 1.5px 0 rgba(255,255,255,.26),          /* top edge catching the light */
+    inset 0 0 0 1px rgba(255,255,255,.10),           /* fine edge all round */
+    inset 0 -2px 0 rgba(0,0,0,.35),
+    0 .16em 0 #070920,                                /* card thickness */
+    0 .22em .1em rgba(0,0,0,.4); }
+/* Matte grain */
+.card::before { content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .5; mix-blend-mode: overlay;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .5 0 0 0 0 .5 0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"); }
+/* Edge highlight: a 1.5px ring, bright where the top-left edge catches the light */
+.card::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; padding: 1.5px;
+  background: linear-gradient(158deg, rgba(255,255,255,.55) 0%, rgba(255,255,255,.14) 22%, rgba(255,255,255,.04) 55%, rgba(255,255,255,.16) 100%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0); }
+/* Lift card content above the grain; the absolutely placed parts below override this */
+.card > * { position: relative; }
+/* Blind-embossed brand mark, bottom right */
+.card-emboss { position: absolute; width: 19em; right: -4.2em; bottom: -5.6em; transform: rotate(-8deg); opacity: .07;
+  filter: grayscale(1) brightness(2.2) drop-shadow(-1px -1px 0 rgba(255,255,255,.9)) drop-shadow(1px 2px 0 rgba(0,0,0,1)); }
+.card-top { display: flex; align-items: flex-start; justify-content: space-between; }
+.card-logo { width: 13.4em; height: auto; display: block;
+  filter: drop-shadow(0 -1px 0 rgba(255,255,255,.18)) drop-shadow(0 1.5px 0 rgba(0,0,0,.55)); }
+.card-label, .card-small, .card-foot { font-family: var(--font-body); font-weight: 600; text-transform: uppercase; }
+.card-label { margin-top: .35em; font-size: 1em; line-height: 1; letter-spacing: .2em; color: #fff;
+  display: inline-flex; align-items: center; gap: .6em; }
+.card-label::before { content: ""; width: .5em; height: .5em; border-radius: 50%; background: var(--grad-cta); }
+.card-id { display: flex; flex-direction: column; align-items: flex-end; gap: .75em; }
+.card-sub { font: 600 .8em/1 var(--font-body); letter-spacing: .2em; text-transform: uppercase; color: rgba(255,255,255,.6); }
+.card-chip { margin-top: 2.1em; width: 4.5em; height: 3.45em; border-radius: .6em;
+  background:
+    linear-gradient(90deg, transparent 31%, rgba(40,46,70,.55) 31%, rgba(40,46,70,.55) 34%, transparent 34%, transparent 66%, rgba(40,46,70,.55) 66%, rgba(40,46,70,.55) 69%, transparent 69%),
+    linear-gradient(0deg, transparent 32%, rgba(40,46,70,.5) 32%, rgba(40,46,70,.5) 36%, transparent 36%, transparent 64%, rgba(40,46,70,.5) 64%, rgba(40,46,70,.5) 68%, transparent 68%),
+    linear-gradient(135deg, #eef0f5 0%, #b4bccb 38%, #e3e7ef 58%, #8f99ad 100%);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.4), inset 0 -1px 0 rgba(0,0,0,.25), 0 1px 2px rgba(0,0,0,.5); }
+.card-num { margin-top: 1.05em; font: 700 2.15em/1 var(--font-display); letter-spacing: .1em; word-spacing: .22em;
+  color: #e4e8f3; font-variant-numeric: tabular-nums;
+  text-shadow: 0 -1px 0 rgba(255,255,255,.35), 0 1.5px 0 rgba(0,0,0,.6), 0 2.5px 3px rgba(0,0,0,.35); }
+.card-meta { margin-top: 1.2em; display: flex; gap: 3.2em; }
+.card-small { display: block; font-size: .72em; line-height: 1; letter-spacing: .2em; color: rgba(255,255,255,.55); }
+.card-value { display: block; margin-top: .42em; font: 700 1.3em/1 var(--font-display); letter-spacing: .09em; text-transform: uppercase;
+  color: #e4e8f3; text-shadow: 0 -1px 0 rgba(255,255,255,.3), 0 1.5px 0 rgba(0,0,0,.6); }
+.card-stripe { position: absolute; left: 0; right: 0; bottom: 3.45em; height: .5em; display: flex; }
+.card-stripe::before { content: ""; flex: 0 0 62%; background: linear-gradient(90deg, #F7935A, #ED1554); }
+.card-stripe::after  { content: ""; flex: 1; margin-left: .3em; background: linear-gradient(90deg, #2a76c6, #1F62A9); }
+.card-foot { position: absolute; left: 2.5em; right: 2.5em; bottom: 1.2em; display: flex; justify-content: space-between;
+  font-size: .8em; line-height: 1; letter-spacing: .16em; color: rgba(255,255,255,.72); }
