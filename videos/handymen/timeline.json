@@ -1,0 +1,71 @@
+{
+ "total": 26.85,
+ "segments": [
+  {
+   "src_in": 0.48,
+   "src_out": 6.78,
+   "out_in": 0.0,
+   "out_out": 6.3
+  },
+  {
+   "src_in": 10.66,
+   "src_out": 13.65,
+   "out_in": 6.27,
+   "out_out": 9.26
+  },
+  {
+   "src_in": 13.92,
+   "src_out": 15.07,
+   "out_in": 9.23,
+   "out_out": 10.38
+  },
+  {
+   "src_in": 16.18,
+   "src_out": 16.96,
+   "out_in": 10.35,
+   "out_out": 11.13
+  },
+  {
+   "src_in": 19.03,
+   "src_out": 22.88,
+   "out_in": 11.1,
+   "out_out": 14.95
+  },
+  {
+   "src_in": 26.08,
+   "src_out": 29.38,
+   "out_in": 14.92,
+   "out_out": 18.22
+  },
+  {
+   "src_in": 31.52,
+   "src_out": 35.08,
+   "out_in": 18.19,
+   "out_out": 21.75
+  },
+  {
+   "src_in": 40.48,
+   "src_out": 45.61,
+   "out_in": 21.72,
+   "out_out": 26.85
+  }
+ ],
+ "broll": [
+  6.27,
+  12.2
+ ],
+ "phones": [
+  {
+   "cid": "akl",
+   "t_in": 6.27
+  },
+  {
+   "cid": "sak",
+   "t_in": 9.23
+  },
+  {
+   "cid": "wlg",
+   "t_in": 10.35
+  }
+ ]
+}
