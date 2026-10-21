@@ -48,7 +48,7 @@ for i, w in enumerate(raw):
         txt, skip = "Builderscrack,", True
     elif txt.startswith("understand"):
         txt, skip = "undercut", True
-    txt = {"inquiries": "enquiries", "500": "$500"}.get(txt, txt)
+    txt = {"inquiries": "enquiries"}.get(txt, txt)
     st = max(st, segs[seg]["src_in"] + 0.03)
     words.append(dict(text=txt, start=to_out(min(st, segs[seg]["src_out"] - 0.05)), seg=seg))
 for w in words:                       # the cut false start sat between these two words
@@ -62,7 +62,7 @@ def word_t(text, seg, nth=0):
     return hits[nth]
 
 # ------------------------------------------------------------------ captions (2-3 words, key word gold)
-KEY = set("""websites $500 agencies grand google reviews business profile enquiries customers work ads money table
+KEY = set("""websites 500 agencies grand google reviews business profile enquiries customers work ads money table
 demo yours away christchurch tradie link name number free 24 hours""".split())
 groups = []
 phrase = []                      # split at sentence/clause ends and segment changes, then chunk in threes
@@ -164,7 +164,7 @@ over.append(f'<div id="sites">{cards}<div class="stamp5" id="stamp5">$500</div><
 for k, (img, url, cx, cy, rot, wd) in enumerate(SITES):
     t = word_t(wd, 0)
     js.append(f'tl.fromTo("#site{k}", {{ opacity: 0, y: -260, rotation: {rot * 3}, scale: 0.7 }}, {{ opacity: 1, y: 0, rotation: {rot}, scale: 1, duration: 0.36, ease: "back.out(1.6)" }}, {T(t - 0.08)});')
-t500 = word_t("$500", 0)
+t500 = word_t("500", 0)
 js.append(f'tl.fromTo("#stamp5", {{ opacity: 0, scale: 2.6, rotation: -25 }}, {{ opacity: 1, scale: 1, rotation: -10, duration: 0.2, ease: "power4.in" }}, {T(t500 - 0.06)});')
 js.append(f'tl.to("#sites", {{ opacity: 0, y: -40, scale: 0.92, duration: 0.2, ease: "power2.in" }}, {T(s0["out_out"] - 0.12)});')
 
@@ -174,9 +174,9 @@ over.append(f'<div class="top" id="price"><div class="prow">'
             f'<div class="ptile gold" id="pt2"><div class="plab">ME</div><div class="pnum">$500</div></div></div></div>')
 show("#pt1", word_t("agencies", 1) - 0.05, segs[2]["out_out"] + 0.15)
 js.append(f'tl.fromTo("#pt1 .pnum", {{ scale: 1.25 }}, {{ scale: 1, duration: 0.3, ease: "back.out(3)" }}, {T(word_t("five", 1) - 0.05)});')
-show("#pt2", word_t("$500", 2) - 0.08, segs[2]["out_out"] + 0.15, frm="{ opacity: 0, y: 40, scale: 0.5 }", ease="back.out(2.4)")
-js.append(f'tl.fromTo("#strike", {{ scaleX: 0 }}, {{ scaleX: 1, duration: 0.22, ease: "power2.out" }}, {T(word_t("$500", 2) + 0.05)});')
-js.append(f'tl.to("#pt1", {{ opacity: 0.55, scale: 0.92, duration: 0.25 }}, {T(word_t("$500", 2) + 0.1)});')
+show("#pt2", word_t("500", 2) - 0.08, segs[2]["out_out"] + 0.15, frm="{ opacity: 0, y: 40, scale: 0.5 }", ease="back.out(2.4)")
+js.append(f'tl.fromTo("#strike", {{ scaleX: 0 }}, {{ scaleX: 1, duration: 0.22, ease: "power2.out" }}, {T(word_t("500", 2) + 0.05)});')
+js.append(f'tl.to("#pt1", {{ opacity: 0.55, scale: 0.92, duration: 0.25 }}, {T(word_t("500", 2) + 0.1)});')
 
 # ------------------------------------------------------------------ 3. demo offer (seg 3)
 s3 = segs[3]

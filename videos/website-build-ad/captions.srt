@@ -4,7 +4,7 @@ These three websites
 
 2
 00:00:01,550 --> 00:00:02,940
-cost $500 bucks.
+cost 500 bucks.
 
 3
 00:00:02,960 --> 00:00:04,000
@@ -16,7 +16,7 @@ charge around five grand.
 
 5
 00:00:05,220 --> 00:00:06,410
-I charge $500 bucks.
+I charge 500 bucks.
 
 6
 00:00:06,430 --> 00:00:06,810
