@@ -225,3 +225,10 @@ and stop it after ~$40 with no leads. Not uploaded yet: Windsor lost its Meta co
   pause v1 if v2 is taking spend and producing leads at or under ~$14.
 - 21/10: static v3 NZ (`120256505927950460`) PAUSED at Joe's request (~$2 delivery in a week), so
   the NZ ad set is a clean v1 vs v2 video test.
+- 21/10 AU (Joe: "use the video for the au campaign"): ad **Video v2 short - Website build AU**
+  (`120256590836790460`, same video `1749715549426802`, AU static PNG as thumbnail, same copy) created
+  and enabled in AU Tradies - Website Demo Lead (`120256505429230460`). Link tagged
+  `utm_campaign=tradie-website-500-au&utm_content=video-v2-short-au`. Static v3 AU
+  (`120256506045560460`) PAUSED (0 leads on $37, CPM ~$57). Ad set and campaign
+  (`120256505428790460`) switched back ON at $20/day; the campaign had been paused since ~18 Oct.
+- Still open for AU: /website says "For NZ tradies" with a Tauranga placeholder.
