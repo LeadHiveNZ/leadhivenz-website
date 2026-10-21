@@ -84,3 +84,62 @@ copy tells them Joe will call within one working day.
    too, so enable those (or just the cities that are open).
 4. Budget is $20 NZD/day CBO across three cities. The old electrician campaign ran $10/day on one
    ad set; if the learning phase stalls, cut to one ad set with all three cities.
+
+---
+
+## Update 21/10/2026 (later): Hawke's Bay + Dunedin for sparkies, new handyman campaign
+
+Joe's instruction: make the ads, model them on the existing handyman ad, and press go. So unlike
+the first build, everything below was **enabled** after the landing pages were verified live.
+
+### Sparky campaign additions (campaign 120256589869770460, still $20/day CBO)
+
+| Ad set | ID | Geo |
+|---|---|---|
+| Hawke's Bay Sparkies | 120256590438890460 | region key 2728 (Hawke's Bay) |
+| Dunedin Sparkies | 120256590439300460 | city key 1670988, 25 mi |
+
+Ads (same copy/headline/link pattern, `?region=hawke's bay` / `?region=dunedin`):
+Hawke's Bay raw 120256590446410460, Hawke's Bay edited 120256590446880460,
+Dunedin raw 120256590447270460, Dunedin edited 120256590447910460.
+`/sparkies` region dropdown extended to include Hawke's Bay and Dunedin.
+
+### Handyman campaign (new)
+
+Template: "Handyman Partner Campaigns" → "Handymen Ad" (120255503280100460, $604 spend / 989 clicks,
+instant form). Replaced the instant form with **https://leadhivenz.com/handymen** (alias
+`/handyman-lead-form`), built from the same shared trade-lead-page component as `/sparkies`,
+trade saved as "Handyman", regions Tauranga / Hamilton / Dunedin / Hawke's Bay / Somewhere else,
+pixel content_name "Handyman lead form". Screenshot: `handymen-page-mobile.png`.
+
+| Object | Name | ID |
+|---|---|---|
+| Campaign (CBO $20/day NZD, OUTCOME_LEADS) | Handyman Partner Campaign - Tauranga / Hamilton / Dunedin / Hawke's Bay | 120256590435020460 |
+| Ad set | Tauranga Handymen (city 1672707, 25 mi) | 120256590437530460 |
+| Ad set | Hamilton Handymen (city 1671146, 25 mi) | 120256590438000460 |
+| Ad set | Dunedin Handymen (city 1670988, 25 mi) | 120256590438290460 |
+| Ad set | Hawke's Bay Handymen (region 2728) | 120256590438590460 |
+| Ad | Tauranga Handymen - Joe video v2 | 120256590451720460 |
+| Ad | Hamilton Handymen - Joe video v2 | 120256590452380460 |
+| Ad | Dunedin Handymen - Joe video v2 | 120256590452660460 |
+| Ad | Hawke's Bay Handymen - Joe video v2 | 120256590452900460 |
+| Video ("Handymen - edited - PREVIEW.mp4" v2, 28s, captions + Auckland 33 / Wellington 40 lead reports) | Handymen - edited v2 - LeadHive NZ (Oct 2026) | 3053923604944254 |
+| Thumbnail image hash | handymen-v2-thumb.jpg ("1 handyman per region" badge frame) | 582cf7931a8f6cc6a146f27afb7c8ef4 |
+
+Ad set settings identical to the sparky ones (Lead-event optimisation on pixel 2212898842912576,
+age 25–65, home + recent, Advantage+ audience). Primary text:
+
+> {City} handymen: tired of chasing quotes that go nowhere?
+>
+> I run Google Ads that put ONE handyman at the top of Google the moment someone in {City} needs a
+> job done. They tap. Your phone rings. No competing with 5 other handymen on Builderscrack for the
+> same job.
+>
+> ✅ Exclusive: only 1 handyman per region
+> ✅ Inbound calls from people who need the work done now, not quote-shoppers
+> ✅ Your own landing page + call tracking, ads live within 24 hours
+>
+> Is {City} still open? Tap below, leave your number, and I'll personally give you a call to tell you straight.
+
+Headline **Only 1 Handyman Per Region** · Description **Leave your number. Joe will call you.** · CTA Learn more.
+Link: `https://leadhivenz.com/handymen?region={city}&utm_source=facebook&utm_medium=paid_social&utm_campaign=handyman-partner-nz&utm_content={city}-video-v2`
