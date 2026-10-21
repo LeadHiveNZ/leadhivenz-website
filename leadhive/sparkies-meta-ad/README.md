@@ -57,8 +57,11 @@ Link per ad (region pre-selects the form's dropdown; UTMs land in the enquiry ro
 
 ## Landing page
 
-Lovable project **LeadHiveNZ** (ec2c7f2f-8d9a-4f32-86be-af4f0900e61b), route `/sparkies`
-(alias `/sparky-lead-form`). Standalone noindex page, same pattern as `/website`. Form fields:
+**Live:** https://leadhivenz.com/sparkies (alias `/sparky-lead-form`). Published 21/10/2026 from
+Lovable project **LeadHiveNZ** (ec2c7f2f-8d9a-4f32-86be-af4f0900e61b), page `src/pages/SparkyLeads.tsx`.
+Prerendered and noindex. The `?region=` param is applied after hydration (a post-mount effect), which
+was needed because the prerendered select otherwise kept Wellington; verified live for all three ad
+links on a 390px viewport. Screenshot: `sparkies-page-mobile.png`. Standalone noindex page, same pattern as `/website`. Form fields:
 name, business, mobile, region (Wellington / Hamilton / Christchurch / Somewhere else). Saves to
 `area_check_enquiries` with trade = Electrician, emails hello@leadhivenz.com through
 `send-contact-email`, fires pixel `Lead` (content_name "Sparky lead form") on success. Success
