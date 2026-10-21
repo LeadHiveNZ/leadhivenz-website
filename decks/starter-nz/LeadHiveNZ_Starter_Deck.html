@@ -1,0 +1,539 @@
+<!doctype html>
+<html lang="en-NZ">
+<head>
+<meta charset="utf-8">
+<title>LeadHiveNZ — Starter Package</title>
+<meta name="viewport" content="width=1600">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ── LeadHive deck · same HTML system as the landing page master templates ── */
+:root{
+  --paper:#F4F6F9; --card:#FFFFFF; --ink:#101C2C; --ink-2:#4A5A6C; --ink-3:#8593A3; --rule:#DCE3EB;
+  --navy:#0D1B3E; --navy-2:#16284F; --gold:#F5A800; --gold-lo:#D99400; --gold-bg:#FFF4D6;
+  --blue:#1A6FD4; --blue-bg:#E7F0FC; --live:#158A4F; --live-bg:#E4F5EC; --bad:#C9360F; --bad-bg:#FBE9E3;
+  --font:"Inter Tight",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --W:1600px; --H:900px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{background:#222}
+body{font-family:var(--font);font-weight:500;color:var(--ink);line-height:1.4;-webkit-font-smoothing:antialiased;background:#222}
+.deck{display:flex;flex-direction:column;align-items:center;gap:24px;padding:24px 0}
+.slide{width:var(--W);height:var(--H);background:var(--paper);position:relative;overflow:hidden;padding:48px 64px 56px;display:flex;flex-direction:column;page-break-after:always;break-after:page}
+.slide.navy{background:var(--navy);color:#fff}
+.slide.navy .ink2{color:rgba(255,255,255,.75)}
+/* mast */
+.mast{display:flex;align-items:center;justify-content:space-between;margin-bottom:26px}
+.ey{display:inline-flex;align-items:center;gap:10px;font-size:13px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-2)}
+.ey i{width:9px;height:9px;border-radius:50%;background:var(--gold);display:inline-block}
+.navy .ey{color:rgba(255,255,255,.7)}
+.mast-r{display:flex;align-items:center;gap:14px;font-size:13px;font-weight:600;color:var(--ink-3)}
+.navy .mast-r{color:rgba(255,255,255,.55)}
+.mark{width:40px;height:40px;border-radius:10px;background:#fff;border:1px solid var(--rule);display:grid;place-items:center;overflow:hidden}
+.mark img{width:100%;height:100%;object-fit:contain}
+/* type */
+h1{font-size:40px;line-height:1.06;letter-spacing:-1.2px;font-weight:800;text-wrap:balance}
+h1 .g{color:var(--gold)}
+.lede{font-size:19px;color:var(--ink-2);margin-top:10px;max-width:70ch;line-height:1.45}
+.navy .lede{color:rgba(255,255,255,.78)}
+.lede b{color:var(--ink);font-weight:700}
+.navy .lede b{color:#fff}
+.h2{font-size:22px;font-weight:800;letter-spacing:-.5px}
+.k{font-size:12.5px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);margin-bottom:10px}
+.navy .k{color:rgba(255,255,255,.55)}
+/* layout */
+.body{flex:1;display:flex;gap:36px;min-height:0}
+.col{flex:1;min-width:0;display:flex;flex-direction:column}
+.foot{position:absolute;left:64px;right:64px;bottom:22px;display:flex;justify-content:space-between;font-size:12.5px;color:var(--ink-3);font-weight:600}
+.navy .foot{color:rgba(255,255,255,.5)}
+/* components (mirrors the landing-page template) */
+.card{background:var(--card);border:1px solid var(--rule);border-radius:14px;padding:22px 24px}
+.navy .card{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.14);color:#fff}
+.card h3{font-size:18.5px;font-weight:800;letter-spacing:-.3px;margin-bottom:6px}
+.card p{font-size:15.5px;color:var(--ink-2);line-height:1.45}
+.navy .card p{color:rgba(255,255,255,.75)}
+.status{display:inline-flex;align-items:center;gap:8px;background:var(--live-bg);color:#0F6B3D;border:1px solid #CDE9DA;border-radius:99px;padding:7px 14px;font-size:13.5px;font-weight:700}
+.status .dot{width:8px;height:8px;border-radius:50%;background:var(--live)}
+.pill{display:inline-flex;align-items:center;gap:8px;border-radius:99px;padding:7px 14px;font-size:13.5px;font-weight:700;background:var(--card);border:1px solid var(--rule);color:var(--ink)}
+.pill.gold{background:var(--gold-bg);border-color:#F3D98F;color:#7A5200}
+.pill.blue{background:var(--blue-bg);border-color:#C8DCF7;color:#164F9A}
+.pill.navy{background:var(--navy);border-color:var(--navy);color:#fff}
+.pills{display:flex;flex-wrap:wrap;gap:8px}
+.points{list-style:none}
+.points li{display:flex;gap:12px;align-items:flex-start;padding:11px 0;font-size:16px;border-bottom:1px solid var(--rule)}
+.points li:last-child{border-bottom:0}
+.points li b{font-weight:700}
+.navy .points li{border-color:rgba(255,255,255,.14)}
+.tick{flex:none;width:22px;height:22px;border-radius:50%;background:var(--live-bg);display:grid;place-items:center;margin-top:2px}
+.tick svg{width:11px;height:11px;stroke:var(--live);fill:none;stroke-width:3.4;stroke-linecap:round;stroke-linejoin:round}
+.steps{list-style:none;counter-reset:s}
+.steps li{display:grid;grid-template-columns:44px 300px 1fr;gap:22px;align-items:start;padding:24px 0;border-bottom:1px solid var(--rule);counter-increment:s}
+.steps li:last-child{border-bottom:0}
+.steps li::before{content:counter(s);width:44px;height:44px;border-radius:50%;background:var(--gold);color:var(--ink);font-size:17px;font-weight:800;display:grid;place-items:center}
+.steps .when{display:block;font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--gold-lo);margin-bottom:3px}
+.steps b{display:block;font-size:21px;font-weight:800;letter-spacing:-.3px}
+.steps span.d{display:block;font-size:17px;color:var(--ink-2);line-height:1.45;padding-top:4px}
+.navy .steps li{border-color:rgba(255,255,255,.14)}
+.navy .steps span.d{color:rgba(255,255,255,.75)}
+.navy .steps .when{color:var(--gold)}
+/* screenshots, phones and callout pins */
+.shot{position:relative;border-radius:14px;overflow:hidden;border:1px solid var(--rule);background:#fff;box-shadow:0 18px 40px -22px rgba(16,28,44,.35)}
+.shot img{display:block;width:100%}
+.phone{position:relative;width:280px;flex:none;border-radius:36px;background:#0F1A2E;padding:10px;box-shadow:0 24px 50px -24px rgba(16,28,44,.6)}
+.phone .scr{border-radius:27px;overflow:hidden;background:#F4F6FA;height:566px}
+.phone .scr img{display:block;width:100%}
+.phone.sm{width:250px}.phone.sm .scr{height:498px;border-radius:24px}
+.phone::after{content:"";position:absolute;top:18px;left:50%;width:84px;height:22px;transform:translateX(-50%);background:#0F1A2E;border-radius:99px}
+.pin{position:absolute;width:30px;height:30px;border-radius:50%;background:var(--gold);color:var(--ink);font-size:14px;font-weight:800;display:grid;place-items:center;transform:translate(-50%,-50%);box-shadow:0 0 0 3px #fff,0 6px 14px -4px rgba(0,0,0,.5);z-index:3}
+.legend{list-style:none;display:flex;flex-direction:column;gap:10px}
+.legend li{display:grid;grid-template-columns:30px 1fr;gap:12px;align-items:start;background:var(--card);border:1px solid var(--rule);border-radius:12px;padding:12px 14px}
+.legend li i{width:30px;height:30px;border-radius:50%;background:var(--gold);color:var(--ink);font-size:14px;font-weight:800;font-style:normal;display:grid;place-items:center}
+.legend li b{display:block;font-size:16px;font-weight:800;letter-spacing:-.2px}
+.legend li span{display:block;font-size:14px;color:var(--ink-2);line-height:1.4;margin-top:2px}
+.navy .legend li{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.14);color:#fff}
+.navy .legend li span{color:rgba(255,255,255,.72)}
+.cap{font-size:13px;color:var(--ink-3);font-weight:600;margin-top:8px}
+/* stats */
+.stat{background:var(--card);border:1px solid var(--rule);border-radius:14px;padding:20px 22px;text-align:center}
+.stat .v{font-size:46px;font-weight:800;letter-spacing:-2px;line-height:1;color:var(--navy)}
+.stat .v.g{color:var(--gold-lo)}
+.stat .l{font-size:12.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);margin-top:8px}
+/* table */
+table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--rule);border-radius:14px;overflow:hidden;font-size:16px}
+th{background:var(--navy);color:#fff;text-align:left;padding:15px 20px;font-weight:700;font-size:14px;letter-spacing:.04em}
+td{padding:15px 20px;border-top:1px solid var(--rule)}
+td.r{font-weight:800;color:var(--blue)}
+tr:nth-child(even) td{background:#FAFBFD}
+/* cover */
+.cover{justify-content:center;padding-left:96px}
+.cover .logo{width:112px;height:112px;border-radius:22px;background:#fff;padding:8px;margin-bottom:40px}
+.cover .logo img{width:100%;height:100%;object-fit:contain}
+.cover h1{font-size:92px;letter-spacing:-4px;line-height:.98}
+.cover .lede{font-size:24px;margin-top:22px;max-width:46ch}
+.cover .pills{margin-top:30px}
+.cover .pills .pill{font-size:15px;padding:10px 18px;background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.2);color:#fff}
+.cover .pills .pill.gold{background:var(--gold);border-color:var(--gold);color:var(--ink)}
+.dots{position:absolute;right:96px;top:80px;display:grid;grid-template-columns:repeat(3,22px);gap:22px}
+.dots i{width:22px;height:22px;border-radius:50%;background:var(--gold);display:block;opacity:.9}
+.stripe{position:absolute;left:0;top:0;bottom:0;width:14px;background:var(--gold)}
+/* price */
+.price{background:var(--card);border:1px solid var(--rule);border-radius:18px;padding:34px 40px;border-top:6px solid var(--gold);position:relative;color:var(--ink)}
+.price .tag{position:absolute;top:-18px;left:50%;transform:translateX(-50%);background:var(--gold);color:var(--ink);font-size:12.5px;font-weight:800;letter-spacing:.12em;text-transform:uppercase;padding:8px 16px;border-radius:99px}
+.price .name{font-size:14px;font-weight:800;letter-spacing:.2em;text-transform:uppercase;color:var(--gold-lo);text-align:center}
+.price .amt{text-align:center;margin-top:8px;font-size:84px;font-weight:800;letter-spacing:-4px;line-height:1;color:var(--navy)}
+.price .amt small{font-size:26px;letter-spacing:-.5px;color:var(--ink-2);font-weight:700;margin-left:6px}
+.price .gst{text-align:center;font-size:15px;color:var(--ink-2);margin-top:6px;font-weight:600}
+.price .box{margin:22px 0 18px;background:var(--paper);border-radius:12px;padding:14px;text-align:center;font-size:17px;font-weight:700}
+.price .box .g{color:var(--gold-lo)}
+.price .box .b{color:var(--blue)}
+.price .inc{display:grid;grid-template-columns:1fr 1fr;gap:4px 18px}
+.price .inc div{display:flex;gap:10px;align-items:flex-start;font-size:15.5px;padding:7px 0}
+.price .inc div::before{content:"";flex:none;width:8px;height:8px;border-radius:50%;background:var(--gold);margin-top:7px}
+.wm{position:absolute;right:18px;bottom:2px;font-size:120px;font-weight:800;letter-spacing:-6px;line-height:1;color:rgba(255,255,255,.07);pointer-events:none}
+.cta{display:inline-flex;align-items:center;gap:12px;background:var(--gold);color:var(--ink);font-size:19px;font-weight:800;padding:20px 30px;border-radius:14px;margin-top:34px;letter-spacing:-.2px}
+.note{background:var(--gold-bg);border:1px solid #F3D98F;border-radius:12px;padding:14px 18px;font-size:14.5px;color:#5A3D00;line-height:1.45}
+.note b{font-weight:800}
+.navy .note{background:rgba(245,168,0,.12);border-color:rgba(245,168,0,.35);color:#FFE6A8}
+.quote{background:var(--navy);color:#fff;border-radius:14px;padding:22px 26px;font-size:17px;line-height:1.5}
+.quote b{color:var(--gold);font-weight:800}
+@media print{
+  @page{size:1600px 900px;margin:0}
+  html,body{background:#fff}
+  .deck{display:block;padding:0;gap:0}
+  .slide{margin:0}
+}
+</style>
+</head>
+<body>
+<div class="deck">
+
+<!-- ═══════════ 1 · COVER ═══════════ -->
+<section class="slide navy cover">
+  <div class="stripe"></div>
+  <div class="dots"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  <div class="logo"><img src="assets/logo.png" alt="LeadHive New Zealand"></div>
+  <div class="ey" style="margin-bottom:18px"><i></i>Starter package · New Zealand</div>
+  <h1>More jobs.<br><span class="g">Zero effort.</span></h1>
+  <p class="lede">Exclusive inbound leads for trade businesses across New Zealand. Google Ads, a landing page, call tracking and your own client portal. All run for you.</p>
+  <div class="pills">
+    <span class="pill gold">$1,500 + GST a month</span>
+    <span class="pill">One trade per area</span>
+    <span class="pill">Live within 24 hours</span>
+    <span class="pill">Every lead is yours alone</span>
+  </div>
+  <div class="foot"><span>LeadHiveNZ · Joe Ingram</span><span>hello@leadhivenz.com</span></div>
+</section>
+
+<!-- ═══════════ 2 · THE PROBLEM ═══════════ -->
+<section class="slide">
+  <div class="mast"><span class="ey"><i></i>The problem</span><span class="mast-r">02 <span class="mark"><img src="assets/logo.png" alt=""></span></span></div>
+  <h1>Word of mouth is great. <span class="g" style="color:var(--gold-lo)">Until it goes quiet.</span></h1>
+  <p class="lede">Most trade businesses run on referrals. That works until the week it doesn't, and you can't plan a business around a phone that rings when it feels like it.</p>
+  <div class="body" style="margin-top:32px">
+    <div class="col" style="gap:14px">
+      <div class="card"><h3>Referrals dry up</h3><p>You can't control when they come or how many. One slow month puts pressure on everything else.</p></div>
+      <div class="card"><h3>No predictability</h3><p>You don't know what next month looks like. Planning, hiring and growing becomes guesswork.</p></div>
+      <div class="card"><h3>Competitors are winning online</h3><p>While you wait for the phone to ring, the business down the road is at the top of Google taking the job.</p></div>
+    </div>
+    <div class="col">
+      <div class="quote" style="flex:1;display:flex;flex-direction:column;justify-content:center;gap:18px;padding:40px">
+        <div class="k" style="color:rgba(255,255,255,.55)">What you actually want</div>
+        <div style="font-size:30px;font-weight:800;letter-spacing:-.8px;line-height:1.15">Your phone ringing with people in <b>your area</b> who need <b>your trade</b> right now.</div>
+        <div style="font-size:17px;color:rgba(255,255,255,.75)">Nothing to learn. Nothing to manage. Just answer the phone and quote the job.</div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>LeadHiveNZ · Starter package</span><span>Exclusively yours. We never share leads.</span></div>
+</section>
+
+<!-- ═══════════ 3 · HOW IT WORKS ═══════════ -->
+<section class="slide navy">
+  <div class="mast"><span class="ey"><i></i>The solution</span><span class="mast-r">03 <span class="mark"><img src="assets/logo.png" alt=""></span></span></div>
+  <h1>We put your business at the top of Google <span class="g">when people need you most.</span></h1>
+  <p class="lede">Four steps. You only touch the last one.</p>
+  <div class="body" style="margin-top:36px;gap:18px;align-items:stretch">
+    <div class="card" style="flex:1;padding:30px 26px;position:relative"><div class="k">Step 1</div><span class="wm">01</span><h3 style="font-size:21px">Someone needs a trade urgently</h3><p>They search Google for an emergency plumber, electrician or builder in their suburb. Right now.</p></div>
+    <div class="card" style="flex:1;padding:30px 26px;position:relative"><div class="k">Step 2</div><span class="wm">02</span><h3 style="font-size:21px">Your ad is the first thing they see</h3><p>We run Google Search Ads targeted to your area and your jobs. Your business sits at the top.</p></div>
+    <div class="card" style="flex:1;padding:30px 26px;position:relative"><div class="k">Step 3</div><span class="wm">03</span><h3 style="font-size:21px">They land on your page</h3><p>A fast, mobile-first landing page built for your trade and your area. Not a shared directory.</p></div>
+    <div class="card" style="flex:1;padding:30px 26px;position:relative;border-color:var(--gold);background:rgba(245,168,0,.1)"><div class="k" style="color:var(--gold)">Step 4</div><span class="wm" style="color:rgba(245,168,0,.12)">04</span><h3 style="font-size:21px">They call you directly</h3><p>The call goes straight to your mobile. Tracked, recorded and logged in your portal. Exclusive. Real. Ready to book.</p></div>
+  </div>
+  <div style="margin-top:26px;display:flex;gap:10px;flex-wrap:wrap">
+    <span class="pill" style="background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.2);color:#fff">Google Search Ads</span>
+    <span class="pill" style="background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.2);color:#fff">Dedicated landing page</span>
+    <span class="pill" style="background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.2);color:#fff">Call tracking + recordings</span>
+    <span class="pill" style="background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.2);color:#fff">Client portal</span>
+    <span class="pill" style="background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.2);color:#fff">Monthly report from Joe</span>
+  </div>
+  <div class="foot"><span>LeadHiveNZ · Starter package</span><span>One trade per area. Your competitors can't buy in.</span></div>
+</section>
+
+<!-- ═══════════ 4 · YOUR ADS ═══════════ -->
+<section class="slide">
+  <div class="mast"><span class="ey"><i></i>Your ads, live</span><span class="mast-r">04 <span class="mark"><img src="assets/logo.png" alt=""></span></span></div>
+  <h1>Your ads, running 24/7, <span style="color:var(--gold-lo)">at the top of Google.</span></h1>
+  <p class="lede">We target the exact searches people make at the moment they need help. Emergency intent only, no tyre-kickers.</p>
+  <div class="body" style="margin-top:26px">
+    <div class="col" style="flex:1.25">
+      <div class="k">How your ad looks on a phone</div>
+      <div class="shot" style="padding:14px 90px 0;background:#fff;max-height:560px">
+        <img src="assets/google-phones.jpg" style="max-height:540px;object-fit:contain" alt="Google search results showing the partner's ad at the top">
+        <span class="pin" style="left:18%;top:33%">1</span>
+        <span class="pin" style="left:19%;top:60%">2</span>
+        <span class="pin" style="left:19%;top:72%">3</span>
+      </div>
+    </div>
+    <div class="col" style="gap:14px">
+      <div>
+        <div class="k">Live ad · Christchurch plumber</div>
+        <div class="shot"><img src="assets/chch-ad.jpg" alt="Live Google ad for a Christchurch plumber" style="max-height:225px;object-fit:cover;object-position:top"></div>
+      </div>
+      <ul class="legend" style="gap:8px">
+        <li style="padding:9px 14px"><i>1</i><div><b>Your business, first on the page</b><span>Above the map, above the directories, above the big franchises.</span></div></li>
+        <li style="padding:9px 14px"><i>2</i><div><b>Job-specific sitelinks</b><span>Hot water, blocked drains, emergency callouts. Whatever you want more of.</span></div></li>
+        <li style="padding:9px 14px"><i>3</i><div><b>Tap to call, straight to your mobile</b><span>Most leads never see the page. They tap the number and ring you.</span></div></li>
+      </ul>
+      <div>
+        <div class="k">Searches we target</div>
+        <div class="pills"><span class="pill navy">"emergency plumber near me"</span><span class="pill navy">"burst pipe Tauranga"</span><span class="pill navy">"hot water repair"</span><span class="pill navy">"blocked drain"</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>LeadHiveNZ · Starter package</span><span>Google Ads fully managed. You never log in.</span></div>
+</section>
+
+<!-- ═══════════ 5 · LANDING PAGE ═══════════ -->
+<section class="slide">
+  <div class="mast"><span class="ey"><i></i>Your landing page</span><span class="mast-r">05 <span class="mark"><img src="assets/logo.png" alt=""></span></span></div>
+  <h1>A landing page built to convert. <span style="color:var(--gold-lo)">Built for the panic moment.</span></h1>
+  <p class="lede">Every partner gets the same proven template with their name, number, area and jobs. Mobile-first, one tap to call, and a quote form for the planned jobs.</p>
+  <div class="body" style="margin-top:22px;align-items:flex-start">
+    <div style="display:flex;gap:28px;flex:none">
+      <div class="phone"><div class="scr"><img src="assets/lp-northland-first.jpg" alt="Landing page on a phone"></div>
+        <span class="pin" style="left:14%;top:7%">1</span>
+        <span class="pin" style="left:88%;top:44%">2</span>
+        <span class="pin" style="left:88%;top:57%">3</span>
+        <span class="pin" style="left:14%;top:63%">4</span>
+      </div>
+    </div>
+    <div class="col">
+      <ul class="legend" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+        <li><i>1</i><div><b>Live status line</b><span>Knows your hours. "Taking bookings today" in the day, "message now, reply first thing" after hours.</span></div></li>
+        <li><i>2</i><div><b>One tap to call</b><span>Big call button, no forms, no waiting. Your tracking number swaps in automatically.</span></div></li>
+        <li><i>3</i><div><b>Get a quote form</b><span>Planned jobs come through as web enquiries. They email you and land in your portal.</span></div></li>
+        <li><i>4</i><div><b>Trust strip</b><span>Your rating, your promise, your pricing. Whatever makes people pick you over the next result.</span></div></li>
+        <li><i>5</i><div><b>Your name, your number</b><span>"Answered by Brian, the owner." A real person, not a call centre, and every lead goes to your mobile.</span></div></li>
+        <li><i>6</i><div><b>A page per job type</b><span>Blocked drains, hot water, decks, renovations. Each ad group lands on its own page.</span></div></li>
+      </ul>
+      <div class="k">The same page on desktop</div>
+      <div class="shot"><img src="assets/lp-tauranga-desktop.jpg" alt="Landing page on desktop" style="max-height:300px;object-fit:cover;object-position:top"><span class="pin" style="left:49%;top:21%">5</span></div>
+    </div>
+  </div>
+  <div class="foot"><span>LeadHiveNZ · Starter package</span><span>Shown: Northland Handyman and Tauranga Handyman partner pages</span></div>
+</section>
+
+<!-- ═══════════ 6 · CALL TRACKING ═══════════ -->
+<section class="slide">
+  <div class="mast"><span class="ey"><i></i>Every lead tracked</span><span class="mast-r">06 <span class="mark"><img src="assets/logo.png" alt=""></span></span></div>
+  <h1>Every call tracked. <span style="color:var(--gold-lo)">Every call recorded.</span></h1>
+  <p class="lede">A dedicated tracking number sits on your ads and your page and forwards to your mobile. You see exactly what's coming through: when, how long, from where, and the recording.</p>
+  <div class="body" style="margin-top:26px;gap:18px">
+    <div class="col">
+      <div class="shot" style="border-radius:14px;background:#0F1A2E"><div style="padding:14px 18px 10px;color:#fff;font-size:13px;font-weight:800;letter-spacing:.1em;text-transform:uppercase"><span style="color:var(--gold)">01 ·</span> Live dashboard</div><img src="assets/ct-dashboard.jpg" alt="Call tracking dashboard"><span class="pin" style="left:12%;top:32%">1</span></div>
+      <p class="cap">32 calls, 27 unique callers in 30 days, tracked across the whole campaign.</p>
+    </div>
+    <div class="col" style="flex:.8">
+      <div class="shot" style="border-radius:14px;background:#0F1A2E"><div style="padding:14px 18px 10px;color:#fff;font-size:13px;font-weight:800;letter-spacing:.1em;text-transform:uppercase"><span style="color:var(--gold)">02 ·</span> Call detail</div><img src="assets/ct-call-detail.jpg" alt="Call detail with duration and status"><span class="pin" style="left:50%;top:39%">2</span><span class="pin" style="left:50%;top:85%">3</span></div>
+      <p class="cap">Duration, status, the tracked number and where it forwarded to.</p>
+    </div>
+    <div class="col">
+      <div class="shot" style="border-radius:14px;background:#0F1A2E"><div style="padding:14px 18px 10px;color:#fff;font-size:13px;font-weight:800;letter-spacing:.1em;text-transform:uppercase"><span style="color:var(--gold)">03 ·</span> Call log</div><img src="assets/call-log.jpg" alt="Inbound call log"><span class="pin" style="left:30%;top:50%">4</span></div>
+      <p class="cap">Every inbound call timestamped and marked answered or missed.</p>
+      <ul class="legend" style="margin-top:10px">
+        <li><i>1</i><div><b>Calls, minutes, unique callers</b></div></li>
+        <li><i>2</i><div><b>How long they talked</b></div></li>
+        <li><i>3</i><div><b>Forwarded to your mobile</b></div></li>
+        <li><i>4</i><div><b>Answered or missed, with a recording</b></div></li>
+      </ul>
+    </div>
+  </div>
+  <div class="foot"><span>LeadHiveNZ · Starter package</span><span>No more "did you get my call?" It's all there, in writing, with a recording.</span></div>
+</section>
+
+<!-- ═══════════ 7 · CLIENT PORTAL · HOME ═══════════ -->
+<section class="slide navy">
+  <div class="mast"><span class="ey"><i></i>Your client portal · new</span><span class="mast-r">07 <span class="mark"><img src="assets/logo.png" alt=""></span></span></div>
+  <h1>Your own client portal. <span class="g">Every lead, every call, every dollar.</span></h1>
+  <p class="lede">Log in from your phone and see the month at a glance: leads against your target, calls answered and missed, jobs you've won, and a note from Joe on what's changing.</p>
+  <div class="body" style="margin-top:22px;align-items:flex-start">
+    <div style="display:flex;gap:22px;flex:none">
+      <div class="phone"><div class="scr"><img src="assets/home_first.png" alt="Portal home"></div>
+        <span class="pin" style="left:86%;top:16%">1</span>
+        <span class="pin" style="left:14%;top:30%">2</span>
+        <span class="pin" style="left:76%;top:55%">3</span>
+        <span class="pin" style="left:14%;top:67%">4</span>
+      </div>
+      <div class="phone"><div class="scr"><img src="assets/home_s2.png" alt="Portal home, scrolled"></div>
+        <span class="pin" style="left:12%;top:10%">5</span>
+        <span class="pin" style="left:12%;top:52%">6</span>
+      </div>
+    </div>
+    <div class="col">
+      <ul class="legend">
+        <li><i>1</i><div><b>Pick any month</b><span>This month so far, or any published month since you started.</span></div></li>
+        <li><i>2</i><div><b>Leads against your target</b><span>Calls plus web enquiries, with the meter showing where you sit against the 15 to 25 lead plan.</span></div></li>
+        <li><i>3</i><div><b>Jobs you've tagged won</b><span>The dollar value of the work you've marked as won. Your real return, in your own numbers.</span></div></li>
+        <li><i>4</i><div><b>Calls, enquiries, answered, missed</b><span>Each one compared with last month, with the average call length.</span></div></li>
+        <li><i>5</i><div><b>Note from Joe</b><span>A plain-English summary every month and a link to the full report.</span></div></li>
+        <li><i>6</i><div><b>Leads by month and by week</b><span>See the trend since you started and which week was busiest.</span></div></li>
+      </ul>
+    </div>
+  </div>
+  <div class="foot"><span>LeadHiveNZ · Starter package</span><span>Portal shown with the demo partner account</span></div>
+</section>
+
+<!-- ═══════════ 8 · CLIENT PORTAL · LEADS ═══════════ -->
+<section class="slide">
+  <div class="mast"><span class="ey"><i></i>Your client portal · leads</span><span class="mast-r">08 <span class="mark"><img src="assets/logo.png" alt=""></span></span></div>
+  <h1>Every lead in one list. <span style="color:var(--gold-lo)">Tap it, hear the call, tag the outcome.</span></h1>
+  <p class="lede">Calls and web enquiries grouped by day. Each one opens with the recording, what they searched, where they called from, and a one-tap way to say what happened.</p>
+  <div class="body" style="margin-top:22px;align-items:flex-start">
+    <div style="display:flex;gap:22px;flex:none">
+      <div class="phone"><div class="scr"><img src="assets/leads_first.png" alt="Portal leads list"></div>
+        <span class="pin" style="left:14%;top:14%">1</span>
+        <span class="pin" style="left:88%;top:6%">2</span>
+        <span class="pin" style="left:86%;top:47%">3</span>
+        <span class="pin" style="left:14%;top:71%">4</span>
+      </div>
+      <div class="phone"><div class="scr"><img src="assets/detail_first.png" alt="Portal lead detail"></div>
+        <span class="pin" style="left:30%;top:32%">5</span>
+        <span class="pin" style="left:18%;top:74%">3</span>
+      </div>
+      <div class="phone"><div class="scr"><img src="assets/detail_s2.png" alt="Portal lead detail, tagging"></div>
+        <span class="pin" style="left:50%;top:48%">6</span>
+        <span class="pin" style="left:14%;top:62%">7</span>
+      </div>
+    </div>
+    <div class="col">
+      <ul class="legend">
+        <li><i>1</i><div><b>Filters that matter</b><span>To tag, missed, web forms, recorded, won. Find the ones that need a call back in seconds.</span></div></li>
+        <li><i>2</i><div><b>Pick a month</b><span>Every lead from every month you've been with us.</span></div></li>
+        <li><i>3</i><div><b>Play the recording</b><span>Hear exactly what was said. Great for training the team and checking quotes.</span></div></li>
+        <li><i>4</i><div><b>Missed calls flagged</b><span>Red tile, with what they searched. Most of these are recoverable with a call back inside 10 minutes.</span></div></li>
+        <li><i>5</i><div><b>Call back or text</b><span>One tap from the lead itself.</span></div></li>
+        <li><i>6</i><div><b>Tag what happened</b><span>Won, quoted, not a lead or spam. Spam is left out of your numbers.</span></div></li>
+        <li><i>7</i><div><b>Job value</b><span>Rough job value on the ones you win. This is how the portal works out your real return.</span></div></li>
+      </ul>
+    </div>
+  </div>
+  <div class="foot"><span>LeadHiveNZ · Starter package</span><span>Joe uses your tags to cut the searches that bring in the duds</span></div>
+</section>
+
+<!-- ═══════════ 9 · CLIENT PORTAL · REPORT ═══════════ -->
+<section class="slide">
+  <div class="mast"><span class="ey"><i></i>Your client portal · monthly report</span><span class="mast-r">09 <span class="mark"><img src="assets/logo.png" alt=""></span></span></div>
+  <h1>A monthly report you'll actually read. <span style="color:var(--gold-lo)">Written by Joe, not a dashboard.</span></h1>
+  <p class="lede">At the start of each month your report is published in the portal: the full breakdown, your return on the plan, what worked and what's changing next month.</p>
+  <div class="body" style="margin-top:22px;align-items:flex-start">
+    <div style="display:flex;gap:22px;flex:none">
+      <div class="phone"><div class="scr"><img src="assets/report_first.png" alt="Portal monthly report"></div>
+        <span class="pin" style="left:86%;top:36%">1</span>
+        <span class="pin" style="left:10%;top:46%">2</span>
+      </div>
+      <div class="phone"><div class="scr"><img src="assets/report_s2.png" alt="Portal report, scrolled"></div>
+        <span class="pin" style="left:12%;top:12%">3</span>
+        <span class="pin" style="left:12%;top:70%">4</span>
+      </div>
+      <div class="phone"><div class="scr"><img src="assets/report_s3.png" alt="Portal report, what's changing"></div>
+        <span class="pin" style="left:14%;top:14%">5</span>
+        <span class="pin" style="left:50%;top:82%">6</span>
+      </div>
+    </div>
+    <div class="col">
+      <ul class="legend">
+        <li><i>1</i><div><b>On target, and how it compares</b><span>Against your plan and against last month.</span></div></li>
+        <li><i>2</i><div><b>The full breakdown</b><span>Calls, answered, missed, web enquiries, average call length, jobs won, quotes out.</span></div></li>
+        <li><i>3</i><div><b>Your return on the plan</b><span>Won jobs against your monthly fee, counting only what you tagged.</span></div></li>
+        <li><i>4</i><div><b>Joe's summary</b><span>What happened this month in plain English.</span></div></li>
+        <li><i>5</i><div><b>What I'm changing</b><span>Three concrete things for next month: keywords, budget, ad schedule, your answer rate.</span></div></li>
+        <li><i>6</i><div><b>PDF to keep</b><span>Download the report or jump straight to every lead from that month.</span></div></li>
+      </ul>
+    </div>
+  </div>
+  <div class="foot"><span>LeadHiveNZ · Starter package</span><span>"Questions? Text Joe, he reads every reply."</span></div>
+</section>
+
+<!-- ═══════════ 10 · REAL RESULTS ═══════════ -->
+<section class="slide navy">
+  <div class="mast"><span class="ey"><i></i>Real results</span><span class="mast-r">10 <span class="mark"><img src="assets/logo.png" alt=""></span></span></div>
+  <h1>Real partners. <span class="g">Real jobs.</span></h1>
+  <p class="lede">A few examples from partners already in the hive. Different trades, different regions, same system.</p>
+  <div class="body" style="margin-top:28px;gap:18px;align-items:stretch">
+    <div class="card" style="flex:1.1;padding:28px;display:flex;flex-direction:column">
+      <div class="k">Christchurch plumber · first 28 days</div>
+      <div style="font-size:26px;font-weight:800;letter-spacing:-.6px;line-height:1.15">One plumber. One landing page. <span style="color:var(--gold)">Real jobs every week.</span></div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:20px 0 16px">
+        <div class="stat" style="background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.14)"><div class="v" style="color:var(--gold)">33</div><div class="l" style="color:rgba(255,255,255,.6)">Calls tracked</div></div>
+        <div class="stat" style="background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.14)"><div class="v" style="color:var(--gold)">27</div><div class="l" style="color:rgba(255,255,255,.6)">Answered</div></div>
+        <div class="stat" style="background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.14)"><div class="v" style="color:var(--gold)">$0</div><div class="l" style="color:rgba(255,255,255,.6)">Extra spend</div></div>
+      </div>
+      <ul class="points" style="margin-bottom:16px">
+        <li><span class="tick"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></span><div>Live within 24 hours of signing. Calls from day one.</div></li>
+        <li><span class="tick"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></span><div>Every call timestamped, recorded and forwarded straight to his mobile.</div></li>
+        <li><span class="tick"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></span><div>No middleman, no missed jobs, no extra spend above the plan.</div></li>
+      </ul>
+      <div style="border-left:3px solid var(--gold);padding:10px 16px;background:rgba(255,255,255,.05);border-radius:0 10px 10px 0;margin-top:auto">
+        <div class="k" style="margin-bottom:4px;color:var(--gold)">Jobs booked</div>
+        <p style="font-size:15px;color:rgba(255,255,255,.85)">Burst pipes · Blocked drains · Hot water failures · Leak detection · Overflowing pipes · Water tank repairs · Installs</p>
+      </div>
+    </div>
+    <div class="col" style="gap:18px">
+      <div class="card" style="padding:28px;flex:1;display:flex;align-items:center;gap:26px">
+        <div><div style="font-size:60px;font-weight:800;letter-spacing:-3px;line-height:1;color:var(--gold)">$20,000</div><div class="k" style="margin:8px 0 0">of work generated</div></div>
+        <div style="flex:1"><div style="font-size:20px;font-weight:800;letter-spacing:-.4px">Auckland builder</div><p>Planned-intent campaign. Decks, renovations and repairs quoted off the landing page form and the tracking line.</p></div>
+      </div>
+      <div class="card" style="padding:28px;flex:1;display:flex;align-items:center;gap:26px">
+        <div><div style="font-size:60px;font-weight:800;letter-spacing:-3px;line-height:1;color:var(--gold)">$13,000</div><div class="k" style="margin:8px 0 0">of work generated</div></div>
+        <div style="flex:1"><div style="font-size:20px;font-weight:800;letter-spacing:-.4px">Wellington sparky</div><p>Emergency and same-day electrical. Calls straight to the van, tracked and recorded.</p></div>
+      </div>
+    </div>
+  </div>
+  <div class="note" style="margin-top:18px"><b>These are results, not a promise.</b> The tradies above have been established in their areas for years and close well on the phone. Every trade, area and month is different, and what you make from the leads depends on how fast you answer and how you quote.</div>
+  <div class="foot"><span>LeadHiveNZ · Starter package</span><span>Figures as reported by the partners</span></div>
+</section>
+
+<!-- ═══════════ 11 · THE NUMBERS ═══════════ -->
+<section class="slide">
+  <div class="mast"><span class="ey"><i></i>The numbers that matter</span><span class="mast-r">11 <span class="mark"><img src="assets/logo.png" alt=""></span></span></div>
+  <h1>A single closed job usually covers <span style="color:var(--gold-lo)">the whole monthly fee.</span></h1>
+  <p class="lede">Rough maths on 15 to 25 leads a month. Plug in your own callout value and close rate.</p>
+  <div class="body" style="margin-top:26px;flex-direction:column;gap:14px">
+    <table>
+      <thead><tr><th>Trade</th><th>Avg callout value</th><th>Leads / month</th><th>Potential revenue</th><th>Against $1,500 + GST</th></tr></thead>
+      <tbody>
+        <tr><td>Emergency plumber</td><td>$200–$450</td><td>15–25</td><td>$3,000–$11,250+</td><td class="r">2x–7x</td></tr>
+        <tr><td>Electrician</td><td>$200–$500</td><td>15–25</td><td>$3,000–$12,500+</td><td class="r">2x–8x</td></tr>
+        <tr><td>Roofer</td><td>$300–$1,200</td><td>15–25</td><td>$4,500–$30,000+</td><td class="r">3x–20x</td></tr>
+        <tr><td>Builder / handyman</td><td>$250–$2,500</td><td>15–25</td><td>$3,750–$62,500+</td><td class="r">2x–40x</td></tr>
+        <tr><td>HVAC / heat pump</td><td>$200–$600</td><td>15–25</td><td>$3,000–$15,000+</td><td class="r">2x–10x</td></tr>
+      </tbody>
+    </table>
+    <div style="display:flex;gap:14px;align-items:stretch">
+      <div class="card" style="flex:1"><h3>Why the portal matters here</h3><p>You tag the jobs you win with a rough value, and the portal shows your actual return on the plan every month. No guessing, no "I think it's working".</p></div>
+      <div class="card" style="flex:1"><h3>Your answer rate is the lever</h3><p>Emergency callers ring the next result if nobody picks up. Partners who answer, or call back inside 10 minutes, get the most out of every lead.</p></div>
+    </div>
+    <p class="cap">*Revenue ranges assume a 20% close rate on 15 to 25 leads and are illustrative only. They are not a guarantee of results.</p>
+  </div>
+  <div class="foot"><span>LeadHiveNZ · Starter package</span><span>All prices NZD, exclusive of GST</span></div>
+</section>
+
+<!-- ═══════════ 12 · YOUR INVESTMENT ═══════════ -->
+<section class="slide navy">
+  <div class="mast"><span class="ey"><i></i>Your investment</span><span class="mast-r">12 <span class="mark"><img src="assets/logo.png" alt=""></span></span></div>
+  <div class="body" style="align-items:center;gap:48px">
+    <div class="col" style="flex:.9;gap:22px">
+      <h1>One package. <span class="g">Everything included.</span></h1>
+      <p class="lede">$500 + GST setup fee. Three-month minimum term, then month to month. First month billed on go-live.</p>
+      <ul class="points" style="margin-top:6px">
+        <li><span class="tick"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></span><div><b>Exclusive.</b> One trade per area. Your competitors can't buy in.</div></li>
+        <li><span class="tick"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></span><div><b>Live within 24 hours.</b> Sign up today, campaign and page live tomorrow.</div></li>
+        <li><span class="tick"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></span><div><b>No lock-in after three months.</b> Stay because it works, not because of a contract.</div></li>
+        <li><span class="tick"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></span><div><b>Direct line to Joe.</b> Text him. He reads every reply.</div></li>
+      </ul>
+    </div>
+    <div class="price" style="flex:1;max-width:760px">
+      <span class="tag">Exclusive partnership</span>
+      <div class="name">Starter</div>
+      <div class="amt">$1,500<small>+ GST</small></div>
+      <div class="gst">per month · NZD</div>
+      <div class="box"><span class="g">$800 ad spend included</span> &nbsp;·&nbsp; <span class="b">15–25 leads a month</span></div>
+      <div class="inc">
+        <div>Google Search Ads fully managed</div>
+        <div>Dedicated landing page built for you</div>
+        <div>Call tracking and call recordings</div>
+        <div>Client portal: leads, recordings, tagging, reports</div>
+        <div>Lead notifications by email and SMS</div>
+        <div>Monthly performance report from Joe</div>
+        <div>One service area, exclusive to you</div>
+        <div>Direct line to Joe</div>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>LeadHiveNZ · Starter package</span><span>All prices NZD, exclusive of GST</span></div>
+</section>
+
+<!-- ═══════════ 13 · WHAT HAPPENS WHEN YOU SIGN UP ═══════════ -->
+<section class="slide">
+  <div class="mast"><span class="ey"><i></i>What happens when you sign up</span><span class="mast-r">13 <span class="mark"><img src="assets/logo.png" alt=""></span></span></div>
+  <h1>From "yes" to your phone ringing <span style="color:var(--gold-lo)">in about a day.</span></h1>
+  <div class="body" style="margin-top:14px">
+    <ul class="steps" style="flex:1">
+      <li><div><span class="when">Hour 0–2</span><b>Quick onboarding call</b></div><span class="d">A 15-minute call to lock in your service area, the jobs you want more of, your hours and your number. You don't do any heavy lifting.</span></li>
+      <li><div><span class="when">Same day</span><b>Landing page built</b></div><span class="d">Your page goes up on our proven template with your name, number, area and job types. Built and shipped the same day.</span></li>
+      <li><div><span class="when">Within 24 hours</span><b>Ads and call tracking go live</b></div><span class="d">Google Search campaigns launch. Your tracking number is live so every call is captured and recorded from day one.</span></li>
+      <li><div><span class="when">Day 1</span><b>Portal login arrives</b></div><span class="d">An email with your login. Leads, recordings and notes show up in the portal as they happen. Tag what you win so your return is tracked.</span></li>
+      <li><div><span class="when">First 2 weeks</span><b>Optimisation phase</b></div><span class="d">We tune bids, keywords and targeting on the early data, and cut the searches that bring in the duds.</span></li>
+      <li><div><span class="when">Ongoing</span><b>Consistent lead flow and a monthly report</b></div><span class="d">Your phone keeps ringing. We keep optimising. At the start of each month your report lands in the portal with what's changing next.</span></li>
+    </ul>
+  </div>
+  <div class="foot"><span>LeadHiveNZ · Starter package</span><span>You answer the phone and quote the job. We do the rest.</span></div>
+</section>
+
+<!-- ═══════════ 14 · CTA ═══════════ -->
+<section class="slide navy cover">
+  <div class="stripe"></div>
+  <div class="dots"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  <div class="logo"><img src="assets/logo.png" alt="LeadHive New Zealand"></div>
+  <h1>Ready to fill<br>your calendar?</h1>
+  <p class="lede">We only take on one trade business per area.<br>If you're seeing this, your spot is still available.</p>
+  <div class="cta">Get started · $500 + GST setup fee, first month billed on go-live</div>
+  <div class="pills" style="margin-top:26px">
+    <span class="pill">hello@leadhivenz.com</span>
+    <span class="pill">Text or call Joe directly</span>
+  </div>
+  <div class="foot"><span>Joe Ingram · LeadHiveNZ</span><span>Exclusively yours. We never share leads.</span></div>
+</section>
+
+</div>
+</body>
+</html>

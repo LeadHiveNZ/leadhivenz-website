@@ -12,6 +12,8 @@ clients/
     northland-handyman-master.html
     README.md                   routes, data sources, pre-launch checks
     screens/                    rendered previews of each page
+decks/
+  starter-nz/                   Starter package sales deck (HTML + PDF), portal screen mocks
 ```
 
 Preview any client file directly in a browser; add `?page=<key>` to view a service page.
