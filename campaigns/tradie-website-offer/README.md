@@ -265,3 +265,21 @@ from here, so the page lives in the Lovable project **ContentHive Homepage Build
 - PAUSED the LeadHive-branded AU video ad (`120256590836790460`); the AU static stays paused.
 - Next: connect a ContentHive subdomain (e.g. websites.contenthiveau.com) to the Lovable project.
   Swapping the ad's link afterwards means a new ad (Meta creatives can't be edited).
+
+## NZ split: v2 short $30/day, v1 $10/day (21/10/2026)
+
+Joe: new NZ ad $30/day, old one $10/day. Meta budgets live on the ad set, so the two videos now
+sit in separate ad sets of the NZ campaign (`120256460133070460`):
+
+| Ad set | ID | Budget | Active ad |
+|---|---|---|---|
+| NZ Tradies - Website Demo Lead | `120256460133520460` | $10/day (was $20) | Website offer video v1 (`120256460158410460`) |
+| NZ Tradies - Website Demo Lead - Video v2 short | `120256592776630460` | $30/day | Video v2 short - Website build NZ (`120256592778570460`) |
+
+- New ad set is a `duplicate_adset` copy of the original (same NZ targeting, LEAD on pixel
+  `2212898842912576`, no ads copied). New ad: same video, copy and link
+  (`utm_content=video-v2-short`) as before, thumbnail = 0.6s frame (`thumb-v2-short.jpg`).
+- The first v2 ad inside the original ad set (`120256590774210460`) is PAUSED so v1 has that ad
+  set to itself. The static NZ stays paused.
+- NZ total is now $40/day (was $20). The v2 ad set starts Meta's learning phase from zero; judge
+  it after ~$90 spend (about 3 days), against v1's ~$14 per lead.
