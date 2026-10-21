@@ -39,7 +39,9 @@ for i, w in enumerate(raw):
         skip = False; continue
     txt, st = w["text"], w["start"]
     tol = 0.3 if txt.endswith(".") else 0.12          # ASR stamps sentence-final words late
-    seg = next((k for k, sg in enumerate(segs) if sg["src_in"] - 0.25 <= st <= sg["src_out"] + tol), None)
+    seg = next((k for k, sg in enumerate(segs) if sg["src_in"] <= st <= sg["src_out"]), None)   # inside a kept range first
+    if seg is None:
+        seg = next((k for k, sg in enumerate(segs) if sg["src_in"] - 0.25 <= st <= sg["src_out"] + tol), None)
     if seg is None:
         continue
     if txt == "Builders" and raw[i + 1]["text"].startswith("Crack"):
@@ -47,6 +49,8 @@ for i, w in enumerate(raw):
     elif txt.startswith("understand"):
         txt, skip = "undercut", True
     txt = {"inquiries": "enquiries"}.get(txt, txt)
+    if txt.lower().startswith(("crosschurch", "christchurch")):
+        txt = "Christchurch" + txt[-1] if txt.endswith(".") else "Christchurch"
     st = max(st, segs[seg]["src_in"] + 0.03)
     words.append(dict(text=txt, start=to_out(min(st, segs[seg]["src_out"] - 0.05)), seg=seg))
 for k in range(1, len(words)):
@@ -57,7 +61,7 @@ def word_t(text, seg, nth=0):
     return hits[nth]
 
 # ------------------------------------------------------------------ captions (2-3 words, key word gold)
-KEY = set("""handyman region zealand residential maintenance qualified enquiries auckland wellington builderscrack race bottom
+KEY = set("""handyman region zealand residential maintenance qualified enquiries auckland wellington christchurch builderscrack race bottom
 undercutting straight same-day attention 18 tradesmen country model area available link form call""".split())
 groups = []
 phrase = []                      # split at sentence/clause ends and segment changes, then chunk in threes
@@ -109,7 +113,7 @@ for i, sg in enumerate(segs):
     js.append(f'tl.set("#cam", {{ scale: {1.0 if i % 2 == 0 else 1.075} }}, {T(sg["out_in"])});')
 js.append(f'tl.set("#cam", {{ scale: 1.075 }}, {T(word_t("each", 0))});')          # beat inside the long opener
 js.append(f'tl.set("#cam", {{ scale: 1.0 }}, {T(word_t("residential", 0))});')
-js.append(f'tl.set("#cam", {{ scale: 1.0 }}, {T(word_t("click", 7))});')
+js.append(f'tl.set("#cam", {{ scale: 1.0 }}, {T(word_t("click", 8))});')
 
 over = []   # overlay html
 def show(sel, t_in, t_out, frm="{ opacity: 0, y: 24, scale: 0.92 }", dur=0.28, ease="back.out(1.8)", out="{ opacity: 0, y: -14, duration: 0.18, ease: \"power2.in\" }"):
@@ -153,12 +157,15 @@ RES = [
     dict(cid="sak", seg=2, side=-1, area="SOUTH AUCKLAND", word="South", biz="RNZ Renovation", head="September 2026 report",
          month="SEPTEMBER 2026", leads=25, pills=[("On target", True), ("+2 leads vs Aug 2026", False)],
          rows=[("Phone calls", "21"), ("Answered", "18 <em>(86%)</em>"), ("Web enquiries", "4"), ("Average call length", "1m 27s"), ("Estimated value of leads", "$11,250")]),
-    dict(cid="wlg", seg=3, side=1, area="WELLINGTON", word="Wellington", biz="K Build", head="September 2026 report",
+    dict(cid="chc", seg=3, side=1, area="CHRISTCHURCH", word="Christchurch", biz="South Maintenance", head="September 2026 report",
+         month="SEPTEMBER 2026", leads=32, pills=[("Above target", True), ("+3 leads vs Aug 2026", False)],
+         rows=[("Phone calls", "27"), ("Answered", "20 <em>(74%)</em>"), ("Web enquiries", "5"), ("Average call length", "2m 52s"), ("Estimated value of leads", "$14,400")]),
+    dict(cid="wlg", seg=4, side=-1, area="WELLINGTON", word="Wellington", biz="K Build", head="September 2026 report",
          month="SEPTEMBER 2026", leads=40, pills=[("Above target", True)],
          rows=[("Phone calls", "30"), ("Answered", "25 <em>(83%)</em>"), ("Web enquiries", "10"), ("Average call length", "1m 48s"), ("Estimated value of leads", "$18,000")]),
 ]
 BROLL_IN = segs[1]["out_in"]
-BROLL_OUT = round(segs[4]["out_in"] + 1.1, 3)
+BROLL_OUT = round(segs[5]["out_in"] + 1.1, 3)
 js.append(f'tl.to("#cam", {{ filter: "blur(22px) brightness(0.5)", duration: 0.22, ease: "power2.out" }}, {T(BROLL_IN - 0.05)});')
 js.append(f'tl.to("#cam", {{ filter: "blur(0px) brightness(1)", duration: 0.25, ease: "power2.out" }}, {T(BROLL_OUT - 0.1)});')
 js.append(f'tl.fromTo("#scrim", {{ opacity: 0 }}, {{ opacity: 1, duration: 0.22 }}, {T(BROLL_IN - 0.05)});')
@@ -188,13 +195,13 @@ for k, r in enumerate(RES):
         js.append(f'tl.to("#{r["cid"]}", {{ opacity: 0, scale: 0.94, duration: 0.25, ease: "power2.in" }}, {T(t_out - 0.25)});')
     js.append(f'tl.set("#{r["cid"]}", {{ visibility: "hidden" }}, {T(t_out)});')
     js.append(f'tl.fromTo("#{r["cid"]}-tag", {{ opacity: 0, scale: 0.4, y: 20 }}, {{ opacity: 1, scale: 1, y: 0, duration: 0.28, ease: "back.out(2.6)" }}, {T(min(t_area - 0.04, t_in + 0.3))});')
-    js.append(f'tl.to("#{r["cid"]}-n", {{ duration: 0.7, ease: "power2.out", onUpdate: countUp, onUpdateParams: ["#{r["cid"]}-n", {r["leads"]}] }}, {T(t_in + 0.15)});')
+    js.append(f'tl.to("#{r["cid"]}-n", {{ duration: 0.42, ease: "power2.out", onUpdate: countUp, onUpdateParams: ["#{r["cid"]}-n", {r["leads"]}] }}, {T(t_in + 0.06)});')
     for j in range(len(r["rows"])):
         js.append(f'tl.fromTo("#{r["cid"]}-r{j}", {{ opacity: 0, x: {30 * r["side"]} }}, {{ opacity: 1, x: 0, duration: 0.16, ease: "power2.out" }}, {T(t_in + 0.12 + 0.04 * j)});')
 
 # ------------------------------------------------------------------ 3. no race to the bottom (seg 4)
-s4 = segs[4]
-t_race, t_under = word_t("race", 4), word_t("undercutting", 4)
+s5 = segs[5]
+t_race, t_under = word_t("race", 5), word_t("undercutting", 5)
 icons = "".join(f'<div class="spk{" you" if j == 2 else ""}" id="spk{j}"><i>{ICON["user"]}</i><span class="cross">{ICON["x"]}</span></div>' for j in range(5))
 over.append(f'<div class="top" id="bid"><div class="spks">{icons}</div><div class="pill dark" id="bid-l"><i class="g">{ICON["bolt"]}</i>No race to the bottom. Just you.</div></div>')
 for j in range(5):
@@ -203,36 +210,36 @@ for j in range(5):
         js.append(f'tl.fromTo("#spk{j} .cross", {{ opacity: 0, scale: 2 }}, {{ opacity: 1, scale: 1, duration: 0.18, ease: "power3.in" }}, {T(t_under - 0.1 + 0.05 * j)});')
         js.append(f'tl.to("#spk{j}", {{ opacity: 0.35, duration: 0.2 }}, {T(t_under + 0.1 + 0.05 * j)});')
 js.append(f'tl.to("#spk2", {{ scale: 1.25, duration: 0.25, ease: "back.out(3)" }}, {T(t_under + 0.15)});')
-show("#bid-l", t_under + 0.2, s4["out_out"] + 0.2)
-js.append(f'tl.to(".spks", {{ opacity: 0, y: -14, duration: 0.18 }}, {T(s4["out_out"] + 0.02)});')
+show("#bid-l", t_under + 0.2, s5["out_out"] + 0.2)
+js.append(f'tl.to(".spks", {{ opacity: 0, y: -14, duration: 0.18 }}, {T(s5["out_out"] + 0.02)});')
 
 # ------------------------------------------------------------------ 4. straight to you + same-day (seg 5)
-s5 = segs[5]
+s6 = segs[6]
 over.append(f'<div class="top" id="qual"><div class="pill dark" id="q1"><i class="ok">{ICON["check"]}</i>Jobs straight to you</div>'
             f'<div class="pill gold" id="q2"><i>{ICON["clock"]}</i>Same-day attention</div></div>')
-show("#q1", word_t("straight", 5) - 0.05, s5["out_out"] + 0.1)
-show("#q2", word_t("same-day", 5) - 0.05, s5["out_out"] + 0.1)
+show("#q1", word_t("straight", 6) - 0.05, s6["out_out"] + 0.1)
+show("#q2", word_t("same-day", 6) - 0.05, s6["out_out"] + 0.1)
 
 # ------------------------------------------------------------------ 5. 18 tradesmen, same model (seg 6)
-s6 = segs[6]
+s7 = segs[7]
 over.append(f'<div class="top" id="sub"><div class="pill gold big" id="g1"><i>{ICON["user"]}</i><span id="t18">0</span>&nbsp;tradesmen across NZ</div>'
             f'<div class="pill dark" id="g2"><i class="g">{ICON["check"]}</i>All on the same model</div></div>')
-t18 = word_t("18", 6)
-show("#g1", t18 - 0.08, s6["out_out"] + 0.1)
+t18 = word_t("18", 7)
+show("#g1", t18 - 0.08, s7["out_out"] + 0.1)
 js.append(f'tl.to("#t18", {{ duration: 0.6, ease: "power2.out", onUpdate: countUp, onUpdateParams: ["#t18", 18] }}, {T(t18 - 0.02)});')
-show("#g2", word_t("same", 6) - 0.05, s6["out_out"] + 0.1)
+show("#g2", word_t("same", 7) - 0.05, s7["out_out"] + 0.1)
 
 # ------------------------------------------------------------------ 6. CTA (seg 7): seeing this ad = your area is available
-s7 = segs[7]
-t_seeing, t_area7 = word_t("seeing", 7), word_t("area", 7)
+s8 = segs[8]
+t_seeing, t_area7 = word_t("seeing", 8), word_t("area", 8)
 over.append(f'<div class="top" id="avail"><div class="atitle" id="at">SEEING THIS AD?</div>'
             f'<div class="pill gold big" id="aok"><i>{ICON["check"]}</i>YOUR AREA IS AVAILABLE</div><div class="aring" id="aring"></div></div>')
 show("#at", t_seeing - 0.05, TOTAL + 0.2, frm="{ opacity: 0, y: 20, scale: 1.3 }", ease="power3.out")
 show("#aok", t_area7 - 0.1, TOTAL + 0.2, frm="{ opacity: 0, y: 30, scale: 0.6 }", ease="back.out(2.4)")
 js.append(f'tl.fromTo("#aring", {{ opacity: 0.9, scale: 0.85 }}, {{ opacity: 0, scale: 1.35, duration: 0.7, ease: "power2.out" }}, {T(t_area7 + 0.15)});')
-js.append(f'tl.fromTo("#aok", {{ scale: 1 }}, {{ scale: 1.06, duration: 0.35, repeat: 3, yoyo: true, ease: "sine.inOut", immediateRender: false }}, {T(word_t("click", 7))});')
+js.append(f'tl.fromTo("#aok", {{ scale: 1 }}, {{ scale: 1.06, duration: 0.35, repeat: 3, yoyo: true, ease: "sine.inOut", immediateRender: false }}, {T(word_t("click", 8))});')
 over.append(f'<div class="cta" id="cta"><i>{ICON["check"]}</i>Fill out the form &middot; quick call</div>')
-show("#cta", word_t("form", 7) - 0.1, TOTAL + 0.2)
+show("#cta", word_t("form", 8) - 0.1, TOTAL + 0.2)
 
 # ------------------------------------------------------------------ captions
 cb = []
