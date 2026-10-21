@@ -148,3 +148,33 @@ age 25–65, home + recent, Advantage+ audience). Primary text:
 
 Headline **Only 1 Handyman Per Region** · Description **Leave your number. Joe will call you.** · CTA Learn more.
 Link: `https://leadhivenz.com/handymen?region={city}&utm_source=facebook&utm_medium=paid_social&utm_campaign=handyman-partner-nz&utm_content={city}-video-v2`
+
+---
+
+## Restructure 21/10/2026 (final): one ad set per trade, full-NZ region dropdown
+
+Joe's call: one electrician ad and one handyman ad whose locations he can add or remove, not an
+ad set per city. The nine per-city ad sets above are **paused** (not deleted; Windsor has no
+delete action). Live structure now:
+
+| Campaign | Ad set (edit locations here) | Ad set ID | Ads |
+|---|---|---|---|
+| Sparky Partner Campaign (120256589869770460, $20/day) | Sparkies - all target regions | 120256590572750460 | raw cut 120256590574240460, edited cut 120256590574780460 |
+| Handyman Partner Campaign (120256590435020460, $20/day) | Handymen - all target regions | 120256590573350460 | v2 video 120256590575720460 |
+
+Locations in the sparky ad set: Wellington (25 mi), Hamilton (25 mi), Christchurch (30 mi),
+Dunedin (25 mi), Hawke's Bay region. Handyman ad set: Tauranga, Hamilton, Dunedin (25 mi each),
+Hawke's Bay region. To add or drop a city, edit the ad set's Locations in Ads Manager, or ask for
+`update_adset` with the new `geo_locations` (Meta city keys are in the tables above).
+
+Ad copy no longer names a city ("someone in your area", "Is your region still open? ... leave your
+number and your region"). Links drop `?region=` and keep UTMs: `utm_content=video-raw`,
+`video-edited`, `video-v2`.
+
+Both lead pages now use one shared dropdown (`NZ_LEAD_REGIONS` in src/lib/area-check.ts):
+Northland, Auckland, Waikato (Hamilton), Bay of Plenty (Tauranga), Gisborne, Hawke's Bay, Taranaki,
+Manawatū-Whanganui, Wellington, Nelson / Tasman, Marlborough, West Coast, Canterbury (Christchurch),
+Otago (Dunedin), Southland, Somewhere else. No default; "Choose your region" placeholder with a
+"Please choose your region." error on submit. `?region=` still pre-selects via `matchLeadRegion`
+(matches region name, bracketed city, or either side of " / "). The saved `region` value is the
+full label, e.g. "Waikato (Hamilton)".
