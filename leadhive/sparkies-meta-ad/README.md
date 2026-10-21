@@ -72,7 +72,12 @@ name, business, mobile, region (Wellington / Hamilton / Christchurch / Somewhere
 `send-contact-email`, fires pixel `Lead` (content_name "Sparky lead form") on success. Success
 copy tells them Joe will call within one working day.
 
-## Before enabling
+## Status
+
+**Enabled 21/10/2026** on Joe's instruction ("press go"): the sparky campaign (5 ad sets, 10 ads)
+and the handyman campaign (4 ad sets, 4 ads) are both live at $20 NZD/day CBO each.
+
+## Pre-launch notes (kept for reference)
 
 1. Open https://leadhivenz.com/sparkies?region=hamilton on a phone, submit a test enquiry, confirm the
    email arrives and the Lead event shows in Events Manager (pixel 2212898842912576).
