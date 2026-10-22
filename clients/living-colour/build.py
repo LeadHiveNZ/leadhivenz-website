@@ -95,9 +95,9 @@ def schema(meta, body):
     out, url = [], SITE + "/" + meta["path"]
     if meta["path"] == "":
         out.append(json.loads(read("data", "business.json")))
-    elif meta["path"] != "404.html":
+    elif not meta.get("noindex"):
         out.append({"@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [
-            {"@type": "ListItem", "position": i + 1, "name": n, "item": SITE + "/" + p} for i, (n, p) in enumerate(crumbs(meta))]})
+            {"@type": "ListItem", "position": i + 1, "name": html.unescape(n), "item": SITE + "/" + p} for i, (n, p) in enumerate(crumbs(meta))]})
     if meta.get("service"):
         out.append({"@context": "https://schema.org", "@type": "Service", "serviceType": meta["service"], "name": meta["service"],
                     "description": meta["description"], "url": url, "areaServed": ["Auckland", "Wellington"],
@@ -119,6 +119,7 @@ def render(meta, body):
     meta["ver"] = VER
     meta["section"] = path.split("/")[0] or "home"
     meta.setdefault("hero_alt", "")
+    meta.setdefault("cta_href", "{{root}}contact/")
     hero = ""
     if meta.get("h1"):
         cr = crumbs(meta)
@@ -165,6 +166,9 @@ def main():
     os.makedirs(DIST)
     for d in ("css", "js", "img"):
         shutil.copytree(os.path.join(SRC, d), os.path.join(DIST, d))
+    css = os.path.join(DIST, "css", "site.css")  # light minify: drop comments + whitespace
+    c = re.sub(r"/\*.*?\*/", "", open(css, encoding="utf-8").read(), flags=re.S)
+    open(css, "w", encoding="utf-8").write(re.sub(r"\s*\n\s*", "", c).replace(";}", "}"))
     for f in os.listdir(os.path.join(SRC, "static")):
         shutil.copy(os.path.join(SRC, "static", f), DIST)
     urls = []

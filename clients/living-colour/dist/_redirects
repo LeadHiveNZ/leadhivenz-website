@@ -1,0 +1,13 @@
+# Old Wix URLs and common guesses -> new pages
+/registration          /contact/                       301
+/contact-us            /contact/                       301
+/quote                 /contact/                       301
+/free-quote            /contact/                       301
+/gallery               /projects/                      301
+/testimonials          /reviews/                       301
+/about-us              /about/                         301
+/interior-painting     /services/interior-painting/    301
+/exterior-painting     /services/exterior-painting/    301
+/roof-painting         /services/roof-painting/        301
+/commercial-painting   /services/commercial-painting/  301
+/index.html            /                               301

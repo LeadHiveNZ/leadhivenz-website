@@ -9,10 +9,9 @@
     d.querySelectorAll('a[href]').forEach(function (a) {
       var h = a.getAttribute('href');
       if (/^([a-z]+:|#|\/\/)/i.test(h)) return;
-      var parts = h.split('#');
-      if (/(^|\/)$/.test(parts[0]) || parts[0] === '.' || parts[0] === '..') {
-        parts[0] = parts[0].replace(/\/?$/, '/') + 'index.html';
-        a.setAttribute('href', parts.join('#'));
+      var m = h.match(/^([^?#]*)(.*)$/), p = m[1];
+      if (p === '' || p === '.' || p === '..' || /\/$/.test(p)) {
+        a.setAttribute('href', p.replace(/\/?$/, '/').replace(/^\/$/, './') + 'index.html' + m[2]);
       }
     });
   }
