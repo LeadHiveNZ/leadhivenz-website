@@ -106,6 +106,30 @@
     });
   });
 
+  // before/after sliders: drag (mouse, pen, horizontal touch) or arrow keys on the range input
+  d.querySelectorAll('.ba-frame').forEach(function (f) {
+    var r = f.querySelector('.ba-r');
+    if (!r) return;
+    function set(v) {
+      v = Math.max(0, Math.min(100, v));
+      r.value = v;
+      f.style.setProperty('--pos', v + '%');
+      r.setAttribute('aria-valuetext', Math.round(v) + '% before photo');
+    }
+    function at(e) { var b = f.getBoundingClientRect(); set((e.clientX - b.left) / b.width * 100); }
+    function end() { f.classList.remove('drag'); }
+    r.addEventListener('input', function () { set(+r.value); });
+    f.addEventListener('pointerdown', function (e) {
+      if (e.button) return;
+      f.setPointerCapture(e.pointerId);
+      if (e.pointerType !== 'touch') { f.classList.add('drag'); at(e); e.preventDefault(); r.focus({ preventScroll: true }); }
+    });
+    f.addEventListener('pointermove', function (e) { if (f.hasPointerCapture(e.pointerId)) { f.classList.add('drag'); at(e); } });
+    f.addEventListener('pointerup', function (e) { if (e.pointerType === 'touch' && !f.classList.contains('drag')) at(e); end(); });
+    f.addEventListener('pointercancel', end);
+    set(+r.value);
+  });
+
   // pre-select service in quote form from ?service=
   var sel = d.querySelector('select[name=service]'), m = location.search.match(/service=([\w-]+)/);
   if (sel && m) Array.prototype.forEach.call(sel.options, function (o) { if (o.getAttribute('data-k') === m[1]) sel.value = o.value; });

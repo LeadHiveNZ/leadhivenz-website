@@ -1,5 +1,12 @@
 Photo credits (free licences):
-- hero-exterior.jpg / project-01.jpg: "Mays/Fairburn Residence, Devonport" by Bjankuloski06 (Bojan Jankuloski), Wikimedia Commons, CC BY 4.0 — https://commons.wikimedia.org/wiki/File:MaysFairburn_Residence_from_NE.jpg  (ATTRIBUTION REQUIRED on site)
-- All other photos: Unsplash licence (unsplash.com) or Pexels licence (pexels.com) — free for commercial use, no attribution required.
+- (The Wikimedia Commons CC BY photo that used to fill hero-exterior.jpg / project-01.jpg has been replaced by client photos, so no attribution is needed any more.)
+- Remaining stock photos: Unsplash licence (unsplash.com) or Pexels licence (pexels.com) — free for commercial use, no attribution required.
   Unsplash: Diana Rafira, Clay Banks, Meg, Fujiphilm, Andrew Itaga, Theme Photos, Hao Wu, Sulthan Auliya, Brian Zajac, Grace Anne Bobadilla, Roger Starnes Sr, Francesca Tosolini, Sasun Bughdaryan
   Pexels: Ksenia Chernaya, Blue Bird, Rajesh S Balouria, Ebubekir Togaci, 19x14, Max Vakhtbovych, Dave Garcia, Peter Vang, Anna Guerrero, dmitry93, Antoni Shkraba, cottonbro studio, Pixabay, Fotios Photos, Ddoneo
+
+REAL CLIENT PHOTOS (from Living Colour Ltd's own Google Business Profile, Oct 2026) — no credit needed, client-owned:
+hero-home, hero-exterior, hero-interior, hero-roof, hero-commercial, hero-prep, hero-about, hero-projects, hero-reviews, hero-process,
+service-interior, service-exterior, service-roof, service-commercial, service-prep, project-01..09, ba1..ba4-before/after, roof-before-after.
+Still stock: hero-staining, hero-areas, hero-contact, hero-faq, service-staining, about-andy, detail-*, auckland-skyline.
+
+Cropped Oct 2026 to remove white collage borders: project-04, hero-process, hero-exterior (right edge), hero-reviews (rounded corners), ba4-after (frame; ba4-before trimmed to match so the pair stays the same size).

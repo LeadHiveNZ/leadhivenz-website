@@ -30,16 +30,17 @@ To preview: `cd dist && python3 -m http.server 8000`, then open http://localhost
 ```
 build.py                 generator + link checker + zipper (~200 lines, stdlib only)
 netlify.toml             Git-based deploy config (headers, redirects)
-tools/make_images.py     regenerates placeholder photos and the OG image (needs Pillow; not part of the build)
+tools/make_images.py     fills any *missing* photo slot with a placeholder + redraws og.jpg (needs Pillow; not part of the build). Never run it with --force: that overwrites the client photos
+tools/shots.js           Playwright screenshots of key pages into screens/ (node tools/shots.js)
 tools/fonts/             Montserrat ExtraBold, used only to draw og.jpg
 src/pages/*.html         one file per page: front-matter comment + page body
 src/partials/            layout (head), header (nav + mega menu), footer, page-hero, cta band, icons (SVG sprite), service cards, service <option>s
 src/data/reviews.json    the 20 curated reviews (used everywhere through {{reviews:1,2,3}})
-src/data/projects.json   22 real jobs; the first 9 have photos (used through {{projects:...}} / {{projectlist:...}})
+src/data/projects.json   9 photo cards (client job photos) + 13 text cards with suburb and review ({{projects:...}} / {{projectlist:...}})
 src/data/business.json   LocalBusiness/HousePainter JSON-LD for the home page
 src/css/site.css         all styles (brand tokens at the top)
-src/js/site.js           nav drawer, mega menu, reveal-on-scroll, counters, review carousel, form niceties
-src/img/                 photos (placeholders for now) + brand/ (logo, favicons)
+src/js/site.js           nav drawer, mega menu, reveal-on-scroll, counters, review carousel, before/after sliders, form niceties
+src/img/                 client job photos, before/after pairs, a few remaining stock photos + brand/ (logo, favicons)
 src/static/              _headers, _redirects (copied to dist root)
 screens/                 Playwright screenshots (1440px and 390px)
 ```
@@ -47,41 +48,61 @@ screens/                 Playwright screenshots (1440px and 390px)
 ### Editing content
 
 - Page text lives in `src/pages/*.html`. The comment at the top sets `title`, `description`, `path`, and the inner-page hero (`h1`, `eyebrow`, `lead`, `hero` image, `crumbs`). `service:` adds Service schema and `faqschema: yes` adds FAQPage schema (built automatically from the `<details class="faq">` blocks). `cta: no` removes the navy call-to-action band.
-- To add a review, add it to `src/data/reviews.json` and reference its `id`. To add a project, append it to `projects.json`. A project card links to its review by `review` id (use `0` for no quote).
+- To add a review, add it to `src/data/reviews.json` and reference its `id`. To add a project, append it to `projects.json`. A project card links to its review by `review` id (use `0` or `null` for no quote). `suburb` is optional: photo cards 1 to 9 have no suburb and no review (the photos aren't tied to a specific reviewed job), so they use `kicker` (e.g. "Exterior painting") for the small red label instead. Only attach a suburb or review to a photo card if the photo really is that job.
 - Brand colours, spacing and radii are CSS variables at the top of `site.css`.
 
-## Swapping in real photos
+## Before & after sliders
 
-Every image is currently a **free stock photo** (Unsplash / Pexels licences, plus two Wikimedia Commons photos under CC BY 4.0 that are credited on the Privacy page; see `src/img/CREDITS.txt`). They are representative, not Andy's actual jobs, so swap them for real job photos as they come in. `tools/make_images.py` can regenerate gradient placeholders if a slot is ever empty. Replace each file in `src/img/` with a real photo **with exactly the same filename**, then run `python3 build.py`. Images sit in fixed-ratio frames with `object-fit: cover`, so any aspect ratio works, but the sizes below crop best. Compress to roughly 200 to 350KB (heroes) and 120 to 200KB (cards) as progressive JPEG, or let Netlify Image CDN handle it later.
+A small, dependency-free compare slider (CSS in `site.css` under "before & after", JS in `site.js` under "before/after sliders"). The after photo sits underneath, the before photo is clipped on top, and a hidden range input carries keyboard and screen-reader control. Drag with a mouse or finger (vertical swipes still scroll the page), tap to jump, or Tab to it and use the arrow keys. It has no animation beyond a short ease when you click, which is switched off for people who prefer reduced motion. Without JS it shows a fixed 50/50 split.
 
-| File | Size | Used on | Suggested shot |
+Where it's used: Home ("Before & after" section after the services grid), Projects (top section, plus the roof composite as a plain image card), Exterior painting (villa slider in the body copy) and Roof painting (the roof composite as a captioned image).
+
+**To add a new pair:**
+
+1. Save two photos of the same view at **exactly the same pixel size** as `src/img/NAME-before.jpg` and `src/img/NAME-after.jpg` (16:10 crops best; around 1600x1000, 150 to 350KB). Shoot both from the same spot so the slider lines up.
+2. Add one line to any page:
+
+```
+{{ba:ba5|plain-text description of the photos (used for alt text)|<strong>Short title</strong>One-line caption.}}
+```
+
+An optional fourth part adds a class: `ba-wide` (full-width, 2:1, as on the home page) or `ba-span2` (two of three columns, as on the Projects page). Put sliders inside a `<div class="ba-grid">` for the three-column layout, or straight into `.prose` body copy for a single one. Don't use `|` or `}` inside the text, and write `&` as a plain `&` in the description (it's escaped for you).
+
+A single composite image (like `roof-before-after.jpg`) isn't a slider. Use a plain `<figure class="ba"><div class="ba-photo"><img ...></div><figcaption>...</figcaption></figure>` (see `svc-roof.html`).
+
+## Photos
+
+Most slots now hold **Living Colour's own job photos** (from the client's Google Business Profile, October 2026). The rest are still **free stock photos** (Unsplash / Pexels licences, no attribution needed; see `src/img/CREDITS.txt`). The Wikimedia Commons photo that needed a credit has been replaced, and the Privacy page credit has been updated to match.
+
+To swap a photo, replace the file in `src/img/` **with exactly the same filename**, then run `python3 build.py`. Images sit in fixed-ratio frames with `object-fit: cover`, so any aspect ratio works, but the sizes below crop best. Compress to roughly 200 to 350KB (heroes) and 120 to 200KB (cards) as progressive JPEG. Photos taken from a Google Business Profile collage can carry white borders: trim them before use (project-04, hero-process, hero-exterior, hero-reviews and ba4-after were trimmed this way).
+
+| File | Status | Used on | Shows / suggested shot |
 |---|---|---|---|
-| hero-home.jpg | 2000x1125 | Home hero, Services hub hero | Best finished exterior, wide, bright sky. Left third should be calm (text sits there) |
-| hero-interior.jpg | 2000x1125 | Interior page | Finished living room or hallway |
-| hero-exterior.jpg | 2000x1125 | Exterior page | Two-storey exterior, e.g. Takapuna or Penrose |
-| hero-roof.jpg | 2000x1125 | Roof page | Freshly coated roof |
-| hero-commercial.jpg | 2000x1125 | Commercial page | Office or school interior |
-| hero-prep.jpg | 2000x1125 | Prep & repairs page | Sanding or filling in progress |
-| hero-staining.jpg | 2000x1125 | Staining page | Epsom cedar re-stain (black Cool Cote) |
-| hero-about.jpg | 2000x1125 | About | Team on site / van |
-| hero-contact.jpg | 2000x1125 | Contact, Privacy | Any friendly on-site shot |
-| hero-areas.jpg | 2000x1125 | Areas | Auckland street of houses |
-| hero-reviews.jpg | 2000x1125 | Reviews | Happy finished home |
-| hero-projects.jpg | 2000x1125 | Projects | Finished project, wide |
-| hero-process.jpg | 2000x1125 | Process | Prep / masking in progress |
-| hero-faq.jpg | 2000x1125 | FAQ | Brushes, paint tins |
-| service-interior/exterior/roof/commercial/prep/staining.jpg | 1200x900 | Home + Services hub cards | One per service |
-| project-01.jpg ... project-09.jpg | 1200x900 | Projects (+ home, service pages) | 01 Takapuna 2-storey exterior · 02 Albany monoclad · 03 Epsom cedar re-stain · 04 Penrose stucco · 05 Mt Eden bungalow interior · 06 Freemans Bay bedrooms · 07 CBD office make-good · 08 Royal Oak roughcast · 09 Massey exterior |
-| detail-brush.jpg | 1200x900 | Prep page | Brush cutting in |
-| detail-roller.jpg | 1200x900 | Interior page | Roller on wall |
-| detail-swatches.jpg | 1200x900 | Services hub, About | Resene/Dulux swatches |
-| detail-weatherboard.jpg | 1200x900 | Exterior page | Close-up of painted boards |
-| detail-door.jpg | 1200x900 | Projects | Freshly painted front door |
-| auckland-skyline.jpg | 1200x900 | Home (areas), Areas | Auckland skyline / Rangitoto |
-| about-andy.jpg | 1000x1250 (portrait) | Home (Meet Andy), About | **A photo of Andy on site.** Currently a faceless stock shot of a painter; replace with Andy's own photo |
-| og.jpg | 1200x630 | Social share image (all pages) | Already final (logo + tagline). Regenerate with `python3 tools/make_images.py` if the logo changes |
+| hero-home.jpg | **Client** | Home hero, Services hub hero | Finished two-storey home, black vertical cedar + white plaster |
+| hero-exterior.jpg | **Client** | Exterior page | Finished white villa |
+| hero-interior.jpg | **Client** | Interior page | Bathroom |
+| hero-roof.jpg | **Client** | Roof page | Roof before/after composite (diagonal split) |
+| hero-commercial.jpg | **Client** | Commercial page | Striped multicolour feature wall |
+| hero-prep.jpg | **Client** | Prep & repairs page | Two-storey home in scaffold |
+| hero-about.jpg | **Client** | About | Crew van and truck at a scaffolded modern home |
+| hero-projects.jpg | **Client** | Projects | Villa in scaffold |
+| hero-reviews.jpg | **Client** | Reviews | White two-storey weatherboard home |
+| hero-process.jpg | **Client** | Process | Finished white plaster townhouse |
+| hero-staining.jpg | Stock | Staining page | Wanted: a cedar re-stain or deck/fence job |
+| hero-contact.jpg | Stock | Contact, Privacy | Wanted: any friendly on-site shot |
+| hero-areas.jpg | Stock | Areas | Wanted: an Auckland street of houses |
+| hero-faq.jpg | Stock | FAQ | Wanted: brushes, paint tins |
+| service-interior/exterior/roof/commercial/prep.jpg | **Client** | Home + Services hub cards | Kitchen / two-storey exterior / roof composite / feature wall / scaffold |
+| service-staining.jpg | Stock | Home + Services hub cards | Wanted: stained cedar, deck or fence |
+| project-01 ... project-09.jpg | **Client** | Projects (+ home, exterior and staining pages) | 01 two-storey exterior · 02 villa · 03 white weatherboard home · 04 plaster & weatherboard townhouse · 05 striped commercial feature wall · 06 bathroom · 07 bathroom · 08 kitchen · 09 roof composite |
+| ba1 ... ba4-before/after.jpg | **Client** | Home, Projects, Exterior (ba2) | 1 two-storey home · 2 villa · 3 weatherboard home · 4 townhouse. Each pair is the same pixel size |
+| roof-before-after.jpg | **Client** | Projects, Roof page | Roof composite, pale roof (top) to charcoal (bottom) |
+| detail-brush/roller/swatches/weatherboard/door.jpg | Stock | Prep, Interior, Services hub, About, Exterior, Projects | Close-up detail shots |
+| auckland-skyline.jpg | Stock | Home (areas), Areas | Auckland skyline / Rangitoto |
+| about-andy.jpg | Stock | Home (Meet Andy), About | **A photo of Andy on site.** Currently a faceless stock shot of a painter; replace with Andy's own photo (1000x1250 portrait) |
+| og.jpg | Final | Social share image (all pages) | Logo + tagline. Regenerate with `python3 tools/make_images.py` if the logo changes |
 
-If the project photos don't match the job in `projects.json`, edit `img`, `type` and `line` there. Project 1 must be a photo of project 1's job.
+The nine photo cards in `projects.json` describe what each photo shows (no suburb, no review). If a photo is swapped, update that card's `type` and `line` to match.
 
 ## Assumptions made
 
@@ -95,7 +116,7 @@ If the project photos don't match the job in `projects.json`, edit `img`, `type`
 8. Wellington service page copy is kept light ("we also take on work in Wellington"). Suburbs listed: Wellington city, Lower Hutt, Porirua.
 9. No prices or cost ranges are published, because there's no client data for them. The FAQ explains that the price depends on the job.
 10. Payment wording is generic ("terms are written into your quote; larger jobs may be invoiced in stages").
-11. There's no before/after slider and no live Google reviews widget, because there are no before/after photos yet and no external JS was allowed (see "Next upgrades").
+11. There's no live Google reviews widget, because no external JS was allowed. The before/after sliders are built in-house with no dependencies.
 12. Year in the footer is hard-coded to 2026; the privacy policy says "Last updated: October 2026".
 13. Hours are shown as Mon–Sat 8am–6pm, Sunday closed (from Google Business Profile).
 
@@ -115,17 +136,20 @@ If the project photos don't match the job in `projects.json`, edit `img`, `type`
 - [ ] **Wellington:** which areas, and is there any minimum job size?
 - [ ] **Hibiscus Coast / Franklin:** happy to travel there for all job sizes?
 - [ ] **Mobile number for texts:** OK to say "call or text"? (Currently just "call".)
-- [ ] **Photos:** real photos for every slot above, especially **Andy's portrait** (`about-andy.jpg`).
+- [ ] **Photos:** real photos for the slots still marked Stock above, especially **Andy's portrait** (`about-andy.jpg`) and a staining job.
+- [ ] **Photo cards and before/after captions:** we described each photo from what's visible (e.g. "black cedar", "iron roof", "bathroom repaint"). Please check they're accurate, and tell us the suburb if you'd like it shown.
+- [ ] **Weatherboard before/after (ba3):** the before and after were taken from different spots, so the slider doesn't line up. A before photo from the same angle as the after would make it much stronger.
 - [ ] **Google review count:** currently 6. Update `src/data/business.json` (`reviewCount`) as it grows.
 - [ ] **Domain** and **Netlify form notification email** (`info@livingcolourltd.co.nz`?).
 - [ ] **Landline (09 390 8689):** still in use? It isn't shown on the site.
 
 ## Next upgrades (optional)
 
-- A before/after slider on the home and exterior pages once paired before/after photos exist.
+- More before/after pairs, ideally shot from the same spot before and after (add with one line each, see "Before & after sliders").
+- Andy's own portrait for `about-andy.jpg`, and real photos for the remaining stock slots.
 - A Google Business Profile post linking to the new site; ask recent customers for Google reviews (the link is on `/reviews/` and in the footer).
 - Suburb landing pages (e.g. /areas/howick/) once there are 2 to 3 local projects with photos per suburb.
-- Netlify Image CDN or pre-generated WebP versions of the real photos.
+- Netlify Image CDN or pre-generated WebP versions of the photos (several client photos are under 1800px wide, which is fine for now).
 
 ## Personal details deliberately left off
 
