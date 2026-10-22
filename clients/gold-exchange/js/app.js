@@ -9,6 +9,7 @@ const isTouch = matchMedia('(hover: none), (pointer: coarse)').matches;
 const isMobile = matchMedia('(max-width: 900px)').matches;
 const gx = () => window.__gx || { setHero() {}, setVelocity() {}, intro() {} };
 
+if (!window.gsap || !window.ScrollTrigger) throw new Error('GSAP failed to load; page falls back to static rendering');
 document.documentElement.classList.remove('js-off');
 gsap.registerPlugin(ScrollTrigger);
 gsap.defaults({ ease: 'expo.out', duration: 1.2 });
