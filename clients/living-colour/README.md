@@ -154,3 +154,7 @@ The nine photo cards in `projects.json` describe what each photo shows (no subur
 ## Personal details deliberately left off
 
 At the client's request the site does not name the owner at all outside customer review quotes (which mention "Andy"), gives the base as Howick / East Auckland with no street address, has no NZBN in the footer and no embedded map pin. The contact page links to the Google Business Profile instead. Schema in `src/data/business.json` carries locality only. Add these back if the client wants them.
+
+## Photos: all client-owned (update)
+
+Every image slot now holds one of Living Colour's own job photos; no stock photos remain. ba6 (kitchen) and ba7 (1970s exterior) were supplied at low resolution (about 1000px), so they are used only in the small slider cards and should be replaced with full-size originals if the client has them.

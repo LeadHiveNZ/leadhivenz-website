@@ -6,7 +6,7 @@ const path = require('path');
   const srv = spawn('python3', ['-m', 'http.server', '8765'], { cwd: path.join(__dirname, '..', 'dist'), stdio: 'ignore' });
   await new Promise(r => setTimeout(r, 1200));
   const browser = await chromium.launch({ executablePath: process.env.CHROME || '/opt/pw-browsers/chromium-1194/chrome-linux/chrome' }).catch(() => chromium.launch());
-  const pages = ['', 'services/', 'services/exterior-painting/', 'services/interior-painting/', 'services/roof-painting/', 'projects/', 'reviews/', 'about/', 'process/', 'areas/', 'faq/', 'contact/'];
+  const pages = ['services/interior-painting/', '', 'services/', 'services/exterior-painting/', 'services/interior-painting/', 'services/roof-painting/', 'projects/', 'reviews/', 'about/', 'process/', 'areas/', 'faq/', 'contact/'];
   for (const w of [1440, 390]) {
     const ctx = await browser.newContext({ viewport: { width: w, height: w === 1440 ? 900 : 844 }, deviceScaleFactor: 1 });
     const page = await ctx.newPage(); await page.emulateMedia({ reducedMotion: 'reduce' });
