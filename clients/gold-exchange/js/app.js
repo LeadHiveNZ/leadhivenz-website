@@ -279,6 +279,14 @@ $$('.svc-toggle').forEach((btn) => btn.addEventListener('click', () => {
   gsap.to(more, { height: open ? 'auto' : 0, opacity: open ? 1 : 0, duration: .8, ease: 'expo.inOut', onComplete: () => ScrollTrigger.refresh() });
 }));
 
+/* ---------------- promo reel: plays while in view, sound on demand ---------------- */
+(function reel() {
+  const v = $('#reel'), btn = $('#reelSound'); if (!v) return;
+  const tryPlay = () => { const p = v.play(); if (p && p.catch) p.catch(() => {}); };
+  ScrollTrigger.create({ trigger: '#reelWrap', start: 'top 85%', end: 'bottom 15%', onToggle: (s) => (s.isActive ? tryPlay() : v.pause()) });
+  btn.addEventListener('click', () => { v.muted = !v.muted; btn.textContent = v.muted ? 'Sound on' : 'Sound off'; if (v.paused) tryPlay(); });
+})();
+
 /* ---------------- investment bar (WebGL ingot locked to the invest box) ---------------- */
 (function investBar() {
   const media = $('#investMedia'); if (!media) return;
