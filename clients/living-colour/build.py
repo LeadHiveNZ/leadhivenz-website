@@ -155,6 +155,18 @@ def render(meta, body):
     return expand(page, meta)
 
 
+IMG_VER = {}
+def version_images(html):
+    """Append ?v=<hash> to every img/ reference so a swapped photo is never served from an old browser cache."""
+    def rep(m):
+        fn = m.group(1)
+        if fn not in IMG_VER:
+            fp = os.path.join(SRC, "img", fn)
+            IMG_VER[fn] = hashlib.md5(open(fp, "rb").read()).hexdigest()[:8] if os.path.exists(fp) else None
+        return m.group(0) + (f"?v={IMG_VER[fn]}" if IMG_VER[fn] else "")
+    return re.sub(r"img/([\w.-]+\.(?:jpg|png|webp))(?![\w?])", rep, html)
+
+
 def check_links():
     bad = 0
     for dp, _, fs in os.walk(DIST):
@@ -197,7 +209,7 @@ def main():
         meta, body = parse(fn)
         out = os.path.join(DIST, meta["path"] if meta["path"].endswith(".html") else os.path.join(meta["path"], "index.html"))
         os.makedirs(os.path.dirname(out), exist_ok=True)
-        open(out, "w", encoding="utf-8").write(render(meta, body))
+        open(out, "w", encoding="utf-8").write(version_images(render(meta, body)))
         if not meta.get("noindex"):
             urls.append((meta["path"], meta.get("priority", "0.7")))
         print(f"  built /{meta['path']}")
