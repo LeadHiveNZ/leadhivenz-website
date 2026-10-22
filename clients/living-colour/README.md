@@ -126,3 +126,7 @@ If the project photos don't match the job in `projects.json`, edit `img`, `type`
 - A Google Business Profile post linking to the new site; ask recent customers for Google reviews (the link is on `/reviews/` and in the footer).
 - Suburb landing pages (e.g. /areas/howick/) once there are 2 to 3 local projects with photos per suburb.
 - Netlify Image CDN or pre-generated WebP versions of the real photos.
+
+## Personal details deliberately left off
+
+At the client's request the site shows the owner as "Andy" only (no surname), gives the base as Howick / East Auckland with no street address, has no NZBN in the footer and no embedded map pin. The contact page links to the Google Business Profile instead. Schema in `src/data/business.json` carries locality only. Add these back if the client wants them.
