@@ -1,0 +1,532 @@
+<!doctype html>
+<html lang="en-AU" class="js-off">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Gold Exchange — Australia's #1 Gold Buyer | Top Cash for Gold, Diamonds, Watches &amp; Bullion</title>
+<meta name="description" content="Gold Exchange pays top cash for scrap gold, fine jewellery, diamonds, watches, bullion and coins. Free on-the-spot valuations, highest payout guaranteed, no hidden commissions or fees. Sydney, Wollongong and Newcastle.">
+<meta name="theme-color" content="#070A12">
+<link rel="icon" href="assets/favicon.ico">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"Organization","name":"Gold Exchange","url":"https://goldexchange.com.au/","logo":"https://goldexchange.com.au/wp-content/uploads/2022/07/GE-logo.png","description":"Australian owned and operated gold buyer and refiner. Top cash for scrap gold, jewellery, diamonds, watches, bullion and coins.","location":[
+{"@type":"LocalBusiness","name":"Gold Exchange Sydney","telephone":"+61292690061","address":{"@type":"PostalAddress","streetAddress":"Level 1, Suite 1, 428 George St","addressLocality":"Sydney","addressRegion":"NSW","postalCode":"2000","addressCountry":"AU"}},
+{"@type":"LocalBusiness","name":"Gold Exchange Wollongong","telephone":"+61242257600","address":{"@type":"PostalAddress","streetAddress":"218 Keira St","addressLocality":"Wollongong","addressRegion":"NSW","postalCode":"2500","addressCountry":"AU"}},
+{"@type":"LocalBusiness","name":"Gold Exchange Newcastle","telephone":"+61499777662","address":{"@type":"PostalAddress","streetAddress":"184 Pacific Hwy","addressLocality":"Charlestown","addressRegion":"NSW","postalCode":"2290","addressCountry":"AU"}}]}
+</script>
+</head>
+<body class="no-cursor">
+
+<!-- ====== LOADER ====== -->
+<div id="loader" aria-hidden="true">
+  <div class="ld-in">
+    <img class="ld-logo" src="assets/logo-dark.png" alt="">
+    <div class="ld-num">0</div>
+    <div class="ld-bar"><i></i></div>
+    <div class="ld-tag">Australia's #1 Gold Buyer</div>
+  </div>
+</div>
+
+<!-- ====== WEBGL + AMBIENT ====== -->
+<div class="ambient" aria-hidden="true"></div>
+<canvas id="gl" aria-hidden="true"></canvas>
+<div class="grain" aria-hidden="true"></div>
+
+<!-- ====== CURSOR ====== -->
+<div class="cursor" aria-hidden="true">
+  <div class="cursor-dot"></div>
+  <div class="cursor-ring"><span class="cursor-label">DRAG</span></div>
+</div>
+
+<!-- ====== NAV ====== -->
+<header class="nav" id="nav">
+  <div class="wrap">
+    <a href="#top" class="nav-logo" aria-label="Gold Exchange home"><img src="assets/logo-dark.png" alt="Gold Exchange"></a>
+    <nav class="nav-links" aria-label="Primary">
+      <a href="#buy">What we buy</a>
+      <a href="#how">How to sell</a>
+      <a href="#estimate">Live prices</a>
+      <a href="#services">Services</a>
+      <a href="#reviews">Reviews</a>
+      <a href="#locations">Locations</a>
+      <a href="#faq">FAQ</a>
+    </nav>
+    <div class="nav-right">
+      <a class="phone-pill" href="tel:0292690061"><span class="dot"></span><span class="txt">Sydney (02) 9269 0061</span><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/></svg></a>
+      <a class="btn btn-gold btn-sm magnetic" href="#contact">Free valuation</a>
+      <button class="burger" id="burger" aria-label="Menu" aria-expanded="false"><span></span><span></span><span></span></button>
+    </div>
+  </div>
+</header>
+<div class="menu" id="menu">
+  <a class="big" href="#buy">What we buy</a>
+  <a class="big" href="#how">How to sell</a>
+  <a class="big" href="#estimate">Live prices</a>
+  <a class="big" href="#services">Services</a>
+  <a class="big" href="#locations">Locations</a>
+  <a class="big" href="#faq">FAQ</a>
+  <a class="big" href="#contact">Contact</a>
+  <div class="menu-foot">
+    <a href="tel:0292690061">Sydney (02) 9269 0061</a>
+    <a href="tel:0242257600">Wollongong (02) 4225 7600</a>
+    <a href="tel:0499777662">Newcastle 0499 777 662</a>
+  </div>
+</div>
+
+<main id="top">
+
+<!-- ====== HERO ====== -->
+<section class="hero" id="hero">
+  <div class="wrap hero-grid">
+    <div class="hero-eyebrow" data-hero="eyebrow">
+      <span>Australia's #1 Gold Buyer</span><i class="sep"></i>
+      <span class="place">Sydney</span><i class="sep"></i><span class="place">Wollongong</span><i class="sep"></i><span class="place">Newcastle</span>
+    </div>
+    <h1 class="display h1" id="heroTitle">
+      <span class="line"><span class="line-in">Top cash</span></span>
+      <span class="line"><span class="line-in">for your</span></span>
+      <span class="line"><span class="line-in"><span class="rotator" id="rotator"><span class="metal on">gold.</span><span class="metal">diamonds.</span><span class="metal">jewellery.</span><span class="metal">watches.</span><span class="metal">bullion.</span><span class="metal">coins.</span><span class="metal">silver.</span><span class="metal">platinum.</span></span></span></span>
+    </h1>
+    <div class="hero-bottom">
+      <div data-hero="copy">
+        <p class="lede">Free valuations on the spot. Highest payout guaranteed. No hidden commissions or fees. Thirty-plus years in gold and diamonds, and still Australian owned and operated.</p>
+        <div class="hero-ctas">
+          <a class="btn btn-gold magnetic" href="#contact">Get a free valuation <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+          <a class="btn btn-ghost magnetic" href="#estimate">What's my gold worth?</a>
+        </div>
+      </div>
+      <div class="hero-trust" data-hero="trust">
+        <div><b data-count="30" data-suffix="+">0</b><span>Years experience</span></div>
+        <div><b data-count="15300" data-suffix="+">0</b><span>Happy customers</span></div>
+        <div><b data-count="3">0</b><span>NSW locations</span></div>
+        <div><b data-count="0" data-prefix="$">0</b><span>Hidden fees</span></div>
+      </div>
+    </div>
+  </div>
+  <div class="scroll-cue" data-hero="cue"><i></i><span>Scroll</span></div>
+
+  <!-- live ticker -->
+  <div class="ticker" data-hero="ticker" aria-label="Live precious metal prices">
+    <div class="tk-label"><i class="live"></i>Live spot</div>
+    <div class="tk-track"><div class="tk-row" id="tickerRow"></div></div>
+  </div>
+</section>
+
+<!-- ====== MANIFESTO ====== -->
+<section class="manifesto" id="manifesto">
+  <div class="wrap">
+    <p class="words" id="manifestoWords">We pay the <em class="gold">highest price in Australia</em> for gold, diamonds, watches and bullion. <em class="gold">No hidden commissions. No fees.</em> Every item valued on the spot by specialists with over thirty years in the trade. Honest, reliable, professional — and <em class="gold">Australian owned</em> since day one.</p>
+    <div class="stats" data-stagger>
+      <div class="stat" data-reveal><b><span data-count="30">0</span><small>+</small></b><span>Years in gold &amp; diamonds</span></div>
+      <div class="stat" data-reveal><b><span data-count="15300">0</span><small>+</small></b><span>Customers paid</span></div>
+      <div class="stat" data-reveal><b><span data-count="10">0</span></b><span>Categories we buy</span></div>
+      <div class="stat" data-reveal><b><small>$</small><span data-count="0">0</span></b><span>Commissions. Ever.</span></div>
+    </div>
+  </div>
+</section>
+
+<div class="strip" aria-hidden="true"><div class="strip-row" id="strip1"></div></div>
+
+<!-- ====== WHAT WE BUY ====== -->
+<section class="buy" id="buy">
+  <div class="buy-pin">
+    <div class="wrap buy-head">
+      <div>
+        <span class="eyebrow" data-reveal>What we buy</span>
+        <h2 class="display h2" style="margin-top:18px"><span class="line"><span class="line-in">If it's precious,</span></span><span class="line"><span class="line-in"><span class="metal">we buy it.</span></span></span></h2>
+      </div>
+      <div class="buy-meta" data-reveal>
+        <div class="count"><span id="buyCount">01</span><small> / 10</small></div>
+        <div>Scroll to explore every category</div>
+      </div>
+    </div>
+    <div class="buy-track" id="buyTrack" data-cursor="drag">
+      <!-- OPUS:BUY-CARDS START — one .buy-card per category, keep this exact structure. Replace OPUS_FILL with the site's own description (2 sentences max). -->
+      <article class="buy-card"><img src="assets/cat-scrap-gold.jpg" alt="Scrap gold" loading="lazy"><span class="num">01</span><span class="tag">Any karat</span><div class="body"><h3>Scrap<br>Gold</h3><p>OPUS_FILL</p><a class="more" href="#contact">Get it valued →</a></div></article>
+      <article class="buy-card"><img src="assets/cat-fine-jewellery.jpg" alt="Fine jewellery" loading="lazy"><span class="num">02</span><span class="tag">Old &amp; new</span><div class="body"><h3>Fine<br>Jewellery</h3><p>OPUS_FILL</p><a class="more" href="#contact">Get it valued →</a></div></article>
+      <article class="buy-card"><img src="assets/cat-diamonds.jpg" alt="Diamonds" loading="lazy"><span class="num">03</span><span class="tag">Loose &amp; set</span><div class="body"><h3>Diamonds</h3><p>OPUS_FILL</p><a class="more" href="#contact">Get it valued →</a></div></article>
+      <article class="buy-card"><img src="assets/cat-watches.jpg" alt="Watches and fob watches" loading="lazy"><span class="num">04</span><span class="tag">Brand name</span><div class="body"><h3>Watches &amp;<br>Fob Watches</h3><p>OPUS_FILL</p><a class="more" href="#contact">Get it valued →</a></div></article>
+      <article class="buy-card"><img src="assets/cat-bullion.jpg" alt="Gold bullion" loading="lazy"><span class="num">05</span><span class="tag">Bars &amp; ingots</span><div class="body"><h3>Bullion</h3><p>OPUS_FILL</p><a class="more" href="#contact">Get it valued →</a></div></article>
+      <article class="buy-card"><img src="assets/cat-coins.jpg" alt="Gold coins" loading="lazy"><span class="num">06</span><span class="tag">Any mint</span><div class="body"><h3>Coins</h3><p>OPUS_FILL</p><a class="more" href="#contact">Get it valued →</a></div></article>
+      <article class="buy-card"><img src="assets/cat-silver.jpg" alt="Silver" loading="lazy"><span class="num">07</span><span class="tag">Sterling &amp; fine</span><div class="body"><h3>Silver</h3><p>OPUS_FILL</p><a class="more" href="#contact">Get it valued →</a></div></article>
+      <article class="buy-card"><img src="assets/cat-platinum.jpg" alt="Platinum" loading="lazy"><span class="num">08</span><span class="tag">Pt 950 / 900</span><div class="body"><h3>Platinum</h3><p>OPUS_FILL</p><a class="more" href="#contact">Get it valued →</a></div></article>
+      <article class="buy-card"><img src="assets/cat-engagement-rings.jpg" alt="Engagement rings" loading="lazy"><span class="num">09</span><span class="tag">Discreet</span><div class="body"><h3>Engagement<br>Rings</h3><p>OPUS_FILL</p><a class="more" href="#contact">Get it valued →</a></div></article>
+      <article class="buy-card"><img src="assets/cat-nuggets.jpg" alt="Gold nuggets and prospect gold" loading="lazy"><span class="num">10</span><span class="tag">Prospectors</span><div class="body"><h3>Nuggets &amp;<br>Prospect Gold</h3><p>OPUS_FILL</p><a class="more" href="#contact">Get it valued →</a></div></article>
+      <!-- OPUS:BUY-CARDS END -->
+      <article class="buy-card cta-card"><div><span class="eyebrow" style="justify-content:center">Not sure?</span><h3 class="display h3" style="margin-top:14px">Bring it in.<br>We'll tell you<br>what it's worth.</h3><a class="btn btn-gold magnetic" href="#contact">Free valuation</a></div></article>
+    </div>
+    <div class="wrap"><div class="buy-progress"><i id="buyProgress"></i></div></div>
+  </div>
+</section>
+
+<!-- ====== ESTIMATE / LIVE PRICES ====== -->
+<section class="sec estimate" id="estimate">
+  <div class="wrap">
+    <div class="sec-head row">
+      <div>
+        <span class="eyebrow" data-reveal>Live prices</span>
+        <h2 class="display h2" style="margin-top:18px"><span class="line"><span class="line-in">What's your</span></span><span class="line"><span class="line-in"><span class="metal">gold worth?</span></span></span></h2>
+      </div>
+      <p class="lede" data-reveal style="max-width:44ch">Prices update from the live spot market. Pick your metal and purity, dial in the weight, and see the indicative metal value in Australian dollars before you walk in.</p>
+    </div>
+    <div class="calc" data-stagger>
+      <div class="calc-panel" data-reveal>
+        <div>
+          <label class="lab">Metal</label>
+          <div class="chips" id="metalChips">
+            <button class="chip on" data-metal="XAU">Gold</button>
+            <button class="chip" data-metal="XAG">Silver</button>
+            <button class="chip" data-metal="XPT">Platinum</button>
+            <button class="chip" data-metal="XPD">Palladium</button>
+          </div>
+        </div>
+        <div>
+          <label class="lab">Purity</label>
+          <div class="chips" id="purityChips"></div>
+        </div>
+        <div class="weight">
+          <label class="lab">Weight</label>
+          <div class="weight-row">
+            <input type="number" id="weightInput" min="0.1" max="5000" step="0.1" value="20" aria-label="Weight in grams">
+            <span class="unit">grams</span>
+          </div>
+          <input type="range" id="weightRange" min="1" max="500" step="1" value="20" aria-label="Weight slider">
+          <div class="presets" id="presets">
+            <button data-g="3.5">Thin ring · 3.5g</button>
+            <button data-g="8">Chain · 8g</button>
+            <button data-g="15">Bracelet · 15g</button>
+            <button data-g="31.1">1 oz · 31.1g</button>
+            <button data-g="100">Bullion bar · 100g</button>
+          </div>
+        </div>
+      </div>
+      <div class="calc-result" data-reveal>
+        <div class="res-top">
+          <span class="eyebrow">Indicative metal value</span>
+          <span class="res-live"><i></i><span id="priceUpdated">Live spot</span></span>
+        </div>
+        <div>
+          <div class="res-num"><small>A$</small><span id="resultNum">0</span></div>
+          <div class="res-sub" style="margin-top:18px">
+            <div><b id="resultPerGram">—</b> per gram · <span id="resultPurity">18ct gold</span></div>
+            <div>Spot <b id="resultSpot">—</b> per ounce · AUD/USD <b id="resultFx">—</b></div>
+          </div>
+        </div>
+        <div class="res-foot">
+          <a class="btn btn-gold magnetic" href="#contact">Lock in a free valuation <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+          <p class="res-note">Indicative pure-metal content at live spot, not a quote. Your final price is confirmed on the spot once we test and weigh your items — with no hidden commissions or fees.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="strip alt" aria-hidden="true"><div class="strip-row" id="strip2"></div></div>
+
+<!-- ====== HOW TO SELL ====== -->
+<section class="sec" id="how">
+  <div class="wrap how-grid">
+    <div class="how-sticky">
+      <span class="eyebrow" data-reveal>How to sell</span>
+      <h2 class="display h2"><span class="line"><span class="line-in">Three steps.</span></span><span class="line"><span class="line-in"><span class="metal">One visit.</span></span></span></h2>
+      <p class="lede" data-reveal>Turn your jewellery into cash in three simple, easy steps. No appointment needed — walk into any of our three NSW offices.</p>
+      <div data-reveal><a class="btn btn-ghost magnetic" href="#locations">Find your nearest office</a></div>
+    </div>
+    <div class="steps">
+      <div class="steps-line"><i id="stepsLine"></i></div>
+      <!-- OPUS:STEPS START — exactly 3 .step blocks, using the How to Sell page copy. Keep structure. -->
+      <article class="step" data-reveal><span class="dot"></span><div><div class="n">STEP 01</div><h3>OPUS_FILL</h3><p>OPUS_FILL</p></div><div class="pic"><img src="assets/step-1.jpg" alt="" loading="lazy"></div></article>
+      <article class="step" data-reveal><span class="dot"></span><div><div class="n">STEP 02</div><h3>OPUS_FILL</h3><p>OPUS_FILL</p></div><div class="pic"><img src="assets/step-2.jpg" alt="" loading="lazy"></div></article>
+      <article class="step" data-reveal><span class="dot"></span><div><div class="n">STEP 03</div><h3>OPUS_FILL</h3><p>OPUS_FILL</p></div><div class="pic"><img src="assets/step-3.jpg" alt="" loading="lazy"></div></article>
+      <!-- OPUS:STEPS END -->
+    </div>
+  </div>
+</section>
+
+<!-- ====== WHY CHOOSE US ====== -->
+<section class="sec" id="why">
+  <div class="wrap">
+    <div class="sec-head row">
+      <div>
+        <span class="eyebrow" data-reveal>Why choose us</span>
+        <h2 class="display h2" style="margin-top:18px"><span class="line"><span class="line-in">Australia's #1</span></span><span class="line"><span class="line-in"><span class="metal">gold buyer.</span></span></span></h2>
+      </div>
+      <p class="lede" data-reveal style="max-width:44ch">Free valuations of all gold, diamonds and watches, priced on the spot — and we guarantee the highest payout with no hidden commissions or fees.</p>
+    </div>
+    <div class="why-grid" data-stagger>
+      <article class="why-card" data-reveal><span class="idx">01</span><div class="ic"><svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.1 6.6.8-4.9 4.6 1.3 6.5L12 16.8 6.1 20l1.3-6.5L2.5 8.9l6.6-.8z"/></svg></div><h3>30+ years industry experience</h3><p>Three decades in gold and diamonds. Our specialists have seen it all — and know exactly what it's worth.</p></article>
+      <article class="why-card" data-reveal><span class="idx">02</span><div class="ic"><svg viewBox="0 0 24 24"><path d="M3 17l5-5 4 4 8-8"/><path d="M14 8h6v6"/></svg></div><h3>Highest cash prices for your items</h3><p>We guarantee the highest payout in Australia. Shop around, then come to us — we'll show you the difference.</p></article>
+      <article class="why-card" data-reveal><span class="idx">03</span><div class="ic"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M8 12h8M12 8v8"/><path d="M4.9 4.9l14.2 14.2"/></svg></div><h3>No hidden commissions or fees</h3><p>The price we quote is the price you're paid. Nothing deducted, nothing hidden, nothing in the fine print.</p></article>
+      <article class="why-card" data-reveal><span class="idx">04</span><div class="ic"><svg viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/><path d="M8.5 12l2.5 2.5 4.5-5"/></svg></div><h3>Honest, reliable, professional</h3><p>We'll show you the karat, the weight and the price. If your chain is 18ct, we'll tell you — even if someone else said 9ct.</p></article>
+      <article class="why-card" data-reveal><span class="idx">05</span><div class="ic"><svg viewBox="0 0 24 24"><path d="M12 21s-7-6.5-7-11a7 7 0 0 1 14 0c0 4.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg></div><h3>3 easy-to-access office locations</h3><p>Sydney CBD on George Street, Wollongong on Keira Street and Newcastle at Charlestown. Walk in, no appointment needed.</p></article>
+    </div>
+    <div class="guarantee" data-reveal>
+      <div class="seal"><span><b>100%</b>Highest payout<br>guaranteed</span></div>
+      <div>
+        <h3>Highest prices. Guaranteed.</h3>
+        <p>Free valuations of all gold, diamond and watch items are priced on the spot, and we guarantee the highest payout with no hidden commissions or fees. Bring a competitor's written quote and let us beat it.</p>
+      </div>
+      <a class="btn btn-gold magnetic" href="#contact">Book a valuation</a>
+    </div>
+  </div>
+</section>
+
+<!-- ====== SERVICES ====== -->
+<section class="sec" id="services">
+  <div class="wrap">
+    <div class="sec-head">
+      <span class="eyebrow" data-reveal>Specialist services</span>
+      <h2 class="display h2"><span class="line"><span class="line-in">More than</span></span><span class="line"><span class="line-in"><span class="metal">a gold buyer.</span></span></span></h2>
+    </div>
+
+    <article class="svc">
+      <div class="svc-media" data-img-reveal><img src="assets/svc-estate.jpg" alt="Estate jewellery" data-parallax><span class="badge">Estate jewellery</span></div>
+      <div class="svc-body">
+        <div class="n" data-reveal>01</div>
+        <h3 data-reveal>Estate Jewellery Specialists</h3>
+        <p data-reveal>Have you been nominated the Executor of a deceased estate or recently inherited gold and diamond jewellery? The Gold Exchange Company are experts in deceased estate sales — purchasing gold and diamond jewellery, antique jewellery, brand name or fob watches, gold bullion and coins and other precious metal items.</p>
+        <div class="svc-more">
+          <p>We understand that this can be a legally challenging process if you are an Executor, or very emotional if you have inherited estate jewellery. Our gold and diamond specialist will help you by examining each item and advising you on the best way of getting the highest price for your inherited items.</p>
+          <p>If you are an Executor or have inherited any gold jewellery, diamonds, other precious metals or brand name watches and want to sell, don't delay in calling Gold Exchange Company.</p>
+        </div>
+        <ul class="pts" data-reveal>
+          <li>Antique and estate jewellery, brand name and fob watches</li>
+          <li>Gold bullion, coins and other precious metal items</li>
+          <li>Item-by-item advice on the best way to realise the highest price</li>
+        </ul>
+        <div class="svc-actions" data-reveal><a class="btn btn-gold btn-sm magnetic" href="#contact">Talk to a specialist</a><button class="link-arrow svc-toggle" type="button">Read the full detail <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button></div>
+      </div>
+    </article>
+
+    <article class="svc flip">
+      <div class="svc-media" data-img-reveal><img src="assets/svc-liquidators.jpg" alt="Liquidators, receivers and administrators" data-parallax><span class="badge">Insolvency</span></div>
+      <div class="svc-body">
+        <div class="n" data-reveal>02</div>
+        <h3 data-reveal>Liquidators, Receivers &amp; Administrators</h3>
+        <p data-reveal>Handling a bankruptcy, liquidation or insolvency with gold and diamonds to sell? The Gold Exchange Company has an excellent reputation with Administrators, Liquidators and Receivers in purchasing gold and diamond jewellery, loose diamonds, bullion, coins, brand name watches and any other precious metals.</p>
+        <div class="svc-more">
+          <p>We guarantee the highest price paid in Australia for any gold and diamond items permitted to be sold by Administrators, Liquidators and Receivers.</p>
+          <p>With over 30 years experience in the gold and diamond industry, we are the first people to call in purchasing gold and diamond jewellery items and providing expert advice on the value of any gold or diamond jewellery items.</p>
+        </div>
+        <ul class="pts" data-reveal>
+          <li>Highest price paid in Australia — guaranteed</li>
+          <li>Loose diamonds, jewellery stock, bullion, coins and watches</li>
+          <li>Expert valuations and advice for insolvency practitioners</li>
+        </ul>
+        <div class="svc-actions" data-reveal><a class="btn btn-gold btn-sm magnetic" href="#contact">Enquire now</a><button class="link-arrow svc-toggle" type="button">Read the full detail <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button></div>
+      </div>
+    </article>
+
+    <article class="svc">
+      <div class="svc-media" data-img-reveal><img src="assets/svc-refining.jpg" alt="Refining and assaying" data-parallax><span class="badge">Trade &amp; industry</span></div>
+      <div class="svc-body">
+        <div class="n" data-reveal>03</div>
+        <h3 data-reveal>Refining &amp; Assaying</h3>
+        <p data-reveal>Gold Exchange Company is one of Australia's leading refiners of gold, platinum, palladium and silver. We purchase any form of scrap precious metal from retail jewellers, manufacturing jewellers, pawnbrokers, other precious metal dealers (including the dental industry), gold miners and prospectors.</p>
+        <div class="svc-more">
+          <p>We guarantee to pay the highest prices for your scrap precious metals. At the Gold Exchange Company we only have one principle when dealing with your scrap material and precious metal: honesty.</p>
+          <p>Our refining division maintains the highest integrity and honesty when determining how much precious metal you actually have in all your scrap, to ensure that you are paid the highest price.</p>
+        </div>
+        <ul class="pts" data-reveal>
+          <li>Gold, platinum, palladium and silver refining</li>
+          <li>Jewellers, pawnbrokers, dental, miners and prospectors</li>
+          <li>Honest assay — paid on what your scrap actually contains</li>
+        </ul>
+        <div class="svc-actions" data-reveal><a class="btn btn-gold btn-sm magnetic" href="#contact">Trade enquiries</a><button class="link-arrow svc-toggle" type="button">Read the full detail <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button></div>
+      </div>
+    </article>
+  </div>
+</section>
+
+<!-- ====== INVESTMENT GOLD ====== -->
+<section class="sec invest" id="invest">
+  <div class="giant" aria-hidden="true">INVEST</div>
+  <div class="wrap invest-grid">
+    <div class="invest-media" id="investMedia" data-reveal data-cursor="spin"><div class="glow"></div><img src="assets/invest-gold.jpg" alt="Investment gold bullion and coins" loading="lazy"><span class="hint">Drag to spin</span></div>
+    <div class="invest-body">
+      <span class="eyebrow" data-reveal>Buy investment gold</span>
+      <h2 class="display h2"><span class="line"><span class="line-in">We don't</span></span><span class="line"><span class="line-in">just buy.</span></span><span class="line"><span class="line-in"><span class="metal">We sell.</span></span></span></h2>
+      <!-- OPUS:INVEST START — replace with the Buy Investment Gold page copy: one lede paragraph + up to 4 <li> product/benefit items. Keep structure. -->
+      <p class="lede" data-reveal>OPUS_FILL</p>
+      <ul data-stagger>
+        <li data-reveal><b>OPUS_FILL</b>OPUS_FILL</li>
+        <li data-reveal><b>OPUS_FILL</b>OPUS_FILL</li>
+        <li data-reveal><b>OPUS_FILL</b>OPUS_FILL</li>
+        <li data-reveal><b>OPUS_FILL</b>OPUS_FILL</li>
+      </ul>
+      <!-- OPUS:INVEST END -->
+      <div data-reveal><a class="btn btn-gold magnetic" href="#contact">Enquire about investment gold <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
+    </div>
+  </div>
+</section>
+
+<!-- ====== REVIEWS ====== -->
+<section class="sec reviews" id="reviews">
+  <div class="wrap">
+    <div class="sec-head" style="text-align:center;justify-items:center">
+      <span class="eyebrow" data-reveal>From our 15,300+ customers</span>
+      <h2 class="display h2"><span class="line"><span class="line-in">Happy clients.</span></span><span class="line"><span class="line-in"><span class="metal">Honest gold.</span></span></span></h2>
+    </div>
+    <div class="rev-stage" id="revStage">
+      <!-- OPUS:REVIEWS START — one .rev per testimonial, full untruncated quotes, first has class "on". -->
+      <figure class="rev on"><div class="stars"></div><blockquote>After shopping around with other gold buyers I was told by them that my gold chain was 9ct. I then went to the Gold Exchange and they were just brilliant! They SHOWED me I had an 18ct chain (not 9ct!) and guaranteed the highest price!</blockquote><figcaption><cite><b>Nicole</b><span>Gold Exchange customer</span></cite></figcaption></figure>
+      <figure class="rev"><div class="stars"></div><blockquote>Over the years I saved so many gold bars and coins that I was very hesitant on selling them. With gold at its highest I wanted to be sure I was going to get someone who would honestly tell me what all my gold was worth — I found that at Gold Exchange.</blockquote><figcaption><cite><b>Elizabeth</b><span>Gold Exchange customer</span></cite></figcaption></figure>
+      <figure class="rev"><div class="stars"></div><blockquote>Huge THANK YOU to the guys at Gold Exchange for being so open and honest and guaranteeing the highest price!</blockquote><figcaption><cite><b>Bill</b><span>Gold Exchange customer</span></cite></figcaption></figure>
+      <figure class="rev"><div class="stars"></div><blockquote>Will definitely recommend your company.</blockquote><figcaption><cite><b>Adam</b><span>Gold Exchange customer</span></cite></figcaption></figure>
+      <!-- OPUS:REVIEWS END -->
+    </div>
+    <div class="rev-nav">
+      <button class="arr" id="revPrev" aria-label="Previous review"><svg viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></button>
+      <div class="rev-dots" id="revDots"></div>
+      <button class="arr" id="revNext" aria-label="Next review"><svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+    </div>
+    <div class="rev-logos" data-reveal><span><b>15,300+</b> customers</span><span><b>30+</b> years</span><span><b>3</b> NSW offices</span><span><b>$0</b> commissions</span></div>
+  </div>
+</section>
+
+<!-- ====== LOCATIONS ====== -->
+<section class="sec" id="locations">
+  <div class="wrap">
+    <div class="sec-head row">
+      <div>
+        <span class="eyebrow" data-reveal>Three NSW offices</span>
+        <h2 class="display h2" style="margin-top:18px"><span class="line"><span class="line-in">Walk in.</span></span><span class="line"><span class="line-in"><span class="metal">Walk out paid.</span></span></span></h2>
+      </div>
+      <p class="lede" data-reveal style="max-width:44ch">Sydney CBD, Wollongong and Newcastle. Easy to access, no appointment needed, and every valuation is free.</p>
+    </div>
+    <div class="loc-grid" data-stagger>
+      <!-- OPUS:LOCATIONS START — fill hours (data-hours) and maps links if found on the site; leave structure. -->
+      <article class="loc" data-reveal data-hours="OPUS_FILL">
+        <div><div class="city">Sydney</div><span class="status" data-status><i></i><span>Call for today's hours</span></span></div>
+        <div class="meta">
+          <div><b>Address</b>Level 1, Suite 1, 428 George St,<br>Sydney NSW 2000</div>
+          <div><b>Phone</b><a class="tel" href="tel:0292690061">(02) 9269 0061</a></div>
+          <div><b>Hours</b><span data-hours-text>OPUS_FILL</span></div>
+        </div>
+        <div class="actions"><a class="btn btn-ghost btn-sm" href="https://www.google.com/maps/search/?api=1&query=Level+1+Suite+1+428+George+St+Sydney+NSW+2000" target="_blank" rel="noopener">Directions</a><a class="btn btn-gold btn-sm" href="tel:0292690061">Call Sydney</a></div>
+      </article>
+      <article class="loc" data-reveal data-hours="OPUS_FILL">
+        <div><div class="city">Wollongong</div><span class="status" data-status><i></i><span>Call for today's hours</span></span></div>
+        <div class="meta">
+          <div><b>Address</b>218 Keira St,<br>Wollongong NSW 2500</div>
+          <div><b>Phone</b><a class="tel" href="tel:0242257600">(02) 4225 7600</a></div>
+          <div><b>Hours</b><span data-hours-text>OPUS_FILL</span></div>
+        </div>
+        <div class="actions"><a class="btn btn-ghost btn-sm" href="https://www.google.com/maps/search/?api=1&query=218+Keira+St+Wollongong+NSW+2500" target="_blank" rel="noopener">Directions</a><a class="btn btn-gold btn-sm" href="tel:0242257600">Call Wollongong</a></div>
+      </article>
+      <article class="loc" data-reveal data-hours="OPUS_FILL">
+        <div><div class="city">Newcastle</div><span class="status" data-status><i></i><span>Call for today's hours</span></span></div>
+        <div class="meta">
+          <div><b>Address</b>184 Pacific Hwy,<br>Charlestown NSW 2290</div>
+          <div><b>Phone</b><a class="tel" href="tel:0499777662">0499 777 662</a></div>
+          <div><b>Hours</b><span data-hours-text>OPUS_FILL</span></div>
+        </div>
+        <div class="actions"><a class="btn btn-ghost btn-sm" href="https://www.google.com/maps/search/?api=1&query=184+Pacific+Hwy+Charlestown+NSW+2290" target="_blank" rel="noopener">Directions</a><a class="btn btn-gold btn-sm" href="tel:0499777662">Call Newcastle</a></div>
+      </article>
+      <!-- OPUS:LOCATIONS END -->
+    </div>
+  </div>
+</section>
+
+<!-- ====== FAQ ====== -->
+<section class="sec" id="faq">
+  <div class="wrap faq-grid">
+    <div class="faq-sticky">
+      <span class="eyebrow" data-reveal>Questions</span>
+      <h2 class="display h2"><span class="line"><span class="line-in">Straight</span></span><span class="line"><span class="line-in"><span class="metal">answers.</span></span></span></h2>
+      <p class="lede" data-reveal>Everything people ask us before they walk in. Can't find it? Call any office and ask a specialist directly.</p>
+      <div data-reveal><a class="btn btn-ghost magnetic" href="tel:0292690061">Call (02) 9269 0061</a></div>
+    </div>
+    <div class="faq-list" id="faqList">
+      <!-- OPUS:FAQ START — one .faq-item per FAQ from the FAQs page, numbered 01, 02 … Keep structure; answers may hold multiple <p>. -->
+      <div class="faq-item"><button class="faq-q" type="button" aria-expanded="false"><span class="i">01</span><span>OPUS_FILL</span><span class="pm"></span></button><div class="faq-a"><div class="in"><p>OPUS_FILL</p></div></div></div>
+      <!-- OPUS:FAQ END -->
+    </div>
+  </div>
+</section>
+
+<!-- ====== NEWS ====== -->
+<section class="sec" id="news">
+  <div class="wrap">
+    <div class="sec-head row">
+      <div>
+        <span class="eyebrow" data-reveal>Blogs &amp; news</span>
+        <h2 class="display h2" style="margin-top:18px"><span class="line"><span class="line-in">Gold market</span></span><span class="line"><span class="line-in"><span class="metal">insight.</span></span></span></h2>
+      </div>
+      <div data-reveal><a class="link-arrow" href="https://goldexchange.com.au/blogs-news/">All articles <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a></div>
+    </div>
+    <div class="news-grid" data-stagger>
+      <!-- OPUS:NEWS START — 3 latest posts from the site. Keep structure; use a downloaded post image if one exists, else assets/post-fallback.jpg -->
+      <a class="post" data-reveal href="https://goldexchange.com.au/us-mint-couldnt-meet-demand-for-gold-and-silver-coins-due-to-pandemic-buying/"><div class="pic"><img src="assets/post-1.jpg" alt="" loading="lazy"></div><div class="body"><span class="date">June 8, 2022</span><h3>US Mint couldn't meet demand for gold and silver coins due to pandemic buying</h3><p>The United States Mint was unable to meet surging demand for its gold and silver bullion coins in 2020 and through January, due partly to pandemic-driven demand and plant capacity issues.</p></div></a>
+      <a class="post" data-reveal href="https://goldexchange.com.au/gold-price-forecast-gold-markets-trying-to-recapture-200-day-ema/"><div class="pic"><img src="assets/post-2.jpg" alt="" loading="lazy"></div><div class="body"><span class="date">June 8, 2022</span><h3>Gold Price Forecast – Gold Markets Trying to Recapture 200 Day EMA</h3><p>The gold market has gapped higher to kick off the trading session on Monday, as traders came back in a much better mood in this market.</p></div></a>
+      <a class="post" data-reveal href="https://goldexchange.com.au/price-pressure-on-gold/"><div class="pic"><img src="assets/post-3.jpg" alt="" loading="lazy"></div><div class="body"><span class="date">June 8, 2022</span><h3>Price pressure on gold, silver as greenback surging</h3><p>Gold and silver futures prices are trading lower in early U.S. dealings Thursday, due in part to a strengthening U.S. dollar index that hit a two-month high overnight.</p></div></a>
+      <!-- OPUS:NEWS END -->
+    </div>
+  </div>
+</section>
+
+<!-- ====== CONTACT ====== -->
+<section class="sec contact" id="contact">
+  <div class="wrap contact-grid">
+    <div class="contact-left">
+      <span class="eyebrow" data-reveal>Get in touch</span>
+      <h2 class="display h2"><span class="line"><span class="line-in">Ready to</span></span><span class="line"><span class="line-in">turn gold</span></span><span class="line"><span class="line-in"><span class="metal">into cash?</span></span></span></h2>
+      <p class="lede" data-reveal>Call your nearest office or send us a message. A gold and diamond specialist will get back to you fast — usually within the hour on business days.</p>
+      <div class="contact-offices" data-stagger>
+        <a href="tel:0292690061" data-reveal><span>Sydney · George St</span><b>(02) 9269 0061</b></a>
+        <a href="tel:0242257600" data-reveal><span>Wollongong · Keira St</span><b>(02) 4225 7600</b></a>
+        <a href="tel:0499777662" data-reveal><span>Newcastle · Charlestown</span><b>0499 777 662</b></a>
+      </div>
+    </div>
+    <form class="form" id="leadForm" data-reveal novalidate>
+      <div class="row">
+        <div class="field"><input type="text" id="fName" placeholder=" " required autocomplete="name"><label for="fName">Your name</label></div>
+        <div class="field"><input type="tel" id="fPhone" placeholder=" " required autocomplete="tel"><label for="fPhone">Phone</label></div>
+      </div>
+      <div class="row">
+        <div class="field"><input type="email" id="fEmail" placeholder=" " autocomplete="email"><label for="fEmail">Email (optional)</label></div>
+        <div class="field"><select id="fOffice"><option>Sydney</option><option>Wollongong</option><option>Newcastle</option><option>Not sure yet</option></select><label for="fOffice">Nearest office</label></div>
+      </div>
+      <div class="field"><select id="fItem"><option>Scrap gold</option><option>Fine jewellery</option><option>Diamonds / engagement ring</option><option>Watches</option><option>Bullion or coins</option><option>Silver or platinum</option><option>Estate / deceased estate</option><option>Trade / refining</option><option>Buying investment gold</option></select><label for="fItem">What are you selling?</label></div>
+      <div class="field"><textarea id="fMsg" placeholder=" "></textarea><label for="fMsg">Tell us about your items (optional)</label></div>
+      <button class="btn btn-gold magnetic" type="submit">Request my free valuation <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+      <p class="fine">No obligation. No hidden commissions or fees. Your details stay with Gold Exchange and are never sold.</p>
+      <div class="form-done" id="formDone"><div><div class="ok"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></div><h3 class="display h3">Got it.</h3><p class="lede" style="margin-top:12px">A specialist will call you back shortly. Want it faster? <a href="tel:0292690061">Call Sydney now</a>.</p></div></div>
+    </form>
+  </div>
+</section>
+
+</main>
+
+<!-- ====== FOOTER ====== -->
+<footer>
+  <div class="foot-giant" aria-hidden="true"><div class="row"><span>Gold Exchange</span><span>Gold Exchange</span><span>Gold Exchange</span><span>Gold Exchange</span></div></div>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div class="foot-brand">
+        <img src="assets/logo-dark.png" alt="Gold Exchange">
+        <p>Gold Exchange is an Australian owned and operated company with over 30 years experience in the gold refining and jewellery industry. We guarantee honest, reliable and professional service for all our customers.</p>
+      </div>
+      <div><h4>What we buy</h4><ul><li><a href="#buy">Scrap gold</a></li><li><a href="#buy">Fine jewellery</a></li><li><a href="#buy">Diamonds</a></li><li><a href="#buy">Watches &amp; fob watches</a></li><li><a href="#buy">Bullion &amp; coins</a></li><li><a href="#buy">Silver &amp; platinum</a></li></ul></div>
+      <div><h4>Company</h4><ul><li><a href="#how">How to sell</a></li><li><a href="#services">Services</a></li><li><a href="#invest">Buy investment gold</a></li><li><a href="#faq">FAQs</a></li><li><a href="#news">Blogs &amp; news</a></li><li><a href="#contact">Contact us</a></li></ul></div>
+      <div><h4>Offices</h4><ul><li><a href="tel:0292690061">Sydney (02) 9269 0061</a></li><li><a href="tel:0242257600">Wollongong (02) 4225 7600</a></li><li><a href="tel:0499777662">Newcastle 0499 777 662</a></li></ul></div>
+    </div>
+    <div class="foot-bottom"><span>© <span id="year"></span> Gold Exchange. All rights reserved.</span><span>Australian owned &amp; operated · Sydney · Wollongong · Newcastle</span></div>
+  </div>
+</footer>
+
+<div class="float-cta"><a class="btn btn-ghost" href="tel:0292690061">Call now</a><a class="btn btn-gold" href="#contact">Free valuation</a></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/lenis@1.1.14/dist/lenis.min.js"></script>
+<!-- classic (non-module) builds so the preview also opens straight from a file:// double-click -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.147.0/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.147.0/examples/js/environments/RoomEnvironment.js"></script>
+<script src="js/scene.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
