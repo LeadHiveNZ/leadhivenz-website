@@ -1,24 +1,200 @@
 [
- {"img":"project-01.jpg","kicker":"Exterior painting","region":"Auckland","type":"Two-storey exterior transformation","svc":"exterior","line":"Cream brick and tired cladding turned into black cedar and crisp white on a two-storey home.","review":null},
- {"img":"project-02.jpg","kicker":"Exterior painting","region":"Auckland","type":"Villa exterior repaint","svc":"exterior","line":"A classic villa finished in fresh white, from the bay window and fretwork to the veranda balustrade.","review":null},
- {"img":"project-03.jpg","kicker":"Exterior painting","region":"Auckland","type":"Weatherboard home exterior","svc":"exterior","line":"A two-storey weatherboard home finished in clean white, with dark joinery picked out for contrast.","review":null},
- {"img":"project-04.jpg","kicker":"Exterior painting","region":"Auckland","type":"Townhouse exterior refresh","svc":"exterior","line":"Plaster and weatherboard townhouse refreshed in white, with crisp lines around the dark window frames.","review":null},
- {"img":"project-05.jpg","kicker":"Commercial painting","region":"Auckland","type":"Commercial feature wall","svc":"commercial","line":"Bold multicolour stripes on a commercial interior, with straight, sharp lines between every colour.","review":null},
- {"img":"project-06.jpg","kicker":"Interior painting","region":"Auckland","type":"Bathroom repaint","svc":"interior","line":"Clean white walls in a modern bathroom, cut in neatly around the tiles, mirror and fittings.","review":null},
- {"img":"project-07.jpg","kicker":"Interior painting","region":"Auckland","type":"Bathroom repaint","svc":"interior","line":"A soft, light finish in a compact bathroom, cut in cleanly around the tiled splashback and fittings.","review":null},
- {"img":"project-08.jpg","kicker":"Interior painting","region":"Auckland","type":"Kitchen repaint","svc":"interior","line":"Fresh white walls in a kitchen, finished neatly against the tiled splashback, rangehood and cabinetry.","review":null},
- {"img":"project-09.jpg","kicker":"Roof painting","region":"Auckland","type":"Roof repaint: pale and chalky to charcoal","svc":"roof","line":"A faded, chalky iron roof recoated in charcoal. Before at the top, after below.","review":null},
- {"img":"","suburb":"Ellerslie","region":"Central","type":"House exterior","svc":"exterior","line":"Exterior repaint completed in record quick time.","review":4},
- {"img":"","suburb":"Papakura","region":"South","type":"House exterior","svc":"exterior","line":"Exterior repaint with guidance along the way and a fast turnaround.","review":7},
- {"img":"","suburb":"Remuera","region":"Central","type":"Block wall","svc":"exterior","line":"Cinder block exterior wall, done on time and on cost.","review":13},
- {"img":"","suburb":"Howick","region":"East","type":"Weatherboard townhouse","svc":"exterior","line":"Weatherboard exterior on a townhouse, close to our Howick base.","review":18},
- {"img":"","suburb":"Mangere","region":"South","type":"House exterior","svc":"exterior","line":"Exterior repaint in South Auckland.","review":0},
- {"img":"","suburb":"Ellerslie","region":"Central","type":"Ceilings and touch-ups","svc":"interior","line":"Ceilings and interior touch-ups, planned around the owners' timings.","review":8},
- {"img":"","suburb":"Grey Lynn","region":"Central","type":"Pre-sale interior","svc":"interior","line":"Interior refresh ahead of a sale.","review":20},
- {"img":"","suburb":"Cockle Bay","region":"East","type":"Ceilings","svc":"interior","line":"Ceiling repaint in East Auckland.","review":0},
- {"img":"","suburb":"Forrest Hill","region":"North Shore","type":"Bathroom","svc":"interior","line":"Bathroom repaint at short notice.","review":15},
- {"img":"","suburb":"Parnell","region":"Central","type":"Retail space","svc":"commercial","line":"Repaint of a retail space.","review":0},
- {"img":"","suburb":"Glenfield","region":"North Shore","type":"Office repaint","svc":"commercial","line":"Office repaint, plus extra work arranged along the way. Finished ahead of schedule.","review":10},
- {"img":"","suburb":"Mairangi Bay","region":"North Shore","type":"Office repaint","svc":"commercial","line":"Office repaint on the North Shore.","review":0},
- {"img":"","suburb":"Manukau","region":"South","type":"End-of-lease repaint","svc":"commercial","line":"End-of-lease repaint so the premises could be handed back.","review":17}
+ {
+  "img": "project-01.jpg",
+  "kicker": "Exterior painting",
+  "region": "Auckland",
+  "type": "Two-storey exterior transformation",
+  "svc": "exterior",
+  "line": "Cream brick and tired cladding turned into black cedar and crisp white on a two-storey home.",
+  "review": null
+ },
+ {
+  "img": "project-02.jpg",
+  "kicker": "Exterior painting",
+  "region": "Auckland",
+  "type": "Villa exterior repaint",
+  "svc": "exterior",
+  "line": "A classic villa finished in fresh white, from the bay window and fretwork to the veranda balustrade.",
+  "review": null
+ },
+ {
+  "img": "project-03.jpg",
+  "kicker": "Exterior painting",
+  "region": "Auckland",
+  "type": "Kauri villa exterior repaint",
+  "svc": "exterior",
+  "line": "A 1912 kauri villa repainted in soft duck-egg blue, with the fretwork, balustrades and window trim picked out in crisp white.",
+  "review": null
+ },
+ {
+  "img": "project-04.jpg",
+  "kicker": "Exterior painting",
+  "region": "Auckland",
+  "type": "Townhouse exterior refresh",
+  "svc": "exterior",
+  "line": "Plaster and weatherboard townhouse refreshed in white, with crisp lines around the dark window frames.",
+  "review": null
+ },
+ {
+  "img": "project-05.jpg",
+  "kicker": "Commercial painting",
+  "region": "Auckland",
+  "type": "Commercial feature wall",
+  "svc": "commercial",
+  "line": "Bold multicolour stripes on a commercial interior, with straight, sharp lines between every colour.",
+  "review": null
+ },
+ {
+  "img": "project-06.jpg",
+  "kicker": "Interior painting",
+  "region": "Auckland",
+  "type": "Bathroom repaint",
+  "svc": "interior",
+  "line": "Clean white walls in a modern bathroom, cut in neatly around the tiles, mirror and fittings.",
+  "review": null
+ },
+ {
+  "img": "project-07.jpg",
+  "kicker": "Interior painting",
+  "region": "Auckland",
+  "type": "Bathroom repaint",
+  "svc": "interior",
+  "line": "A soft, light finish in a compact bathroom, cut in cleanly around the tiled splashback and fittings.",
+  "review": null
+ },
+ {
+  "img": "project-08.jpg",
+  "kicker": "Interior painting",
+  "region": "Auckland",
+  "type": "Kitchen repaint",
+  "svc": "interior",
+  "line": "Fresh white walls in a kitchen, finished neatly against the tiled splashback, rangehood and cabinetry.",
+  "review": null
+ },
+ {
+  "img": "project-09.jpg",
+  "kicker": "Roof painting",
+  "region": "Auckland",
+  "type": "Roof repaint: pale and chalky to charcoal",
+  "svc": "roof",
+  "line": "A faded, chalky iron roof recoated in charcoal. Before at the top, after below.",
+  "review": null
+ },
+ {
+  "img": "",
+  "suburb": "Ellerslie",
+  "region": "Central",
+  "type": "House exterior",
+  "svc": "exterior",
+  "line": "Exterior repaint completed in record quick time.",
+  "review": 4
+ },
+ {
+  "img": "",
+  "suburb": "Papakura",
+  "region": "South",
+  "type": "House exterior",
+  "svc": "exterior",
+  "line": "Exterior repaint with guidance along the way and a fast turnaround.",
+  "review": 7
+ },
+ {
+  "img": "",
+  "suburb": "Remuera",
+  "region": "Central",
+  "type": "Block wall",
+  "svc": "exterior",
+  "line": "Cinder block exterior wall, done on time and on cost.",
+  "review": 13
+ },
+ {
+  "img": "",
+  "suburb": "Howick",
+  "region": "East",
+  "type": "Weatherboard townhouse",
+  "svc": "exterior",
+  "line": "Weatherboard exterior on a townhouse, close to our Howick base.",
+  "review": 18
+ },
+ {
+  "img": "",
+  "suburb": "Mangere",
+  "region": "South",
+  "type": "House exterior",
+  "svc": "exterior",
+  "line": "Exterior repaint in South Auckland.",
+  "review": 0
+ },
+ {
+  "img": "",
+  "suburb": "Ellerslie",
+  "region": "Central",
+  "type": "Ceilings and touch-ups",
+  "svc": "interior",
+  "line": "Ceilings and interior touch-ups, planned around the owners' timings.",
+  "review": 8
+ },
+ {
+  "img": "",
+  "suburb": "Grey Lynn",
+  "region": "Central",
+  "type": "Pre-sale interior",
+  "svc": "interior",
+  "line": "Interior refresh ahead of a sale.",
+  "review": 20
+ },
+ {
+  "img": "",
+  "suburb": "Cockle Bay",
+  "region": "East",
+  "type": "Ceilings",
+  "svc": "interior",
+  "line": "Ceiling repaint in East Auckland.",
+  "review": 0
+ },
+ {
+  "img": "",
+  "suburb": "Forrest Hill",
+  "region": "North Shore",
+  "type": "Bathroom",
+  "svc": "interior",
+  "line": "Bathroom repaint at short notice.",
+  "review": 15
+ },
+ {
+  "img": "",
+  "suburb": "Parnell",
+  "region": "Central",
+  "type": "Retail space",
+  "svc": "commercial",
+  "line": "Repaint of a retail space.",
+  "review": 0
+ },
+ {
+  "img": "",
+  "suburb": "Glenfield",
+  "region": "North Shore",
+  "type": "Office repaint",
+  "svc": "commercial",
+  "line": "Office repaint, plus extra work arranged along the way. Finished ahead of schedule.",
+  "review": 10
+ },
+ {
+  "img": "",
+  "suburb": "Mairangi Bay",
+  "region": "North Shore",
+  "type": "Office repaint",
+  "svc": "commercial",
+  "line": "Office repaint on the North Shore.",
+  "review": 0
+ },
+ {
+  "img": "",
+  "suburb": "Manukau",
+  "region": "South",
+  "type": "End-of-lease repaint",
+  "svc": "commercial",
+  "line": "End-of-lease repaint so the premises could be handed back.",
+  "review": 17
+ }
 ]
