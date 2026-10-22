@@ -12,7 +12,8 @@ Pages live in src/pages/*.html. Each starts with a front-matter comment:
   crumbs: Services|services/          (parents; the page itself is added from `crumb`)
   -->
 Template tags: {{root}} relative path to site root, {{> partial}}, {{reviews:1,2}},
-{{projects:1-9}}, {{projectlist:10-22}}, plus any front-matter key as {{key}}.
+{{projects:1-9}}, {{projectlist:10-22}},
+{{ba:ba1|alt text|caption|class}} (before/after slider), plus any front-matter key as {{key}}.
 """
 import hashlib, html, json, os, re, shutil, sys, zipfile
 from datetime import date
@@ -63,19 +64,39 @@ def short(text, n=120):
 
 
 def project_card(p, photo=True):
-    r = REVIEWS.get(p["review"])
+    r = REVIEWS.get(p.get("review"))
+    sub, kick = p.get("suburb"), p.get("kicker") or p.get("suburb")
     quote = (f'<a class="pquote" href="{{{{root}}}}reviews/#review-{r["id"]}">&ldquo;{esc(short(r["text"]))}&rdquo; '
              f'<span>{esc(r["name"])}, {esc(r["suburb"])}</span></a>') if r else ""
-    media = (f'<div class="media"><img src="{{{{root}}}}img/{p["img"]}" alt="{esc(p["type"])} by Living Colour in {esc(p["suburb"])}" '
-             f'loading="lazy" width="1200" height="900"><span class="tag">{esc(p["region"])}</span></div>') if photo else ""
+    tag = f'<span class="tag">{esc(p["region"])}</span>' if p.get("region") else ""
+    alt = f'{p["type"]} by Living Colour' + (f' in {sub}' if sub else ", Auckland")
+    media = (f'<div class="media"><img src="{{{{root}}}}img/{p["img"]}" alt="{esc(alt)}" '
+             f'loading="lazy" width="1200" height="900">{tag}</div>') if photo else ""
     cls = "project" if photo else "project project-text"
-    return (f'<article class="{cls}">{media}<div class="body"><p class="kicker">{esc(p["suburb"])}</p>'
+    kicker = f'<p class="kicker">{esc(kick)}</p>' if kick else ""
+    return (f'<article class="{cls}">{media}<div class="body">{kicker}'
             f'<h3>{esc(p["type"])}</h3><p>{esc(p["line"])}</p>{quote}</div></article>')
+
+
+def ba_slider(m):
+    """{{ba:NAME|what the photos show|caption html|extra classes}} -> before/after compare slider.
+    Needs img/NAME-before.jpg and img/NAME-after.jpg (same size)."""
+    name, subj, cap, cls = (m.group(i) or "" for i in range(1, 5))
+    s = esc(subj.strip())
+    img = lambda k, a: f'<img src="{{{{root}}}}img/{name.strip()}-{k}.jpg" alt="{a}: {s}" loading="lazy" draggable="false">'
+    return (f'<figure class="{("ba " + cls).strip()}"><div class="ba-frame">{img("after", "After")}'
+            f'<span class="tag tag-red ba-ta" aria-hidden="true">After</span>'
+            f'<div class="ba-b">{img("before", "Before")}<span class="tag" aria-hidden="true">Before</span></div>'
+            f'<input class="ba-r" type="range" min="0" max="100" value="50" aria-label="Before and after slider: {s}">'
+            '<span class="ba-h" aria-hidden="true"><span class="ba-k"><svg class="ic"><use href="#i-left"/></svg>'
+            '<svg class="ic"><use href="#i-arrow"/></svg></span></span></div>'
+            + (f'<figcaption>{cap.strip()}</figcaption>' if cap.strip() else "") + '</figure>')
 
 
 def expand(body, meta):
     for _ in range(4):
         body = re.sub(r"\{\{>\s*([\w-]+)\s*\}\}", lambda m: read("partials", m.group(1) + ".html"), body)
+    body = re.sub(r"\{\{ba:([^|}]+)\|([^|}]+)\|([^|}]*)(?:\|([^|}]*))?\}\}", ba_slider, body)
     body = re.sub(r"\{\{reviews:([\d,\-]+)\}\}", lambda m: "\n".join(review_card(REVIEWS[i]) for i in ids(m.group(1))), body)
     body = re.sub(r"\{\{projects:([\d,\-]+)\}\}", lambda m: "\n".join(project_card(DATA["projects"][i - 1]) for i in ids(m.group(1))), body)
     body = re.sub(r"\{\{projectlist:([\d,\-]+)\}\}", lambda m: "\n".join(project_card(DATA["projects"][i - 1], False) for i in ids(m.group(1))), body)
