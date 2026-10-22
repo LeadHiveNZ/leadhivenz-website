@@ -15,10 +15,6 @@
   "telephone": "+64212668689",
   "email": "info@livingcolourltd.co.nz",
   "foundingDate": "2014-04-07",
-  "founder": {
-    "@type": "Person",
-    "name": "Andy"
-  },
   "address": {
     "@type": "PostalAddress",
     "addressLocality": "Howick",
