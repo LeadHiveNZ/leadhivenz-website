@@ -1,22 +1,200 @@
 [
- {"id":1,"name":"Anna","suburb":"Takapuna","job":"Two-storey exterior","date":"Apr 2021","svc":"exterior","text":"Andy painted the whole exterior of our two-storeyed house. I found Andy to be honest and a man of his word. He completed the job to a high standard and within the time-frame indicated. I particularly appreciated his excellent communication with me, including ongoing photos of his progress due to my now living in a different city. I highly recommend Andy."},
- {"id":2,"name":"Suzanne","suburb":"Albany","job":"Monoclad exterior","date":"Mar 2021","svc":"exterior","text":"Andy arrived promptly and explained the process, paint for this monocladding and timeframe. The quote was detailed. Andy project managed scaffolders, cleaners, his painters. The painters were diligent, polite and proud of their work which Andy checked. I am delighted with the stress free process and the result. Thanks Living Colour"},
- {"id":3,"name":"Brian","suburb":"Epsom","job":"Cedar re-stain, Resene Cool Cote","date":"Apr 2022","svc":"staining","text":"Andy and his team did an excellent job of painting and staining my house. They worked quickly and carefully and got the job done in good time. I was very impressed with the level of communication with Andy, very prompt and kept me informed. They were not the cheapest quotation that I got but am pleased I went with them."},
- {"id":4,"name":"Dave","suburb":"Ellerslie","job":"House exterior","date":"Nov 2021","svc":"exterior","text":"Andy and his team completed the job in record quick time and delivered a first class, really professional job. Highly recommended painting contractor and wouldn't hesitate to use again."},
- {"id":5,"name":"Sarah","suburb":"Auckland City","job":"Office make-good repaint","date":"Jan 2022","svc":"commercial","text":"Andy and his team did a great job at super short notice. We needed to repaint some walls in the office as part of a make good before our lease expired. It was all carried out professionally and the workmanship was great. The communication was great and they were on time for both the quote and the job."},
- {"id":6,"name":"Karen","suburb":"Freemans Bay","job":"Three-bedroom interior","date":"Jul 2021","svc":"interior","text":"Extremely happy with Living Colour Ltd. They organised to have a colour specialist help me with colour choices. Very professional and easy to work around. Definitely using them again for any other work needed."},
- {"id":7,"name":"Pip","suburb":"Papakura","job":"House exterior","date":"Dec 2020","svc":"exterior","text":"Andy was great to work with. He provided professional quotes, prompt communication and provided guidance along the way. His turn-around on the job itself was fantastic and we are really happy with the workmanship. Would definitely use Living Colour again"},
- {"id":8,"name":"Pip","suburb":"Ellerslie","job":"Ceilings and touch-ups","date":"Oct 2020","svc":"interior","text":"Andy was an absolute pleasure to deal with. Got our interior looking better than we thought it could whilst being super pragmatic about our situation. Great communication, particularly with regard to timings. Will absolutely use again."},
- {"id":9,"name":"Feroz","suburb":"Massey","job":"House exterior","date":"Mar 2021","svc":"exterior","text":"Andy and his team did an amazing job painting our house. They took our job at short notice and got it done in record time even working on a Saturday. The quality of the work was excellent and communication was great."},
- {"id":10,"name":"Marilyn","suburb":"Glenfield","job":"Office repaint","date":"Nov 2020","svc":"commercial","text":"Andy was amazing to deal with, managed the whole job. We needed some extra work done which he arranged and completed. Finished ahead of schedule, fantastic job. Super satisfied with the whole project."},
- {"id":11,"name":"Melanie","suburb":"Mount Eden","job":"Bungalow interior","date":"Aug 2019","svc":"interior","text":"Andy and his team were very efficient and did a beautiful job painting the interior of our Mount Eden bungalow. Would highly recommend for anyone looking for similar work."},
- {"id":12,"name":"Ian","suburb":"Parnell","job":"Interior repaint","date":"Dec 2021","svc":"interior","text":"Andy was brilliant. Friendly and good communication. Excellent job. Reviews with me, and completed ahead of budget."},
- {"id":13,"name":"Bruce","suburb":"Remuera","job":"Block wall exterior","date":"Jan 2021","svc":"exterior","text":"Great communication and easy to deal with. Job was well done on time and on cost. Would recommend"},
- {"id":14,"name":"Jackie","suburb":"Penrose","job":"Two-storey stucco exterior","date":"Nov 2023","svc":"exterior","text":"Great work Andy, really good communication, did it when they said they would and the initial inspection looks great."},
- {"id":15,"name":"Ingrid","suburb":"Forrest Hill","job":"Bathroom","date":"Nov 2017","svc":"interior","text":"Excellent workmanship. Great communication and a great job done in short notice. Great to deal with. Would highly recommend."},
- {"id":16,"name":"Jonathan","suburb":"Parnell","job":"Fence and handrails quote","date":"Mar 2021","svc":"staining","text":"Quick response, very professional with a detailed quote. I'd highly recommend getting Living Colour to quote for your job."},
- {"id":17,"name":"Rachel","suburb":"Manukau","job":"End-of-lease repaint","date":"Nov 2020","svc":"commercial","text":"Andy was great to deal with. Very professional. Highly recommend."},
- {"id":18,"name":"Marc","suburb":"Howick","job":"Weatherboard townhouse exterior","date":"Nov 2020","svc":"exterior","text":"Excellent company to deal with. Will use again"},
- {"id":19,"name":"Linda","suburb":"Royal Oak","job":"Roughcast exterior","date":"Nov 2020","svc":"exterior","text":"They have done a great job. Friendly to deal with and good communication. I'm going to use them for another big house. I really recommend these guys."},
- {"id":20,"name":"Sam","suburb":"Grey Lynn","job":"Pre-sale interior","date":"Sep 2020","svc":"interior","text":"Great work. Communicated clearly."}
+ {
+  "id": 1,
+  "name": "Anna",
+  "suburb": "Takapuna",
+  "job": "Two-storey exterior",
+  "date": "Apr 2021",
+  "svc": "exterior",
+  "text": "Andy painted the whole exterior of our two-storeyed house. I found Andy to be honest and a man of his word. He completed the job to a high standard and within the time-frame indicated. I particularly appreciated his excellent communication with me, including ongoing photos of his progress due to my now living in a different city. I highly recommend Andy."
+ },
+ {
+  "id": 2,
+  "name": "Suzanne",
+  "suburb": "Albany",
+  "job": "Monoclad exterior",
+  "date": "Mar 2021",
+  "svc": "exterior",
+  "text": "Andy arrived promptly and explained the process, paint for this monocladding and timeframe. The quote was detailed. Andy project managed scaffolders, cleaners, his painters. The painters were diligent, polite and proud of their work which Andy checked. I am delighted with the stress free process and the result. Thanks Living Colour"
+ },
+ {
+  "id": 3,
+  "name": "Brian",
+  "suburb": "Epsom",
+  "job": "Cedar re-stain, Resene Cool Cote",
+  "date": "Apr 2022",
+  "svc": "staining",
+  "text": "Andy and his team did an excellent job of painting and staining my house. They worked quickly and carefully and got the job done in good time. I was very impressed with the level of communication with Andy, very prompt and kept me informed. They were not the cheapest quotation that I got but am pleased I went with them."
+ },
+ {
+  "id": 4,
+  "name": "Dave",
+  "suburb": "Ellerslie",
+  "job": "House exterior",
+  "date": "Nov 2021",
+  "svc": "exterior",
+  "text": "Andy and his team completed the job in record quick time and delivered a first class, really professional job. Highly recommended painting contractor and wouldn't hesitate to use again."
+ },
+ {
+  "id": 5,
+  "name": "Sarah",
+  "suburb": "Auckland City",
+  "job": "Office make-good repaint",
+  "date": "Jan 2022",
+  "svc": "commercial",
+  "text": "Andy and his team did a great job at super short notice. We needed to repaint some walls in the office as part of a make good before our lease expired. It was all carried out professionally and the workmanship was great. The communication was great and they were on time for both the quote and the job."
+ },
+ {
+  "id": 6,
+  "name": "Karen",
+  "suburb": "Freemans Bay",
+  "job": "Three-bedroom interior",
+  "date": "Jul 2021",
+  "svc": "interior",
+  "text": "Extremely happy with Living Colour Ltd. They organised to have a colour specialist help me with colour choices. Very professional and easy to work around. Definitely using them again for any other work needed."
+ },
+ {
+  "id": 7,
+  "name": "Pip",
+  "suburb": "Papakura",
+  "job": "House exterior",
+  "date": "Dec 2020",
+  "svc": "exterior",
+  "text": "Andy was great to work with. He provided professional quotes, prompt communication and provided guidance along the way. His turn-around on the job itself was fantastic and we are really happy with the workmanship. Would definitely use Living Colour again"
+ },
+ {
+  "id": 8,
+  "name": "Pip",
+  "suburb": "Ellerslie",
+  "job": "Ceilings and touch-ups",
+  "date": "Oct 2020",
+  "svc": "interior",
+  "text": "Andy was an absolute pleasure to deal with. Got our interior looking better than we thought it could whilst being super pragmatic about our situation. Great communication, particularly with regard to timings. Will absolutely use again."
+ },
+ {
+  "id": 9,
+  "name": "Feroz",
+  "suburb": "Massey",
+  "job": "House exterior",
+  "date": "Mar 2021",
+  "svc": "exterior",
+  "text": "Andy and his team did an amazing job painting our house. They took our job at short notice and got it done in record time even working on a Saturday. The quality of the work was excellent and communication was great."
+ },
+ {
+  "id": 10,
+  "name": "Marilyn",
+  "suburb": "Glenfield",
+  "job": "Office repaint",
+  "date": "Nov 2020",
+  "svc": "commercial",
+  "text": "Andy was amazing to deal with, managed the whole job. We needed some extra work done which he arranged and completed. Finished ahead of schedule, fantastic job. Super satisfied with the whole project."
+ },
+ {
+  "id": 11,
+  "name": "Melanie",
+  "suburb": "Mount Eden",
+  "job": "Bungalow interior",
+  "date": "Aug 2019",
+  "svc": "interior",
+  "text": "Andy and his team were very efficient and did a beautiful job painting the interior of our Mount Eden bungalow. Would highly recommend for anyone looking for similar work."
+ },
+ {
+  "id": 12,
+  "name": "Ian",
+  "suburb": "Parnell",
+  "job": "Interior repaint",
+  "date": "Dec 2021",
+  "svc": "interior",
+  "text": "Andy was brilliant. Friendly and good communication. Excellent job. Reviews with me, and completed ahead of budget."
+ },
+ {
+  "id": 13,
+  "name": "Bruce",
+  "suburb": "Remuera",
+  "job": "Block wall exterior",
+  "date": "Jan 2021",
+  "svc": "exterior",
+  "text": "Great communication and easy to deal with. Job was well done on time and on cost. Would recommend"
+ },
+ {
+  "id": 14,
+  "name": "Jackie",
+  "suburb": "Penrose",
+  "job": "Two-storey stucco exterior",
+  "date": "Nov 2023",
+  "svc": "exterior",
+  "text": "Great work Andy, really good communication, did it when they said they would and the initial inspection looks great."
+ },
+ {
+  "id": 15,
+  "name": "Ingrid",
+  "suburb": "Forrest Hill",
+  "job": "Bathroom",
+  "date": "Nov 2017",
+  "svc": "interior",
+  "text": "Excellent workmanship. Great communication and a great job done in short notice. Great to deal with. Would highly recommend."
+ },
+ {
+  "id": 16,
+  "name": "Jonathan",
+  "suburb": "Parnell",
+  "job": "Fence and handrails quote",
+  "date": "Mar 2021",
+  "svc": "staining",
+  "text": "Quick response, very professional with a detailed quote. I'd highly recommend getting Living Colour to quote for your job."
+ },
+ {
+  "id": 17,
+  "name": "Rachel",
+  "suburb": "Manukau",
+  "job": "End-of-lease repaint",
+  "date": "Nov 2020",
+  "svc": "commercial",
+  "text": "Andy was great to deal with. Very professional. Highly recommend."
+ },
+ {
+  "id": 18,
+  "name": "Marc",
+  "suburb": "Howick",
+  "job": "Weatherboard townhouse exterior",
+  "date": "Nov 2020",
+  "svc": "exterior",
+  "text": "Excellent company to deal with. Will use again"
+ },
+ {
+  "id": 19,
+  "name": "Linda",
+  "suburb": "Royal Oak",
+  "job": "Roughcast exterior",
+  "date": "Nov 2020",
+  "svc": "exterior",
+  "text": "They have done a great job. Friendly to deal with and good communication. I'm going to use them for another big house. I really recommend these guys."
+ },
+ {
+  "id": 20,
+  "name": "Sam",
+  "suburb": "Grey Lynn",
+  "job": "Pre-sale interior",
+  "date": "Sep 2020",
+  "svc": "interior",
+  "text": "Great work. Communicated clearly."
+ },
+ {
+  "id": 21,
+  "name": "Karen",
+  "suburb": "Mairangi Bay",
+  "job": "Office repaint",
+  "date": "Mar 2021",
+  "svc": "commercial",
+  "text": "Andy and the team were great."
+ },
+ {
+  "id": 22,
+  "name": "Jan",
+  "suburb": "Cockle Bay",
+  "job": "Ceiling repaint",
+  "date": "Nov 2020",
+  "svc": "interior",
+  "text": "Very happy with the work that Andy and his employees completed for me."
+ }
 ]

@@ -81,6 +81,24 @@
   "review": null
  },
  {
+  "img": "project-10.jpg",
+  "kicker": "Interior painting",
+  "region": "Auckland",
+  "type": "Open-plan living room",
+  "svc": "interior",
+  "line": "Raked ceilings, exposed beams and walls all brought back to a clean, bright white ahead of sale.",
+  "review": null
+ },
+ {
+  "img": "project-11.jpg",
+  "kicker": "Interior painting",
+  "region": "Auckland",
+  "type": "Living room repaint",
+  "svc": "interior",
+  "line": "Fresh white walls and ceiling beams in a family lounge, with the trims and doors painted to match.",
+  "review": null
+ },
+ {
   "img": "",
   "suburb": "Ellerslie",
   "region": "Central",
@@ -123,7 +141,11 @@
   "type": "House exterior",
   "svc": "exterior",
   "line": "Exterior repaint in South Auckland.",
-  "review": 0
+  "review": 0,
+  "rated": {
+   "name": "Naomi",
+   "suburb": "Mangere"
+  }
  },
  {
   "img": "",
@@ -150,7 +172,7 @@
   "type": "Ceilings",
   "svc": "interior",
   "line": "Ceiling repaint in East Auckland.",
-  "review": 0
+  "review": 22
  },
  {
   "img": "",
@@ -168,7 +190,11 @@
   "type": "Retail space",
   "svc": "commercial",
   "line": "Repaint of a retail space.",
-  "review": 0
+  "review": 0,
+  "rated": {
+   "name": "Neala",
+   "suburb": "Parnell"
+  }
  },
  {
   "img": "",
@@ -186,7 +212,7 @@
   "type": "Office repaint",
   "svc": "commercial",
   "line": "Office repaint on the North Shore.",
-  "review": 0
+  "review": 21
  },
  {
   "img": "",

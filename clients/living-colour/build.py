@@ -68,6 +68,10 @@ def project_card(p, photo=True):
     sub, kick = p.get("suburb"), p.get("kicker") or p.get("suburb")
     quote = (f'<a class="pquote" href="{{{{root}}}}reviews/#review-{r["id"]}">&ldquo;{esc(short(r["text"]))}&rdquo; '
              f'<span>{esc(r["name"])}, {esc(r["suburb"])}</span></a>') if r else ""
+    if not r and p.get("rated"):
+        quote = (f'<a class="pquote" href="https://builderscrack.co.nz/tradies/1gskyndo/living-colour-ltd" target="_blank" rel="noopener">'
+                 f'&#9733;&#9733;&#9733;&#9733;&#9733; Rated 5 out of 5 on Builderscrack '
+                 f'<span>{esc(p["rated"]["name"])}, {esc(p["rated"]["suburb"])}</span></a>')
     tag = f'<span class="tag">{esc(p["region"])}</span>' if p.get("region") else ""
     alt = f'{p["type"]} by Living Colour' + (f' in {sub}' if sub else ", Auckland")
     media = (f'<div class="media"><img src="{{{{root}}}}img/{p["img"]}" alt="{esc(alt)}" '
