@@ -20,7 +20,7 @@ try {
 }
 
 if (renderer && !reduce) {
-  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, isMobile ? 1.5 : 1.75));
+  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, isMobile ? 1.25 : 1.5));
   renderer.setSize(innerWidth, innerHeight, false);
   renderer.setClearColor(0x000000, 0);
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -80,21 +80,21 @@ if (renderer && !reduce) {
   // ---------- hero objects ----------
   const heroGroup = new THREE.Group(); scene.add(heroGroup);
   const defs = isMobile ? [
-    { kind: 'ingot', pos: [3.0, 3.4, -2], s: 1.0 },
-    { kind: 'coin', pos: [-3.2, 4.6, -3], s: 0.9 },
-    { kind: 'nugget', pos: [3.4, -0.5, 0], s: 0.7 },
-    { kind: 'coin', pos: [4.4, 1.2, -6], s: 1.1 },
-    { kind: 'ingot', pos: [-4.5, 0.4, -7], s: 1.1 },
+    { kind: 'ingot', pos: [1.7, 5.0, -2], s: 0.9 },
+    { kind: 'coin', pos: [-1.7, 5.4, -3], s: 0.85 },
+    { kind: 'nugget', pos: [3.2, 4.2, -9], s: 0.7 },
+    { kind: 'coin', pos: [-3.4, 2.6, -7], s: 1.0 },
+    { kind: 'ingot', pos: [3.2, -2.6, -5], s: 0.9 },
   ] : [
-    { kind: 'ingot', pos: [6.0, 1.4, -1], s: 1.25 },
-    { kind: 'coin', pos: [-6.2, 3.4, -3], s: 1.0 },
-    { kind: 'nugget', pos: [3.4, -3.0, 0.6], s: 0.8 },
-    { kind: 'coin', pos: [8.2, -2.4, -4], s: 1.3 },
-    { kind: 'ingot', pos: [-7.4, -3.0, -5.5], s: 1.1 },
-    { kind: 'nugget', pos: [7.0, 4.6, -6], s: 1.1 },
-    { kind: 'coin', pos: [-2.2, 4.8, -7.5], s: 1.2 },
-    { kind: 'ingot', pos: [1.6, 4.2, -4.5], s: 0.8 },
-    { kind: 'nugget', pos: [-9.0, 1.2, -1.5], s: 0.55 },
+    { kind: 'ingot', pos: [6.2, 1.6, -1], s: 1.25 },
+    { kind: 'coin', pos: [-6.4, 4.6, -3], s: 1.0 },
+    { kind: 'nugget', pos: [7.4, -0.6, -0.5], s: 0.8 },
+    { kind: 'coin', pos: [8.6, 2.8, -4], s: 1.3 },
+    { kind: 'ingot', pos: [3.6, 5.2, -6], s: 1.1 },
+    { kind: 'nugget', pos: [7.2, 5.0, -6], s: 1.0 },
+    { kind: 'coin', pos: [-2.2, 5.6, -7.5], s: 1.2 },
+    { kind: 'ingot', pos: [1.2, 4.9, -4.5], s: 0.8 },
+    { kind: 'nugget', pos: [-8.8, 0.6, -2.5], s: 0.55 },
   ];
   const objs = defs.map((d, i) => {
     let mesh;
@@ -125,7 +125,7 @@ if (renderer && !reduce) {
   api.spinBar = (dx) => { barState.vel += dx * 0.01; };
 
   // ---------- gold dust ----------
-  const COUNT = isMobile ? 800 : 2400;
+  const COUNT = isMobile ? 600 : 2000;
   const pos = new Float32Array(COUNT * 3);
   const aSize = new Float32Array(COUNT);
   const aPhase = new Float32Array(COUNT);

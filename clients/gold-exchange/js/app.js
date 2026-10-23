@@ -182,11 +182,11 @@ const introTl = gsap.timeline({ paused: true })
   gsap.set(['[data-hero="eyebrow"]', '[data-hero="cue"]', '[data-hero="copy"] > *', '[data-hero="trust"] > div', '.nav'], { opacity: 0 });
   gsap.set('[data-hero="ticker"]', { yPercent: 100 });
   const tl = gsap.timeline({ onComplete: () => { $('#loader').remove(); lenis && lenis.start(); } });
-  tl.to(n, { v: 100, duration: 1.5, ease: 'power2.inOut', onUpdate: () => { num.textContent = Math.round(n.v); } })
-    .to('#loader .ld-bar i', { scaleX: 1, duration: 1.5, ease: 'power2.inOut' }, 0)
-    .to('#loader .ld-in', { y: -50, opacity: 0, duration: .55, ease: 'power3.in' }, '-=.05')
-    .to('#loader', { yPercent: -100, duration: 1, ease: 'expo.inOut' }, '-=.2')
-    .add(() => { introTl.play(); gx().intro(); setTimeout(() => window.__startRotator && window.__startRotator(), 1800); }, '-=.75');
+  tl.to(n, { v: 100, duration: .9, ease: 'power2.inOut', onUpdate: () => { num.textContent = Math.round(n.v); } })
+    .to('#loader .ld-bar i', { scaleX: 1, duration: .9, ease: 'power2.inOut' }, 0)
+    .to('#loader .ld-in', { y: -40, opacity: 0, duration: .4, ease: 'power3.in' }, '-=.05')
+    .to('#loader', { yPercent: -100, duration: .8, ease: 'expo.inOut' }, '-=.15')
+    .add(() => { introTl.play(); gx().intro(); setTimeout(() => window.__startRotator && window.__startRotator(), 1800); }, '-=.6');
 })();
 
 /* ---------------- counters ---------------- */
@@ -206,10 +206,10 @@ $$('[data-count]').filter((el) => !el.closest('.hero')).forEach((el) => {
 if (!reduce) {
   const title = $('#heroTitle');
   ScrollTrigger.create({
-    trigger: '.hero', start: 'top top', end: isMobile ? '+=70%' : '+=110%', pin: true, pinSpacing: true, scrub: true,
+    trigger: '.hero', start: 'top top', end: isMobile ? '+=55%' : '+=75%', pin: true, pinSpacing: true, scrub: true,
     onUpdate: (s) => {
       const p = s.progress;
-      gsap.set(title, { scale: 1 + p * 1.1, opacity: 1 - Math.min(1, p * 1.45), filter: `blur(${p * 14}px)`, transformOrigin: '0% 100%' });
+      gsap.set(title, { scale: 1 + p * 0.9, opacity: 1 - Math.min(1, p * 1.5), filter: `blur(${p * 10}px)`, transformOrigin: '0% 100%' });
       gsap.set('.hero-bottom, .hero-eyebrow', { opacity: 1 - Math.min(1, p * 2.2), y: p * -60 });
       gsap.set('[data-hero="cue"]', { opacity: 1 - Math.min(1, p * 4) });
       gx().setHero(p);

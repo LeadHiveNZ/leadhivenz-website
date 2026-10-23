@@ -46,6 +46,14 @@ calculator, UI), `assets/` (logo, photos pulled from the current site).
 Libraries (CDN, pinned): GSAP 3.12.5 + ScrollTrigger, Lenis 1.1.14, Three.js 0.147 + RoomEnvironment.
 Fonts: Syne (display) + Inter (body) from Google Fonts.
 
+## Load and performance
+
+Measured locally: about 1.1 MB on the first screen before CDN compression (Three.js is 594 KB
+of that and compresses to roughly 150 KB), 1.7 MB for the whole page with every photo. Photos
+below the fold lazy-load. The cost that matters is GPU, not download: the WebGL layer renders
+continuously, so the pixel ratio is capped (1.5 desktop, 1.25 mobile) and the particle count
+drops on phones. The loader runs for about 1.5 s by design.
+
 ## Live prices
 
 Spot prices come from `api.gold-api.com` (XAU/XAG/XPT/XPD in USD) and the AUD rate from
