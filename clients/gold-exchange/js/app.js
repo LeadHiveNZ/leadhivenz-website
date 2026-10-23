@@ -370,6 +370,7 @@ burger.addEventListener('click', () => {
 
 /* ---------------- cursor + magnetic ---------------- */
 if (!isTouch && !reduce) {
+  document.body.classList.add('no-cursor');
   const cur = $('.cursor'), dot = $('.cursor-dot'), ring = $('.cursor-ring'), label = $('.cursor-label');
   const m = { x: innerWidth / 2, y: innerHeight / 2 }, r = { x: m.x, y: m.y };
   addEventListener('pointermove', (e) => { m.x = e.clientX; m.y = e.clientY; gsap.set(dot, { x: m.x, y: m.y }); }, { passive: true });
@@ -385,7 +386,7 @@ if (!isTouch && !reduce) {
     el.addEventListener('pointermove', (e) => { const b = el.getBoundingClientRect(); gsap.to(el, { x: (e.clientX - b.left - b.width / 2) * .28, y: (e.clientY - b.top - b.height / 2) * .28, duration: .6, ease: 'power3.out' }); });
     el.addEventListener('pointerleave', () => gsap.to(el, { x: 0, y: 0, duration: 1, ease: 'elastic.out(1,.4)' }));
   });
-} else document.body.classList.remove('no-cursor');
+}
 
 /* ---------------- lead form (preview: no backend wired) ---------------- */
 $('#leadForm').addEventListener('submit', (e) => {
