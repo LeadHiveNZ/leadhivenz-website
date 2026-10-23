@@ -1,0 +1,836 @@
+<!doctype html>
+<!--
+  LEADHIVE — SMITH TRADERS SELLER INTAKE PAGE  v1
+  Meta (Facebook / Instagram) lead ads land here. One job: form or call.
+
+  ZONE A — CONFIG (in the <script>, marked ▼ CONFIG ▼): the ONLY editable block.
+  ZONE B — everything else: LOCKED.
+
+  Preview an ad angle with ?page=<key>  (default, contract, auction, downsizing, pacific, appraisal)
+  Privacy policy (Meta Instant Forms / Pixel need its URL): ?page=privacy
+  Dev page switcher shows on file:// or with ?dev=1 only.
+
+  PHONE: CONFIG.business.phone and the #nb-source span must hold the number Nimbata is
+  configured to REPLACE for this project (Mitch's real mobile), never a tracking number.
+-->
+<html lang="en-NZ">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1A1718">
+<title>Sell your truck or machinery | Smith Traders</title>
+<meta name="description" content="Smith Traders sells trucks, diggers and earthmoving machinery on behalf of NZ owners while the machine keeps working. Send the details and Mitch will call you.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=Bebas+Neue&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#231F20; --ink-2:#4F5359; --ink-3:#62676E; --paper:#EEF0F2; --card:#FFFFFF; --rule:#D3D8DD; --field:#BCC3CA;
+  --char:#1A1718; --char-2:#2A2627; --red:#D81B15; --red-lo:#B5140F; --red-brand:#FC221C; --red-tint:#FDECEB; --oxblood:#40140F;
+  --ok:#1F8A4D; --ok-bg:#E3F3EA;
+  --wrap:1120px; --bar:78px;
+  --display:"Bebas Neue",Impact,"Arial Narrow Bold","Arial Narrow",sans-serif;
+  --font:"Archivo",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html{-webkit-text-size-adjust:100%}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+body{font-family:var(--font);font-size:17px;line-height:1.5;background:var(--paper);color:var(--ink);-webkit-font-smoothing:antialiased;overflow-x:hidden}
+a{color:inherit}
+img{max-width:100%}
+.ico{width:20px;height:20px;flex:none;fill:currentColor}
+.wrap{max-width:var(--wrap);margin:0 auto}
+fieldset{border:0;min-width:0;margin:18px 0 0;padding:0}legend{padding:0}fieldset>legend.fl{margin-top:0}
+.vh{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+[hidden]{display:none!important}
+
+/* header */
+.hdr{background:var(--char);color:#fff;border-bottom:3px solid var(--red-brand)}
+.hdr-in{max-width:var(--wrap);margin:0 auto;display:flex;align-items:center;gap:10px;padding:8px 16px;min-height:62px}
+.logo{width:50px;height:43px;flex:none;display:grid;place-items:center}
+.logo img{width:100%;height:100%;object-fit:contain}
+.logo .wm{width:44px;height:44px;border-radius:50%;border:2px solid #fff;display:grid;place-items:center;font-family:var(--display);font-size:20px;letter-spacing:.04em}
+.brand{min-width:0;line-height:1}
+.brand b{display:block;font-family:var(--display);font-weight:400;font-size:25px;letter-spacing:.05em}
+.brand small{display:block;font-size:12.5px;line-height:1.25;color:#C9CDD1;margin-top:3px}
+.hdr-call{margin-left:auto;flex:none;display:flex;align-items:center;gap:8px;background:var(--red);color:#fff;border-radius:10px;padding:10px 12px;min-height:46px;font-weight:800;font-size:16px;text-decoration:none;white-space:nowrap;font-variant-numeric:tabular-nums}
+.hdr-call:active{background:var(--red-lo)}
+.hdr-call .num{display:none}
+@media(min-width:480px){.hdr-call .num{display:inline}.hdr-call .lab{display:none}}
+
+/* hero + form */
+.hero{color:#fff;padding:24px 16px 40px;background:linear-gradient(180deg,rgba(26,23,24,.62) 0%,rgba(26,23,24,.84) 55%,rgba(26,23,24,.96) 100%),var(--hero-img,none) center 40%/cover no-repeat,var(--char)}
+.eyebrow{display:flex;align-items:center;gap:10px;font-size:13px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
+.eyebrow::before{content:"";width:24px;height:3px;background:var(--red-brand);flex:none}
+.h1{font-family:var(--display);font-weight:400;font-size:clamp(46px,13.2vw,80px);line-height:.94;letter-spacing:.01em;margin:12px 0 12px;text-wrap:balance}
+.lede{font-size:17.5px;line-height:1.5;color:#E3E6E9;max-width:40ch}
+.lede b{color:#fff;font-weight:700}
+.cta{display:flex;flex-direction:column;gap:10px;margin-top:20px}
+.btn{display:flex;align-items:center;justify-content:center;gap:10px;min-height:56px;padding:14px 20px;border-radius:12px;font:inherit;font-size:18px;font-weight:800;line-height:1.15;text-decoration:none;text-align:center;border:0;cursor:pointer}
+.btn-red{background:var(--red);color:#fff;box-shadow:0 10px 24px -12px rgba(216,27,21,.8)}
+.btn-red:active{background:var(--red-lo)}
+.btn-ghost{background:rgba(255,255,255,.04);color:#fff;border:2px solid rgba(255,255,255,.75)}
+.btn-dark{background:var(--char);color:#fff}
+.btn-line{background:var(--card);color:var(--ink);border:2px solid var(--ink)}
+.btn .num{font-variant-numeric:tabular-nums;white-space:nowrap}
+[data-phone-display]{white-space:nowrap}
+.status{display:flex;gap:9px;align-items:flex-start;margin-top:14px;font-size:15px;line-height:1.4;color:#D6D9DC}
+.status .dot{width:9px;height:9px;border-radius:50%;background:#9AA1A8;flex:none;margin-top:6px}
+.status.open .dot{background:#3DDC84;box-shadow:0 0 0 0 rgba(61,220,132,.6);animation:pulse 2.4s infinite}
+@keyframes pulse{0%{box-shadow:0 0 0 0 rgba(61,220,132,.55)}70%{box-shadow:0 0 0 8px rgba(61,220,132,0)}100%{box-shadow:0 0 0 0 rgba(61,220,132,0)}}
+.chips{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:20px}
+.chip{border:1px solid rgba(255,255,255,.24);background:rgba(255,255,255,.06);border-radius:10px;padding:10px 6px 9px;text-align:center}
+.chip .v{font-family:var(--display);font-size:clamp(20px,5.6vw,27px);line-height:1;letter-spacing:.03em;color:#fff;white-space:nowrap}
+.chip .l{font-size:12.5px;line-height:1.25;color:#CDD1D5;margin-top:4px}
+
+.formcard{position:relative;background:var(--card);border:1px solid var(--rule);border-radius:16px;margin:-22px 12px 0;padding:20px 16px 20px;box-shadow:0 20px 44px -24px rgba(0,0,0,.45);scroll-margin-top:12px}
+.f-step{font-size:13px;font-weight:800;color:var(--red);text-transform:uppercase;letter-spacing:.1em}
+.f-h{font-family:var(--display);font-weight:400;font-size:34px;line-height:1;letter-spacing:.02em;margin-top:4px}
+.f-lede{font-size:15.5px;color:var(--ink-2);margin-top:6px}
+.fl{display:block;font-size:15.5px;font-weight:700;margin:18px 0 8px}
+.fl .opt{font-weight:500;color:var(--ink-3)}
+.formcard input[type=text],.formcard input[type=tel],.formcard input[type=email],.formcard input[type=number],.formcard select{width:100%;font:inherit;font-size:17px;min-height:52px;padding:12px 14px;border:1.5px solid var(--field);border-radius:10px;background:#fff;color:var(--ink);appearance:none;-webkit-appearance:none}
+.formcard select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='9' viewBox='0 0 14 9'%3E%3Cpath d='M1 1l6 6 6-6' fill='none' stroke='%23231F20' stroke-width='2'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 15px center;padding-right:40px}
+.formcard input:focus,.formcard select:focus{outline:3px solid rgba(216,27,21,.28);outline-offset:0;border-color:var(--red)}
+.tiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.tile{position:relative;display:block}
+.tile input{position:absolute;opacity:0;width:1px;height:1px}
+.tile span{display:flex;align-items:center;min-height:48px;padding:10px 12px;border:1.5px solid var(--field);border-radius:10px;font-size:15.5px;font-weight:600;line-height:1.2;cursor:pointer;background:#fff}
+.tile input:checked+span{border-color:var(--red);background:var(--red-tint);color:var(--oxblood);box-shadow:inset 0 0 0 1px var(--red)}
+.tile input:focus-visible+span{outline:3px solid rgba(216,27,21,.35);outline-offset:1px}
+.seg{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.seg .tile span{justify-content:center;text-align:center}
+.stack{display:grid;gap:8px}
+.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.two .fl{margin-top:18px}
+.err{display:none;color:#B3140F;font-size:14.5px;font-weight:600;margin-top:7px}
+.bad .err{display:block}
+.bad input,.bad select,.bad .tile span{border-color:#B3140F}
+.f-btn{width:100%;margin-top:20px}
+.f-btn:disabled{opacity:.65;cursor:default}
+.f-row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.f-back{background:none;border:0;color:var(--ink-2);font:inherit;font-size:15.5px;font-weight:600;text-decoration:underline;padding:12px 0;cursor:pointer;min-height:44px}
+.f-fine{font-size:13.5px;line-height:1.45;color:var(--ink-3);margin-top:12px}
+.f-msg{margin-top:12px;font-size:15px;font-weight:600;color:#B3140F}
+.photo{display:flex;align-items:center;justify-content:center;gap:9px;min-height:52px;border:1.5px dashed #9AA1A8;border-radius:10px;font-weight:700;font-size:16px;cursor:pointer;background:#FAFBFB;padding:10px 14px;text-align:center}
+.photo:focus-within{outline:3px solid rgba(216,27,21,.3)}
+.photo-note{font-size:14.5px;color:var(--ink-2);margin-top:7px}
+.photo-count{font-size:14.5px;font-weight:700;color:var(--ok);margin-top:6px}
+.hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+.done{padding:6px 0}
+.done .tickbig{width:52px;height:52px;border-radius:50%;background:var(--ok-bg);display:grid;place-items:center;margin-bottom:12px}
+.done .tickbig svg{width:26px;height:26px;stroke:var(--ok);fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.done h3{font-family:var(--display);font-weight:400;font-size:34px;line-height:1;letter-spacing:.02em}
+.done p{margin-top:10px;font-size:16.5px;color:var(--ink-2)}
+.done p b{color:var(--ink)}
+.done .btn{margin-top:16px}
+
+/* sections */
+.sec{padding:48px 16px}
+.sec.white{background:var(--card)}
+.h2{font-family:var(--display);font-weight:400;font-size:clamp(36px,9.6vw,54px);line-height:.98;letter-spacing:.015em;text-wrap:balance}
+.sub{font-size:17px;color:var(--ink-2);max-width:62ch;margin:10px 0 24px}
+.h3{font-family:var(--display);font-weight:400;font-size:30px;line-height:1;letter-spacing:.02em;margin:34px 0 14px}
+
+.steps{list-style:none;display:grid;gap:12px;counter-reset:s}
+.steps li{position:relative;counter-increment:s;background:var(--card);border:1px solid var(--rule);border-radius:14px;padding:18px 16px 18px 72px}
+.sec.white .steps li{background:var(--paper);border-color:transparent}
+.steps li::before{content:counter(s,decimal-leading-zero);position:absolute;left:16px;top:14px;font-family:var(--display);font-size:42px;line-height:1;color:var(--red)}
+.steps b{display:block;font-size:18px;font-weight:800;line-height:1.25}
+.steps p{font-size:16px;color:var(--ink-2);margin-top:5px}
+.keeps{margin-top:16px;border-left:4px solid var(--red-brand);background:var(--char);color:#fff;border-radius:0 12px 12px 0;padding:16px 18px;font-size:17px;font-weight:600;line-height:1.45}
+
+.cmp{display:grid;gap:12px}
+.cmp-card{border-radius:14px;padding:20px 18px 8px}
+.cmp-a{background:var(--card);border:1px solid var(--rule)}
+.cmp-b{background:var(--char);color:#fff}
+.cmp-card h3{font-family:var(--display);font-weight:400;font-size:30px;line-height:1;letter-spacing:.02em;margin-bottom:8px}
+.cmp-card ul{list-style:none}
+.cmp-card li{display:flex;gap:12px;padding:12px 0;border-top:1px solid var(--rule);font-size:16.5px;line-height:1.4}
+.cmp-b li{border-top-color:rgba(255,255,255,.14)}
+.cmp-card li small{display:block;font-size:14px;color:var(--ink-3);margin-top:3px}
+.mk{flex:none;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;margin-top:1px}
+.mk svg{width:12px;height:12px;fill:none;stroke-width:3.2;stroke-linecap:round;stroke-linejoin:round}
+.mk.x{background:#E6E9EC}.mk.x svg{stroke:#6E737A}
+.mk.y{background:var(--red)}.mk.y svg{stroke:#fff}
+.cmp-src{font-size:14px;color:var(--ink-3);margin-top:14px;max-width:70ch}
+
+.tags{display:flex;flex-wrap:wrap;gap:8px}
+.tag{display:inline-block;padding:9px 14px;border-radius:999px;background:var(--paper);border:1px solid var(--rule);font-size:15.5px;font-weight:600}
+.clients{margin-top:18px;font-size:17px;color:var(--ink-2);max-width:62ch}
+.clients b{color:var(--ink);font-weight:700}
+.units{display:grid;grid-auto-flow:column;grid-auto-columns:74%;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;margin:0 -16px;padding:2px 16px 12px;scroll-padding:0 16px;-webkit-overflow-scrolling:touch}
+.unit{scroll-snap-align:start;display:block;background:var(--card);border:1px solid var(--rule);border-radius:12px;overflow:hidden;text-decoration:none;color:inherit}
+.sec.white .unit{background:var(--paper);border-color:transparent}
+.unit .ph{aspect-ratio:4/3;background:#D9DDE1;display:grid;place-items:center;overflow:hidden}
+.unit .ph img{width:100%;height:100%;object-fit:cover;display:block}
+.unit .ph .fb{font-family:var(--display);font-size:26px;color:#8A9097;letter-spacing:.04em;padding:10px;text-align:center}
+.unit .tx{padding:10px 12px 13px}
+.unit .k{font-size:12.5px;font-weight:800;color:var(--red);text-transform:uppercase;letter-spacing:.08em}
+.unit .t{display:block;font-size:16.5px;font-weight:700;line-height:1.25;margin-top:3px}
+.more{margin-top:14px;display:flex;flex-wrap:wrap;gap:10px}
+.more .btn{font-size:16.5px;min-height:52px;flex:1 1 240px}
+
+.people{display:grid;gap:20px;background:var(--card);border:1px solid var(--rule);border-radius:16px;padding:20px 18px}
+.faces{display:flex;gap:12px}
+.face{width:min(140px,42vw)}
+.face .im{aspect-ratio:363/390;border-radius:12px;overflow:hidden;background:#D9DDE1;display:grid;place-items:center;font-family:var(--display);font-size:44px;color:#8A9097}
+.face .im img{width:100%;height:100%;object-fit:cover;display:block}
+.face b{display:block;font-size:16px;font-weight:700;margin-top:8px;line-height:1.2}
+.face small{display:block;font-size:14px;color:var(--ink-3)}
+.pull{font-family:var(--display);font-weight:400;font-size:clamp(30px,8vw,40px);line-height:1;letter-spacing:.015em}
+.people p{font-size:17px;color:var(--ink-2);margin-top:12px;max-width:56ch}
+.people .btn{margin-top:18px}
+
+.faq details{border-bottom:1px solid var(--rule)}
+.faq details:first-child{border-top:1px solid var(--rule)}
+.faq summary{list-style:none;cursor:pointer;padding:16px 0;font-size:17.5px;font-weight:700;display:flex;justify-content:space-between;align-items:center;gap:14px;min-height:56px}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";font-weight:500;color:var(--red);font-size:28px;line-height:1;flex:none}
+.faq details[open] summary::after{content:"–"}
+.faq details p{padding:0 0 18px;font-size:16.5px;color:var(--ink-2);max-width:66ch}
+
+.privacy{background:var(--card)}
+.privacy .upd{font-size:14.5px;color:var(--ink-3);margin-top:8px}
+.privacy h3{font-size:19px;font-weight:800;margin:26px 0 6px}
+.privacy p,.privacy li{font-size:16.5px;color:var(--ink-2);max-width:68ch}
+.privacy ul{padding-left:20px;margin-top:6px}
+.privacy li{margin:4px 0}
+.privacy .back{margin-top:28px;max-width:420px}
+
+.ftr{background:var(--char);color:#C9CDD1;padding:36px 16px calc(28px + var(--bar) + env(safe-area-inset-bottom));font-size:15.5px}
+.ftr b{color:#fff;font-weight:700}
+.ftr .co{font-family:var(--display);font-size:28px;letter-spacing:.04em;color:#fff;line-height:1}
+.ftr p{margin-top:8px}
+.ftr a{color:#fff}
+.ftr ul{list-style:none;display:flex;flex-wrap:wrap;gap:6px 22px;margin-top:18px}
+.ftr li a{display:inline-block;padding:6px 0;text-decoration:underline;text-underline-offset:3px}
+.ftr .by{margin-top:20px;font-size:13.5px;color:#9AA1A8}
+
+.bar{position:fixed;left:0;right:0;bottom:0;z-index:50;background:rgba(26,23,24,.96);border-top:1px solid #3A3536;padding:10px 12px calc(10px + env(safe-area-inset-bottom))}
+.bar-in{max-width:600px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.bar .btn{min-height:56px;font-size:17px;padding:8px 10px}
+.bar .call{background:#fff;color:var(--ink);flex-direction:column;gap:0}
+.bar .call .num{font-size:13px;font-weight:600;color:var(--ink-2)}
+.bar .call span:first-child{display:flex;align-items:center;gap:7px}
+.dev{position:fixed;top:8px;right:8px;z-index:60;font-size:11px;background:#111;color:#fff;padding:5px 8px;border-radius:6px;opacity:.8;max-width:calc(100vw - 16px)}
+.dev a{color:#fff;margin-left:6px}
+
+/* privacy view: only the policy */
+[data-view=privacy] [data-landing]{display:none!important}
+[data-view=privacy] .bar .send{display:none}
+[data-view=privacy] .bar-in{grid-template-columns:1fr}
+
+@media(min-width:720px){
+  .steps{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .cmp{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .units{grid-auto-flow:row;grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-columns:auto;overflow:visible;margin:0;padding:0}
+  .people{grid-template-columns:auto 1fr;align-items:center;padding:28px}
+  .people .btn{display:inline-flex}
+}
+@media(min-width:960px){
+  .ftr{padding-bottom:32px}
+  .bar{display:none}
+  .top{background:linear-gradient(90deg,rgba(26,23,24,.94) 0%,rgba(26,23,24,.78) 52%,rgba(26,23,24,.55) 100%),var(--hero-img,none) center 40%/cover no-repeat,var(--char);padding:40px 24px 56px}
+  .top-in{max-width:var(--wrap);margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 440px;gap:56px;align-items:start}
+  .hero{background:none;padding:28px 0 0}
+  .logo{width:60px;height:51px}
+  .tile span{min-height:46px}
+  .cta{flex-direction:row}
+  .cta .btn{padding:14px 26px}
+  .chips{max-width:560px}
+  .formcard{margin:0;padding:24px 22px}
+  .sec{padding:72px 24px}
+  .steps{grid-template-columns:repeat(4,minmax(0,1fr))}
+  .steps li{padding:70px 18px 20px}
+  .steps li::before{top:18px;left:18px}
+}
+</style>
+</head>
+<body>
+
+<span id="nb-source" data-fallback="" style="position:absolute;left:-9999px;top:0"></span>
+<div class="dev" id="dev" hidden></div>
+
+<header class="hdr">
+  <div class="hdr-in">
+    <div class="logo" id="logo"></div>
+    <div class="brand"><b id="biz"></b><small id="cred"></small></div>
+    <a class="hdr-call" href="#" data-phone-link data-call><svg class="ico" viewBox="0 0 24 24"><path d="M6.6 10.8a15.1 15.1 0 006.6 6.6l2.2-2.2a1 1 0 011-.24 11.4 11.4 0 003.6.58 1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1 11.4 11.4 0 00.57 3.6 1 1 0 01-.25 1z"/></svg><span class="lab">Call</span><span class="num" data-phone-display></span></a>
+  </div>
+</header>
+
+<main>
+<section class="top" id="top" data-landing>
+  <div class="top-in">
+    <div class="hero" id="hero">
+      <div class="eyebrow" id="eyebrow"></div>
+      <h1 class="h1" id="h1"></h1>
+      <p class="lede" id="lede"></p>
+      <div class="cta">
+        <a class="btn btn-red" href="#form" data-to-form id="cta-main"></a>
+        <a class="btn btn-ghost" href="#" data-phone-link data-call><svg class="ico" viewBox="0 0 24 24"><path d="M6.6 10.8a15.1 15.1 0 006.6 6.6l2.2-2.2a1 1 0 011-.24 11.4 11.4 0 003.6.58 1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1 11.4 11.4 0 00.57 3.6 1 1 0 01-.25 1z"/></svg><span id="cta-call-lab"></span><span class="num" data-phone-display></span></a>
+      </div>
+      <div class="status" id="status"><span class="dot"></span><span id="status-text"></span></div>
+      <div class="chips" id="chips"></div>
+    </div>
+
+    <div class="formcard" id="form">
+      <form id="enquiry" novalidate>
+        <div id="step1">
+          <div class="f-step" id="f-step1"></div>
+          <h2 class="f-h" id="f-h"></h2>
+          <p class="f-lede" id="f-lede"></p>
+          <fieldset id="g-type"><legend class="fl" id="l-type"></legend><div class="tiles" id="f-types"></div><div class="err" id="e-type"></div></fieldset>
+          <div id="g-region"><label class="fl" for="f-region" id="l-region"></label><select id="f-region" autocomplete="address-level1"></select><div class="err" id="e-region"></div></div>
+          <div id="g-phone"><label class="fl" for="f-phone" id="l-phone"></label><input id="f-phone" type="tel" inputmode="tel" autocomplete="tel" placeholder="021 123 4567"><div class="err" id="e-phone"></div></div>
+          <button type="button" class="btn btn-red f-btn" id="f-next"></button>
+          <p class="f-fine" id="f-fine1"></p>
+        </div>
+
+        <div id="step2" hidden>
+          <div class="f-row"><div class="f-step" id="f-step2"></div><button type="button" class="f-back" id="f-back"></button></div>
+          <h2 class="f-h" id="f-h2"></h2>
+          <div id="g-name"><label class="fl" for="f-name" id="l-name"></label><input id="f-name" type="text" autocomplete="name"><div class="err" id="e-name"></div></div>
+          <div id="g-make"><label class="fl" for="f-make" id="l-make"></label><input id="f-make" type="text" autocomplete="off"></div>
+          <div class="two">
+            <div id="g-year"><label class="fl" for="f-year" id="l-year"></label><input id="f-year" type="number" inputmode="numeric" min="1950" step="1"><div class="err" id="e-year"></div></div>
+            <div id="g-hours"><label class="fl" for="f-hours" id="l-hours"></label><input id="f-hours" type="text" inputmode="text"></div>
+          </div>
+          <fieldset><legend class="fl" id="l-finance"></legend><div class="seg" id="f-finance"></div></fieldset>
+          <fieldset><legend class="fl" id="l-when"></legend><div class="stack" id="f-when"></div></fieldset>
+          <div><span class="fl" id="l-photos"></span>
+            <label class="photo" for="f-photos"><svg class="ico" viewBox="0 0 24 24"><path d="M9 3L7.2 5H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V7a2 2 0 00-2-2h-3.2L15 3H9zm3 15a5 5 0 110-10 5 5 0 010 10zm0-2a3 3 0 100-6 3 3 0 000 6z"/></svg><span id="photo-btn"></span><input id="f-photos" class="vh" type="file" accept="image/*" multiple></label>
+            <div class="photo-count" id="photo-count" hidden></div>
+            <p class="photo-note" id="photo-note"></p>
+          </div>
+          <div id="g-email"><label class="fl" for="f-email" id="l-email"></label><input id="f-email" type="email" autocomplete="email" inputmode="email"><div class="err" id="e-email"></div></div>
+          <div class="hp" aria-hidden="true"><label for="f-company">Company website</label><input id="f-company" type="text" tabindex="-1" autocomplete="off"></div>
+          <button type="submit" class="btn btn-red f-btn" id="f-btn"></button>
+          <div class="f-msg" id="f-msg" role="alert"></div>
+          <p class="f-fine" id="f-fine2"></p>
+        </div>
+      </form>
+      <div class="done" id="done" hidden role="status" aria-live="polite"></div>
+    </div>
+  </div>
+</section>
+
+<section class="sec white" id="how" data-landing>
+  <div class="wrap">
+    <h2 class="h2" id="h-how"></h2>
+    <p class="sub" id="sub-how"></p>
+    <ol class="steps" id="steps"></ol>
+    <div class="keeps" id="keeps"></div>
+  </div>
+</section>
+
+<section class="sec" id="auction" data-landing>
+  <div class="wrap">
+    <h2 class="h2" id="h-cmp"></h2>
+    <p class="sub" id="sub-cmp"></p>
+    <div class="cmp" id="cmp"></div>
+    <p class="cmp-src" id="cmp-src"></p>
+  </div>
+</section>
+
+<section class="sec white" id="who" data-landing>
+  <div class="wrap">
+    <h2 class="h2" id="h-who"></h2>
+    <p class="sub" id="sub-who"></p>
+    <div class="tags" id="sectors"></div>
+    <p class="clients" id="clients"></p>
+    <div id="units-wrap">
+      <h3 class="h3" id="h-units"></h3>
+      <div class="units" id="units"></div>
+      <div class="more" id="more"></div>
+    </div>
+  </div>
+</section>
+
+<section class="sec" id="people-sec" data-landing>
+  <div class="wrap">
+    <div class="people" id="people">
+      <div class="faces" id="faces"></div>
+      <div><div class="pull" id="pull"></div><p id="people-copy"></p><a class="btn btn-dark" href="#" data-phone-link data-call id="people-call"></a></div>
+    </div>
+  </div>
+</section>
+
+<section class="sec white" id="faq-sec" data-landing>
+  <div class="wrap">
+    <h2 class="h2" id="h-faq" style="margin-bottom:18px"></h2>
+    <div class="faq" id="faq"></div>
+    <div style="margin-top:24px;max-width:420px"><a class="btn btn-red" href="#form" data-to-form id="faq-cta"></a></div>
+  </div>
+</section>
+
+<section class="sec privacy" id="privacy" hidden>
+  <div class="wrap" style="max-width:760px">
+    <h2 class="h2" id="h-priv"></h2>
+    <p class="upd" id="priv-upd"></p>
+    <div id="priv-body"></div>
+    <div class="back"><a class="btn btn-line" href="?" id="priv-back"></a></div>
+  </div>
+</section>
+</main>
+
+<footer class="ftr">
+  <div class="wrap">
+    <div class="co" id="ft-co"></div>
+    <p id="ft-addr"></p>
+    <p><a href="#" data-phone-link data-call><span data-phone-display></span></a> · <a id="ft-email" href="#"></a></p>
+    <ul id="ft-links"></ul>
+    <p class="by" id="ft-by"></p>
+  </div>
+</footer>
+
+<div class="bar"><div class="bar-in">
+  <a class="btn call" href="#" data-phone-link data-call><span><svg class="ico" viewBox="0 0 24 24"><path d="M6.6 10.8a15.1 15.1 0 006.6 6.6l2.2-2.2a1 1 0 011-.24 11.4 11.4 0 003.6.58 1 1 0 011 1V20a1 1 0 01-1 1A17 17 0 013 4a1 1 0 011-1h3.5a1 1 0 011 1 11.4 11.4 0 00.57 3.6 1 1 0 01-.25 1z"/></svg><span id="bar-call"></span></span><span class="num" data-phone-display></span></a>
+  <a class="btn btn-red send" href="#form" data-to-form id="bar-form"></a>
+</div></div>
+
+<script>
+/* ═══════════════ ▼ CONFIG ▼ — the only editable block ═══════════════ */
+const CONFIG = {
+  "site": {
+    "domain": "",
+    "titleSuffix": " | Smith Traders"
+  },
+  "tracking": {
+    "metaPixelId": "",
+    "ga4Id": ""
+  },
+  "business": {
+    "name": "Smith Traders",
+    "legalName": "Smith Traders 2010 Ltd",
+    "initials": "ST",
+    "logoUrl": "https://images.squarespace-cdn.com/content/v1/6296bbbbbd847a08d48507df/1655762320572-GW1CJOQMULHTRSVAUE52/smith-traders-logo-white-shad.png?format=300w",
+    "credential": "Truck & machinery brokers · NZ-wide",
+    "address": "830 Oropi Road, Tauriko, Tauranga",
+    "email": "admin@smithtraders.co.nz",
+    "phone": "027 253 0888",
+    "contact": "Mitch"
+  },
+  "hours": {
+    "open": 8,
+    "close": 17,
+    "days": [1, 2, 3, 4, 5],
+    "label": "Mon–Fri, 8am–5pm"
+  },
+  "links": {
+    "site": "https://www.smithtraders.co.nz",
+    "stock": "https://www.smithtraders.co.nz/for-sale",
+    "dealsOnWheels": "https://www.dealsonwheels.co.nz/search/dealer-5211234"
+  },
+  "images": {
+    "digger": "https://images.squarespace-cdn.com/content/v1/6296bbbbbd847a08d48507df/1654139368852-P45SK77W93AMM3CXDDXC/site-digger-web.jpg?format=1500w",
+    "truck": "https://images.squarespace-cdn.com/content/v1/6296bbbbbd847a08d48507df/1654127693025-YO2HC2RDGMTKNUNMGLL1/truck-road-web.jpg?format=1500w",
+    "wharf": "https://images.squarespace-cdn.com/content/v1/6296bbbbbd847a08d48507df/1654143201614-IERIY6FU0NF3MTNVC74Y/shipping-wharf-web.jpg?format=1500w"
+  },
+  "pages": {
+    "default": {
+      "eyebrow": "Sell your truck or machine",
+      "h1": "Parked up and still costing you?",
+      "lede": "Finance, insurance and depreciation don't stop when the machine does. Smith Traders sells trucks, diggers and excavators <b>on your behalf, NZ-wide</b>, and Mitch finds the buyer.",
+      "cta": "Send the machine details",
+      "image": "digger",
+      "title": "Sell your truck or digger"
+    },
+    "contract": {
+      "eyebrow": "Sell it while it works",
+      "h1": "Keep it earning while we sell it",
+      "lede": "Your truck, digger or loader <b>stays on contract until it sells</b>. No yard, no downtime. Mitch arranges viewings around your job.",
+      "cta": "Send the machine details",
+      "image": "truck",
+      "title": "Sell your machine while it keeps working"
+    },
+    "auction": {
+      "eyebrow": "Before you book an auction",
+      "h1": "Don't fire-sale it at auction",
+      "lede": "At auction the machine stops working, gets trucked to a yard and sells for whatever the bidding reaches. With Smith Traders it <b>keeps earning, you set the price</b>, and Mitch deals with the buyers.",
+      "cta": "Send the machine details",
+      "image": "digger",
+      "title": "An alternative to auction"
+    },
+    "downsizing": {
+      "eyebrow": "Surplus to requirements",
+      "h1": "Downsizing the fleet?",
+      "lede": "Surplus trucks, excavators and loaders sold on your behalf to buyers across NZ and the Pacific. Smith Traders has averaged <b>$1.9M of sales a year</b>.",
+      "cta": "Send the machine details",
+      "image": "truck",
+      "title": "Downsizing the fleet"
+    },
+    "pacific": {
+      "eyebrow": "Buyers here and offshore",
+      "h1": "Buyers in NZ and across the Pacific",
+      "lede": "Smith Traders sells to NZ contractors and to buyers in the <b>Solomon Islands, Fiji, Vanuatu and Tonga</b>. More buyers see your machine, and it stays put while it's marketed.",
+      "cta": "Send the machine details",
+      "image": "wharf",
+      "title": "Buyers in NZ and the Pacific"
+    },
+    "appraisal": {
+      "eyebrow": "Market appraisal",
+      "h1": "What's your machine worth?",
+      "lede": "Send the make, model, year and hours. Mitch will give you <b>a current market price</b> and tell you how he'd sell it.",
+      "cta": "Get a market price",
+      "image": "digger",
+      "title": "What's my machine worth",
+      "whenDefault": "Just want to know what it's worth"
+    }
+  },
+  "status": {
+    "open": "Mitch is taking calls now.",
+    "closed": "Outside office hours. Send the details now and Mitch calls first thing {when}."
+  },
+  "trust": [
+    { "v": "Since 2011", "l": "selling on behalf" },
+    { "v": "$1.9M", "l": "average sales a year" },
+    { "v": "NZ + Pacific", "l": "buyer network" }
+  ],
+  "form": {
+    "endpoint": "/api/public/enquiry",
+    "step1": "Step 1 of 2",
+    "step2": "Step 2 of 2",
+    "heading": "Tell us about the machine",
+    "lede": "Two quick steps. Mitch calls you back to talk it through.",
+    "typeLabel": "What is it?",
+    "machineTypes": ["Excavator / digger", "Truck", "Dozer", "Loader", "Grader", "Roller / compaction", "Trailer", "Forestry", "Crane / Hiab", "Other"],
+    "regionLabel": "Where is it?",
+    "regions": ["Northland", "Auckland", "Waikato", "Bay of Plenty", "Gisborne", "Hawke's Bay", "Taranaki", "Manawatū-Whanganui", "Wellington", "Tasman", "Nelson", "Marlborough", "West Coast", "Canterbury", "Otago", "Southland"],
+    "phoneLabel": "Your mobile",
+    "next": "Next: a few details",
+    "back": "Back",
+    "heading2": "A few details",
+    "nameLabel": "Your name",
+    "makeLabel": "Make and model",
+    "makePlaceholder": "e.g. Hitachi ZX135US",
+    "yearLabel": "Year",
+    "hoursLabel": "Hours or kms",
+    "hoursPlaceholder": "e.g. 8,400 hrs",
+    "financeLabel": "Any finance owing?",
+    "finance": ["Yes", "No", "Rather not say"],
+    "whenLabel": "When do you want it sold?",
+    "timing": ["As soon as possible", "In the next 1–3 months", "Just want to know what it's worth"],
+    "photosLabel": "Photos",
+    "photosButton": "Add photos",
+    "photosNote": "Optional. Or text photos to {phone}.",
+    "photoMaxBase64": 4000000,
+    "photoMaxCount": 8,
+    "emailLabel": "Email",
+    "button": "Send to Mitch",
+    "barLabel": "Send details",
+    "fine1": "Your number only goes to Smith Traders and their marketing partner, LeadHive NZ. <a href=\"?page=privacy\">Privacy</a>",
+    "fine2": "By sending, you agree to Smith Traders contacting you about this machine. <a href=\"?page=privacy\">Privacy</a>",
+    "errType": "Pick the closest one.",
+    "errRegion": "Choose a region.",
+    "errPhone": "Enter an NZ mobile, e.g. 021 123 4567.",
+    "errName": "Enter your name.",
+    "errYear": "Check the year.",
+    "errEmail": "Check the email, or leave it blank.",
+    "successTitle": "Got it, {name}",
+    "successOpen": "<b>Mitch will call you within the hour</b> on {phone}.",
+    "successClosed": "It's after hours, so <b>Mitch will call you first thing {when}</b>. During business hours ({hours}) he calls within the hour.",
+    "photosSkipped": "Your photos were too big to send here. Text them to Mitch on {phone}.",
+    "successCall": "Call Mitch now",
+    "error": "That didn't send. Please call or text Mitch on {phone} instead."
+  },
+  "sections": {
+    "how": "How it works",
+    "howSub": "You keep running your business. Mitch does the selling.",
+    "keeps": "The machine stays with you and keeps earning until it sells. Viewings are arranged around your job, wherever it is in NZ.",
+    "cmp": "Why not just auction it?",
+    "cmpSub": "Auction suits some sellers. Here's the honest comparison.",
+    "who": "Who we sell for",
+    "whoSub": "Owner-operators and fleets across New Zealand.",
+    "units": "Listed with Smith Traders now",
+    "faq": "Questions sellers ask",
+    "faqCta": "Send the machine details"
+  },
+  "steps": [
+    { "t": "Send the details", "d": "Machine type, year, hours and a few photos. Takes two minutes on your phone." },
+    { "t": "Mitch gives you a market price", "d": "He appraises it against what's selling now, and you know the fee before you agree to anything." },
+    { "t": "Listed NZ-wide while it keeps working", "d": "On Deals on Wheels, Trade Me, MarketBook, Facebook and smithtraders.co.nz. Buyers can get an independent pre-purchase inspection." },
+    { "t": "Sold, you get paid", "d": "Mitch handles the viewings and negotiation with the buyer and closes the sale." }
+  ],
+  "compare": {
+    "auction": {
+      "title": "Selling at auction",
+      "items": [
+        { "t": "Trucked to the auction yard" },
+        { "t": "Stops earning while it waits for sale day" },
+        { "t": "Price is set by the bidding on the day" },
+        { "t": "Seller pays commission, and the buyer pays a fee on top", "s": "Turners: 9.5% seller commission on sales of $10,000 and over. Buyers pay 10.75% on top." }
+      ]
+    },
+    "us": {
+      "title": "Selling through Smith Traders",
+      "items": [
+        { "t": "Stays with you, on site or in your yard" },
+        { "t": "Keeps working on contract until it sells" },
+        { "t": "You set the asking price" },
+        { "t": "Fee agreed with Mitch before anything is listed" },
+        { "t": "Independent pre-purchase inspection. Mitch does the viewings and the negotiation." }
+      ]
+    },
+    "source": "Turners Trucks & Machinery fees as published at <a href=\"https://www.turners.co.nz/Trucks-Machinery/Buyer-and-Seller-Fees/\" target=\"_blank\" rel=\"noopener\">turners.co.nz</a>, October 2026. Other auction houses charge differently."
+  },
+  "sectors": ["Forestry", "Mining", "Haulage", "Agriculture", "Council", "Concrete", "Landscaping", "Civil", "Drainage"],
+  "clients": ["RJ Lincoln", "Pro Floors", "JD Fieldservices", "Regal Haulage", "McLeod Cranes"],
+  "clientsLead": "Smith Traders works alongside firms including",
+  "units": [
+    { "t": "1993 Kenworth T800", "k": "Truck", "img": "https://assets.primecreative.com.au/imagegen/max/pcr/800/-/assets/momoads/2024/12/12/114733/2148708665.jpg" },
+    { "t": "2015 Hino 700 FY with Hiab", "k": "Truck · Hiab", "img": "https://assets.primecreative.com.au/imagegen/max/pcr/800/-/assets/momoads/2026/03/24/110707/1956541580.jpg" },
+    { "t": "2020 Isuzu CYJ400 with PK50 Hiab", "k": "Truck · Hiab", "img": "https://assets.primecreative.com.au/imagegen/max/pcr/800/-/assets/momoads/2024/12/09/070749/2165471456.jpg" },
+    { "t": "Tigercat 630", "k": "Forestry", "img": "https://assets.primecreative.com.au/imagegen/max/pcr/800/-/assets/momoads/2024/12/11/125300/1189169044.jpg" },
+    { "t": "Doosan DX255LC", "k": "Excavator", "img": "https://assets.primecreative.com.au/imagegen/max/pcr/800/-/assets/momoads/2026/03/25/071033/2288533336.jpg" },
+    { "t": "CAT 950H", "k": "Loader", "img": "https://assets.primecreative.com.au/imagegen/max/pcr/800/-/assets/momoads/2024/12/05/091440/2167610852.jpg" }
+  ],
+  "unitsMore": "See all stock for sale",
+  "unitsMoreAlt": "Deals on Wheels listings",
+  "people": [
+    { "name": "Mitch Smith", "role": "Director", "photoUrl": "https://images.squarespace-cdn.com/content/v1/6296bbbbbd847a08d48507df/1655762814834-PFJF6HQ9V7Y5I1YV3FHL/mitch-smith.jpg" },
+    { "name": "Nicky Smith", "role": "Director", "photoUrl": "https://images.squarespace-cdn.com/content/v1/6296bbbbbd847a08d48507df/1655762832433-K6IN937HLC03J5KCAZ0P/nicky-smith.jpg" }
+  ],
+  "peoplePull": "Mitch is on the ground for every viewing and negotiation.",
+  "peopleCopy": "Mitch and Nicky Smith run Smith Traders from their yard at 830 Oropi Road, Tauriko. They sell trucks and machinery on behalf of NZ owners, with buyers here and in the Pacific Islands.",
+  "peopleCall": "Call Mitch",
+  "faq": [
+    { "q": "What does it cost?", "a": "Mitch tells you the fee up front, before anything is listed. You'll know exactly what you're paying before you agree to anything." },
+    { "q": "Do I have to bring it to Tauranga?", "a": "No. Smith Traders sells NZ-wide. The machine stays where it is, and Mitch arranges viewings at its location, including airport pick-ups for buyers flying in." },
+    { "q": "Can I keep using it while it's for sale?", "a": "Yes. That's the point. It stays on contract and keeps earning until a buyer is found, and viewings are arranged around your work." },
+    { "q": "How long does it take to sell?", "a": "It depends on the machine, the price and the market. Mitch will give you a straight answer when he appraises it." },
+    { "q": "What if there's finance on it?", "a": "Say so on the form. Mitch will talk it through with you before anything is listed, so there are no surprises when a buyer comes along." },
+    { "q": "Do you buy machines outright?", "a": "Smith Traders sells on your behalf, which is how you get a better price than a quick trade-in. If you're after an outright sale, ask Mitch." }
+  ],
+  "privacy": {
+    "title": "Privacy policy",
+    "updated": "Last updated 23 October 2026",
+    "back": "Back to the form",
+    "sections": [
+      { "h": "Who we are", "p": "This page is run for Smith Traders 2010 Ltd, 830 Oropi Road, Tauriko, Tauranga, by its marketing partner LeadHive NZ. In this policy, \"we\" means both." },
+      { "h": "What we collect", "list": [
+        "What you enter in the form: your name, mobile number, email (if you give it), region, and details of the machine: type, make and model, year, hours or kms, whether there is finance owing, when you want it sold, and any photos you attach.",
+        "The same kind of details if you use a Smith Traders lead form on Facebook or Instagram.",
+        "Basic technical information, such as which ad or link brought you here. Where turned on, the Meta Pixel and Google Analytics set cookies to measure visits and form sends."
+      ] },
+      { "h": "Why we collect it", "p": "To contact you about selling your machine, give you a market appraisal and, if you go ahead, list and sell it. We also use it to measure which ads work. We don't sell your details or add you to a mailing list." },
+      { "h": "Who sees it", "list": [
+        "Smith Traders (Mitch and Nicky Smith).",
+        "LeadHive NZ, which runs this page, sends your enquiry to Mitch and manages the advertising.",
+        "The services that host this page and deliver the enquiry by email and text message.",
+        "Meta and Google receive limited event information, for example that a form was sent, to measure advertising. Where used for ad measurement, your phone number or email is sent in a scrambled (hashed) form. They do not receive your machine details."
+      ] },
+      { "h": "How long we keep it", "p": "As long as we need it to deal with your enquiry and any sale, and to meet legal and tax record-keeping requirements." },
+      { "h": "Your rights", "p": "Under the Privacy Act 2020 you can ask to see or correct the information we hold about you, or ask us to delete it. Email admin@smithtraders.co.nz or call {phone}. If you're not happy with our response, you can contact the Office of the Privacy Commissioner at privacy.org.nz." },
+      { "h": "Cookies", "p": "You can block or clear cookies in your browser settings. The form still works without them." }
+    ]
+  },
+  "footer": {
+    "links": [
+      { "t": "smithtraders.co.nz", "href": "site" },
+      { "t": "Trucks & machinery for sale", "href": "stock" },
+      { "t": "Privacy", "href": "?page=privacy" }
+    ],
+    "by": "Seller enquiries page for Smith Traders, run by LeadHive NZ."
+  }
+};
+/* ═══════════════ ▲ CONFIG ▲ ═══════════════ */
+
+/* ───────── TEMPLATE LOGIC — locked ───────── */
+(function(){
+  const $=id=>document.getElementById(id); const B=CONFIG.business; const F=CONFIG.form; const S=CONFIG.sections;
+  const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  const fill=(s,o)=>String(s).replace(/\{(\w+)\}/g,(m,k)=>o[k]!=null?o[k]:m);
+  const phoneSpan='<span data-phone-display></span>';
+
+  /* hours (NZ time) */
+  const parts=new Intl.DateTimeFormat("en-NZ",{timeZone:"Pacific/Auckland",hour:"numeric",hour12:false,weekday:"short"}).formatToParts(new Date());
+  const hr=(+parts.find(p=>p.type==="hour").value)%24;
+  const wd=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].indexOf(parts.find(p=>p.type==="weekday").value);
+  const H=CONFIG.hours; const open=H.days.includes(wd)&&hr>=H.open&&hr<H.close;
+  const when=(()=>{ if(H.days.includes(wd)&&hr<H.open) return "this morning";
+    for(let i=1;i<=7;i++){const d=(wd+i)%7; if(H.days.includes(d)) return i===1?"tomorrow":["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][d];} return "next working day"; })();
+
+  /* page key */
+  const q=new URLSearchParams(location.search);
+  const raw=(q.get("page")||"default").toLowerCase();
+  const isPrivacy=raw==="privacy";
+  const key=CONFIG.pages[raw]?raw:"default"; const P=CONFIG.pages[key];
+  document.body.dataset.view=isPrivacy?"privacy":"landing";
+
+  /* tracking — injected only when ids are set */
+  const T=CONFIG.tracking||{};
+  if(T.metaPixelId){
+    !function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init',T.metaPixelId); fbq('track','PageView');
+  }
+  if(T.ga4Id){
+    const s=document.createElement("script"); s.async=true; s.src="https://www.googletagmanager.com/gtag/js?id="+encodeURIComponent(T.ga4Id); document.head.appendChild(s);
+    window.dataLayer=window.dataLayer||[]; window.gtag=function(){dataLayer.push(arguments);}; gtag("js",new Date()); gtag("config",T.ga4Id,{page_title:document.title});
+  }
+  const track=(fbEvent,gaEvent,eventId,params)=>{ try{ if(window.fbq&&T.metaPixelId) fbq("track",fbEvent,{},eventId?{eventID:eventId}:undefined); if(window.gtag&&T.ga4Id) gtag("event",gaEvent,params||{}); }catch(_){} };
+
+  /* dev switcher (single-file preview only; not part of the Lovable build) */
+  if(location.protocol==="file:"||q.get("dev")==="1"){ const d=$("dev"); d.hidden=false; d.innerHTML="preview:"+Object.keys(CONFIG.pages).concat("privacy").map(k=>`<a href="?page=${k}${q.get("dev")?"&dev=1":""}">${k}</a>`).join(""); }
+
+  /* head */
+  document.title=(isPrivacy?CONFIG.privacy.title:P.title)+CONFIG.site.titleSuffix;
+  if(CONFIG.site.domain){ const l=document.createElement("link"); l.rel="canonical"; l.href="https://"+CONFIG.site.domain.replace(/^https?:\/\//,"").replace(/\/$/,"")+"/"+(isPrivacy?"?page=privacy":(key==="default"?"":"?page="+key)); document.head.appendChild(l); }
+
+  /* header */
+  const wordmark=()=>{ $("logo").innerHTML=`<span class="wm">${esc(B.initials)}</span>`; };
+  if(B.logoUrl){ const im=new Image(); im.alt=B.name+" logo"; im.onerror=wordmark; im.src=B.logoUrl; $("logo").appendChild(im); } else wordmark();
+  $("biz").textContent=B.name; $("cred").textContent=B.credential;
+
+  /* hero */
+  const img=CONFIG.images[P.image]||P.image;
+  if(img){ const t=$("top"); t.style.setProperty("--hero-img",`url("${img}")`); $("hero").style.setProperty("--hero-img",`url("${img}")`); }
+  $("eyebrow").textContent=P.eyebrow; $("h1").textContent=P.h1; $("lede").innerHTML=P.lede; $("cta-main").textContent=P.cta;
+  $("cta-call-lab").textContent="Call "+B.contact;
+  const st=$("status"); st.classList.toggle("open",open); $("status-text").textContent=fill(open?CONFIG.status.open:CONFIG.status.closed,{when});
+  if(CONFIG.trust&&CONFIG.trust.length) $("chips").innerHTML=CONFIG.trust.map(c=>`<div class="chip"><div class="v">${esc(c.v)}</div><div class="l">${esc(c.l)}</div></div>`).join(""); else $("chips").remove();
+
+  /* how it works */
+  if(CONFIG.steps&&CONFIG.steps.length){ $("h-how").textContent=S.how; $("sub-how").textContent=S.howSub; $("steps").innerHTML=CONFIG.steps.map(s=>`<li><b>${esc(s.t)}</b><p>${esc(s.d)}</p></li>`).join(""); if(S.keeps) $("keeps").textContent=S.keeps; else $("keeps").remove(); } else $("how").remove();
+
+  /* auction comparison */
+  const C=CONFIG.compare; const X='<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>', Y='<svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg>';
+  if(C&&C.auction&&C.us&&C.us.items.length){
+    const card=(c,cls,mk,ic)=>`<div class="cmp-card ${cls}"><h3>${esc(c.title)}</h3><ul>${c.items.map(i=>`<li><span class="mk ${mk}">${ic}</span><span>${esc(i.t)}${i.s?`<small>${esc(i.s)}</small>`:""}</span></li>`).join("")}</ul></div>`;
+    $("h-cmp").textContent=S.cmp; $("sub-cmp").textContent=S.cmpSub; $("cmp").innerHTML=card(C.auction,"cmp-a","x",X)+card(C.us,"cmp-b","y",Y); $("cmp-src").innerHTML=C.source||"";
+  } else $("auction").remove();
+
+  /* who we sell for + units */
+  $("h-who").textContent=S.who; $("sub-who").textContent=S.whoSub;
+  if(CONFIG.sectors&&CONFIG.sectors.length) $("sectors").innerHTML=CONFIG.sectors.map(s=>`<span class="tag">${esc(s)}</span>`).join(""); else $("sectors").remove();
+  if(CONFIG.clients&&CONFIG.clients.length){ const c=CONFIG.clients.map(n=>`<b>${esc(n)}</b>`); $("clients").innerHTML=`${esc(CONFIG.clientsLead)} ${c.slice(0,-1).join(", ")} and ${c.slice(-1)}.`; } else $("clients").remove();
+  const L=CONFIG.links;
+  if(CONFIG.units&&CONFIG.units.length){
+    $("h-units").textContent=S.units;
+    $("units").innerHTML=CONFIG.units.map(u=>`<a class="unit" href="${L.stock}" target="_blank" rel="noopener"><div class="ph">${u.img?`<img src="${u.img}" alt="${esc(u.t)}" loading="lazy" onerror="this.outerHTML='<span class=&quot;fb&quot;>'+this.alt+'</span>'">`:`<span class="fb">${esc(u.t)}</span>`}</div><div class="tx"><span class="k">${esc(u.k)}</span><span class="t">${esc(u.t)}</span></div></a>`).join("");
+    $("more").innerHTML=`<a class="btn btn-line" href="${L.stock}" target="_blank" rel="noopener">${esc(CONFIG.unitsMore)} →</a>`+(L.dealsOnWheels?`<a class="btn btn-line" href="${L.dealsOnWheels}" target="_blank" rel="noopener">${esc(CONFIG.unitsMoreAlt)} →</a>`:"");
+  } else $("units-wrap").remove();
+  if(!$("sectors")&&!$("clients")&&!$("units-wrap")) $("who").remove();
+
+  /* people */
+  if(CONFIG.people&&CONFIG.people.length){
+    $("faces").innerHTML=CONFIG.people.map(p=>`<div class="face"><div class="im">${p.photoUrl?`<img src="${p.photoUrl}" alt="${esc(p.name)}" loading="lazy" onerror="this.parentNode.textContent='${esc(p.name.split(" ").map(w=>w[0]).join(""))}'">`:esc(p.name.split(" ").map(w=>w[0]).join(""))}</div><b>${esc(p.name)}</b><small>${esc(p.role)}</small></div>`).join("");
+    $("pull").textContent=CONFIG.peoplePull; $("people-copy").textContent=CONFIG.peopleCopy; $("people-call").innerHTML=`<span>${esc(CONFIG.peopleCall)}</span><span class="num" data-phone-display></span>`;
+  } else $("people-sec").remove();
+
+  /* faq */
+  if(CONFIG.faq&&CONFIG.faq.length){ $("h-faq").textContent=S.faq; $("faq").innerHTML=CONFIG.faq.map(f=>`<details><summary>${esc(f.q)}</summary><p>${esc(f.a)}</p></details>`).join(""); $("faq-cta").textContent=S.faqCta; } else $("faq-sec").remove();
+
+  /* privacy */
+  const PV=CONFIG.privacy;
+  $("h-priv").textContent=PV.title; $("priv-upd").textContent=PV.updated; $("priv-back").textContent=PV.back;
+  $("priv-body").innerHTML=PV.sections.map(s=>`<h3>${esc(s.h)}</h3>`+(s.p?`<p>${fill(esc(s.p),{phone:phoneSpan})}</p>`:"")+(s.list?`<ul>${s.list.map(i=>`<li>${esc(i)}</li>`).join("")}</ul>`:"")).join("");
+  if(isPrivacy){ $("privacy").hidden=false; }
+
+  /* footer */
+  $("ft-co").textContent=B.legalName; $("ft-addr").textContent=B.address;
+  $("ft-email").textContent=B.email; $("ft-email").href="mailto:"+B.email;
+  $("ft-links").innerHTML=CONFIG.footer.links.map(l=>{ const h=L[l.href]||l.href; const ext=/^https?:/.test(h); return `<li><a href="${h}"${ext?' target="_blank" rel="noopener"':""}>${esc(l.t)}</a></li>`; }).join("");
+  $("ft-by").textContent=CONFIG.footer.by;
+  $("bar-call").textContent="Call "+B.contact; $("bar-form").textContent=F.barLabel;
+
+  /* ─── FORM ─── */
+  const form=$("enquiry");
+  $("f-step1").textContent=F.step1; $("f-step2").textContent=F.step2; $("f-h").textContent=F.heading; $("f-lede").textContent=F.lede; $("f-h2").textContent=F.heading2;
+  $("l-type").textContent=F.typeLabel; $("l-region").textContent=F.regionLabel; $("l-phone").textContent=F.phoneLabel;
+  $("f-types").innerHTML=F.machineTypes.map((t,i)=>`<label class="tile"><input type="radio" name="type" value="${esc(t)}" id="ty${i}"><span>${esc(t)}</span></label>`).join("");
+  $("f-region").innerHTML='<option value="">Choose a region</option>'+F.regions.map(r=>`<option>${esc(r)}</option>`).join("");
+  $("f-next").textContent=F.next+" →"; $("f-back").textContent="← "+F.back; $("f-fine1").innerHTML=F.fine1; $("f-fine2").innerHTML=F.fine2;
+  $("l-name").textContent=F.nameLabel; $("l-make").innerHTML=esc(F.makeLabel)+' <span class="opt">(optional)</span>'; $("f-make").placeholder=F.makePlaceholder;
+  $("l-year").innerHTML=esc(F.yearLabel)+' <span class="opt">(opt.)</span>'; $("f-year").max=new Date().getFullYear()+1; $("f-year").placeholder="e.g. 2015";
+  $("l-hours").innerHTML=esc(F.hoursLabel)+' <span class="opt">(opt.)</span>'; $("f-hours").placeholder=F.hoursPlaceholder;
+  $("l-finance").textContent=F.financeLabel; $("f-finance").innerHTML=F.finance.map((t,i)=>`<label class="tile"><input type="radio" name="finance" value="${esc(t)}"><span>${esc(t)}</span></label>`).join("");
+  $("l-when").textContent=F.whenLabel; $("f-when").innerHTML=F.timing.map(t=>`<label class="tile"><input type="radio" name="when" value="${esc(t)}"${P.whenDefault===t?" checked":""}><span>${esc(t)}</span></label>`).join("");
+  $("l-photos").innerHTML=esc(F.photosLabel)+' <span class="opt">(optional)</span>'; $("photo-btn").textContent=F.photosButton; $("photo-note").innerHTML=fill(esc(F.photosNote),{phone:phoneSpan});
+  $("l-email").innerHTML=esc(F.emailLabel)+' <span class="opt">(optional)</span>'; $("f-btn").textContent=F.button;
+  ["e-type","e-region","e-phone","e-name","e-year","e-email"].forEach(id=>{ const k={"e-type":"errType","e-region":"errRegion","e-phone":"errPhone","e-name":"errName","e-year":"errYear","e-email":"errEmail"}[id]; $(id).textContent=F[k]; });
+
+  const nzPhone=v=>{ let d=String(v).replace(/[^\d+]/g,""); if(d.startsWith("+64")) d="0"+d.slice(3); else if(d.startsWith("64")&&d.length>=10) d="0"+d.slice(2); if(/^02\d{7,9}$/.test(d)) return {local:d.slice(0,3)+" "+d.slice(3,6)+" "+d.slice(6),e164:"+64"+d.slice(1)}; if(/^0[3-9]\d{7}$/.test(d)) return {local:d.slice(0,2)+" "+d.slice(2,5)+" "+d.slice(5),e164:"+64"+d.slice(1)}; return null; };
+  const setBad=(id,bad)=>{ $(id).classList.toggle("bad",bad); return !bad; };
+  const radio=n=>{ const r=form.querySelector(`input[name="${n}"]:checked`); return r?r.value:""; };
+  const unbad=e=>{ const g=e.target.closest("#g-type,#g-region,#g-phone,#g-name,#g-year,#g-email"); if(g) g.classList.remove("bad"); };
+  form.addEventListener("change",unbad); form.addEventListener("input",unbad); /* clear errors while typing so the button does not jump under a tap */
+  const goForm=e=>{ if(isPrivacy) return; e.preventDefault(); $("form").scrollIntoView({behavior:matchMedia("(prefers-reduced-motion: reduce)").matches?"auto":"smooth",block:"start"}); };
+  document.querySelectorAll("[data-to-form]").forEach(a=>a.addEventListener("click",goForm));
+  if(isPrivacy) document.querySelectorAll("[data-to-form]").forEach(a=>a.setAttribute("href","?"));
+
+  const step=n=>{ $("step1").hidden=n!==1; $("step2").hidden=n!==2; $("form").scrollIntoView({block:"start"}); const f=n===2?$("f-name"):null; if(f) setTimeout(()=>f.focus({preventScroll:true}),60); };
+  $("f-next").addEventListener("click",()=>{
+    const ok=[setBad("g-type",!radio("type")), setBad("g-region",!$("f-region").value), setBad("g-phone",!nzPhone($("f-phone").value))].every(Boolean);
+    if(!ok){ const b=form.querySelector(".bad input,.bad select"); if(b) b.focus(); return; }
+    track("Contact","form_step_1"); step(2);
+  });
+  $("f-back").addEventListener("click",()=>step(1));
+  $("f-phone").addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); $("f-next").click(); } });
+
+  const files=$("f-photos");
+  files.addEventListener("change",()=>{ const n=files.files.length; const c=$("photo-count"); c.hidden=!n; c.textContent=n?(Math.min(n,F.photoMaxCount)+(n===1?" photo":" photos")+" added"+(n>F.photoMaxCount?` (first ${F.photoMaxCount} will be sent)`:"")):""; });
+
+  /* shrink phone photos to ~1600px JPEG so they fit the payload */
+  const shrink=file=>new Promise(res=>{ const url=URL.createObjectURL(file); const im=new Image();
+    im.onload=()=>{ try{ const m=1600, r=Math.min(1,m/Math.max(im.naturalWidth,im.naturalHeight)); const c=document.createElement("canvas"); c.width=Math.round(im.naturalWidth*r); c.height=Math.round(im.naturalHeight*r); c.getContext("2d").drawImage(im,0,0,c.width,c.height); URL.revokeObjectURL(url); res({name:file.name,type:"image/jpeg",data:c.toDataURL("image/jpeg",.8).split(",")[1]}); }catch(_){ URL.revokeObjectURL(url); res(null); } };
+    im.onerror=()=>{ URL.revokeObjectURL(url); const fr=new FileReader(); fr.onload=()=>res({name:file.name,type:file.type||"application/octet-stream",data:String(fr.result).split(",")[1]||""}); fr.onerror=()=>res(null); fr.readAsDataURL(file); };
+    im.src=url; });
+
+  form.addEventListener("submit",async e=>{
+    e.preventDefault();
+    if($("step2").hidden){ $("f-next").click(); return; }
+    const email=$("f-email").value.trim(), yr=$("f-year").value.trim(), maxY=new Date().getFullYear()+1;
+    const ok=[setBad("g-name",$("f-name").value.trim().length<2), setBad("g-year",!!yr&&(!/^\d{4}$/.test(yr)||+yr<1950||+yr>maxY)), setBad("g-email",!!email&&!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email))].every(Boolean);
+    if(!ok){ const b=form.querySelector(".bad input"); if(b) b.focus(); return; }
+    const btn=$("f-btn"), msg=$("f-msg"); btn.disabled=true; btn.textContent="Sending…"; msg.textContent="";
+    const ph=nzPhone($("f-phone").value); const type=radio("type"), region=$("f-region").value, make=$("f-make").value.trim(), hours=$("f-hours").value.trim(), finance=radio("finance"), timing=radio("when");
+    const leadId=(window.crypto&&crypto.randomUUID)?crypto.randomUUID():String(Date.now())+Math.random().toString(16).slice(2);
+    let photos=[], skipped=false, note="";
+    const list=Array.from(files.files||[]).slice(0,F.photoMaxCount);
+    if(list.length){ btn.textContent="Preparing photos…"; photos=(await Promise.all(list.map(shrink))).filter(Boolean);
+      const total=photos.reduce((a,p)=>a+p.data.length,0);
+      if(total>F.photoMaxBase64){ skipped=true; note=`${photos.length} photo(s) not sent: ${(total/1e6).toFixed(1)}MB is over the form limit. Ask the seller to text them to ${B.phone}.`; photos=[]; }
+      btn.textContent="Sending…"; }
+    const src={}; ["utm_source","utm_medium","utm_campaign","utm_content","utm_term","fbclid"].forEach(k=>{ if(q.get(k)) src[k]=q.get(k); });
+    const body={
+      name:$("f-name").value.trim(), phone:ph?ph.local:$("f-phone").value.trim(), suburb:region,
+      issue:[type, make, yr, hours, finance?"finance owing: "+finance:"", timing].filter(Boolean).join(" · "),
+      isUrgent: timing===F.timing[0],
+      leadId, phoneE164:ph?ph.e164:"", email, region, machineType:type, makeModel:make, year:yr?+yr:null, hoursKms:hours,
+      financeOwing:finance, timing, photos, photosSkipped:skipped, photosNote:note,
+      page:key, source:src, landingUrl:location.href, referrer:document.referrer||"", submittedAt:new Date().toISOString(), business:B.legalName
+    };
+    if($("f-company").value){ done(body.name,false); return; }
+    try{
+      const r=await fetch(F.endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}); if(!r.ok) throw 0;
+      track("Lead","generate_lead",leadId,{form_page:key}); done(body.name,skipped);
+    }catch(_){ msg.innerHTML=fill(esc(F.error),{phone:phoneSpan}); apply(); btn.disabled=false; btn.textContent=F.button; }
+  });
+  function done(name,skipped){
+    const first=esc((name||"").split(/\s+/)[0]||"thanks");
+    form.hidden=true; const d=$("done"); d.hidden=false;
+    d.innerHTML=`<div class="tickbig"><svg viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg></div><h3>${fill(esc(F.successTitle),{name:first})}</h3>`+
+      `<p>${fill(open?F.successOpen:F.successClosed,{phone:phoneSpan,when:esc(when),hours:esc(H.label)})}</p>`+
+      (skipped?`<p>${fill(esc(F.photosSkipped),{phone:phoneSpan})}</p>`:"")+
+      `<a class="btn btn-dark" href="#" data-phone-link data-call><span>${esc(F.successCall)}</span><span class="num" data-phone-display></span></a>`;
+    d.querySelector("[data-call]").addEventListener("click",()=>track("Contact","click_to_call"));
+    apply(); $("form").scrollIntoView({block:"start"});
+  }
+
+  /* call tracking */
+  document.querySelectorAll("[data-call]").forEach(a=>a.addEventListener("click",()=>track("Contact","click_to_call")));
+
+  /* ─── PHONE PROPAGATION — the attribution fix ─── */
+  const src=$("nb-source"); src.textContent=B.phone; src.dataset.fallback=B.phone;
+  const prefix="+64";
+  const toDial = s => { const d=s.replace(/[^\d+]/g,""); return d.startsWith("+")?d:(d.startsWith("0")?prefix+d.slice(1):d); };
+  function apply(){ const shown=(src.textContent||"").trim()||src.dataset.fallback; if(!shown) return; const dial=toDial(shown);
+    document.querySelectorAll("[data-phone-display]").forEach(el=>el.textContent=shown);
+    document.querySelectorAll("[data-phone-link]").forEach(el=>el.setAttribute("href","tel:"+dial)); }
+  apply(); new MutationObserver(apply).observe(src,{childList:true,characterData:true,subtree:true}); [300,900,2000,4000].forEach(t=>setTimeout(apply,t));
+})();
+</script>
+</body>
+</html>
