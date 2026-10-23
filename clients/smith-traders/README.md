@@ -187,3 +187,20 @@ lead ad angle; `sellmymachine.co.nz` covers trucks and diggers. The brand on the
   `event_id = leadId`.
 - Self-host Bebas Neue and Archivo, and re-host every image above.
 - The dev switcher (`#dev`) is preview-only; leave it out.
+
+## Ad stills (`ads/`)
+
+Three static creatives, one per lead ad angle, rendered at 1080x1350 (4:5 feed) and 1080x1080 (square).
+Built from `ads/ad-template.html` (`?ad=1|2|3&size=45|sq`) and rendered with `ads/render.js` (Playwright).
+The template expects the source photos in `ads/src/` (not committed): his Squarespace hero photos
+(`digger.webp`, `truck.webp`), the Tigercat 630 listing photo (`list3.jpg`) and `logo-750.png`. Logo is only
+270x230 at source; ask Mitch for a vector or larger PNG before scaling creative further.
+
+| File | Angle | Landing page key | Suggested primary text |
+|---|---|---|---|
+| `smith-traders-ad1-*` | Holding cost | `?page=default` | Parked up and still paying for it? Finance, insurance and depreciation don't stop when the machine does. Smith Traders sells trucks and machinery on your behalf, NZ-wide. Send the details and Mitch will call you. |
+| `smith-traders-ad2-*` | Keep it on contract | `?page=contract` | Keep it earning while we sell it. No yard, no auction, no downtime. Independent inspections, viewings arranged around your job, buyers in NZ and the Pacific. |
+| `smith-traders-ad3-*` | Anti-auction / downsizing | `?page=auction` | Downsizing the fleet? Don't fire-sale it at auction. You set the price, Mitch finds the buyer. Sold on behalf of NZ operators since 2011. |
+
+Headline field in Ads Manager: "Sell your truck or machine" / "Get a market appraisal" / "Talk to Mitch".
+Meta copy rule: talk about the machine, never the owner's finances.
