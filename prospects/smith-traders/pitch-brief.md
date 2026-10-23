@@ -110,3 +110,71 @@ Call him first, today. He enquired on a form, you are selling speed-to-lead, so 
 2. Check the Meta Ad Library by hand for "Smith Traders", "Turners", "Independent Equipment" and "Ritchie Bros" in NZ to confirm nobody is running seller ads. The research agent got a 403 and could not.
 3. If he is lukewarm on ads, build the free site mock-up as the hook, the same play that worked on Common Ground.
 4. Pipedrive returned "company account is not open" (402, trial expired) so this lead is not logged. Fix the account or log him somewhere else before he gets lost.
+
+---
+
+## 9. Three decisions (added after Joe's questions)
+
+### 9a. Which page the ads run from: Mitch's page, your ad account
+
+**Run the ads from the Smith Traders Facebook page, through a LeadHive-owned ad account.** Not from LeadHive's page and never from a personal profile (Meta does not allow ads from a profile anyway).
+
+Why: the seller is trusting "Smith Traders" with a $40k machine. An ad from LeadHive NZ asking them to sell their digger converts at a fraction of the rate and looks like a lead-reseller. The page is his face. The ad account, the pixel, the creative and the lead routing are yours. That split keeps you sticky (he cannot just take the campaign and run it himself) while the ads look exactly like they should.
+
+Setup, in order:
+1. **Business Portfolio.** business.facebook.com. Use the LeadHive NZ portfolio (create it if you only have a personal ad account). Verify the business while you are there; it lifts spend limits and reduces account flags.
+2. **Ad account.** Create "Smith Traders – Seller Leads" under the LeadHive portfolio. Currency NZD, time zone Pacific/Auckland, your card as the payment method. Ad spend is inside the package so billing stays with you. One client per ad account, always.
+3. **Page access.** Business settings → Accounts → Pages → Add → "Request access to a Page". Enter the Smith Traders 2010 Limited page. Ask for **Create ads** and **Manage content** (so you can post the landing page in the feed too). Mitch approves it from Business Suite → Settings → Page access, or from the notification Meta sends him. He must be an admin of the page, not an editor. If someone else set the page up years ago, that is the first thing to sort on the call.
+4. **Instagram.** If he has an account, link it to the page and request access the same way. If he does not, run Instagram placements anyway. Meta lets the page act as the Instagram identity.
+5. **Pixel / dataset.** Create it under the LeadHive portfolio, install it on the new site, and turn on Conversions API through Make or the site platform. Do not put it under his portfolio.
+6. **Instant Forms and lead access.** Forms belong to the page, so the leads are legally his, which is the right outcome. You need **Leads Access** granted to you: Business Suite → All tools → Instant Forms → Leads access (Mitch assigns you or the LeadHive business as a CRM user). Then Make.com "Facebook Lead Ads" trigger → SMS and email to Mitch → Google Sheet. Same pattern as your Nimbata flows.
+7. **Privacy policy URL.** Instant Forms will not publish without one. Put a privacy page on the new site in week one.
+8. **Policy check on the copy.** Meta's personal-attributes rule bans ads that imply the viewer's financial situation. "Parked up and still paying for it?" is about the machine, fine. "Downsizing the fleet?" fine. Do not run "Business going under?" or "Can't make the repayments?". That gets the account flagged.
+
+What to tell Mitch on the call: "Ads run from your Smith Traders page, so every seller sees your name. I run them from my ad account so you never touch Ads Manager or a card. You own the page and every lead. I own the build."
+
+### 9b. The package: one package, not the tradie tiers
+
+Joe's call, and it is the right one: do not reuse the tradesman packages. Different buyer, different platform, different economics. One number, one pilot.
+
+**LeadHive Seller Campaign (Meta)**
+- Setup $500, one-off: website rebuild, pixel and Conversions API, instant form, lead routing, four creatives, campaign build.
+- $2,000 a month, which includes about $1,000 of ad spend. Management, retargeting, creative refresh, monthly report.
+- 90-day pilot, then month to month.
+- NZ-wide exclusivity for truck and machinery brokerage.
+- Fallback if he will not do ads: website only at $500 + $20 a month. Keep that as a line, not a tier.
+
+Why $2,000 and not $1,500: nationwide B2B on Meta needs about $1,000 of spend to get out of the learning phase and test six angles. At $750 you would be testing two angles for a month and calling it a result. A $40k machine at a broker commission pays him $2k–$4k, so one listing sold a month still covers it.
+
+Name it and reuse it. This is your first non-tradie, Meta-first product. Next time a broker, a dealer, a hire company or a recruiter asks, the answer is "LeadHive Seller Campaign, $500 + $2,000". Build the Make flow and the Lovable page as a template the same way the handyman master works.
+
+### 9c. The video: record it before you send anything
+
+A Loom is your proven move and it is what your cold outreach skill is built on. For an inbound lead who has already raised his hand, it does two jobs: it proves you actually looked at his business, and it lets him forward it to Nicky, who is the other director and half the decision.
+
+**Format:** 4 to 5 minutes. Phone-to-camera for the first 20 seconds so he sees a face, then Loom screen share. Say his name in the first sentence. No slides. Finish with the one number and the call time.
+
+**Script**
+
+| Time | On screen | Say |
+|---|---|---|
+| 0:00–0:20 | You, to camera | "Mitch, Joe from LeadHive. You filled in the form about surplus truck and machinery leads. I spent a couple of hours on your business before calling you, so here's what I found and what I'd do." |
+| 0:20–1:10 | smithtraders.co.nz, then the Deals on Wheels feed | "Good business. Machine keeps working on contract while you sell it, you do the viewings, 76 units live, Pacific buyers. But everything here is where buyers look. There is nothing on this site for a seller: no sell-your-machine page, no form, no tracking. Last updated 2022. Sellers find you by word of mouth, which means you are capped by word of mouth." |
+| 1:10–1:50 | Proposal page, "Why now" tiles | "42% of civil firms cut staff last year, 768 construction companies liquidated in the year to March, gear sits unused half the time. Those owners are on Facebook tonight. I checked: nobody, not Turners, not Independent Equipment, is running an ad to them." (Only say this after you have checked the Ad Library yourself.) |
+| 1:50–3:00 | Proposal page ad mock-ups, then a Meta instant form preview in Ads Manager | "Here's the ad. Parked up and still paying for it? Keep it earning while Smith Traders sells it. It runs from your page, with your name. They fill in machine, year, hours, region, when they want it sold, photos. That lands on your phone as a text inside two minutes. Here's what that text looks like for one of my plumbers." (Show a real lead SMS from an existing client with the number blurred.) |
+| 3:00–3:40 | southmaintenance.co.nz on your phone | "Your site gets rebuilt as part of it, this is one I did last month. Five pages, a sell-your-machine page, your stock feed stays exactly as it is. I'm not building you a marketplace, Deals on Wheels already is one." |
+| 3:40–4:20 | Proposal page, Investment | "One package. $500 to build it, $2,000 a month with about a grand of that going straight into ads. 90-day pilot, you see every lead, you stop after that if it isn't paying for itself. One extra machine sold a month covers it. And I won't run this for another broker in NZ while you're on." |
+| 4:20–4:40 | You, to camera | "I'll call you tomorrow at ten. Page link is under this video. Cheers." |
+
+**Before you record:** check the Meta Ad Library for Turners, Independent Equipment, Ritchie Bros and Smith Traders in NZ so the "nobody is advertising" line is true when you say it. Have a real lead SMS screenshot ready. Put the Loom link in the email draft where it says [LOOM LINK].
+
+**Second video, later:** the ad creative itself. 30 seconds of Mitch walking around a listed machine at the yard, phone, captions. Get it on the onboarding visit. Do not shoot it until he has paid.
+
+### 9d. What you need from Mitch at onboarding
+- Admin access confirmation on the Smith Traders page, then approval of your partner request.
+- Instagram login or confirmation he has none.
+- Logo, 20–30 good photos of recent stock, any video he has.
+- Past buyer and seller contact list (CSV) for the custom audience.
+- How he charges, in one sentence, for the sell-your-machine page.
+- One consistent "years in the trade" number.
+- Three clients happy to be quoted: RJ Lincoln, McLeod Cranes, Regal Haulage are already named on his site.
