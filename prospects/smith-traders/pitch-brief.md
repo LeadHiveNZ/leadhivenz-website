@@ -23,7 +23,7 @@ So when he wrote "lead generation surplus truck and machinery", he means: **find
 
 ## 3. Risks you need to go in eyes open about
 
-- **Volume is unproven.** This is B2B on Meta in a small country. Published CPLs for industrial and commercial are US$36 to AUD$51 median, B2B datasets up to $145. Expect NZ$40–150 per raw seller lead. Do **not** promise 15–25 leads a month. Sell a 90-day pilot measured on appraisals booked and listings won.
+- **Volume is unproven.** This is B2B on Meta in a small country. Published CPLs for industrial and commercial are US$36 to AUD$51 median, B2B datasets up to $145. Expect NZ$40–150 per raw seller lead. Do **not** promise 15–25 leads a month. Sell a 30-day pilot measured on appraisals booked and listings won.
 - **$750 of ad spend is thin for nationwide B2B.** Recommend you push the $2,000 Growth tier ($1,000+ spend). If he baulks, run Starter but set expectations at 8–15 enquiries a month, not 20+.
 - **Meta is not your home turf.** Your skills and systems are Google Ads. Treat the build like a new product: pixel + Conversions API, instant forms, creative testing, lead routing. Budget your own time for it.
 - **Lead quality will be messy.** Expect private sellers with a $6k ute, tyre-kickers, and people who want a free valuation. The intake form has to qualify (commercial gear, approximate value, timeframe) and Mitch has to be fine with calling 10 to win 2.
@@ -31,7 +31,7 @@ So when he wrote "lead generation surplus truck and machinery", he means: **find
 
 ## 4. The offer
 
-Superseded by section 9b after Joe's call: one package, not tiers. **LeadHive Seller Campaign: $500 setup (seller landing page, pixel, forms, creatives, routing) + $2,000 a month including about $1,000 of ad spend.** 90-day pilot, then month to month. NZ-wide exclusivity for truck and machinery brokerage while he is a client.
+Superseded by section 9b after Joe's call: one package, not tiers. **LeadHive Seller Campaign: $500 setup (seller landing page, pixel, forms, creatives, routing) + $2,000 a month including about $1,000 of ad spend.** 30-day pilot, then month to month. NZ-wide exclusivity for truck and machinery brokerage while he is a client.
 
 **Marketplace: say no, politely.** He is not building one and does not need one. His stock already lives in the Deals on Wheels feed, embedded in his site as an iframe. The landing page links to it. Zero listing admin for you. If he ever asks for a real marketplace, that is a separate quote with ongoing dev and moderation and you should price it so you do not want to win it.
 
@@ -60,7 +60,7 @@ Facebook groups (NZ earthmoving, diggers for sale, trucking) cannot be targeted.
 
 **Lead handling:** instant SMS and email to Mitch on every form (your Make.com flow), plus a weekly sheet. Speed-to-lead target under 15 minutes in business hours. Agree up front that he calls every lead the same day; if he will not, do not run the campaign.
 
-**KPIs for the 90-day pilot:** cost per raw lead, % qualified (commercial gear worth $15k+), appraisals booked, listings won, units sold. The number that matters to him is listings won. Report it monthly with your lead-report skill.
+**KPIs for the 30-day pilot:** cost per raw lead, % qualified (commercial gear worth $15k+), appraisals booked, listings won, units sold. The number that matters to him is listings won. Report it monthly with your lead-report skill.
 
 ## 6. The landing page (decided: standalone page, not his website)
 
@@ -89,11 +89,11 @@ Call him first, today. He enquired on a form, you are selling speed-to-lead, so 
 - *"Facebook doesn't work for B2B."* Your sellers are owner-operators and small fleet owners scrolling Facebook at 9pm like everyone else. The ad shows a digger and says "parked up?". Nobody else in NZ is running that ad.
 - *"Turners / Independent Equipment."* Neither is advertising to sellers on Meta. First one in owns the feed. Your edge over them is the machine keeps earning; the ad says exactly that.
 - *"I get enough from Deals on Wheels."* Deals on Wheels is where buyers look. It brings you zero sellers.
-- *"What's the guarantee?"* No lead-count guarantee on a new niche and I will not pretend otherwise. 90-day pilot, you see every lead, you cancel after that if it is not paying for itself. One extra sale a month covers it.
-- *"Too expensive."* Drop to Starter, keep the setup at $500, hold the 90 days.
+- *"What's the guarantee?"* No lead-count guarantee on a new niche and I will not pretend otherwise. 30-day pilot, you see every lead, you cancel after that if it is not paying for itself. One extra sale a month covers it.
+- *"Too expensive."* Drop to Starter, keep the setup at $500, hold the 30 days.
 - *"Can you build me a marketplace?"* No. Your Deals on Wheels feed already does that and buyers already use it. Spend the money on sellers.
 
-**Close:** "Let's run it for 90 days on Growth. I build the page and the pixel this week, ads live within 10 working days. Setup is $500 today, first month on launch."
+**Close:** "Let's run it for 30 days on Growth. I build the page and the pixel this week, ads live within 10 working days. Setup is $500 today, first month on launch."
 
 ## 8. Next 48 hours
 
@@ -131,7 +131,7 @@ Joe's call, and it is the right one: do not reuse the tradesman packages. Differ
 **LeadHive Seller Campaign (Meta)**
 - Setup $500, one-off: seller landing page (own domain, his branding, you host it), pixel and Conversions API, instant form, lead routing, four creatives, campaign build.
 - $2,000 a month, which includes about $1,000 of ad spend. Management, retargeting, creative refresh, monthly report.
-- 90-day pilot, then month to month.
+- 30-day pilot, then month to month.
 - NZ-wide exclusivity for truck and machinery brokerage.
 - No website-only fallback. If he only wants a website, quote it separately or pass.
 
@@ -154,7 +154,7 @@ A Loom is your proven move and it is what your cold outreach skill is built on. 
 | 1:10–1:50 | Proposal page, "Why now" tiles | "42% of civil firms cut staff last year, 768 construction companies liquidated in the year to March, gear sits unused half the time. Those owners are on Facebook tonight. I checked: nobody, not Turners, not Independent Equipment, is running an ad to them." (Only say this after you have checked the Ad Library yourself.) |
 | 1:50–3:00 | Proposal page ad mock-ups, then a Meta instant form preview in Ads Manager | "Here's the ad. Parked up and still paying for it? Keep it earning while Smith Traders sells it. It runs from your page, with your name. They fill in machine, year, hours, region, when they want it sold, photos. That lands on your phone as a text inside two minutes. Here's what that text looks like for one of my plumbers." (Show a real lead SMS from an existing client with the number blurred.) |
 | 3:00–3:40 | The Smith Traders seller page on your phone | "This is where the ad lands. Your name, your number, one form, links back to your site and your stock. I host it, you don't touch it. I'm not building you a marketplace, Deals on Wheels already is one." |
-| 3:40–4:20 | Proposal page, Investment | "One package. $500 to build it, $2,000 a month with about a grand of that going straight into ads. 90-day pilot, you see every lead, you stop after that if it isn't paying for itself. One extra machine sold a month covers it. And I won't run this for another broker in NZ while you're on." |
+| 3:40–4:20 | Proposal page, Investment | "One package. $500 to build it, $2,000 a month with about a grand of that going straight into ads. 30-day pilot, you see every lead, you stop after that if it isn't paying for itself. One extra machine sold a month covers it. And I won't run this for another broker in NZ while you're on." |
 | 4:20–4:40 | You, to camera | "I'll call you tomorrow at ten. Page link is under this video. Cheers." |
 
 **Before you record:** check the Meta Ad Library for Turners, Independent Equipment, Ritchie Bros and Smith Traders in NZ so the "nobody is advertising" line is true when you say it. Have a real lead SMS screenshot ready. Put the Loom link in the email draft where it says [LOOM LINK].
