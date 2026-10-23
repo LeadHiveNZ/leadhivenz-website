@@ -122,7 +122,11 @@ function calcUpdate(instant) {
   $('#resultPurity').textContent = `${label} ${PRICES[calc.metal].name.toLowerCase()}`;
   $('#resultSpot').textContent = `A$${fmt(audOz(calc.metal), 2)}`;
   $('#resultFx').textContent = fmt(PRICES.fx, 4);
-  gsap.to(shown, { v, duration: instant ? 0.3 : 0.9, ease: 'power3.out', overwrite: true, onUpdate: () => { resultNum.textContent = fmt(shown.v, shown.v < 1000 ? 2 : 0); } });
+  const box = resultNum.parentElement;
+  gsap.to(shown, { v, duration: instant ? 0.3 : 0.9, ease: 'power3.out', overwrite: true, onUpdate: () => {
+    const txt = fmt(shown.v, shown.v < 1000 ? 2 : 0); resultNum.textContent = txt;
+    const n = txt.replace(/[^0-9]/g, '').length; box.classList.toggle('len-8', n >= 8); box.classList.toggle('len-6', n >= 6 && n < 8);
+  } });
 }
 $$('#metalChips .chip').forEach((b) => b.addEventListener('click', () => {
   $$('#metalChips .chip').forEach((c) => c.classList.remove('on')); b.classList.add('on');
