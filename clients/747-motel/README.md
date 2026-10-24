@@ -9,13 +9,22 @@ the handyman template; this is a full motel site (rooms, offers, car hire, locat
 
 | File | What |
 |---|---|
-| `index.html` | the whole site, one self-contained file (inline CSS/JS, Google Fonts only) |
+| `index.html` | Home: hero, trust strip, availability widget, offers, rooms/car-hire tiles, guest segments, reviews, contact |
+| `rooms.html` | Rooms & rates (all nine studios), availability widget, amenities |
+| `offers.html` | The three offers plus the availability widget |
+| `car-hire.html` | 747 Car Hire: how it works, the nine pick-up/drop-off locations, quote form |
+| `gallery.html` | Photo grid with lightbox |
+| `location.html` | Address, distances, Google map, who stays with us |
+| `reviews.html` | Booking.com score block and guest quotes |
+| `contact.html` | Phone, mobile, email, enquiry form, FAQ (with FAQPage JSON-LD) |
+| `css/style.css`, `js/main.js` | shared styles and behaviour (menu, booking widget, modal, lightbox, reveal) |
 | `img/` | the motel's own photos (current site + the Booking.com photo set), renamed and optimised, plus `logo.png` |
 | `FACTS.md` | every fact used on the page with its source, and what is unconfirmed |
-| `screens/` | mobile (390px) and desktop (1440px) full-page renders |
+| `screens/` | full-page renders: `desktop.png`/`mobile.png` are the original one-page build; `pages/` has every page at 1440px and 390px |
 
-Open `index.html` in a browser to preview. Forms and the booking widget are visual only and show a
-"preview" notice on submit.
+Open `index.html` in a browser to preview; all pages link to each other with relative paths, so the
+folder can be dropped on any static host as-is. Forms and the booking widget are visual only and
+show a "preview" notice on submit. The original single-page build is in git history (commit 6efad42).
 
 ## What was reproduced from the current site (747motel.co.nz)
 
