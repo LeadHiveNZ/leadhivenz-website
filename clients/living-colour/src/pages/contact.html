@@ -16,9 +16,8 @@ priority: 0.9
     <div class="form-card reveal" id="quote-form">
       <h3>Request your free quote</h3>
       <p>Fields marked optional can be left blank. We&rsquo;ll only use your details to respond to your enquiry.</p>
-      <form class="form" name="quote" method="POST" action="/thanks/" enctype="multipart/form-data" data-netlify="true" netlify-honeypot="bot-field">
-        <input type="hidden" name="form-name" value="quote">
-        <p class="hp"><label>Leave this empty <input name="bot-field" tabindex="-1" autocomplete="off"></label></p>
+      <form class="form" name="quote" method="POST" action="https://formsubmit.co/info@livingcolourltd.co.nz" enctype="multipart/form-data">
+        <input type="hidden" name="_subject" value="New quote request from livingcolourltd.co.nz"><input type="hidden" name="_next" value="https://livingcolourltd.co.nz/thanks/"><input type="hidden" name="_template" value="table"><input type="hidden" name="_captcha" value="false"><input type="text" name="_honey" style="display:none" tabindex="-1" autocomplete="off">
         <div class="field"><label for="c-name">Name</label><input id="c-name" name="name" autocomplete="name" required></div>
         <div class="field"><label for="c-phone">Phone</label><input id="c-phone" name="phone" type="tel" autocomplete="tel" required></div>
         <div class="field"><label for="c-email">Email</label><input id="c-email" name="email" type="email" autocomplete="email" required></div>

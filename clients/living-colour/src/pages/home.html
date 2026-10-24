@@ -257,9 +257,8 @@ cta: no
     <div class="form-card reveal reveal-d1">
       <h3>Request a free quote</h3>
       <p>It takes about a minute. We&rsquo;ll never share your details.</p>
-      <form class="form" name="quick-quote" method="POST" action="/thanks/" data-netlify="true" netlify-honeypot="bot-field">
-        <input type="hidden" name="form-name" value="quick-quote">
-        <p class="hp"><label>Leave this empty <input name="bot-field" tabindex="-1" autocomplete="off"></label></p>
+      <form class="form" name="quick-quote" method="POST" action="https://formsubmit.co/info@livingcolourltd.co.nz">
+        <input type="hidden" name="_subject" value="New quick quote request from livingcolourltd.co.nz"><input type="hidden" name="_next" value="https://livingcolourltd.co.nz/thanks/"><input type="hidden" name="_template" value="table"><input type="hidden" name="_captcha" value="false"><input type="text" name="_honey" style="display:none" tabindex="-1" autocomplete="off">
         <div class="field"><label for="q-name">Name</label><input id="q-name" name="name" autocomplete="name" required></div>
         <div class="field"><label for="q-phone">Phone</label><input id="q-phone" name="phone" type="tel" autocomplete="tel" required></div>
         <div class="field"><label for="q-email">Email</label><input id="q-email" name="email" type="email" autocomplete="email" required></div>

@@ -158,3 +158,7 @@ At the client's request the site does not name the owner at all outside customer
 ## Photos: all client-owned (update)
 
 Every image slot now holds one of Living Colour's own job photos; no stock photos remain. ba6 (kitchen) and ba7 (1970s exterior) were supplied at low resolution (about 1000px), so they are used only in the small slider cards and should be replaced with full-size originals if the client has them.
+
+## Forms now go through FormSubmit (not Netlify Forms)
+
+Netlify charges for form email notifications, so both forms POST directly to `https://formsubmit.co/info@livingcolourltd.co.nz` (free, no account, photo attachments included). Hidden fields set the email subject, the redirect to `/thanks/`, a table layout and a honeypot (`_honey`). **First-time activation:** the first submission triggers an "Activate form" email to info@livingcolourltd.co.nz; the client must click it once, after which every submission is delivered. To hide the address from scrapers, FormSubmit gives a random alias after activation; swap it into both `action` attributes if wanted. Netlify form detection can be left on or off; it no longer matters.
