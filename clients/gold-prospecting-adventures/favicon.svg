@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-labelledby="t">
+  <title id="t">Gold Prospecting Adventures</title>
+  <defs>
+    <linearGradient id="metal" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#E6B84A"/><stop offset=".45" stop-color="#C9972B"/><stop offset="1" stop-color="#8C6418"/>
+    </linearGradient>
+    <linearGradient id="nugget" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FFE08A"/><stop offset=".5" stop-color="#E6B84A"/><stop offset="1" stop-color="#A9781E"/>
+    </linearGradient>
+    <linearGradient id="handle" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#7A5230"/><stop offset=".5" stop-color="#A8774A"/><stop offset="1" stop-color="#6A4426"/>
+    </linearGradient>
+    <linearGradient id="goldText" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#E6B84A"/><stop offset=".55" stop-color="#C9972B"/><stop offset="1" stop-color="#A9781E"/>
+    </linearGradient>
+    <radialGradient id="disc" cx=".5" cy=".42" r=".62">
+      <stop offset="0" stop-color="#7B5332"/><stop offset=".7" stop-color="#5A3A22"/><stop offset="1" stop-color="#3E2817"/>
+    </radialGradient>
+    <radialGradient id="rim" cx=".5" cy=".5" r=".5">
+      <stop offset=".6" stop-color="#3A2717"/><stop offset=".92" stop-color="#2B1D12"/><stop offset="1" stop-color="#1f150c"/>
+    </radialGradient>
+    
+  </defs>
+  <clipPath id="clipDisc"><circle cx="64" cy="64" r="54"/></clipPath>
+  <circle cx="64" cy="64" r="63" fill="#1B140E"/>
+  <circle cx="64" cy="64" r="60" fill="url(#metal)"/>
+  <circle cx="64" cy="64" r="55" fill="#2B1D12"/>
+  <g clip-path="url(#clipDisc)">
+    <rect x="0" y="0" width="128" height="44" fill="#64412A"/>
+    <rect x="0" y="44" width="128" height="42" fill="#5A3A22"/>
+    <rect x="0" y="86" width="128" height="42" fill="#6B4629"/>
+    <path d="M0 44 H128 M0 86 H128" stroke="#20150c" stroke-width="2"/>
+    
+    <circle cx="64" cy="64" r="54" fill="url(#disc)" opacity=".5"/>
+  </g>
+  <circle cx="64" cy="64" r="54.5" fill="none" stroke="#1B140E" stroke-width="2"/>
+  <g transform="translate(64 70) scale(0.305)">
+  <g stroke="#1B140E" stroke-width="7" stroke-linejoin="round" stroke-linecap="round">
+    <g transform="translate(0 -18) rotate(-40)">
+      <rect x="-6.5" y="-70" width="13" height="196" rx="5" fill="url(#handle)"/>
+      <rect x="-21" y="118" width="42" height="13" rx="5" fill="url(#handle)"/>
+      <path d="M-9 -50 L9 -50 L13 -72 L-13 -72 Z" fill="#8C6418"/>
+      <path d="M-34 -68 L34 -68 L35 -122 Q35 -152 0 -176 Q-35 -152 -35 -122 Z" fill="url(#metal)"/>
+      <path d="M0 -78 L0 -150" stroke="#8C6418" stroke-width="6.3" fill="none"/>
+      <path d="M-24 -78 L-25 -120 Q-25 -140 -6 -158" stroke="#E6B84A" stroke-width="5.6000000000000005" fill="none" opacity=".7"/>
+    </g>
+    <g transform="translate(0 -18) rotate(40)">
+      <rect x="-7" y="-116" width="14" height="242" rx="6" fill="url(#handle)"/>
+      <path d="M-104 -88 Q-54 -134 0 -138 Q54 -134 104 -88 Q54 -114 0 -110 Q-54 -114 -104 -88 Z" fill="url(#metal)"/>
+      <rect x="-13" y="-134" width="26" height="30" rx="4" fill="#8C6418"/>
+      <path d="M-80 -104 Q-40 -126 0 -128" stroke="#E6B84A" stroke-width="5.6000000000000005" fill="none" opacity=".7"/>
+    </g>
+    <!-- pan -->
+    <path d="M-100 50 Q-88 104 0 106 Q88 104 100 50 Z" fill="#8C6418"/>
+    <ellipse cx="0" cy="50" rx="100" ry="42" fill="url(#metal)"/>
+    <ellipse cx="0" cy="46" rx="86" ry="33" fill="#24180f" stroke-width="5.6000000000000005"/>
+    <ellipse cx="0" cy="54" rx="56" ry="20" fill="#3a2a1b" stroke="none"/>
+    <path d="M-86 46 A86 33 0 0 1 86 46" fill="none" stroke="#E6B84A" stroke-width="4.8999999999999995" opacity=".55"/>
+    <g stroke="none">
+      <ellipse cx="-30" cy="58" rx="7" ry="4.2" fill="#7d776c"/>
+      <ellipse cx="-16" cy="64" rx="5" ry="3.2" fill="#5f5a51"/>
+      <ellipse cx="-42" cy="50" rx="4.5" ry="3" fill="#8f897d"/>
+      <ellipse cx="30" cy="62" rx="5.5" ry="3.4" fill="#6e6a62"/>
+      <ellipse cx="-4" cy="44" rx="4" ry="2.6" fill="#7d776c"/>
+      <circle cx="-22" cy="48" r="2.2" fill="#E6B84A"/>
+      <circle cx="-8" cy="58" r="1.8" fill="#E6B84A"/>
+      <circle cx="40" cy="52" r="2" fill="#E6B84A"/>
+      <circle cx="22" cy="44" r="1.5" fill="#E6B84A"/>
+      <circle cx="-34" cy="66" r="1.5" fill="#E6B84A"/>
+    </g>
+    <path d="M2 52 L10 42 L24 40 L33 47 L31 58 L20 64 L7 62 Z" fill="url(#nugget)" stroke-width="5.6000000000000005"/>
+    <path d="M11 46 L22 44 L27 49" fill="none" stroke="#fff3c4" stroke-width="5.6000000000000005" opacity=".85"/>
+  </g></g>
+</svg>

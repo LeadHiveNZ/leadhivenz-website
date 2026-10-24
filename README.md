@@ -12,6 +12,9 @@ clients/
     northland-handyman-master.html
     README.md                   routes, data sources, pre-launch checks
     screens/                    rendered previews of each page
+  gold-prospecting-adventures/  Gold Prospecting Adventures (Ian Lawson), Murchison NZ
+    index.html + 4 pages        5-page rustic brochure site (not a lead-gen template: own CSS/JS)
+    README.md                   confirm-with-Ian list, photo/logo/domain swap, SEO notes
 ```
 
 Preview any client file directly in a browser; add `?page=<key>` to view a service page.
