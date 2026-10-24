@@ -78,38 +78,57 @@ with `<!-- CONFIRM WITH IAN -->` are the ones most likely to need a wording chan
 12. **Drive times** are the approximate figures from the brief: Westport ~1h20, Nelson ~1h45,
     Hanmer Springs ~2h15, Blenheim/Picton ~2h30 (Picton a bit longer), Christchurch ~4h.
 13. **Geo coordinates** in the JSON-LD are Murchison township (-41.8036, 172.3263), not the house.
-14. **Photo of the house.** `homestead.jpg` is currently a bush-and-river landscape, NOT his house.
-    The stay page hero is written as "Your base in the hills" so it works with a landscape, but
-    we need a real photo of the house/verandah (and ideally Ian on the river) before launch.
+14. **Photo of the house (still needed).** Ian's river and gold photos are now in, but
+    `homestead.jpg` (stay page hero) is still a Commons bush-and-river landscape, NOT his house.
+    The hero reads "Your base in the hills" so it works with a landscape until he sends a
+    photo of the house/verandah. A photo of Ian himself on the river would also help.
+15. **Guests in photos (NEW).** `ian-guest-panning.jpg` and `ian-nugget-in-hand.jpg` show guests'
+    faces (home cards, adventure gallery). Ian must confirm both guests are happy to appear on
+    the website. If not, swap in `ian-pan-in-creek.jpg` / `ian-gold-flakes.jpg`.
+16. **Gallery wording.** The adventure page "From the pan" gallery says "Real finds from recent
+    trips. No two pans are the same." and captions one photo "A good day's pan". Confirm the
+    gold shown really came from his trips; the copy makes no promise about results.
 
 ## Swapping the photos, logo and domain
 
-**Photos.** All photos are placeholders from Wikimedia Commons; sources, authors and licences are
-in [`assets/img/PHOTO-CREDITS.md`](assets/img/PHOTO-CREDITS.md). Several are CC BY / CC BY-SA, so the
-footer carries a small "Photo credits" line on every page. To swap a photo, overwrite the file
-with the same name (16:9, about 1920x1080, JPEG under ~400 KB) and update its `alt` text in the
-HTML. When all CC BY / CC BY-SA images have been replaced with Ian's own photos, delete the
-`<p class="credits">` line from the footer of each page. If a photo file is missing, the frame
+**Photos.** The gold, river and guest photos (`ian-*.jpg`) are Ian's own. The landscapes,
+lamp, sluice box and heritage postcards are still placeholders from Wikimedia Commons. Sources,
+authors and licences for everything are in
+[`assets/img/PHOTO-CREDITS.md`](assets/img/PHOTO-CREDITS.md). Several Commons images are
+CC BY / CC BY-SA, so the footer carries a small "Photo credits" line on every page; if a credited
+photo is removed, take that author's name out of the line too. To swap a photo, overwrite the
+file with the same name (same orientation; JPEG under ~500 KB) and update its `alt` text in the
+HTML. When all CC BY / CC BY-SA images have been replaced, delete the `<p class="credits">` line
+from the footer of each page. If a photo file is missing, the frame
 shows a tinted background with a faint logo instead of a broken image.
 
 Current placements:
 
 | File | Used on |
 |---|---|
+| **Ian's own** | |
+| ian-nugget-in-hand.jpg (3:4) | Home card 1 "Learn to pan", Adventure "From the pan" gallery |
+| ian-guest-panning.jpg (3:4) | Home card 2 "Work the rivers" |
+| ian-robin-pan.jpg (3:4) | Home "Stay with Ian" teaser, Adventure gallery |
+| ian-bush-creek-wide.jpg (16:9) | Adventure hero |
+| ian-nugget-pile-wide.jpg (4:3) | Adventure intro "Real rivers, real gravel, real gold" |
+| ian-gold-flakes.jpg, ian-gravel-gold.jpg (3:4) | Adventure gallery |
+| ian-pan-in-creek.jpg (3:4) | Adventure "Who it suits" |
+| ian-bush-creek.jpg (3:4) | Stay intro |
+| ian-nugget-pile.jpg (3:4) | Contact, next to the phone sign |
+| ian-*-wide spares (guest-panning, pan-in-creek, gold-flakes) | Not used yet |
+| **Commons placeholders** | |
 | hero-river.jpg | Home hero, Open Graph / Twitter image on every page |
-| gold-pan.jpg | Home card 1, Adventure "who it suits" |
-| panning-action.jpg | Home card 2, Adventure hero |
-| sluice-box.jpg | Home card 3 |
-| homestead.jpg (placeholder landscape) | Home "Stay with Ian", Stay hero |
-| buller-panorama.jpg | Home full-width band, Stay intro, Contact hero |
+| sluice-box.jpg | Home card 3 "Hear the old yarns" (heritage) |
+| homestead.jpg (landscape, not the house) | Stay hero |
+| buller-panorama.jpg | Home full-width band, Contact hero |
 | murchison-valley.jpg | Getting Here hero, Contact location |
 | lewis-pass-river.jpg | Getting Here "What the drive is like" |
-| nuggets.jpg | Adventure intro |
-| lamp-evening.jpg | Stay "Evenings on the verandah", Contact |
+| lamp-evening.jpg | Stay "Evenings on the verandah" |
 | heritage-coach.jpg, heritage-gorge.jpg | Home heritage postcards; Adventure history (gorge) |
 
-`gold-pan.jpg`, `sluice-box.jpg` and `lamp-evening.jpg` are portrait shots padded to 16:9, so
-they are shown in portrait (3:4) frames. Ian's own photos can be any orientation.
+`sluice-box.jpg` and `lamp-evening.jpg` are portrait shots padded to 16:9, so they are shown
+in portrait (3:4) frames. Every photo slot sets its frame ratio (`--ar`) to match the file.
 
 **Logo.** Replace `assets/img/logo.svg` (full badge, square) and `assets/img/logo-mark.svg`
 (square, reads at 46px) with the final artwork, keeping the file names; also update
@@ -150,4 +169,4 @@ use `.html` URLs so they work on any host without rewrite rules.
 - Every internal `href`/`src` and every CSS `url()` resolves; no duplicate ids; HTML tags
   balance; all JSON-LD parses; titles/descriptions within length (Python checker).
 - No horizontal scroll at 320, 375, 390 and 1440 px.
-- Rendered at 390x844 and 1440x900 with Playwright; see `screens/`.
+- First screen of every page rendered at 390x844 and 1440x900 with Playwright; see `screens/`.
