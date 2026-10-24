@@ -6,7 +6,7 @@
   <title>Book Gold Panning in Murchison | Call Ian 022 533 5445</title>
   <meta name="description" content="Book a gold panning stay in Murchison, New Zealand. Call Ian Lawson on 022 533 5445 to talk through dates, prices and group size. Bookings by phone.">
   <link rel="canonical" href="https://www.goldprospectingadventures.co.nz/contact.html">
-  <meta name="theme-color" content="#2B1D12">
+  <meta name="theme-color" content="#F3EEE4">
   <meta name="format-detection" content="telephone=yes">
   <meta name="geo.region" content="NZ-TAS">
   <meta name="geo.placename" content="Murchison">
@@ -30,8 +30,13 @@
   <link rel="apple-touch-icon" href="assets/img/logo-mark.svg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&amp;family=Lora:ital,wght@0,400;0,600;1,400&amp;family=Rye&amp;display=swap">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,300..600,0..100,0..1;1,9..144,300..500,0..100,0..1&amp;family=Inter:wght@400;500;600&amp;display=swap">
   <link rel="stylesheet" href="assets/css/style.css">
+  <script>
+    /* Enquiry form. Leave formEndpoint empty to submit the form natively (Netlify Forms picks it up).
+       Set it to a URL, e.g. LeadHive's "/api/public/enquiry" route, to send the enquiry as JSON instead. See README. */
+    window.GPA_CONFIG = { formEndpoint: "" };
+  </script>
   <script src="assets/js/main.js" defer></script>
   <script type="application/ld+json">
 {
@@ -76,7 +81,7 @@
 </svg>
 <a class="skip-link" href="#main">Skip to content</a>
 
-<header class="site-header wood">
+<header class="site-header">
   <div class="container">
     <a class="brand" href="index.html" aria-label="Gold Prospecting Adventures, home">
       <img src="assets/img/logo-mark.svg" alt="" width="46" height="46">
@@ -85,7 +90,7 @@
     <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="site-nav">
       <span class="bars" aria-hidden="true"><span></span><span></span><span></span></span><span class="nav-toggle-label">Menu</span>
     </button>
-    <nav class="site-nav wood" id="site-nav" aria-label="Main">
+    <nav class="site-nav" id="site-nav" aria-label="Main">
       <ul>
           <li><a href="index.html">Home</a></li>
           <li><a href="the-adventure.html">The Adventure</a></li>
@@ -109,70 +114,116 @@
       <img src="assets/img/buller-panorama.jpg" alt="Morning mist along the Buller River below a bush-covered peak" width="1920" height="1080" fetchpriority="high">
     </div>
     <div class="container">
-      <div class="plank-sign wood planks nailed">
+      <div class="page-hero-text">
         <nav class="crumbs" aria-label="Breadcrumb">
           <ol><li><a href="index.html">Home</a></li><li><span aria-current="page">Contact</span></li></ol>
         </nav>
         <h1 id="page-title">Call Ian</h1>
-        <p>No forms, no booking system. Just a phone call with the man who will take you panning.</p>
+        <p>The quickest way to book is a phone call with the man who will take you panning. Prefer to write? <a href="#enquiry">Send an enquiry</a>.</p>
       </div>
     </div>
   </section>
 
-  <section class="section paper torn-top" aria-labelledby="phone-title">
+  <section class="section tone-cream" aria-labelledby="phone-title">
     <div class="container contact-top">
-      <div class="phone-sign wood planks nailed">
-        <p class="sign-place"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-star"/></svg><span>Gold Prospecting Adventures</span><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-star"/></svg></p>
+      <div class="phone-sign tone-dark">
+        <p class="sign-place">Gold Prospecting Adventures</p>
         <h2 id="phone-title">Ring Ian Lawson</h2>
         <a class="big-phone" href="tel:+64225335445">022 533 5445</a>
+        <p class="phone-sign-note">Bookings, dates and prices, all by phone.</p>
         <div class="hero-ctas">
           <a class="btn btn--big" href="tel:+64225335445"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-phone"/></svg><span>Call Ian <span class="btn-num">022 533 5445</span></span></a>
-          <a class="btn btn--ghost" href="sms:+64225335445">Or send Ian a text</a>
+          <a class="btn btn--ghost btn--on-dark" href="sms:+64225335445">Or send Ian a text</a>
         </div>
       </div>
+      <div class="enquiry-card" id="enquiry">
+        <p class="kicker">Prefer to write?</p>
+        <h2 id="enquiry-title" class="enquiry-title">Send an enquiry</h2>
+        <p class="enquiry-intro">Tell Ian when you would like to come and how many of you there are, and he will get back to you with dates and prices.</p>
+        <form class="enquiry" method="POST" action="contact.html?sent=1" data-netlify="true" name="enquiry" netlify-honeypot="company" aria-labelledby="enquiry-title">
+          <input type="hidden" name="form-name" value="enquiry">
+          <input type="hidden" name="page" value="Contact">
+          <p class="enq-hp" aria-hidden="true"><label>Leave this field empty <input type="text" name="company" tabindex="-1" autocomplete="off"></label></p>
+          <p class="enq-required"><span aria-hidden="true">*</span> Required</p>
+          <div class="enq-grid">
+            <div class="field">
+              <label for="enq-name">Name <span class="req" aria-hidden="true">*</span></label>
+              <input id="enq-name" name="name" type="text" autocomplete="name" maxlength="120" required aria-describedby="enq-name-err">
+              <p class="field-error" id="enq-name-err"></p>
+            </div>
+            <div class="field">
+              <label for="enq-phone">Phone <span class="req" aria-hidden="true">*</span></label>
+              <input id="enq-phone" name="phone" type="tel" autocomplete="tel" inputmode="tel" maxlength="40" required aria-describedby="enq-phone-err">
+              <p class="field-error" id="enq-phone-err"></p>
+            </div>
+            <div class="field">
+              <label for="enq-email">Email</label>
+              <input id="enq-email" name="email" type="email" autocomplete="email" maxlength="160" aria-describedby="enq-email-err">
+              <p class="field-error" id="enq-email-err"></p>
+            </div>
+            <div class="field">
+              <label for="enq-dates">Preferred dates</label>
+              <input id="enq-dates" name="dates" type="text" maxlength="120" placeholder="e.g. 3 nights in mid-March">
+            </div>
+            <div class="field">
+              <label for="enq-people">Number of people</label>
+              <select id="enq-people" name="people">
+                <option value="">Choose</option>
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5+">5+</option>
+              </select>
+            </div>
+            <div class="field field--full">
+              <label for="enq-message">Message</label>
+              <textarea id="enq-message" name="message" rows="5" maxlength="2000" placeholder="Anything Ian should know: kids&rsquo; ages, mobility, whether you have panned before"></textarea>
+            </div>
+          </div>
+          <div class="enq-foot">
+            <p class="enq-consent">Ian will call or text you back.</p>
+            <button class="btn btn--dark" type="submit">Send enquiry</button>
+          </div>
+          <p class="enq-status" role="status" aria-live="polite"></p>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <section class="section tone-pale" aria-labelledby="when-title">
+    <div class="container split split--img-narrow">
       <div class="frame frame--portrait">
-        <figure class="ph " style="--ar: 3 / 4">
+        <figure class="ph" style="--ar: 3 / 4">
         <img src="assets/img/ian-nugget-pile.jpg" alt="A pile of gold nuggets and fine gold on a black gold pan in the sun, from a Murchison river" width="1080" height="1440" loading="lazy" decoding="async">
       </figure>
       </div>
-    </div>
-  </section>
-
-  <section class="section section--tight paper-2 torn-top" aria-labelledby="when-title">
-    <div class="container contact-grid">
-      <div class="panel-paper nailed">
-        <h2 id="when-title" class="h3"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-clock"/></svg> Best times to call</h2>
-        <!-- CONFIRM WITH IAN: best times to call -->
-        <p>Ian is often out on the river during the day, where the phone signal can be patchy. If he doesn&rsquo;t pick up, leave a message or send a text with your name and number, and he will call you back.</p>
-        <p class="mb-0">Early mornings and evenings are usually the easiest time to catch him.</p>
-      </div>
-      <div class="panel-paper nailed">
-        <h2 class="h3"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-people"/></svg> When you call</h2>
-        <p>It helps to have a rough idea of:</p>
-        <ul class="ticks">
-          <li>When you would like to come, and how many nights</li>
-          <li>How many of you there are, and the ages of any kids</li>
-          <li>Whether you have panned for gold before</li>
-          <li>Anything Ian should know about, such as mobility or dietary needs</li>
-        </ul>
+      <div class="info-stack">
+        <div>
+          <h2 id="when-title" class="h3"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-clock"/></svg> Best times to call</h2>
+          <!-- CONFIRM WITH IAN: best times to call -->
+          <p>Ian is often out on the river during the day, where the phone signal can be patchy. If he doesn&rsquo;t pick up, leave a message or send a text with your name and number, and he will call you back.</p>
+          <p class="mb-0">Early mornings and evenings are usually the easiest time to catch him.</p>
+        </div>
+        <div>
+          <h2 class="h3"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-people"/></svg> When you call</h2>
+          <p>It helps to have a rough idea of:</p>
+          <ul class="ticks mb-0">
+            <li>When you would like to come, and how many nights</li>
+            <li>How many of you there are, and the ages of any kids</li>
+            <li>Whether you have panned for gold before</li>
+            <li>Anything Ian should know about, such as mobility or dietary needs</li>
+          </ul>
+        </div>
       </div>
     </div>
   </section>
 
-  <section class="section bush torn-top" aria-labelledby="where-title">
+  <section class="section tone-cream" aria-labelledby="where-title">
     <div class="container split">
       <div>
         <p class="kicker">Location</p>
         <h2 id="where-title">Murchison, Tasman, New Zealand</h2>
-        <svg class="divider" viewBox="0 0 420 34" aria-hidden="true" focusable="false">
-        <path class="d-line" stroke-width="2.2" d="M6 17c34-2 64 2.5 98-.5s46-1 72 1"/>
-        <path class="d-line" stroke-width="1" d="M24 22.5c36-1.5 70 1 104-1s32 .5 46 0"/>
-        <path class="d-line" stroke-width="2.2" d="M244 17.5c26-2 72 1.5 106-1s42 1.5 64 .5"/>
-        <path class="d-line" stroke-width="1" d="M246 22.5c16-.5 44 1 78-1s48 .5 72 0"/>
-        <path d="M181 17l4.5-4.5 4.5 4.5-4.5 4.5zM230 17l4.5-4.5 4.5 4.5-4.5 4.5z" fill="currentColor"/>
-        <path class="d-nug" d="M198 19l4-9 9.5-2.5 8.5 4 2.5 7.5-6 6.5-11.5 1z"/>
-        <path d="M204 13.5l7-2 4.5 2.5" fill="none" stroke="#fff3c4" stroke-width="1.4" stroke-linecap="round" opacity=".9"/>
-      </svg>
         <p class="lede">Ian&rsquo;s place is in Murchison, at the top of the South Island, on the main road between Nelson and the West Coast. He will give you directions when you book.</p>
         <ul class="ticks">
           <li>Nelson ~1 hr 45 &middot; Westport ~1 hr 20</li>
@@ -182,17 +233,18 @@
         <p class="mb-0"><a class="link-arrow" href="getting-here.html">Routes, map and things to do near Murchison</a></p>
       </div>
       <div class="frame">
-        <figure class="ph " style="--ar: 4 / 3">
+        <figure class="ph" style="--ar: 4 / 3">
         <img src="assets/img/murchison-valley.jpg" alt="The Buller River winding between bush-covered hills near Murchison" width="1920" height="1080" loading="lazy" decoding="async">
       </figure>
       </div>
     </div>
   </section>
 
-  <section class="section callband wood planks torn-top" aria-labelledby="cta-title">
+  <section class="section callband tone-pale" aria-labelledby="cta-title">
     <div class="container">
       <p class="kicker">Gold panning in Murchison</p>
       <h2 id="cta-title">We&rsquo;ll keep a pan warm for you</h2>
+      <span class="orn" aria-hidden="true"></span>
       <a class="big-phone" href="tel:+64225335445">022 533 5445</a>
       <p>The quickest way to book your gold panning stay in Murchison is a quick chat with Ian.</p>
       <div class="hero-ctas"><a class="btn btn--big" href="tel:+64225335445"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-phone"/></svg><span>Call Ian <span class="btn-num">022 533 5445</span></span></a></div>
@@ -200,7 +252,7 @@
   </section>
 </main>
 
-<footer class="site-footer wood">
+<footer class="site-footer tone-dark">
   <div class="container">
     <div class="footer-grid">
       <div class="footer-brand">
@@ -220,7 +272,7 @@
       <div class="footer-call">
         <h2>Call Ian</h2>
         <a class="big-phone" href="tel:+64225335445">022 533 5445</a>
-        <p>No online bookings. Just give Ian a ring for dates and prices.</p>
+        <p>Bookings by phone. Give Ian a ring for dates and prices, or <a href="contact.html#enquiry">send an enquiry</a>.</p>
         <address>Murchison, Tasman, New Zealand</address>
       </div>
     </div>
@@ -232,7 +284,7 @@
   </div>
 </footer>
 
-<div class="callbar wood">
+<div class="callbar">
   <a class="btn" href="tel:+64225335445"><svg class="icon" aria-hidden="true" focusable="false"><use href="#i-phone"/></svg><span>Call Ian <span class="btn-num">022 533 5445</span></span></a>
 </div>
 </body>
