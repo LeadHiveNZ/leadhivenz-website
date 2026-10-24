@@ -100,10 +100,20 @@
   // file input feedback
   d.querySelectorAll('.file-drop input[type=file]').forEach(function (inp) {
     var label = inp.closest('.file-drop').querySelector('strong'), orig = label.textContent;
+    var LIMIT = 10 * 1024 * 1024, form = inp.form;
+    function total() { var t = 0; for (var i = 0; inp.files && i < inp.files.length; i++) t += inp.files[i].size; return t; }
     inp.addEventListener('change', function () {
-      var n = inp.files ? inp.files.length : 0;
-      label.textContent = n ? (n === 1 ? inp.files[0].name : n + ' photos selected') : orig;
+      var n = inp.files ? inp.files.length : 0, mb = (total() / 1048576).toFixed(1);
+      if (total() > LIMIT) {
+        inp.setCustomValidity('Those photos add up to ' + mb + 'MB. Please choose fewer or smaller photos (10MB in total).');
+        label.textContent = 'Too large (' + mb + 'MB). Please pick fewer photos';
+        inp.reportValidity();
+      } else {
+        inp.setCustomValidity('');
+        label.textContent = n ? (n === 1 ? inp.files[0].name : n + ' photos selected (' + mb + 'MB)') : orig;
+      }
     });
+    if (form) form.addEventListener('submit', function (e) { if (total() > LIMIT) { e.preventDefault(); inp.reportValidity(); } });
   });
 
   // before/after sliders: drag (mouse, pen, horizontal touch) or arrow keys on the range input
