@@ -53,7 +53,7 @@
     var car=f.getAttribute('data-preview')==='car';
     openModal(car?'Quote request (preview)':'Enquiry (preview)',
       car?'In the live site this goes straight to the 747 Car Hire team, who reply with a quote within the hour during business hours.'
-         :'In the live site this enquiry is emailed straight to 747motel@gmail.com.');
+         :'In the live site this enquiry is emailed straight to wellington747motel@gmail.com.');
   })});
 
   // Lightbox

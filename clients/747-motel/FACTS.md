@@ -4,7 +4,7 @@
 - Name: 747 Motel & Car Hire (Booking.com now lists it as "Wellington 747 Motel"). Logo text: "747 MOTEL & CAR HIRE". Also referred to as "747 Motel & Rentals" / "747 Rental Car".
 - Address: 80 Kilbirnie Crescent, Kilbirnie, Wellington 6022, New Zealand.
 - Phone: (04) 939 1747  (painted on the building; also on Pauls Motels / Yelp). International +64 4 939 1747. Mobile seen on Trivago: 027 571 0929 (less certain, do not use as primary).
-- Email: 747motel@gmail.com (from Pauls Motels listing). Site's own email is Cloudflare-obfuscated.
+- Email: wellington747motel@gmail.com (from Pauls Motels listing). Site's own email is Cloudflare-obfuscated.
 - Manager: Zafar Syed.
 - Opposite the Wellington Regional Aquatic Centre. 3 km / ~5 min drive to Wellington International Airport. ~10 min drive to city centre. ASB Sports Centre 3 min drive. Near Weta Cave / Weta Workshop, Wind Sculptures on Cobham Drive, Wellington Hospital (Newtown), Kilbirnie shops/supermarkets/cafes/banks 5 min walk, bus route to city.
 - Amenity icons on current site: Halal, Free WiFi, Sky TV, EFTPOS, Mastercard, Visa, Wheelchair access.

@@ -47,7 +47,7 @@ show a "preview" notice on submit. The original single-page build is in git hist
   different scores (5.6 to 7.8); check the live listing before publishing.
 - **Car hire fleet and daily rates** are not published anywhere. The page asks for a quote instead.
 - **Check-in time** shown as 2pm (listings disagree: 12pm–3pm). Check-out 10am is consistent.
-- **Email** 747motel@gmail.com from a directory listing; the site's own address is obfuscated.
+- **Email** wellington747motel@gmail.com from a directory listing; the site's own address is obfuscated.
 - **Pets**: listings conflict, so the page says nothing about pets.
 - **Booking engine**: the "check availability" widget needs wiring to whatever he uses (or a
   Booking.com deep link). Direct bookings are the whole pitch, so this is the first integration.
