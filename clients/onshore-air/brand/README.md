@@ -25,9 +25,9 @@ Prepared by LeadHive AU (Joe) for Onshore Air as a value-add. October 2026.
 5. Ship a full system that sits beside Daikin, Mitsubishi Electric and Airstage dealer badges, from a favicon to a 6 m van.
 
 ## The three concepts
-| | 1 · Evolution | 2 · Horizon | 3 · Monogram (recommended) |
+| | 1 · Evolution (recommended) | 2 · Horizon | 3 · Monogram |
 |---|---|---|---|
-| Idea | Today's sphere, grown up. A diagonal S-split disc in four flat bands: heat bottom-left, cool ocean air top-right | The sun sits on one line that is both horizon and onshore breeze, rising to wrap the sun. Sun-over-sea split inside | A heavy navy O (Onshore's initial) framing the sun over a cooling wave, like a porthole |
+| Idea | Today's sphere, grown up. A diagonal S-split disc in four flat bands: heat bottom-left, cool ocean air top-right | The sun sits on one line that is both horizon and onshore breeze: flat under the sun, then sweeping up the right side and tapering away. Sun-over-sea split inside | A navy O (Onshore's initial) framing the original diagonal sun-meets-sea split: warm bottom-left, cool top-right |
 | Wordmark | Outfit ExtraBold, +50 tracking, R–E +12 | Sora Bold, +150 tracking, word space +60 | Red Hat Display Black, +60 tracking, R–E +10 |
 | Descriptor | Outfit SemiBold | Sora SemiBold | Red Hat Display Bold |
 | Navy | Onshore Navy `#0B1F5C` (white on it 15.4:1) | Ink Navy `#0C1C45` (16.6:1) | Royal Navy `#0A2272` (14.1:1) |
@@ -36,7 +36,15 @@ Prepared by LeadHive AU (Joe) for Onshore Air as a value-add. October 2026.
 
 All fonts are Google Fonts under the SIL Open Font Licence 1.1. Every letter is converted to outlines, so no file depends on installed fonts. Fonts are **not** stored in this repo; `source/fetch-fonts.sh` downloads them when regenerating.
 
-**Recommendation: Concept 3, Monogram.** It performs best where Onshore is actually seen: 16 px favicon, Google avatar, cap and polo embroidery, and next to OEM dealer badges. Its one-colour version is two solid shapes, and it keeps the sun/sea equity and colour family. The trade-off is that it drops the diagonal of today's sphere; the counter wave can tilt in round two if Luke wants it back. Evolution is the safe continuity option; Horizon is the most premium at large sizes.
+**Recommendation: Concept 1, Evolution.**
+- **It keeps the identity customers already know.** It is the only concept that keeps the diagonal sun-meets-sea split as the whole mark, the split already on the van, the shirts and the Google listing.
+- **It has the most personality.** It has the most colour and character on a van and in a social feed.
+- **It passes the practical tests.** The favicon cut reads at 16 px, and the embroidery cut has widened gaps.
+- **The trade-off:** it is the most colourful of the three, so one-colour jobs must use the mono files.
+
+**Runner-up: Monogram**, for a client who wants maximum simplicity. It is technically the safest at small sizes, and its O now carries the diagonal split, but the ring dominates and the silhouette reads as generic: a porthole or a bank badge that could belong to anyone.
+
+**Horizon** is the premium outlier: the most refined at large sizes, but the least connected to today's logo.
 
 ## File guide
 Each `concept-*/` folder holds the same set. All SVGs use flat fills only, a correct `viewBox` starting at `0 0`, no fixed width or height, and a margin of half the clear space.
@@ -89,15 +97,14 @@ Other files here: `presentation.html` / `.png` (the client deck), `screens/` (se
 ## What to send the client (Luke)
 1. `presentation.png`, or `presentation.html` as an attachment (it opens offline). Optionally the six `screens/mock-*.png` images for a quick look on his phone.
 2. A short cover note, e.g.:
-   > Hi Luke, here are three directions for the Onshore Air logo refresh. All of them keep your sun-and-sea circle and colours, but rebuild them so they work on the van, embroidered on polos, as your Google profile picture and as a website icon. Our pick is Concept 3, the "Monogram". Have a look at the mockups and let us know which one feels most like Onshore. We'll then do one round of tweaks and send the final files.
+   > Hi Luke, here are three directions for the Onshore Air logo refresh. All of them keep your sun-and-sea circle and colours, but rebuild them so they work on the van, embroidered on polos, as your Google profile picture and as a website icon. Our pick is Concept 1, "Evolution": it keeps the diagonal sun-and-sea look people already know from the van, just cleaner and more professional. Have a look at the mockups and let us know which one feels most like Onshore. We'll then do one round of tweaks and send the final files.
 3. Once he chooses: one refinement round, then send that concept's folder. Before print, proof CMYK values on stock (they are not yet proofed) and run an IP Australia trade-mark search.
 
 ## Regenerating
 The artwork is generated, not hand-drawn, so round-two changes are a config edit.
 ```bash
 cd clients/onshore-air/brand/source
-npm install            # opentype.js + paper. PNGs and screenshots also need Playwright with Chromium:
-                       # use a global install, or: npm i -D playwright && npx playwright install chromium
+npm install            # opentype.js + paper (Playwright must be available for PNGs/screenshots)
 npm run fonts          # downloads the six TTFs into source/fonts (git-ignored)
 npm run all            # rebuilds the concept folders, PNGs, presentation and screens one level up
 ```

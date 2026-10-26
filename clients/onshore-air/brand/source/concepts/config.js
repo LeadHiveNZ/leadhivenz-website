@@ -18,7 +18,7 @@ module.exports = [
     onNavy: { navy: WHITE, ocean: '#1E7FD8', sun: '#FFC233', sunset: '#F5871F', word: WHITE, desc: '#FFC233' },
     name: { text: 'ONSHORE AIR', tracking: 50, pairs: { RE: 12 } },
     descText: 'AIR CONDITIONING · SUNSHINE COAST', descCap: 0.3,
-    stacked: { markH: 3.3, gap: 0.62, ox: 0 },
+    stacked: { markH: 3.56, gap: 0.66, ox: 0 },   // round 2: mark +8% so it leads
     horizontal: { markK: 1.22, gap: 0.36, dGap: 0.44, oy: 0 },
     compact: { markK: 2.1, gap: 0.42 },
   },
@@ -26,8 +26,8 @@ module.exports = [
     id: 'concept-2-horizon', title: 'Horizon', slug: 'horizon',
     fonts: { name: 'Sora-700', desc: 'Sora-600' },
     mark: () => M.horizon({ split: true }),
-    monoMark: () => M.horizon({ split: true, gap: 8.5, wg: 8.5 }),
-    smallMark: () => M.horizon({ split: true, th: 26, gap: 11, wg: 11, xl: -100, end: -42, A: 3 }),
+    monoMark: () => M.horizon({ split: true, gap: 8.5, wg: 8.5, hold: 24, pow: 0.6 }),
+    smallMark: () => M.horizon({ split: true, th: 26, gap: 11, wg: 11, xl: -100, wrap: 100, hold: 24, pow: 0.55, A: 3 }),
     colours: [
       { role: 'navy', name: 'Ink Navy', hex: '#0C1C45' },
       { role: 'sun', name: 'Sun Gold', hex: '#F4B23E' },
@@ -44,9 +44,9 @@ module.exports = [
   {
     id: 'concept-3-monogram', title: 'Monogram', slug: 'monogram',
     fonts: { name: 'RedHatDisplay-900', desc: 'RedHatDisplay-700' },
-    mark: () => M.monogram({ r: 62, gap: 7, y0: 12, A: 5, wl: 60, wg: 7.5 }),
-    monoMark: () => M.monogram({ r: 62, gap: 9, y0: 12, A: 5, wl: 60, wg: 9, dropSea: true }),
-    smallMark: () => M.monogram({ r: 60, gap: 11, y0: 10, A: 4, wl: 70, wg: 11 }),
+    mark: () => M.monogram({ r: 67, gap: 7, wg: 7.5, alpha: 30, A: 6.5 }),        // ring 33 (was 38): -13%
+    monoMark: () => M.monogram({ r: 67, gap: 9, wg: 9, A: 6.5, dropSea: true }),
+    smallMark: () => M.monogram({ r: 66, gap: 10, wg: 10, A: 5 }),
     colours: [
       { role: 'navy', name: 'Royal Navy', hex: '#0A2272' },
       { role: 'sun', name: 'Signal Yellow', hex: '#FFC629' },

@@ -1,6 +1,6 @@
 # Onshore Air: self-critique log
 
-Every change below came from looking at Playwright renders: review sheets, 2× zooms, 16 px pixel views and full-page and per-section screenshots of `presentation.html`. Six rounds in total, listed in order.
+Every change below came from looking at Playwright renders: review sheets, 2× zooms, 16 px pixel views and full-page and per-section screenshots of `presentation.html`. Seven rounds in total, listed in order. Round 7 is the overseer's review.
 
 ## Round 0: exploration (prototype sheets, before any lockup)
 | Area | What the render showed | Change |
@@ -60,6 +60,18 @@ Every change below came from looking at Playwright renders: review sheets, 2× z
 | Clear-space diagrams | The first version's mid-edge markers crowded the artwork, so markers moved to the corners. x = name cap height (100 units in every lockup file). |
 | XML validity | All 54 SVGs parse. None use `<text>`, gradients, filters, strokes, clip paths, transforms or width/height. |
 | Second renderer | CairoSVG (not Chromium) renders the lockups, mono files and adaptive favicons identically. |
+
+## Round 7: overseer review
+| Change | What the render showed | Result |
+|---|---|---|
+| Recommendation | The overseer overruled Monogram. Only Evolution keeps the diagonal sun-meets-sea split customers already know, and it has the most personality on a van and in a feed. Monogram is the safest but reads as generic. | Presentation, before/after caption (with a Recommended badge) and README now recommend Evolution. Monogram is the runner-up for maximum simplicity; Horizon is the premium outlier. |
+| Horizon stroke | The round-1 line read as a fishing hook or letter J, and its squared top-right end looked unfinished. | Rebuilt from explicit edges as a filled shape. The inner edge is the flat horizon plus an exact concentric arc, so the gap to the sun is constant. The outer edge holds full weight under the sun, then tapers to a point after a 108° wrap. |
+| Horizon, second version | A constant-width stroke with a round cap tangent to the arc (100° wrap) still read as a J. | Rejected. The taper was kept. See `screens/horizon-taper-vs-roundcap.png`. |
+| Horizon favicon cut | Re-tested at 16 px. | 26-unit stroke, 100° wrap, fuller taper: the body holds as a 2 px stroke and the tip fades as intended. |
+| Monogram counter | The flat horizontal wave lost the heritage diagonal. | Replaced with the original diagonal S-split: warm bottom-left, cool top-right, one gentle S-curve at 30°. |
+| Monogram ring | The inner mark looked small at 32 px. | Ring thinned 38→33 units (-13%), so the inner mark radius grows 55→60 (+9%). |
+| Flat vs diagonal at 16 px | Side-by-side at 128/32/16 px with zoomed pixels (`screens/monogram-flat-vs-diagonal.png`): both read as a navy ring with yellow and blue inside. Flat has a bigger yellow top; diagonal has a larger inner mark at 32 px. | A tie at 16 px, so the diagonal is kept, per the heritage preference. Mono cut: ring plus the solid warm region. Filling both regions read as a tennis ball. |
+| Evolution stacked | The icon should lead the wordmark. | Mark +8% (3.3→3.56× cap height). Gap raised 0.62→0.66× cap after checking on white and navy, since the larger disc made the old gap feel tight. Nothing else on Evolution changed. |
 
 ## Known limits, honestly stated
 - CMYK and Pantone values are not proofed. The printer must match them from the hex values on stock.

@@ -22,13 +22,13 @@ const RATIONALE = {
     'The diagonal S-split tells the product story at a glance: Sunshine Coast heat in the bottom-left, cool ocean air in the top-right.',
     'Paired with a heavy, round-shouldered Outfit wordmark, it looks like the same company, grown up.'],
   horizon: [
-    'The sun sits on a single line that is both the coastline horizon and the onshore breeze. The line rises to wrap the sun, the way the afternoon sea breeze cools the coast.',
+    'The sun sits on a single line that is both the coastline horizon and the onshore breeze. It runs flat under the sun, then sweeps up the right side and tapers away like a gust of sea air.',
     'Inside the sun, the warm/cool split is kept as sun over sea, and the whole mark uses only two main colours plus an ocean-blue accent.',
-    'Set in a wide-tracked Sora wordmark, it has the calm restraint of an OEM dealer badge and feels the most premium of the three.'],
+    'Set in a wide-tracked Sora wordmark, it has the calm restraint of an OEM dealer badge and is the most premium of the three in large formats.'],
   monogram: [
-    'A heavy navy O, the initial of Onshore, frames a view out to sea like a porthole: the sun over a cooling wave.',
-    'It is the boldest, simplest silhouette of the three, so it holds up at 16 px, on a cap, on a Google avatar and beside Mitsubishi Electric and Daikin badges.',
-    'The Red Hat Display Black wordmark adds corporate weight without losing the coastal warmth.'],
+    'A navy O, the initial of Onshore, frames the original diagonal sun-meets-sea split: warm bottom-left, cool top-right.',
+    'It is the simplest, sturdiest silhouette of the three, so it holds up at 16 px, on a cap and as a Google avatar.',
+    'The Red Hat Display Black wordmark adds corporate weight. The trade-off is that the ring makes it read more like a badge than a personality.'],
 };
 const FONTNOTE = {
   evolution: 'Outfit ExtraBold (wordmark) · Outfit SemiBold (descriptor) · Google Fonts, SIL Open Font Licence',
@@ -116,7 +116,7 @@ const FONTNOTE = {
 <html lang="en-AU"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Onshore Air Logo Refresh</title>
 <meta name="description" content="Three logo concepts for Onshore Air, air conditioning on the Sunshine Coast, with mockups and a recommendation.">
-<link rel="icon" href="${svgData(R[2].files['favicon.svg'])}">
+<link rel="icon" href="${svgData(R[0].files['favicon.svg'])}">
 <style>
 :root{--navy:#0B1F5C;--ink:#121a2e;--muted:#5b6475;--line:#e3e6ec;--bg:#f5f6f8;--paper:#fff}
 *{box-sizing:border-box}
@@ -148,6 +148,7 @@ p{margin:0 0 12px;max-width:72ch}
 .bcell svg{width:86%;height:auto}
 .bcell label,.tile label{position:absolute;left:14px;bottom:10px;font-size:11px;letter-spacing:.04em;color:#8a93a5}
 .bcell.old{background:#000}
+.badge{position:absolute;top:12px;left:12px;background:#FFC233;color:#0B1F5C;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;border-radius:999px;padding:4px 10px}
 .bcell.nv,.tile.n{background:var(--cnavy,var(--navy))}
 .tile.n label,.bcell.nv label,.bcell.old label{color:#8ea0cf}
 .chead{display:flex;gap:22px;align-items:center}
@@ -321,10 +322,10 @@ footer{color:#8a93a5;font-size:12.5px;text-align:center;padding:10px 0 50px}
 <section id="before-after">
   <div class="eyebrow">Before and after</div>
   <h2>Same idea, three ways forward</h2>
-  <p>The current logo (left) is shown as supplied. Each concept is shown on its own navy, the way it would appear in the website header.</p>
+  <p>The current logo (left), as supplied, beside the three concepts, each on its own navy as it would appear in the website header. Concept 1 keeps today's diagonal sun-meets-sea split most directly, which is why it is our recommendation.</p>
   <div class="before">
     <div class="bcell old"><img src="${OLD}" alt="Current Onshore Air logo"><label>Current logo</label></div>
-    ${R.map((r, i) => `<div class="bcell nv" style="--cnavy:${r.P.navy}">${inline(r.files['primary-stacked-on-navy.svg'])}<label>${i + 1} · ${r.cfg.title}</label></div>`).join('')}
+    ${R.map((r, i) => `<div class="bcell nv" style="--cnavy:${r.P.navy}">${i === 0 ? '<span class="badge">Recommended</span>' : ''}${inline(r.files['primary-stacked-on-navy.svg'])}<label>${i + 1} · ${r.cfg.title}</label></div>`).join('')}
   </div>
 </section>
 
@@ -368,28 +369,27 @@ ${mockSection('mock-tab', 'In the browser', 'Favicons at their real size in ligh
 
 <section class="reco" id="recommendation">
   <div class="eyebrow">Recommendation</div>
-  <h2>Go with Concept 3, Monogram</h2>
+  <h2>Go with Concept 1, Evolution</h2>
   <div class="win">
-    <div class="lg">${inline(R[2].files['primary-stacked.svg'])}</div>
+    <div class="lg">${inline(R[0].files['primary-stacked.svg'])}</div>
     <div>
       <ol>
-        <li><b>It works best where Onshore is actually seen.</b> At 16 px, as a Google avatar, on a cap and as an embroidered crest, the heavy O stays clear. Its one-colour version is just two solid shapes, which is the easiest file to stitch or engrave.</li>
-        <li><b>It looks established beside the brands Luke installs.</b> The round, solid silhouette holds its own next to Mitsubishi Electric, Daikin and Airstage dealer badges.</li>
-        <li><b>It keeps the equity.</b> The sun over a cooling sea, in navy, yellow and ocean blue, so customers see an upgrade rather than a stranger.</li>
-        <li><b>It is the most legible from the street.</b> The Red Hat Display Black wordmark reads fastest on a moving van and in a mobile header.</li>
-        <li><b>It is the simplest system to run.</b> Three colours, and on navy the ring simply turns white.</li>
+        <li><b>It keeps the identity Onshore already has.</b> Customers already know the diagonal sun-meets-sea split from the van, the shirts and the Google listing. Evolution is the only concept that keeps it as the whole mark, so the refresh reads as an upgrade, not a rebrand.</li>
+        <li><b>It has the most personality.</b> Four flat colours carry on a van at distance and stand out in a social feed or a Maps list, where most trades are blue on white.</li>
+        <li><b>It passes the practical tests.</b> The favicon cut reads at 16 px and the embroidery cut has widened gaps. Every lockup has one-colour and on-navy versions.</li>
+        <li><b>Its trade-offs are manageable.</b> It is the most colourful of the three, so one-colour jobs use the mono files, and at the very smallest sizes the bands read by colour rather than by shape.</li>
       </ol>
     </div>
   </div>
-  <p class="alt"><b>The trade-off:</b> it drops the diagonal of today's sphere. If that matters to Luke, the wave in the counter can tilt to echo it in round two.</p>
-  <p class="alt" style="border-top:0;margin-top:0;padding-top:0">If Luke wants maximum continuity with today's sphere, <b>Concept 1, Evolution</b> is the safe choice: it is the most recognisable and the most colourful on a van. <b>Concept 2, Horizon</b> is the most premium in large formats, but it needs its favicon cut at small sizes.</p>
+  <p class="alt"><b>Runner-up: Concept 3, Monogram</b>, for a client who wants maximum simplicity. It is technically the safest at small sizes, and its O now carries the diagonal split. But the ring dominates, and the overall silhouette reads as generic, a porthole or a bank badge that could belong to any company. Its small-size advantage is real, but Evolution already passes the 16 px test with its favicon cut.</p>
+  <p class="alt" style="border-top:0;margin-top:0;padding-top:0"><b>Concept 2, Horizon</b> is the premium outlier: the most refined at large sizes, but the least connected to the logo customers know today.</p>
 </section>
 
 <section class="next" id="next">
   <div class="eyebrow">Next steps</div>
   <h2>What we need from Luke</h2>
   <ol>
-    <li>Pick a direction. Mixing is fine, for example the Monogram mark with Evolution's warmer colours.</li>
+    <li>Confirm the direction. We recommend Evolution, and elements can be mixed, for example Monogram's heavier wordmark with the Evolution mark.</li>
     <li>One round of refinements on the chosen concept (colour, weight, descriptor wording).</li>
     <li>Final artwork pack: SVG master files plus print PDFs with CMYK values proofed by the printer, an embroidery file digitised from the mono artwork, and the van wrap scaled from SVG.</li>
   </ol>

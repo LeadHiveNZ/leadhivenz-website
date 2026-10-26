@@ -46,14 +46,37 @@ function ribbon(c, t0, t1, th, n = 200, roundCaps = false) {
   return out;
 }
 
-/* Concept 2, Horizon: sun on a horizon line that rises to wrap it as an air current.
-   The sun keeps the warm/cool split (gold sky over ocean) with a gentle wave knockout. */
+/* Concept 2, Horizon: the sun sits on a horizon line that sweeps up its right side like a breeze.
+   Built from explicit edges so it is a filled shape, not a stroke:
+   - inner edge: straight horizon at y = R + gap, then an exact concentric arc (constant gap to the sun)
+   - outer edge: inner edge + thickness; full weight under the sun, then tapering to a point after `wrap` degrees
+   `rightCap: 'round'` gives the constant-width, round-capped alternative documented in critique.md. */
 function horizon(o = {}) {
-  const R = o.R ?? 70, th = o.th ?? 15, gap = o.gap ?? 7, Rr = R + gap + th / 2, end = (o.end ?? -38) * Math.PI / 180, xl = o.xl ?? -125;
-  const L1 = 0 - xl; const arcLen = Rr * (Math.PI / 2 - end);
-  // centreline: straight horizon from xl to the sun's foot, then a concentric arc up the right side
-  const c = s => { if (s <= L1) return [xl + s, Rr]; const a = Math.PI / 2 - (s - L1) / Rr; return [Rr * Math.cos(a), Rr * Math.sin(a)]; };
-  const line = ribbon(c, 0, L1 + arcLen, th, 400, o.round ?? false);
+  const R = o.R ?? 70, th = o.th ?? 17, gap = o.gap ?? 7, Ri = R + gap;
+  const wrap = rad(o.wrap ?? 108), a0 = Math.PI / 2, a1 = a0 - wrap;   // screen angles: 90deg = 6 o'clock
+  const xl = o.xl ?? -125, hold = rad(o.hold ?? 18), pow = o.pow ?? 0.7;
+  const P = (x, y) => new paper.Point(x, y), polar = (r, a) => P(r * Math.cos(a), r * Math.sin(a));
+  const thick = a => { const done = a0 - a; if (done <= hold) return th; const u = Math.max(0, 1 - (done - hold) / (wrap - hold)); return th * Math.pow(Math.sin(u * Math.PI / 2), pow); };
+  const shape = new paper.Path();
+  shape.add(P(xl, Ri)); shape.add(P(0, Ri));
+  shape.arcTo(polar(Ri, (a0 + a1) / 2), polar(Ri, a1));               // exact inner arc, ends at the tip
+  let line;
+  if ((o.rightCap ?? 'taper') === 'taper') {
+    const outer = new paper.Path();
+    for (let i = 0; i <= 240; i++) { const a = a1 + (a0 - a1) * i / 240; outer.add(polar(Ri + thick(a), a)); }
+    outer.simplify(o.tol ?? 0.002);
+    shape.lastSegment.handleOut = outer.firstSegment.handleOut;          // smooth departure from the tip
+    for (const seg of outer.segments.slice(1)) shape.add(seg.clone());
+    shape.lastSegment.handleOut = new paper.Point(0, 0);
+    shape.add(P(xl, Ri + th));
+    shape.closed = true; line = shape;
+  } else {                                                             // constant width + round cap at the tip
+    shape.add(polar(Ri + th, a1));
+    shape.arcTo(polar(Ri + th, (a0 + a1) / 2), polar(Ri + th, a0));
+    shape.add(P(xl, Ri + th));
+    shape.closed = true;
+    line = U(shape, circle((Ri + th / 2) * Math.cos(a1), (Ri + th / 2) * Math.sin(a1), th / 2));
+  }
   const out = [];
   if (o.split) {
     const A = o.A ?? 4, y0 = o.y0 ?? 14, wg = o.wg ?? 6, wl = o.wl ?? 70;
@@ -66,20 +89,32 @@ function horizon(o = {}) {
   return out;
 }
 
-/* Concept 3, Monogram: heavy O whose counter frames the sun over a wave (porthole view).
-   dropSea / dropSun produce the one-colour embroidery cut. */
+/* Concept 3, Monogram: a navy O whose counter holds the original diagonal sun-meets-sea split
+   (warm bottom-left, cool top-right, one gentle S-curve). split: 'flat' gives the round-1 horizontal wave,
+   kept for the comparison in critique.md. dropSea / dropSun produce the one-colour embroidery cut. */
 function monogram(o = {}) {
-  const R = 100, r = o.r ?? 62, gap = o.gap ?? 7, A = o.A ?? 7, y0 = o.y0 ?? 10, wg = o.wg ?? 7;
+  const R = 100, r = o.r ?? 67, gap = o.gap ?? 7, wg = o.wg ?? 7.5;
   const ring = S(circle(0, 0, R), circle(0, 0, r));
-  const inner = circle(0, 0, r - gap);
-  const yc = x => y0 + A * Math.sin(Math.PI * (x + (o.shift ?? 0)) / (o.wl ?? 52));
-  const gTop = curve(x => [x, yc(x) - wg / 2], -1.2 * R, 1.2 * R, 160, 0.004);
-  const gBot = curve(x => [x, yc(x) + wg / 2], -1.2 * R, 1.2 * R, 160, 0.004);
-  const above = between(gTop, curve(x => [x, -3 * R], -1.2 * R, 1.2 * R, 4, 0.1));
-  const below = between(gBot, curve(x => [x, 3 * R], -1.2 * R, 1.2 * R, 4, 0.1));
+  const ri = r - gap, inner = circle(0, 0, ri);
+  let warm, cool;
+  if ((o.split ?? 'diagonal') === 'diagonal') {
+    const alpha = rad(o.alpha ?? 30), A = o.A ?? 6.5, s0 = o.s0 ?? 0;
+    const dx = Math.cos(alpha), dy = Math.sin(alpha), nx = Math.sin(alpha), ny = -Math.cos(alpha);
+    const w = t => A * Math.sin(Math.PI * t / ri);
+    const wave = off => curve(t => [t * dx + (off + w(t)) * nx, t * dy + (off + w(t)) * ny], -1.4 * R, 1.4 * R, 160, 0.004);
+    cool = I(inner, between(wave(s0 + wg / 2), wave(3 * R)));
+    warm = I(inner, between(wave(-3 * R), wave(s0 - wg / 2)));
+  } else {
+    const A = o.A ?? 7, y0 = o.y0 ?? 10;
+    const yc = x => y0 + A * Math.sin(Math.PI * (x + (o.shift ?? 0)) / (o.wl ?? 52));
+    const gTop = curve(x => [x, yc(x) - wg / 2], -1.2 * R, 1.2 * R, 160, 0.004);
+    const gBot = curve(x => [x, yc(x) + wg / 2], -1.2 * R, 1.2 * R, 160, 0.004);
+    warm = I(inner, between(gTop, curve(x => [x, -3 * R], -1.2 * R, 1.2 * R, 4, 0.1)));
+    cool = I(inner, between(gBot, curve(x => [x, 3 * R], -1.2 * R, 1.2 * R, 4, 0.1)));
+  }
   const out = [{ item: ring, role: 'navy' }];
-  if (o.dropSun !== true) out.push({ item: I(inner, above), role: 'sun' });
-  if (o.dropSea !== true) out.push({ item: I(inner, below), role: 'ocean' });
+  if (o.dropSun !== true) out.push({ item: warm, role: 'sun' });
+  if (o.dropSea !== true) out.push({ item: cool, role: 'ocean' });
   return out;
 }
 
