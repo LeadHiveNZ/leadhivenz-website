@@ -65,7 +65,8 @@ Links from a service page to the form pre-tick that service (`contact.html?servi
   Monochrome. Text is converted to outlines (Archivo), so the logo renders identically everywhere.
 - `photos/`: 41 of Matt's Facebook photos (all quality 4–5 picks plus selected 3s, and two
   in-progress fencing shots because fencing photos are thin). Resized (hero images 1200px long
-  edge, others 900px), JPEG q76, EXIF stripped, original `sl-NN` names kept.
+  edge, others 900px), JPEG q76, EXIF stripped, original `sl-NN` names kept. Also `hero-home.jpg`
+  (1920px) and `hero-home-mobile.jpg` (900x1350 crop, used below 768px): the stock placeholder home hero.
   `photos/thumbs/`: 480px-wide versions for grids. Captions and alt text come from the photo
   manifest. Gallery filter tags: decking (incl. build-in-progress "team" shots), retaining,
   fencing, gardens (manifest "general"), lawns & irrigation; a few photos carry two tags where
@@ -77,7 +78,8 @@ Links from a service page to the form pre-tick that service (`contact.html?servi
 
 | Item | Status |
 |---|---|
-| Photos | **Real**, Matt's own jobs from the Straightline Landscape Facebook page. No stock. People in team photos are not identified. |
+| Photos | **Real**, Matt's own jobs from the Straightline Landscape Facebook page. No stock except the home hero (next row). People in team photos are not identified. |
+| Home hero photo (`photos/hero-home.jpg`, `photos/hero-home-mobile.jpg`) | **Placeholder, stock photo, not Matt's work.** "House with Lawn" by Max Vakhtbovych, https://www.pexels.com/photo/house-with-lawn-7587878/ , Pexels licence (free for commercial use, no attribution required). Used because all of Matt's photos are square Facebook crops and none works as a wide hero. Replace before launch. |
 | Phone 020 4006 6910, email sales@straightline1.co.nz, Tauranga 3110 | **Real**, from the Facebook About section |
 | Landscaping since 2012, owner for 4 years, services list | **Real**, from Facebook / Matt |
 | Logo, mark and favicon | **Placeholder**, designed for the preview; Matt has no logo |
@@ -101,3 +103,4 @@ Facts source: Straightline Landscape Facebook page, About section, plus what Mat
 9. **About copy**: the brief's H1 says "Landscaping in Tauranga Since 2012". Confirm he has been working in Tauranga (not elsewhere) since 2012, and how he came to own the business 4 years ago.
 10. **Services detail**: block retaining walls, composite decking and Wi-Fi irrigation controllers are mentioned as options. Confirm he offers them. Also: garden maintenance, artificial turf (some photos show it), rubber safety surfacing (several photos, not shown on the site)?
 11. **Text messages**: the site says "call or text Matt". OK?
+12. **Home hero**: Replace the home hero with a wide shot of one of his own finished jobs.
