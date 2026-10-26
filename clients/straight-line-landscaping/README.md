@@ -104,3 +104,11 @@ Facts source: Straightline Landscape Facebook page, About section, plus what Mat
 10. **Services detail**: block retaining walls, composite decking and Wi-Fi irrigation controllers are mentioned as options. Confirm he offers them. Also: garden maintenance, artificial turf (some photos show it), rubber safety surfacing (several photos, not shown on the site)?
 11. **Text messages**: the site says "call or text Matt". OK?
 12. **Home hero**: Replace the home hero with a wide shot of one of his own finished jobs.
+
+## Deal (26/10/2026)
+
+Offer: $500 one-off build and launch + $20/month hosting & care plan, cancel any time.
+
+- Stripe payment link: https://buy.stripe.com/cNibJ1fmv1F7bEUaRhfw40g (`plink_1UUeZxFmmZSfVmopm3xvuqlA`, live, NZD)
+- Products: `prod_VVfvRCP8Qe8kaK` build & setup ($500 one-off), `prod_VVfvP1FpPIFU1Z` hosting & care plan ($20/month)
+- Pitch email to sales@straightline1.co.nz drafted in Gmail; website link to be pasted in before sending.
