@@ -3,8 +3,8 @@
 Three logo concepts for **Onshore Air**, built as complete, portable logo systems, with a client presentation, mockups and a recommendation.
 Prepared by LeadHive AU (Joe) for Onshore Air as a value-add. October 2026.
 
-> **Start here:** open `presentation.html` in a browser (it is self-contained), or look at `presentation.png`.
-> Mockups of each concept on a van, polo, Google profile, phone, business card and browser tab are in `screens/`.
+> **Start here:** open `presentation/index.html`. It is a small, phone-first site: overview and recommendation, one page per concept with its own mockups, a side-by-side comparison, and guidelines with download packs and a PDF.
+> Screenshots of every page (390 px mobile and 1280 px desktop) are in `presentation/screens/`.
 
 ## Client facts
 | | |
@@ -68,7 +68,28 @@ Each `concept-*/` folder holds the same set. All SVGs use flat fills only, a cor
 | `png/icon-16/32/64/180/512.png` | Icon sizes (16 and 32 from the favicon cut) | `favicon.ico` fallback, apple-touch (180), GBP upload (512) |
 | `png/icon-app-*.png` | Navy-tile icon at the same sizes | Avatars that need a filled background |
 
-Other files here: `presentation.html` / `.png` (the client deck), `screens/` (section and mockup screenshots), `research.md` (category research), `critique.md` (the iteration log), `reference/current-logo.png` (the logo being replaced) and `source/` (the generator).
+### Folder layout
+```
+brand/
+  README.md                this file
+  research.md              category research and strategy
+  critique.md              the iteration log (what each review round changed and why)
+  concept-1-evolution/     the SVG set + png/ (2x renders and icon sizes); same for the two folders below
+  concept-2-horizon/
+  concept-3-monogram/
+  presentation/            the client-facing site (static, relative links, no scripts, no external URLs)
+    index.html             overview, before/after, how to choose, recommendation, next steps, page cards
+    concept-1.html ...     one page per concept: rationale, palette, every file, small sizes, its mockups
+    compare.html           all three side by side on the van, polo, Google profile, phone, card and tab
+    guidelines.html        clear space, smallest sizes, which file to use, downloads
+    styles.css             the one shared stylesheet (includes the print rules used for the PDF)
+    assets/                logo files the pages display (one folder per concept) + the current logo
+    downloads/             one zip per concept, an all-concepts zip, and the presentation as an A4 PDF
+    screens/               <page>-mobile.png (390x844 viewport) and <page>-desktop.png (1280) for every page
+  screens/                 2x sheets for decks and emails: concept boards, mockup rows, rules, round-2 comparisons
+  reference/               current-logo.png, the logo being replaced
+  source/                  the generator (see Regenerating)
+```
 
 ## Usage rules
 **Clear space.** Keep **x** clear on every side, where x is the cap height of ONSHORE in the wordmark. In the stacked and horizontal SVGs, x is exactly 100 viewBox units.
@@ -95,17 +116,24 @@ Other files here: `presentation.html` / `.png` (the client deck), `screens/` (se
 **Don'ts.** Don't recolour outside the palette, add gradients, shadows or outlines, stretch or rotate, or place the full-colour logo on a busy photo. On navy, always switch to the `-on-navy` or `mono-white` files.
 
 ## What to send the client (Luke)
-1. `presentation.png`, or `presentation.html` as an attachment (it opens offline). Optionally the six `screens/mock-*.png` images for a quick look on his phone.
+1. The link to the published presentation (`presentation/index.html`, see Publishing). It is built for a phone. If he prefers a file, send `presentation/downloads/onshore-air-logo-presentation.pdf`.
 2. A short cover note, e.g.:
-   > Hi Luke, here are three directions for the Onshore Air logo refresh. All of them keep your sun-and-sea circle and colours, but rebuild them so they work on the van, embroidered on polos, as your Google profile picture and as a website icon. Our pick is Concept 1, "Evolution": it keeps the diagonal sun-and-sea look people already know from the van, just cleaner and more professional. Have a look at the mockups and let us know which one feels most like Onshore. We'll then do one round of tweaks and send the final files.
-3. Once he chooses: one refinement round, then send that concept's folder. Before print, proof CMYK values on stock (they are not yet proofed) and run an IP Australia trade-mark search.
+   > Hi Luke, here are three directions for the Onshore Air logo refresh. All of them keep your sun-and-sea circle and colours, but rebuild them so they work on the van, embroidered on polos, as your Google profile picture and as a website icon. Our pick is Concept 1, "Evolution": it keeps the diagonal sun-and-sea look people already know from the van, just cleaner and more professional. Have a look at the mockups (the Compare page shows all three on the van side by side) and let us know which one feels most like Onshore. We'll then do one round of tweaks and send the final files.
+3. Once he chooses: one refinement round, then send that concept's zip from `presentation/downloads/`. Before print, proof CMYK values on stock (they are not yet proofed) and run an IP Australia trade-mark search.
 
 ## Regenerating
-The artwork is generated, not hand-drawn, so round-two changes are a config edit.
+Everything here is generated from `source/`, not hand-drawn, so round-two changes are a config edit followed by one command.
 ```bash
 cd clients/onshore-air/brand/source
-npm install            # opentype.js + paper (Playwright must be available for PNGs/screenshots)
-npm run fonts          # downloads the six TTFs into source/fonts (git-ignored)
-npm run all            # rebuilds the concept folders, PNGs, presentation and screens one level up
+npm install            # opentype.js + paper. PNGs, the PDF and screenshots also need Playwright with Chromium:
+                       # use a global install, or: npm i -D playwright && npx playwright install chromium
+npm run fonts          # downloads the six Google Fonts TTFs into source/fonts (git-ignored)
+npm run all            # = build (SVG sets) + png (renders) + site (presentation/, downloads, PDF, all screens)
 ```
-Geometry lives in `concepts/marks.js`; palettes, fonts, tracking and lockup proportions live in `concepts/config.js`.
+- Geometry lives in `concepts/marks.js`. Palettes, fonts, tracking and lockup proportions live in `concepts/config.js`.
+- Page copy and layout live in `present/build-site.js`, mockups in `present/mockups.js`, styling in `present/site/styles.css`.
+- The PDF is printed page by page with Playwright (`page.pdf`, A4, backgrounds on) using the print rules in `styles.css`, then joined with `pdfunite` (poppler-utils). The zips need `zip`.
+- The SVG and PNG outputs are deterministic: a rebuild from a clean checkout reproduces them byte for byte.
+
+## Publishing
+`presentation/` is a self-contained static site: every link is relative (`concept-1.html`, `styles.css`, `assets/...`, `downloads/...`), with no scripts, no external URLs and no build step. To publish it, upload the whole folder as is, with `index.html` as the entry page. Any static host works (a multi-file artifact, GitHub Pages, Netlify drop, an S3 bucket). The total is about 15 MB in 88 files; the downloads (7.3 MB) and screens (6.2 MB) are most of it, and a phone opening `index.html` loads about 150 KB (110 KB gzipped). Republish after every `npm run site`.

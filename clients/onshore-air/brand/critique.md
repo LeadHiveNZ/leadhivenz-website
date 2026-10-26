@@ -1,6 +1,6 @@
 # Onshore Air: self-critique log
 
-Every change below came from looking at Playwright renders: review sheets, 2× zooms, 16 px pixel views and full-page and per-section screenshots of `presentation.html`. Seven rounds in total, listed in order. Round 7 is the overseer's review.
+Every change below came from looking at Playwright renders: review sheets, 2× zooms, 16 px pixel views and full-page and per-section screenshots of `presentation.html`. Eight rounds in total, listed in order. Rounds 7 and 8 are the overseer's reviews.
 
 ## Round 0: exploration (prototype sheets, before any lockup)
 | Area | What the render showed | Change |
@@ -72,6 +72,21 @@ Every change below came from looking at Playwright renders: review sheets, 2× z
 | Monogram ring | The inner mark looked small at 32 px. | Ring thinned 38→33 units (-13%), so the inner mark radius grows 55→60 (+9%). |
 | Flat vs diagonal at 16 px | Side-by-side at 128/32/16 px with zoomed pixels (`screens/monogram-flat-vs-diagonal.png`): both read as a navy ring with yellow and blue inside. Flat has a bigger yellow top; diagonal has a larger inner mark at 32 px. | A tie at 16 px, so the diagonal is kept, per the heritage preference. Mono cut: ring plus the solid warm region. Filling both regions read as a tennis ball. |
 | Evolution stacked | The icon should lead the wordmark. | Mark +8% (3.3→3.56× cap height). Gap raised 0.62→0.66× cap after checking on white and navy, since the larger disc made the old gap feel tight. Nothing else on Evolution changed. |
+
+## Round 8: phone-first multi-page site (overseer review)
+The single 1.1 MB page became six linked pages, generated from `source/`, with logos referenced as asset files instead of inlined.
+
+| Check | What the screenshots or tests showed | Change |
+|---|---|---|
+| Page weight | The old single page was 1.1 MB. | `index.html` is 9.4 KB, about 150 KB with its assets (110 KB gzipped). Concept pages are 105–115 KB of HTML and compare is 303 KB, mostly outlined mockup type. Mockup type precision 2→1 decimal saved 12–15%. |
+| Mobile polo (390 px) | The whole shirt shrank to a thumbnail and the crest was unreadable. | On phones the polo is cropped to the chest, so the crest reads at real scale. |
+| Mobile compare | The Google and phone mockups had no concept labels once stacked. | Each mockup now has a "1 · Evolution" style label. |
+| Mobile browser tabs | Titles truncated to "Ons…", so the three tabs were indistinguishable. | On phones the tabs show just the concept name and drop the window dots. |
+| 360 / 320 px | The business card (fixed 336 px) blew out the 1fr grid columns, overflowing by 20 px at 360 and 8 px at 320. | All grid tracks are `minmax(0,1fr)`. The card is fully fluid: its type is sized in container-query units with px fallbacks. The phone mockup zooms to 88% below 360 px. No overflow at 320, 360, 390 or 1280 px on any page. |
+| Element screenshots | The sticky nav overlapped the top of section captures. | The nav is hidden for element shots only. |
+| PDF pagination | The first PDF was 41 pages, with mockup sections split across pages. Chromium ignored `break-inside: avoid` on these blocks, and grid and flex did no better. | Short sections print as full-width inline-blocks (atomic, never split), with `orphans:1; widows:1` so each can sit alone at a page foot. The nav, page cards, prev/next and download buttons are hidden in print because they would be dead links in a PDF. Now 28 A4 pages, every mockup section whole. |
+| PDF check | `convert -density 100 file.pdf[0]` cannot run here: Ghostscript, ImageMagick's PDF delegate, is not installed. | Rasterised with poppler's `pdftoppm` instead. Page 1 and every other page were checked. |
+| Links | | 0 broken links, 0 absolute or external URLs, 0 scripts across the six pages. Every page has a doctype, charset, viewport, title, description, the shared stylesheet and an explicit body background. |
 
 ## Known limits, honestly stated
 - CMYK and Pantone values are not proofed. The printer must match them from the hex values on stock.

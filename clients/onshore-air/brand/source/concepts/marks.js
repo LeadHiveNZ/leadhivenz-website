@@ -50,7 +50,8 @@ function ribbon(c, t0, t1, th, n = 200, roundCaps = false) {
    Built from explicit edges so it is a filled shape, not a stroke:
    - inner edge: straight horizon at y = R + gap, then an exact concentric arc (constant gap to the sun)
    - outer edge: inner edge + thickness; full weight under the sun, then tapering to a point after `wrap` degrees
-   `rightCap: 'round'` gives the constant-width, round-capped alternative documented in critique.md. */
+   `rightCap: 'round'` gives the constant-width, round-capped alternative and `rightCap: 'square'` the round-1
+   "hook"; both are kept only for the comparison sheet in screens/. */
 function horizon(o = {}) {
   const R = o.R ?? 70, th = o.th ?? 17, gap = o.gap ?? 7, Ri = R + gap;
   const wrap = rad(o.wrap ?? 108), a0 = Math.PI / 2, a1 = a0 - wrap;   // screen angles: 90deg = 6 o'clock
@@ -70,12 +71,12 @@ function horizon(o = {}) {
     shape.lastSegment.handleOut = new paper.Point(0, 0);
     shape.add(P(xl, Ri + th));
     shape.closed = true; line = shape;
-  } else {                                                             // constant width + round cap at the tip
+  } else {                                                             // constant width: 'round' cap, or 'square' (round-1 hook)
     shape.add(polar(Ri + th, a1));
     shape.arcTo(polar(Ri + th, (a0 + a1) / 2), polar(Ri + th, a0));
     shape.add(P(xl, Ri + th));
     shape.closed = true;
-    line = U(shape, circle((Ri + th / 2) * Math.cos(a1), (Ri + th / 2) * Math.sin(a1), th / 2));
+    line = o.rightCap === 'square' ? shape : U(shape, circle((Ri + th / 2) * Math.cos(a1), (Ri + th / 2) * Math.sin(a1), th / 2));
   }
   const out = [];
   if (o.split) {

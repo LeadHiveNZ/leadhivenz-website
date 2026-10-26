@@ -1,30 +1,29 @@
-// Pure SVG/HTML/CSS mockups. Each takes a concept build result r = { cfg, files, P }.
-const { inline, nest, outline, textSVG, svgData } = require('./parts');
+// Pure SVG/HTML/CSS mockups. Each takes a concept r = { cfg, files, P, url } where url(file) is the
+// relative href of that concept's asset (logos are referenced, not inlined, so pages stay light).
+const { outline, textSVG, imageRef, imgRef } = require('./parts');
 const BIZ = { phone: '0444 541 409', email: 'onshoreair@outlook.com', web: 'onshoreair.com.au', arc: 'AU067414', place: 'Pacific Paradise QLD 4564' };
 let n = 0;
 
-/* ---------------- Van side panel (white LWB van, facing left) ---------------- */
 function fitOutline(font, str, cap, maxW, o) {
   let t = outline(font, str, cap, o);
   if (t.w > maxW) t = outline(font, str, cap * maxW / t.w, o);
   return t;
 }
+
+/* ---------------- Van side panel (white LWB van, facing left) ---------------- */
 function van(r) {
   n++; const id = 'v' + n;
   const P = r.P.colour, navy = P.navy, F = r.cfg.fonts;
   const body = 'M84,410 L72,336 Q70,306 90,296 L140,268 Q170,256 222,246 L238,240 Q256,200 276,160 L292,124 Q302,98 336,98 L1012,96 Q1036,96 1037,120 L1042,392 Q1042,410 1024,410 L912.45,410 A64,64 0 0 0 787.55,410 L312.45,410 A64,64 0 0 0 187.55,410 Z';
   const wheel = cx => `<g><circle cx="${cx}" cy="424" r="55" fill="#17181b"/><circle cx="${cx}" cy="424" r="34" fill="#cfd4da"/><circle cx="${cx}" cy="424" r="27" fill="#aab0b8"/>${[0, 72, 144, 216, 288].map(a => { const t = a * Math.PI / 180; return `<circle cx="${(cx + 16 * Math.cos(t)).toFixed(1)}" cy="${(424 + 16 * Math.sin(t)).toFixed(1)}" r="3.2" fill="#7b828c"/>`; }).join('')}<circle cx="${cx}" cy="424" r="8" fill="#8c939c"/></g>`;
   const well = cx => `<circle cx="${cx}" cy="424" r="63" fill="#24272d"/>`;
-  // cargo panel copy: logo, phone, web (all above the gold stripe at y=331)
-  const logo = nest(r.files['horizontal.svg'], 737, 112, { w: 450, anchor: 'middle' });
+  const logo = imageRef(r.url('horizontal.svg'), r.files['horizontal.svg'], 737, 112, { w: 450, anchor: 'middle' });
   const phone = fitOutline(F.name, BIZ.phone, 36, 400, { x: 737, y: 112 + logo.h + 52, fill: navy, anchor: 'middle', tracking: 30 });
   const web = fitOutline(F.desc, BIZ.web.toUpperCase(), 12, 300, { x: 737, y: 112 + logo.h + 78, fill: P.desc, anchor: 'middle', tracking: 240 });
-  // skirt copy between the wheel arches (x 330..770)
   const services = fitOutline(F.desc, 'INSTALLATIONS · REPAIRS · MAINTENANCE · HYDRO CLEANING', 11, 430, { x: 550, y: 380, fill: '#FFFFFF', anchor: 'middle', tracking: 140 });
-  // cab door: icon + licence, between window bottom (240) and stripe (331)
-  const doorIcon = nest(r.files['icon.svg'], 352, 276, { w: 50, anchor: 'center' });
+  const doorIcon = imageRef(r.url('icon.svg'), r.files['icon.svg'], 352, 276, { w: 50, anchor: 'center' });
   const lic = fitOutline(F.desc, 'ARC ' + BIZ.arc, 8, 120, { x: 352, y: 318, fill: navy, anchor: 'middle', tracking: 140 });
-  return `<svg class="mock-van" viewBox="0 0 1100 500" role="img" aria-label="${r.cfg.title} concept on a white van side panel">
+  return `<div class="van-crop"><svg class="mock-van" viewBox="0 0 1100 500" role="img" aria-label="${r.cfg.title} concept on a white van side panel">
   <defs>
     <clipPath id="${id}c"><path d="${body}"/></clipPath>
     <linearGradient id="${id}g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset=".72" stop-color="#f4f6f8"/><stop offset="1" stop-color="#dfe3e8"/></linearGradient>
@@ -53,15 +52,15 @@ function van(r) {
   ${logo.svg}
   ${phone.path}${web.path}
   ${doorIcon.svg}${lic.path}
-</svg>`;
+</svg></div>`;
 }
 
 /* ---------------- Navy polo with small mono-white chest crest ---------------- */
 function polo(r) {
   n++; const id = 'p' + n;
   const base = '#16244b', dark = '#0f1a38', light = '#203260';
-  const crest = nest(r.files['mono-white.svg'], 290, 140, { w: 64, anchor: 'center' });
-  return `<svg class="mock-polo" viewBox="0 0 420 460" role="img" aria-label="${r.cfg.title} concept embroidered on a navy polo">
+  const crest = imageRef(r.url('mono-white.svg'), r.files['mono-white.svg'], 290, 140, { w: 64, anchor: 'center' });
+  return `<div class="polo-crop"><svg class="mock-polo" viewBox="0 0 420 460" role="img" aria-label="${r.cfg.title} concept embroidered on a navy polo">
   <defs><linearGradient id="${id}g" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="${dark}"/><stop offset=".25" stop-color="${base}"/><stop offset=".75" stop-color="${base}"/><stop offset="1" stop-color="${dark}"/></linearGradient>
   <filter id="${id}s"><feGaussianBlur stdDeviation="6"/></filter></defs>
   <ellipse cx="210" cy="446" rx="150" ry="8" fill="#000" opacity=".18" filter="url(#${id}s)"/>
@@ -77,7 +76,7 @@ function polo(r) {
   <path d="M270,38 Q250,56 216,98 L228,108 Q260,90 292,72 L290,52 Z" fill="${light}" stroke="${dark}" stroke-width="1.5"/>
   <path d="M120,300 Q160,320 150,380 M300,260 Q270,300 286,360" stroke="${dark}" stroke-width="10" fill="none" opacity=".25" stroke-linecap="round"/>
   ${crest.svg}
-</svg>`;
+</svg></div>`;
 }
 
 /* ---------------- Google Business Profile card ---------------- */
@@ -86,14 +85,14 @@ function gbp(r) {
   const btn = (label, d) => `<div class="gbtn"><span class="gic"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="${d}" fill="none" stroke="#1a73e8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>${label}</div>`;
   return `<div class="gbp" role="img" aria-label="${r.cfg.title} concept as a Google Business Profile avatar">
     <div class="gcover"><div class="gsun" style="background:${r.P.colour.sun}"></div></div>
-    <div class="gav">${inline(r.files['icon-app.svg'], { cls: 'gavimg' })}</div>
+    <div class="gav">${imgRef(r.url('icon-app.svg'), r.files['icon-app.svg'], { cls: 'gavimg' })}</div>
     <div class="gbody">
       <div class="gname">Onshore Air</div>
       <div class="grate"><b>5.0</b> ${star.repeat(5)} <span>(14)</span></div>
       <div class="gcat">Air conditioning contractor · Pacific Paradise</div>
       <div class="gopen"><b>Open</b> · Closes 5 pm</div>
       <div class="gbtns">${btn('Directions', 'M12 2l8 8-8 8-8-8z M9 13v-3h5M12 7l2 3-2 3')}${btn('Call', 'M5 4h4l2 5-2.5 1.5a11 11 0 005 5L15 13l5 2v4a2 2 0 01-2 2A16 16 0 013 6a2 2 0 012-2')}${btn('Website', 'M12 3a9 9 0 100 18 9 9 0 000-18M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18')}${btn('Save', 'M6 3h12v18l-6-4-6 4z')}</div>
-      <div class="gmaps"><span class="gpin">${inline(r.files['icon-app.svg'], { cls: 'gpinimg' })}</span> How it shows as a Maps result at 32 px</div>
+      <div class="gmaps"><span class="gpin">${imgRef(r.url('icon-app.svg'), r.files['icon-app.svg'], { cls: 'gpinimg' })}</span> How it shows as a Maps result at 32 px</div>
     </div>
   </div>`;
 }
@@ -108,7 +107,7 @@ function phone(r) {
   return `<div class="phone" role="img" aria-label="${r.cfg.title} concept in a mobile website header">
     <div class="pscreen">
       <div class="pstatus" style="background:${r.P.navy}"><span>9:41</span>${status}</div>
-      <div class="phead" style="background:${r.P.navy}">${inline(r.files['horizontal-compact-on-navy.svg'], { cls: 'plogo' })}<div class="pburger"><i></i><i></i><i></i></div></div>
+      <div class="phead" style="background:${r.P.navy}">${imgRef(r.url('horizontal-compact-on-navy.svg'), r.files['horizontal-compact-on-navy.svg'], { cls: 'plogo' })}<div class="pburger"><i></i><i></i><i></i></div></div>
       <div class="phero" style="background:${r.P.navy}">
         ${h1}${h2}${h3}
         <p>Installs, repairs, maintenance and hydro cleaning from Caloundra to Noosa.</p>
@@ -122,30 +121,35 @@ function phone(r) {
 
 /* ---------------- Business card front / back ---------------- */
 function card(r) {
-  const P = r.P.colour, F = r.cfg.fonts, on = r.P.onNavy;
-  const t = (s, cap, fill, tr = 0, font = F.desc) => textSVG(font, s, cap, fill, { tracking: tr });
+  const F = r.cfg.fonts, on = r.P.onNavy;
+  const t = (s, cap, fill, tr = 0, font = F.desc) => textSVG(font, s, cap, fill, { tracking: tr, cqBase: 336 });
+  const gap = px => `<div style="height:${px}px;height:${(px / 3.36).toFixed(3)}cqw"></div>`;
   return `<div class="cards" role="img" aria-label="${r.cfg.title} concept on a business card, front and back">
-    <div class="bcard front">${inline(r.files['primary-stacked.svg'], { cls: 'bclogo' })}</div>
+    <div class="bcard front">${imgRef(r.url('primary-stacked.svg'), r.files['primary-stacked.svg'], { cls: 'bclogo' })}</div>
     <div class="bcard back" style="background:${r.P.navy}">
       <div class="bcl">
         ${t('LUKE', 15, '#FFFFFF', 60, F.name)}
-        <div style="height:8px"></div>${t('OWNER · LICENSED TECHNICIAN', 6.5, on.desc, 160)}
-        <div style="height:18px"></div>${t(BIZ.phone, 10, '#FFFFFF', 40, F.name)}
-        <div style="height:9px"></div>${t(BIZ.email, 7, '#FFFFFF', 20)}
-        <div style="height:7px"></div>${t(BIZ.web, 7, '#FFFFFF', 20)}
-        <div style="height:14px"></div>${t('ARC LICENCE ' + BIZ.arc + ' · ' + BIZ.place.toUpperCase(), 5, '#AFC1E6', 120)}
+        ${gap(8)}${t('OWNER · LICENSED TECHNICIAN', 6.5, on.desc, 160)}
+        ${gap(18)}${t(BIZ.phone, 10, '#FFFFFF', 40, F.name)}
+        ${gap(9)}${t(BIZ.email, 7, '#FFFFFF', 20)}
+        ${gap(7)}${t(BIZ.web, 7, '#FFFFFF', 20)}
+        ${gap(14)}${t('ARC LICENCE ' + BIZ.arc + ' · ' + BIZ.place.toUpperCase(), 5, '#AFC1E6', 120)}
       </div>
-      ${inline(r.files['icon-on-navy.svg'], { cls: 'bcicon' })}
+      ${imgRef(r.url('icon-on-navy.svg'), r.files['icon-on-navy.svg'], { cls: 'bcicon' })}
     </div>
   </div>`;
 }
 
-/* ---------------- Browser tabs with favicons (all concepts in one window) ---------------- */
-function tabs(rs, dark = false) {
-  const tab = (r, active) => `<div class="tab ${active ? 'on' : ''}"><img src="${svgData(dark ? r.files['_favicon-dark-preview'] : r.files['favicon.svg'])}" width="16" height="16" alt="${r.cfg.title} favicon"><span>Onshore Air | ${r.cfg.title}</span><b>×</b></div>`;
-  return `<div class="browser ${dark ? 'dark' : ''}">
-    <div class="tabbar"><div class="dots"><i></i><i></i><i></i></div>${rs.map((r, i) => tab(r, i === 0)).join('')}<div class="tab ghost"><span>Air conditioning Sunsh…</span></div></div>
-    <div class="toolbar"><span class="nav">‹ › ↻</span><div class="url"><svg class="lock" width="10" height="12" viewBox="0 0 10 12" aria-hidden="true"><rect x="1" y="5" width="8" height="6.5" rx="1.4" fill="currentColor"/><path d="M3 5V3.6a2 2 0 014 0V5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg> onshoreair.com.au</div></div>
+/* ---------------- Browser tabs with favicons ----------------
+   rs: concepts shown as tabs (first is active). single=true adds neutral extra tabs for a one-concept view. */
+function tabs(rs, dark = false, { single = false } = {}) {
+  const fav = r => r.url(dark ? 'favicon-dark-preview.svg' : 'favicon.svg');
+  const lock = '<svg class="lock" width="10" height="12" viewBox="0 0 10 12" aria-hidden="true"><rect x="1" y="5" width="8" height="6.5" rx="1.4" fill="currentColor"/><path d="M3 5V3.6a2 2 0 014 0V5" fill="none" stroke="currentColor" stroke-width="1.4"/></svg>';
+  const tab = (r, active) => `<div class="tab ${active ? 'on' : ''}"><img src="${fav(r)}" width="16" height="16" alt="${r.cfg.title} favicon"><span>${single ? 'Onshore Air | Air conditioning' : '<span class="tl">Onshore Air | ' + r.n + ' · </span>' + r.cfg.title}</span><b>×</b></div>`;
+  const extra = single ? '<div class="tab ghost"><span>New tab</span><b>×</b></div><div class="tab ghost wide"><span>Inbox</span></div>' : '<div class="tab ghost wide"><span>Air conditioning Sunsh…</span></div>';
+  return `<div class="browser ${dark ? 'dark' : ''}" role="img" aria-label="Favicon in a ${dark ? 'dark' : 'light'} browser tab">
+    <div class="tabbar"><div class="dots"><i></i><i></i><i></i></div>${rs.map((r, i) => tab(r, i === 0)).join('')}${extra}</div>
+    <div class="toolbar"><span class="nav">‹ › ↻</span><div class="url">${lock}onshoreair.com.au</div></div>
   </div>`;
 }
 

@@ -2,14 +2,14 @@
   "name": "onshore-air-brand",
   "version": "1.0.0",
   "private": true,
-  "description": "Generator for the Onshore Air logo concepts: SVG sets, PNG renders, presentation and screens",
+  "description": "Generator for the Onshore Air logo concepts: SVG sets, PNG renders, multi-page presentation site, download packs, PDF and screens",
   "license": "UNLICENSED",
   "scripts": {
     "fonts": "./fetch-fonts.sh",
     "build": "BRAND_OUT=.. node build.js",
     "png": "BRAND_OUT=.. node render-png.js",
-    "present": "BRAND_OUT=.. PRESENT_OUT=.. OLD_LOGO=../reference/current-logo.png node present/build-presentation.js --shots",
-    "all": "npm run build && npm run png && npm run present"
+    "site": "BRAND_OUT=.. SITE_OUT=../presentation SCREENS_OUT=../screens OLD_LOGO=../reference/current-logo.png node present/build-site.js",
+    "all": "npm run build && npm run png && npm run site"
   },
   "dependencies": {
     "opentype.js": "^2.0.0",
