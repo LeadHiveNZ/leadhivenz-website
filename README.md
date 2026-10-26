@@ -12,6 +12,9 @@ clients/
     northland-handyman-master.html
     README.md                   routes, data sources, pre-launch checks
     screens/                    rendered previews of each page
+  straight-line-landscaping/    Straight Line Landscaping (Matt), Tauranga: multi-page brochure
+                                preview site built from his Facebook photos (not the ads template)
+    index.html + 10 pages, assets/, photos/, screens/, README.md
 ```
 
 Preview any client file directly in a browser; add `?page=<key>` to view a service page.
