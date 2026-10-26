@@ -1,0 +1,492 @@
+[
+ {
+  "name": "Bungee Inline",
+  "family": "Bungee Inline",
+  "wght": 400,
+  "file": "bungee-inline.ttf",
+  "mode": "solid"
+ },
+ {
+  "name": "Bungee",
+  "family": "Bungee",
+  "wght": 400,
+  "file": "bungee.ttf",
+  "mode": "solid"
+ },
+ {
+  "name": "Passion One",
+  "family": "Passion One",
+  "wght": 400,
+  "file": "passion-one.ttf",
+  "mode": "solid"
+ },
+ {
+  "name": "Changa One",
+  "family": "Changa One",
+  "wght": 400,
+  "file": "changa-one.ttf",
+  "mode": "solid"
+ },
+ {
+  "name": "Lilita One",
+  "family": "Lilita One",
+  "wght": 400,
+  "file": "lilita-one.ttf",
+  "mode": "solid"
+ },
+ {
+  "name": "Titan One",
+  "family": "Titan One",
+  "wght": 400,
+  "file": "titan-one.ttf",
+  "mode": "solid"
+ },
+ {
+  "name": "Bowlby One",
+  "family": "Bowlby One",
+  "wght": 400,
+  "file": "bowlby-one.ttf",
+  "mode": "solid"
+ },
+ {
+  "name": "Righteous",
+  "family": "Righteous",
+  "wght": 400,
+  "file": "righteous.ttf",
+  "mode": "solid"
+ },
+ {
+  "name": "Big Shoulders Inline 800",
+  "family": "Big Shoulders Inline Display",
+  "wght": 800,
+  "file": "big-shoulders-inline-800.ttf",
+  "mode": "solid"
+ },
+ {
+  "name": "Audiowide",
+  "family": "Audiowide",
+  "wght": 400,
+  "file": "audiowide.ttf",
+  "mode": "solid"
+ },
+ {
+  "name": "Monoton",
+  "family": "Monoton",
+  "wght": 400,
+  "file": "monoton.ttf",
+  "mode": "solid"
+ },
+ {
+  "name": "Tube: Righteous",
+  "family": "Righteous",
+  "wght": 400,
+  "file": "righteous.ttf",
+  "mode": "tube"
+ },
+ {
+  "name": "Tube: Comfortaa 300",
+  "family": "Comfortaa",
+  "wght": 300,
+  "file": "comfortaa-300.ttf",
+  "mode": "tube"
+ },
+ {
+  "name": "Tube: Poiret One",
+  "family": "Poiret One",
+  "wght": 400,
+  "file": "poiret-one.ttf",
+  "mode": "tube"
+ },
+ {
+  "name": "Tube: Josefin Sans 100",
+  "family": "Josefin Sans",
+  "wght": 100,
+  "file": "josefin-100.ttf",
+  "mode": "tube"
+ },
+ {
+  "name": "Tube: Big Shoulders 100",
+  "family": "Big Shoulders Display",
+  "wght": 100,
+  "file": "big-shoulders-100.ttf",
+  "mode": "tube"
+ },
+ {
+  "name": "Tube: Antonio 100",
+  "family": "Antonio",
+  "wght": 100,
+  "file": "antonio-100.ttf",
+  "mode": "tube"
+ },
+ {
+  "name": "Tube: Oswald 200",
+  "family": "Oswald",
+  "wght": 200,
+  "file": "oswald-200.ttf",
+  "mode": "tube"
+ },
+ {
+  "name": "Tube: Advent Pro 100",
+  "family": "Advent Pro",
+  "wght": 100,
+  "file": "advent-pro-100.ttf",
+  "mode": "tube"
+ },
+ {
+  "name": "Tube: Saira Extra Condensed 100",
+  "family": "Saira Extra Condensed",
+  "wght": 100,
+  "file": "saira-xc-100.ttf",
+  "mode": "tube"
+ },
+ {
+  "name": "Tube: Barlow Condensed 100",
+  "family": "Barlow Condensed",
+  "wght": 100,
+  "file": "barlow-cond-100.ttf",
+  "mode": "tube"
+ },
+ {
+  "name": "Tube: Sofia Sans Extra Condensed 100",
+  "family": "Sofia Sans Extra Condensed",
+  "wght": 100,
+  "file": "sofia-xc-100.ttf",
+  "mode": "tube"
+ },
+ {
+  "name": "Tube: Tilt Neon",
+  "family": "Tilt Neon",
+  "wght": 400,
+  "file": "tilt-neon.ttf",
+  "mode": "tube"
+ },
+ {
+  "name": "Tube: Federo",
+  "family": "Federo",
+  "wght": 400,
+  "file": "federo.ttf",
+  "mode": "tube"
+ },
+ {
+  "name": "Tube: Quicksand 300",
+  "family": "Quicksand",
+  "wght": 300,
+  "file": "quicksand-300.ttf",
+  "mode": "tube"
+ },
+ {
+  "name": "Tube: Outfit 100",
+  "family": "Outfit",
+  "wght": 100,
+  "file": "outfit-100.ttf",
+  "mode": "tube"
+ },
+ {
+  "name": "Tube: Jost 100",
+  "family": "Jost",
+  "wght": 100,
+  "file": "jost-100.ttf",
+  "mode": "tube"
+ },
+ {
+  "name": "Tube: Rajdhani 300",
+  "family": "Rajdhani",
+  "wght": 300,
+  "file": "rajdhani-300.ttf",
+  "mode": "tube"
+ },
+ {
+  "name": "Tube: Teko 300",
+  "family": "Teko",
+  "wght": 300,
+  "file": "teko-300.ttf",
+  "mode": "tube"
+ },
+ {
+  "name": "Tube: Mohave 300",
+  "family": "Mohave",
+  "wght": 300,
+  "file": "mohave-300.ttf",
+  "mode": "tube"
+ },
+ {
+  "name": "Tube: M PLUS Rounded 1c 100",
+  "family": "M PLUS Rounded 1c",
+  "wght": 100,
+  "file": "mplus-rounded-100.ttf",
+  "mode": "tube"
+ },
+ {
+  "name": "Tube: Nunito 200",
+  "family": "Nunito",
+  "wght": 200,
+  "file": "nunito-200.ttf",
+  "mode": "tube"
+ },
+ {
+  "name": "Tube: Megrim",
+  "family": "Megrim",
+  "wght": 400,
+  "file": "megrim.ttf",
+  "mode": "tube"
+ },
+ {
+  "name": "Tube: Julius Sans One",
+  "family": "Julius Sans One",
+  "wght": 400,
+  "file": "julius.ttf",
+  "mode": "tube"
+ },
+ {
+  "name": "Tube: Uncial Antiqua",
+  "family": "Uncial Antiqua",
+  "wght": 400,
+  "file": "uncial.ttf",
+  "mode": "tube"
+ },
+ {
+  "name": "Tube: Saira Extra Condensed 200",
+  "family": "Saira Extra Condensed",
+  "wght": 200,
+  "file": "saira-xc-200.ttf",
+  "mode": "tube"
+ },
+ {
+  "name": "Tube: Saira Extra Condensed 300",
+  "family": "Saira Extra Condensed",
+  "wght": 300,
+  "file": "saira-xc-300.ttf",
+  "mode": "tube"
+ },
+ {
+  "name": "Tube: Saira Condensed 100",
+  "family": "Saira Condensed",
+  "wght": 100,
+  "file": "saira-c-100.ttf",
+  "mode": "tube"
+ },
+ {
+  "name": "Tube: Oswald 300",
+  "family": "Oswald",
+  "wght": 300,
+  "file": "oswald-300.ttf",
+  "mode": "tube"
+ },
+ {
+  "name": "Tube: Mohave 400",
+  "family": "Mohave",
+  "wght": 400,
+  "file": "mohave-400.ttf",
+  "mode": "tube"
+ },
+ {
+  "name": "Tube: Barlow Condensed 200",
+  "family": "Barlow Condensed",
+  "wght": 200,
+  "file": "barlow-cond-200.ttf",
+  "mode": "tube"
+ },
+ {
+  "name": "Tube: Smooch Sans 100",
+  "family": "Smooch Sans",
+  "wght": 100,
+  "file": "smooch-100.ttf",
+  "mode": "tube"
+ },
+ {
+  "name": "Tube: Yanone Kaffeesatz 200",
+  "family": "Yanone Kaffeesatz",
+  "wght": 200,
+  "file": "yanone-200.ttf",
+  "mode": "tube"
+ },
+ {
+  "name": "Tube: BenchNine 300",
+  "family": "BenchNine",
+  "wght": 300,
+  "file": "benchnine-300.ttf",
+  "mode": "tube"
+ },
+ {
+  "name": "Tube: Roboto Condensed 100",
+  "family": "Roboto Condensed",
+  "wght": 100,
+  "file": "roboto-cond-100.ttf",
+  "mode": "tube"
+ },
+ {
+  "name": "Tube: Fira Sans Extra Condensed 100",
+  "family": "Fira Sans Extra Condensed",
+  "wght": 100,
+  "file": "fira-xc-100.ttf",
+  "mode": "tube"
+ },
+ {
+  "name": "Tube: IBM Plex Sans Condensed 100",
+  "family": "IBM Plex Sans Condensed",
+  "wght": 100,
+  "file": "plex-cond-100.ttf",
+  "mode": "tube"
+ },
+ {
+  "name": "Tube: Encode Sans Condensed 100",
+  "family": "Encode Sans Condensed",
+  "wght": 100,
+  "file": "encode-cond-100.ttf",
+  "mode": "tube"
+ },
+ {
+  "name": "Tube: Sofia Sans Condensed 100",
+  "family": "Sofia Sans Condensed",
+  "wght": 100,
+  "file": "sofia-c-100.ttf",
+  "mode": "tube"
+ },
+ {
+  "name": "Tube: Antonio 200",
+  "family": "Antonio",
+  "wght": 200,
+  "file": "antonio-200.ttf",
+  "mode": "tube"
+ },
+ {
+  "name": "Tube: Dosis 200",
+  "family": "Dosis",
+  "wght": 200,
+  "file": "dosis-200.ttf",
+  "mode": "tube"
+ },
+ {
+  "name": "Tube: Gemunu Libre 200",
+  "family": "Gemunu Libre",
+  "wght": 200,
+  "file": "gemunu-200.ttf",
+  "mode": "tube"
+ },
+ {
+  "name": "Tube: Big Shoulders Text 100",
+  "family": "Big Shoulders Text",
+  "wght": 100,
+  "file": "big-shoulders-text-100.ttf",
+  "mode": "tube"
+ },
+ {
+  "name": "Tube: Khand 300",
+  "family": "Khand",
+  "wght": 300,
+  "file": "khand-300.ttf",
+  "mode": "tube"
+ },
+ {
+  "name": "Tube: Pathway Gothic One",
+  "family": "Pathway Gothic One",
+  "wght": 400,
+  "file": "pathway.ttf",
+  "mode": "tube"
+ },
+ {
+  "name": "Tube: Economica",
+  "family": "Economica",
+  "wght": 400,
+  "file": "economica.ttf",
+  "mode": "tube"
+ },
+ {
+  "name": "Tube: Tulpen One",
+  "family": "Tulpen One",
+  "wght": 400,
+  "file": "tulpen.ttf",
+  "mode": "tube"
+ },
+ {
+  "name": "Tube: Voltaire",
+  "family": "Voltaire",
+  "wght": 400,
+  "file": "voltaire.ttf",
+  "mode": "tube"
+ },
+ {
+  "name": "Tube: Iceland",
+  "family": "Iceland",
+  "wght": 400,
+  "file": "iceland.ttf",
+  "mode": "tube"
+ },
+ {
+  "name": "Tube: Tomorrow 100",
+  "family": "Tomorrow",
+  "wght": 100,
+  "file": "tomorrow-100.ttf",
+  "mode": "tube"
+ },
+ {
+  "name": "Tube: Asap Condensed 200",
+  "family": "Asap Condensed",
+  "wght": 200,
+  "file": "asap-cond-200.ttf",
+  "mode": "tube"
+ },
+ {
+  "name": "Tube: Teko 400",
+  "family": "Teko",
+  "wght": 400,
+  "file": "teko-400.ttf",
+  "mode": "tube"
+ },
+ {
+  "name": "Tube: Stick No Bills 200",
+  "family": "Stick No Bills",
+  "wght": 200,
+  "file": "sticknobills-200.ttf",
+  "mode": "tube"
+ },
+ {
+  "name": "Tube: Oxanium 200",
+  "family": "Oxanium",
+  "wght": 200,
+  "file": "oxanium-200.ttf",
+  "mode": "tube"
+ },
+ {
+  "name": "Tube: Jura 300",
+  "family": "Jura",
+  "wght": 300,
+  "file": "jura-300.ttf",
+  "mode": "tube"
+ },
+ {
+  "name": "Tube: Abel",
+  "family": "Abel",
+  "wght": 400,
+  "file": "abel.ttf",
+  "mode": "tube"
+ },
+ {
+  "name": "Tube: Archivo Narrow",
+  "family": "Archivo Narrow",
+  "wght": 400,
+  "file": "archivo-narrow.ttf",
+  "mode": "tube"
+ },
+ {
+  "name": "Bebas Neue",
+  "family": "Bebas Neue",
+  "wght": 400,
+  "file": "bebas.ttf",
+  "mode": "solid"
+ },
+ {
+  "name": "League Gothic",
+  "family": "League Gothic",
+  "wght": 400,
+  "file": "league-gothic.ttf",
+  "mode": "solid"
+ },
+ {
+  "name": "Squada One",
+  "family": "Squada One",
+  "wght": 400,
+  "file": "squada.ttf",
+  "mode": "solid"
+ }
+]

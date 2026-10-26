@@ -31,7 +31,19 @@ function preloadImage(name, sizes) {
   const set = m.widths.map((w) => `/assets/img/${name}-${w}.webp ${w}w`).join(', ');
   return `<link rel="preload" as="image" type="image/webp" imagesrcset="${set}" imagesizes="${sizes}" fetchpriority="high">`;
 }
-const logo = (cls = '', eager = true) => `<picture class="${cls}"><source type="image/webp" srcset="/assets/img/logo.webp"><img src="/assets/img/logo.png" width="329" height="180" alt="Onshore Air"${eager ? '' : ' loading="lazy"'} decoding="async"></picture>`;
+// Vector logo (site-tools/logo/build-logo.js). Intrinsic sizes come from each SVG's viewBox.
+const svgSize = (file) => {
+  const m = fs.readFileSync(path.join(SITE_DIR, 'assets', 'img', file), 'utf8').match(/viewBox="0 0 ([\d.]+) ([\d.]+)"/);
+  return { w: Math.round(parseFloat(m[1])), h: Math.round(parseFloat(m[2])) };
+};
+// ?v=content-hash: /assets/* is cached for a year (immutable), so a changed logo gets a new URL
+const LOGO = { stacked: { src: `/assets/img/logo.svg?v=${hashOf('assets/img/logo.svg')}`, ...svgSize('logo.svg') }, horizontal: { src: `/assets/img/logo-horizontal.svg?v=${hashOf('assets/img/logo-horizontal.svg')}`, ...svgSize('logo-horizontal.svg') } };
+// Header lockup: stacked on phones (it fits the 390 px header with the phone button), horizontal from 1240 px.
+const HEADER_HORIZONTAL_FROM = process.env.HEADER_LOCKUP === 'stacked' ? null : 1240;
+const logo = (cls = '', eager = true) => `<img class="${cls}" src="${LOGO.stacked.src}" width="${LOGO.stacked.w}" height="${LOGO.stacked.h}" alt="Onshore Air"${eager ? '' : ' loading="lazy"'} decoding="async">`;
+const headerLogo = () => HEADER_HORIZONTAL_FROM
+  ? `<picture class="brand-logo"><source media="(min-width: ${HEADER_HORIZONTAL_FROM}px)" srcset="${LOGO.horizontal.src}" width="${LOGO.horizontal.w}" height="${LOGO.horizontal.h}"><img src="${LOGO.stacked.src}" width="${LOGO.stacked.w}" height="${LOGO.stacked.h}" alt="Onshore Air" decoding="async"></picture>`
+  : `<picture class="brand-logo">${logo()}</picture>`;
 
 /* ---------- small pieces ---------- */
 const callBtn = (cls = '', label = '') => `<a class="btn btn-call ${cls}" href="${TEL}" data-phone-link>${icon('phone')}<span>${label ? `<span class="call-word">${label} </span>` : ''}${PHONE}</span></a>`;
@@ -52,7 +64,7 @@ function header(current) {
 <span class="nb-source" id="nb-source" aria-hidden="true">${S.phone.display}</span>
 <header class="site-header">
   <div class="container header-inner">
-    <a class="brand" href="/">${logo('brand-logo')}<span class="visually-hidden"> home</span></a>
+    <a class="brand" href="/">${headerLogo()}<span class="visually-hidden"> home</span></a>
     <nav class="nav-desktop" aria-label="Main"><ul>${navLinks(current)}</ul></nav>
     <a class="btn btn-call header-call" href="${TEL}" data-phone-link>${icon('phone')}<span class="header-call-text">${PHONE}</span><span class="header-call-short" aria-hidden="true">Call</span></a>
     <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="mobile-menu"><span class="visually-hidden">Menu</span>${icon('menu', 'icon-open')}${icon('close', 'icon-close')}</button>
@@ -266,8 +278,8 @@ ${canonical ? `<meta property="og:url" content="${url}">\n` : ''}<meta property=
 <link rel="preload" href="/assets/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/assets/fonts/outfit-latin.woff2" as="font" type="font/woff2" crossorigin>
 ${preload ? preload + '\n' : ''}<link rel="stylesheet" href="/assets/css/site.css?v=${hashOf('assets/css/site.css')}">
-<link rel="icon" href="/favicon.ico" sizes="any">
-<link rel="icon" href="/assets/img/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="icon" href="/favicon.ico" sizes="32x32">
+<link rel="icon" href="/assets/img/favicon.svg?v=${hashOf('assets/img/favicon.svg')}" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/assets/img/apple-touch-icon.png">
 <link rel="manifest" href="/site.webmanifest">
 <script src="/assets/js/site.js?v=${hashOf('assets/js/site.js')}" defer></script>

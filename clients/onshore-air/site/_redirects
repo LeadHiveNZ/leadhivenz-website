@@ -1,13 +1,20 @@
-# Same rules as netlify.toml (kept as a fallback for drag-and-drop deploys)
-/cleaning              /hydro-cleaning/   301
-/contact-8             /contact/          301
-/home                  /                  301
-/installations.html    /installations/    301
-/repairs.html          /repairs/          301
-/hydro-cleaning.html   /hydro-cleaning/   301
-/maintenance.html      /maintenance/      301
-/about.html            /about/            301
-/service-areas.html    /service-areas/    301
-/contact.html          /contact/          301
-/cleaning.html         /hydro-cleaning/   301
-/contact-8.html        /contact/          301
+# Same rules as netlify.toml (kept as a fallback for drag-and-drop deploys). First match wins.
+/cleaning                                                                      /hydro-cleaning/   301
+/contact-8                                                                     /contact/          301
+/home                                                                          /                  301
+/inquiry-services-page                                                         /contact/          301
+/blog                                                                          /                  301
+/blog/*                                                                        /                  301
+/post/professional-air-conditioner-cleaning-services-on-the-sunshine-coast     /hydro-cleaning/   301
+/post/fast-reliable-air-conditioner-repairs-on-the-sunshine-coast              /repairs/          301
+/post/expert-air-conditioning-installations-on-the-sunshine-coast              /installations/    301
+/post/*                                                                        /                  301
+/installations.html                                                            /installations/    301
+/repairs.html                                                                  /repairs/          301
+/hydro-cleaning.html                                                           /hydro-cleaning/   301
+/maintenance.html                                                              /maintenance/      301
+/about.html                                                                    /about/            301
+/service-areas.html                                                            /service-areas/    301
+/contact.html                                                                  /contact/          301
+/cleaning.html                                                                 /hydro-cleaning/   301
+/contact-8.html                                                                /contact/          301

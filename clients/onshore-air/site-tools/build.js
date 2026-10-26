@@ -53,10 +53,19 @@ Sitemap: ${S.origin}/sitemap.xml
 `);
 
 // Old Wix URLs and *.html variants -> new clean routes (301). Netlify matches with or without a trailing slash.
+// Includes every URL in the old Wix sitemap and blog feed so links and rankings carry over (first match wins,
+// so the specific /post/ rules sit before the /post/* catch-all).
 const redirects = [
   ['/cleaning', '/hydro-cleaning/'],
   ['/contact-8', '/contact/'],
   ['/home', '/'],
+  ['/inquiry-services-page', '/contact/'],
+  ['/blog', '/'],
+  ['/blog/*', '/'],
+  ['/post/professional-air-conditioner-cleaning-services-on-the-sunshine-coast', '/hydro-cleaning/'],
+  ['/post/fast-reliable-air-conditioner-repairs-on-the-sunshine-coast', '/repairs/'],
+  ['/post/expert-air-conditioning-installations-on-the-sunshine-coast', '/installations/'],
+  ['/post/*', '/'],
   ...['installations', 'repairs', 'hydro-cleaning', 'maintenance', 'about', 'service-areas', 'contact'].map((r) => [`/${r}.html`, `/${r}/`]),
   ['/cleaning.html', '/hydro-cleaning/'],
   ['/contact-8.html', '/contact/'],
@@ -92,7 +101,7 @@ ${redirects.map(([from, to]) => `[[redirects]]
   to = "${to}"
   status = 301
 `).join('\n')}`);
-write('_redirects', `# Same rules as netlify.toml (kept as a fallback for drag-and-drop deploys)\n${redirects.map(([f, t]) => `${f.padEnd(22)} ${t.padEnd(18)} 301`).join('\n')}\n`);
+write('_redirects', `# Same rules as netlify.toml (kept as a fallback for drag-and-drop deploys). First match wins.\n${redirects.map(([f, t]) => `${f.padEnd(78)} ${t.padEnd(18)} 301`).join('\n')}\n`);
 
 write('site.webmanifest', JSON.stringify({
   name: S.name,

@@ -53,7 +53,7 @@
   --font-body: "Inter", "Inter Fallback", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
   color-scheme: light;
 }
-@media (min-width: 1100px) { :root { --header-h: 88px; } }
+@media (min-width: 1180px) { :root { --header-h: 88px; } }
 
 /* ---------- base ---------- */
 *, *::before, *::after { box-sizing: border-box; }
@@ -125,19 +125,24 @@ strong { color: var(--ink); font-weight: 600; }
   .header-call-text { display: none; }
   .header-call-short { display: inline; }
 }
-@media (min-width: 1100px) {
-  .brand-logo img { height: 64px; }
+@media (min-width: 1180px) {
+  .brand-logo img { height: 60px; }
   .nav-toggle, .mobile-menu { display: none; }
   .menu-open body { overflow: visible; }
   .menu-open .site-header::after { display: none; }
   .nav-desktop { display: block; margin-right: 8px; }
   .nav-desktop ul { display: flex; gap: 2px; list-style: none; }
-  .nav-desktop a { display: block; padding: 10px 12px; border-radius: 10px; color: #E3EAF6; font-weight: 500; font-size: .9688rem; text-decoration: none; transition: background-color .15s, color .15s; }
+  .nav-desktop a { display: block; padding: 10px 10px; border-radius: 10px; color: #E3EAF6; font-weight: 500; font-size: .9688rem; white-space: nowrap; text-decoration: none; transition: background-color .15s, color .15s; }
   .nav-desktop a:hover { background: rgba(255, 255, 255, .08); color: #fff; }
   .nav-desktop a[aria-current="page"] { color: var(--sun-400); }
   .header-call { min-height: 48px; padding: 0 20px; font-size: 1.0625rem; }
 }
-@media (min-width: 1240px) { .nav-desktop a { padding: 10px 14px; } }
+/* from 1240px the header has room for the horizontal lockup (sphere left of the wordmark) */
+@media (min-width: 1240px) {
+  .nav-desktop a { padding: 10px 12px; }
+  .brand-logo img { height: 50px; }
+}
+@media (min-width: 1320px) { .nav-desktop a { padding: 10px 14px; } }
 
 /* ---------- status pill ---------- */
 .status { display: inline-flex; align-items: center; gap: 10px; margin: 0 0 20px; padding: 7px 14px 7px 12px; border-radius: 18px; background: rgba(255, 255, 255, .08); border: 1px solid rgba(255, 255, 255, .14); color: #E9EFF9; font-size: .875rem; font-weight: 500; line-height: 1.3; }

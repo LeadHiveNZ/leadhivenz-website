@@ -4,7 +4,8 @@
 module.exports = {
   name: 'Onshore Air',
   owner: 'Luke',
-  origin: 'https://onshoreair.com.au',
+  // Canonical host: the live Wix site (and Google's index) uses www, so keep it for the migration.
+  origin: 'https://www.onshoreair.com.au',
   phone: { display: '0444 541 409', tel: '+61444541409' },
   email: 'onshoreair@outlook.com',
   abn: '22 594 945 437',

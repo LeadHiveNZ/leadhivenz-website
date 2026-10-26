@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://onshoreair.com.au/sitemap.xml
+Sitemap: https://www.onshoreair.com.au/sitemap.xml

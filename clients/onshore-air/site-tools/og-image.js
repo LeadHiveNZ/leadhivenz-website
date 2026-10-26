@@ -25,7 +25,7 @@ p{margin-top:18px;font-size:24px;color:#D5E2F5;font-weight:500}
 <img class="bg" src="${url('assets/img/coast-aerial-1600.jpg')}">
 <div class="shade"></div>
 <div class="copy">
-  <img class="logo" src="${url('assets/img/logo.png')}">
+  <img class="logo" src="${url('assets/img/logo.svg')}">
   <h1>Sunshine Coast air conditioning, <span>done properly.</span></h1>
   <p>Installs · Repairs · Hydro cleaning · Servicing</p>
   <div class="tel">0444 541 409</div>

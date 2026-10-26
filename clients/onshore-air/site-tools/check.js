@@ -70,7 +70,7 @@ for (const file of [...htmlFiles, ...textAssets]) {
   text = text.replace(/xmlns="http:\/\/www\.w3\.org\/2000\/svg"/g, '');           // SVG namespace, not a request
   text.split('\n').forEach((line) => {
     for (const m of line.matchAll(/(?:https?:)?\/\/[a-z0-9.-]+\.[a-z]{2,}[^\s"'<>)]*/gi)) {
-      if (allowedLine(line) && m[0].startsWith('https://onshoreair.com.au/')) continue;
+      if (allowedLine(line) && m[0].startsWith(require('./src/site').origin + '/')) continue;
       externals++; fail('EXTERNAL', rel(file), m[0]);
     }
   });

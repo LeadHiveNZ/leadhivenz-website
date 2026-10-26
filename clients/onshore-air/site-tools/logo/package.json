@@ -1,0 +1,11 @@
+{
+  "name": "onshore-air-logo",
+  "private": true,
+  "description": "Vector rebuild of the Onshore Air logo (sphere geometry + wordmark outlines). Run: npm install && node build-logo.js",
+  "license": "UNLICENSED",
+  "dependencies": {
+    "clipper-lib": "6.4.2",
+    "opentype.js": "2.0.0",
+    "paper": "0.16.0"
+  }
+}

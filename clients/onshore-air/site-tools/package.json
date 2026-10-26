@@ -1,17 +1,18 @@
 {
   "name": "onshore-air-site-tools",
   "private": true,
-  "description": "Generator and QA helpers for the Onshore Air website (no npm dependencies; Playwright and ImageMagick are used from the system).",
+  "description": "Generator and QA helpers for the Onshore Air website. Logo: cd logo && npm install && node build-logo.js. Everything else uses system Node, Playwright and ImageMagick.",
   "scripts": {
     "build": "node build.js",
+    "logo": "cd logo && npm install --no-audit --no-fund && node build-logo.js",
     "images": "node images.js",
-    "brand": "bash brand.sh",
     "og": "node og-image.js",
     "fonts": "bash fonts.sh",
     "check": "node check.js",
     "shots": "node screenshots.js",
     "zip": "bash zip.sh",
     "serve": "node serve.js 8080",
+    "preview": "node stage-preview.js",
     "release": "node build.js && node check.js && node screenshots.js && bash zip.sh"
   }
 }

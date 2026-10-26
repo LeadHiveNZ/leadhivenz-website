@@ -24,7 +24,7 @@
     doc.addEventListener('keydown', function (e) {
       if (e.key === 'Escape' && root.classList.contains('menu-open')) { setMenu(false); toggle.focus(); }
     });
-    var desktop = window.matchMedia('(min-width: 1100px)');
+    var desktop = window.matchMedia('(min-width: 1180px)');
     var onChange = function () { if (desktop.matches) setMenu(false); };
     if (desktop.addEventListener) desktop.addEventListener('change', onChange);
   }

@@ -40,6 +40,41 @@
   status = 301
 
 [[redirects]]
+  from = "/inquiry-services-page"
+  to = "/contact/"
+  status = 301
+
+[[redirects]]
+  from = "/blog"
+  to = "/"
+  status = 301
+
+[[redirects]]
+  from = "/blog/*"
+  to = "/"
+  status = 301
+
+[[redirects]]
+  from = "/post/professional-air-conditioner-cleaning-services-on-the-sunshine-coast"
+  to = "/hydro-cleaning/"
+  status = 301
+
+[[redirects]]
+  from = "/post/fast-reliable-air-conditioner-repairs-on-the-sunshine-coast"
+  to = "/repairs/"
+  status = 301
+
+[[redirects]]
+  from = "/post/expert-air-conditioning-installations-on-the-sunshine-coast"
+  to = "/installations/"
+  status = 301
+
+[[redirects]]
+  from = "/post/*"
+  to = "/"
+  status = 301
+
+[[redirects]]
   from = "/installations.html"
   to = "/installations/"
   status = 301
