@@ -3,7 +3,9 @@
 Client: **SR Shutters & Screens (Shane Bartolo)**, owner-operator. Plantation shutters, aluminium/outdoor
 shutters, security screens and doors, fly screens, blinds. Brisbane, Moreton Bay, Logan, Redlands, Ipswich,
 Gold Coast and Sunshine Coast, QLD.
-Deal: **demo request only, no deal yet.** Built for Joe to show Shane. Current site is srshuttersandscreens.com.au
+Deal: **demo request 25/10/2026 (Mount Gravatt), no deal yet.** Offer: A$500 one-off build + A$20/month hosting & care.
+Stripe payment link (AUD): https://buy.stripe.com/00wdR91vFfvXcIY9Ndfw40h
+Shane's contact details are in the demo-request email thread in Gmail (25/10). Intro email sent 26/10; "ready to look at" email drafted in Gmail.
 (WordPress/Elementor by CMAK Digital).
 
 ## What's in the folder
