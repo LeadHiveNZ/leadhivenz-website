@@ -111,4 +111,5 @@ Offer: $500 one-off build and launch + $20/month hosting & care plan, cancel any
 
 - Stripe payment link: https://buy.stripe.com/cNibJ1fmv1F7bEUaRhfw40g (`plink_1UUeZxFmmZSfVmopm3xvuqlA`, live, NZD)
 - Products: `prod_VVfvRCP8Qe8kaK` build & setup ($500 one-off), `prod_VVfvP1FpPIFU1Z` hosting & care plan ($20/month)
-- Pitch email to sales@straightline1.co.nz drafted in Gmail; website link to be pasted in before sending.
+- Preview hosted at https://linelandscaping.netlify.app/
+- Pitch email sent 26/10/2026 to matt93943@gmail.com (the address Matt gave on the demo request form) and sales@straightline1.co.nz.
