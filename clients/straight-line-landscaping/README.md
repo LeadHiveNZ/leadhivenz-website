@@ -17,8 +17,8 @@ Plain HTML/CSS/vanilla JS, no build step. All links are relative, so it works:
 - from disk: open `index.html` in a browser (file://),
 - on any static host, or when the folder is published as an artifact.
 
-The only external request is the Google Font (Manrope); the site falls back to system fonts
-without it. Every page carries `<meta name="robots" content="noindex, nofollow">` so a hosted
+The only external request is the Google Font (Archivo, one variable-font request covering
+weights 400 to 900 and the width axis); the site falls back to system fonts without it. Every page carries `<meta name="robots" content="noindex, nofollow">` so a hosted
 preview is not indexed. **Remove it at launch.**
 
 ## Pages
@@ -56,9 +56,13 @@ Links from a service page to the form pre-tick that service (`contact.html?servi
 ## Assets
 
 - `assets/style.css`, `assets/site.js` (nav toggle, services dropdown, gallery filter, lightbox, demo form)
-- `assets/logo.svg` (horizontal lockup), `assets/logo-light.svg` (reversed, used in the footer),
-  `assets/logo-mark.svg` (square mark), `assets/favicon.svg` (same as the mark). Text is converted
-  to outlines (Inter Display ExtraBold / Inter Bold), so the logo renders identically everywhere.
+- `assets/logo.svg` (horizontal lockup, ink #0E1A14), `assets/logo-light.svg` (reversed white, used
+  over hero photos and in the footer), `assets/logo-mark.svg` (square mark), `assets/favicon.svg`
+  (same as the mark). Purely typographic: "STRAIGHT LINE" in Archivo 900 (slightly
+  expanded width) uppercase with wide tracking, a single horizontal rule underneath that runs past the
+  wordmark on the right, and small spaced caps "LANDSCAPING" below the rule. No icon. The mark is
+  an ink square with "SL" in Archivo 900 and the same single rule threaded through the letters.
+  Monochrome. Text is converted to outlines (Archivo), so the logo renders identically everywhere.
 - `photos/`: 41 of Matt's Facebook photos (all quality 4–5 picks plus selected 3s, and two
   in-progress fencing shots because fencing photos are thin). Resized (hero images 1200px long
   edge, others 900px), JPEG q76, EXIF stripped, original `sl-NN` names kept.

@@ -2,18 +2,30 @@
 (function () {
   'use strict';
 
-  // Mobile nav toggle
+  // Header: transparent over the hero on load, solid off-white once scrolled (or while the menu is open)
+  var header = document.querySelector('.site-header');
   var toggle = document.querySelector('.nav-toggle');
   var nav = document.getElementById('site-nav');
+  function updateHeader() {
+    if (!header) return;
+    var solid = window.scrollY > 40 || (nav && nav.classList.contains('open'));
+    header.classList.toggle('is-solid', !!solid);
+  }
+  window.addEventListener('scroll', updateHeader, { passive: true });
+  updateHeader();
+
+  // Mobile nav toggle
   if (toggle && nav) {
     toggle.addEventListener('click', function () {
       var open = nav.classList.toggle('open');
       toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+      updateHeader();
     });
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape' && nav.classList.contains('open')) {
         nav.classList.remove('open');
         toggle.setAttribute('aria-expanded', 'false');
+        updateHeader();
         toggle.focus();
       }
     });
