@@ -1,4 +1,4 @@
-# SR Shutters & Screens: demo site
+# SR Shutters & Screens: demo site (multi-page)
 
 Client: **SR Shutters & Screens (Shane Bartolo)**, owner-operator. Plantation shutters, aluminium/outdoor
 shutters, security screens and doors, fly screens, blinds. Brisbane, Moreton Bay, Logan, Redlands, Ipswich,
@@ -10,49 +10,73 @@ Deal: **demo request only, no deal yet.** Built for Joe to show Shane. Current s
 
 | Path | What |
 |---|---|
-| `index.html` | Home page demo. One file, inline CSS + vanilla JS, Google Fonts, images from `assets/img/` |
-| `review.html` | The `/review` page behind the QR card, SMS and email. `?demo=1` shows the "For Shane" panel |
+| `*.html` | 15 static pages (see the page map below). Relative links throughout, so it works from file:// or any plain web host |
+| `assets/css/site.css` | The whole visual system, shared by every page (tokens, type, header, sections, product pages, review page) |
+| `assets/js/site.js` | Shared script: phone sync from `#nb-source`, header, products dropdown, mobile menu, scroll reveal, before/after sliders, gallery filter + lightbox, quote form, mobile bar, QR codes. Holds `GOOGLE_REVIEW_URL` |
 | `assets/img/` | 43 curated files, 6.0 MB. Only Shane's real installs + logos. See `assets/img/INDEX.md` |
-| `screens/` | `home-desktop.png`, `home-mobile.png`, `home-first-screen-mobile.png`, `home-first-screen-desktop.png`, `review-desktop.png`, `review-mobile.png` |
-| `research/` | Design brief, current-site content, audit, online presence (source of every fact on the page) |
+| `screens/` | Screenshots of every page (list below) |
+| `research/` | Design brief, current-site content, audit, online presence (source of every fact on the site) |
 
 ## Preview
 
-Open `index.html` in a browser (file:// is fine). From file://, or with `?demo=1`, the quote form skips
-the network call and shows the success state, so it demos cleanly. Open `review.html?demo=1` to show Shane
-the SMS / email / leave-behind card. Both pages need the internet for fonts and the QR library.
+Open `index.html` in a browser (file:// is fine) and click through; every link is relative. From file://, or
+with `?demo=1`, the quote form on `contact.html` skips the network call and shows the success state, so it
+demos cleanly. Product-page CTAs deep-link into the form with the product pre-ticked, e.g.
+`contact.html?product=security-screens-doors`. Open `review.html?demo=1` to show Shane the SMS / email /
+leave-behind card. Pages need the internet for Google Fonts and the QR library (cdnjs, pinned 1.4.4 + SRI).
+To host it, upload the folder as-is to any static host (Netlify drop, S3, cPanel).
 
-Page weight (Playwright, cold load): home **0.87 MB** first screen on desktop, **0.62 MB** on mobile;
-**2.9 MB / 2.3 MB** after scrolling the whole page. His current home page is ~40 MB. No console errors, no 404s.
+Checked with Playwright at 1440×900 and 390×844 on every page: no console errors, no failed requests, no
+horizontal scroll on mobile, one H1 per page, no duplicate IDs, all local links and image paths resolve, nav
+active state correct. Cold first-screen weight: home 1.1 MB desktop / 0.6 MB mobile; product pages 0.3–0.6 MB.
 
-## Section map (index.html)
+## Page map
 
-| # | Anchor | Section |
-|---|---|---|
-| 0 | header | Logo, nav, phone, "Book a Free Measure". Turns solid after 80px. Mobile: phone + louvre-line menu |
-| 1 | `#top` | Hero. H1 "Plantation Shutters & Security Screens · Brisbane / Fitted by the man who measured them." Louvre-slat reveal on load, "5.0 on Google" chip |
-| 2 | trust | Owner-operated · No subcontractors · Free measure & quote · 5.0 on Google · Brisbane-wide |
-| 3 | `#collection` | 5 product cards (plantation, security, outdoor/aluminium, fly screens, blinds). Click pre-ticks the product in the form |
-| 4 | `#shane` | "You'll deal with Shane. Start to finish." Real install photo + typography, no photo of Shane |
-| 5 | `#difference` | Before/after sliders, the 2 genuine pairs. Drag, touch, arrow keys; one gentle nudge on first view |
-| 6 | `#work` | 12-photo editorial grid + lightbox (keyboard, prev/next) |
-| 7 | `#process` | 4 steps |
-| 8 | `#materials` | PVC vs basswood vs aluminium |
-| 9 | `#reviews` | The 4 real Google reviews, verbatim, first name + date, "5.0 on Google", link to the profile |
-| 10 | `#leave-a-review` | "Happy with your shutters? Tell Brisbane." Gold button → `review.html`, QR, support line |
-| 11 | `#areas` | The 35 areas from his current site, grouped into 6 regions |
-| 12 | `#faq` | 8 FAQs (native accordion) + FAQPage schema |
-| 13 | `#quote` | Form: name, mobile, suburb (35 areas), product chips, message, honeypot, success state |
-| 14 | footer | Phone, email, hours, nav, "Leave a Google review", privacy placeholder (`/privacy`) |
-| M | mobile bar | "Call Shane" / "Free Quote". Shows after the hero, hides while the form is on screen |
+| File | Purpose | `<title>` | Lovable route |
+|---|---|---|---|
+| `index.html` | Home, kept short: hero, trust strip, 5 product cards, "You'll deal with Shane" (condensed), one before/after slider, 3 reviews, quote CTA band | Plantation Shutters, Security Screens & Blinds Brisbane \| SR Shutters & Screens | `/` |
+| `plantation-shutters.html` | Product page + the PVC vs basswood vs aluminium guide (`#materials`), styles, 6 photos, 4 FAQs | Plantation Shutters Brisbane \| Free Measure & Quote \| SR Shutters & Screens | `/plantation-shutters` (or `/plantation-shutters-brisbane`) |
+| `security-screens-doors.html` | Product page: stainless mesh doors and window screens, John's review, 4 FAQs | Security Screens & Doors Brisbane \| SR Shutters & Screens | `/security-screens-doors` |
+| `outdoor-aluminium-shutters.html` | Product page: patios, pools, balconies, alfresco; CSS material art (no real photos yet), 4 FAQs | Outdoor & Aluminium Shutters Brisbane \| SR Shutters & Screens | `/outdoor-aluminium-shutters` |
+| `fly-screens.html` | Product page: sliding screen doors and window fly screens; CSS mesh art, 3 FAQs | Fly Screens & Screen Doors Brisbane \| SR Shutters & Screens | `/fly-screens` |
+| `blinds.html` | Product page: roller, blockout, dual, vertical, manual or motorised; 4 photos, 3 FAQs | Blinds Brisbane \| Roller, Blockout & Motorised \| SR Shutters & Screens | `/blinds` |
+| `before-after.html` | Both genuine before/after sliders at full width, captions, "how to read these" | Before & After: Shutters & Blinds in Brisbane \| SR Shutters & Screens | `/before-after` |
+| `our-work.html` | Full gallery: 21 real installs, product filter, lightbox | Our Work: Shutters, Screens & Blinds in Brisbane \| SR Shutters & Screens | `/gallery` (or `/our-work`) |
+| `about.html` | Meet Shane: owner-operator block, 4-step process, the six-point SR promise | About Shane Bartolo, Owner \| SR Shutters & Screens Brisbane | `/about` |
+| `reviews.html` | The 4 Google reviews verbatim, "5.0 on Google", "Tell Brisbane" band with QR → `review.html`, link to Google | Reviews: 5.0 on Google \| SR Shutters & Screens Brisbane | `/reviews` |
+| `service-areas.html` | 35 areas in 6 regions, a short paragraph per region, links to every product | Service Areas: Brisbane, Moreton Bay, Logan & Redlands \| SR Shutters & Screens | `/service-areas`, then `/areas/[region]` and `/areas/[suburb]` |
+| `faq.html` | All 8 FAQs (native accordion) | FAQ: Plantation Shutters, Security Screens & Blinds \| SR Shutters & Screens | `/faq` |
+| `contact.html` | Full quote form (`?product=` pre-select), phone, email, hours, "Call Shane" card, what happens next. No sticky mobile bar | Book a Free Measure & Quote \| Contact SR Shutters & Screens Brisbane | `/contact` (or `/quote`) |
+| `review.html` | The QR / SMS landing (`?demo=1` = "For Shane" panel). noindex. No sticky mobile bar | Leave a Google Review \| SR Shutters & Screens | `/review` |
+| `privacy.html` | Plain privacy policy: what the form collects, used only to arrange the measure and quote, contact email. noindex | Privacy Policy \| SR Shutters & Screens | `/privacy` |
 
-Schema: `HomeAndConstructionBusiness` (phone, email, 35 `areaServed`, hours, logo, images, sameAs FB/IG/GBP),
-5 `Service` entries, `FAQPage`. **No AggregateRating** (Google treats self-served review stars as ineligible).
+**Shared on every page:** header (logo, "Shutters & Screens" dropdown with the 5 products, Before & After, Our
+Work, About, Reviews, FAQ, Contact, phone, "Book a Free Measure"; current page marked with `aria-current`),
+a mobile menu listing every page, the footer (products, company links incl. Service areas, Leave a Google
+review and Privacy, phone, email, hours) and the sticky "Call Shane | Free Quote" bar (all pages except
+`contact.html` and `review.html`; it hides while a quote CTA band is on screen). Product pages link to their
+four siblings, to `before-after.html` and to `contact.html?product=<key>`; keys are `plantation-shutters`,
+`security-screens-doors`, `outdoor-aluminium-shutters`, `fly-screens`, `blinds`.
 
-Phone: `#nb-source` holds **0411 885 227** (the number Nimbata must be set to REPLACE). Every
-`[data-phone-display]` / `[data-phone-link]` re-syncs from it, same as the handyman template.
-Form: posts JSON `{name, phone, suburb, issue, isUrgent, products, message, source}` to
-`/functions/v1/send-lead-notification`.
+**SEO per page:** unique title and meta description, canonical placeholder
+`https://srshuttersandscreens.com.au/<slug>`, Open Graph tags, one H1. JSON-LD: `HomeAndConstructionBusiness`
+on `index.html` and `about.html`; `Service` (name, provider, areaServed) on each product page; `FAQPage` only on
+`faq.html` and the product pages that show FAQs (matching the questions shown); `BreadcrumbList` on every inner
+page. **No AggregateRating anywhere** (Google treats self-served review stars as ineligible).
+
+Phone: each page has exactly one `#nb-source` holding **0411 885 227** (the number Nimbata must be set to
+REPLACE). Every `[data-phone-display]` / `[data-phone-link]` re-syncs from it, same as the handyman template.
+Form: posts JSON `{name, phone, suburb, issue, isUrgent, products, message, source, page}` to
+`/functions/v1/send-lead-notification`; honeypot field `website`.
+
+## Screens
+
+`screens/` (256-colour PNGs; full-page shots scaled to keep the folder near 15 MB):
+`home-first-screen-desktop.png` (1440×900), `home-first-screen-mobile.png` (390×844 @2x), `home-desktop.png`
+(full page, 960 wide), `home-mobile.png`, one `<slug>-desktop.png` per other page (full page, 800 wide):
+plantation-shutters, security-screens-doors, outdoor-aluminium-shutters, fly-screens, blinds, before-after,
+our-work, about, reviews, service-areas, faq, contact, review, privacy; plus `plantation-shutters-mobile.png`,
+`reviews-mobile.png` and `contact-mobile.png`.
 
 ## Pulled from his current site vs new
 
@@ -62,20 +86,23 @@ and wording (PVC/timber, bay/arched/odd shapes, stainless mesh, rust-proof/rot-p
 powder-coated, sliding screen doors, blockout/motorised blinds), "flexible payment options", the 35 service
 areas, 47 real install photos, both real before/after pairs, the 4 Google reviews (verbatim, typos kept).
 
-**New:** all design and copy structure, the materials guide, process, FAQ wording (rewritten so nothing
+**New:** all design and copy structure, the multi-page split (product, about, before & after, gallery, reviews,
+areas, FAQ, contact, privacy pages), the materials guide, process, FAQ wording (rewritten so nothing
 unverified is claimed), review band, `/review` page and the review-request sequence, schema, image
 optimisation (117 MB → 6 MB).
 
 **Deliberately left out:** the AI "Shane", the AI before/afters, all stock/supplier images, the 13 page
 testimonials that aren't on Google ("Karen M" etc.), "15 years", "Founded in 2010", "15-30 / 30 year
 warranty", "lifetime guarantee", "certified technicians", "meets Australian standards", brand names, QBCC, ABN.
-Warranty is worded as "manufacturer's warranty + SR workmanship guarantee, terms in writing with your quote".
+Product pages only use copy that is on his site or in the research; where no real photo exists (outdoor
+shutters, fly screens) the page says so and shows other real jobs. Warranty is worded as "manufacturer's
+warranty + SR workmanship guarantee, terms in writing with your quote".
 
 ## Review-generation system
 
 1. **Branded link:** `srshuttersandscreens.com.au/review` → `review.html`. Big gold "Leave a Google review"
-   button and a QR, both reading one const, `GOOGLE_REVIEW_URL` at the top of the page script (also in
-   `index.html` for the QR in the review band). **It currently holds the working write-review fallback for the
+   button and a QR, all reading one const, `GOOGLE_REVIEW_URL` at the top of `assets/js/site.js` (the same
+   const drives the QR in the "Tell Brisbane" band on `reviews.html`). **It currently holds the working write-review fallback for the
    "SR Shutters and Screens" GBP (place_id `ChIJX0h2jR-nMAYRF8pfdpDSDkM`). Swap in his g.page/r/…/review
    link** (GBP → Read reviews → Get more reviews → Copy) and test in a private window.
 2. **QR handover card:** black A6, gold monogram, "Enjoy your new shutters.", QR to `/review`, Shane's number.
@@ -123,21 +150,26 @@ From the audit, in my words:
 - **Finance**: provider for "flexible payment options", or drop the FAQ
 - **Which phone number is right** (0411 885 227 vs 0480 431 417), then **merge the duplicate GBP** ("Blinds" listing) and retire srshuttersblinds.com
 - **Real Google review short link** (g.page/r/…/review) for `GOOGLE_REVIEW_URL`
-- **A real photo of Shane** on the job (the positioning block is built to take one)
-- Photos of **outdoor/aluminium shutters and fly screens** (those cards use CSS art for now), and whether `security-screens-patio-windows-01` and the bay-window shot are his jobs
+- **A real photo of Shane** on the job (the positioning block on `about.html` and the home page is built to take one)
+- **More security door photos** (only 2 real ones, so that page shows 2 instead of 3 to 6)
+- **Privacy policy**: confirm the wording, and add analytics / Nimbata call-tracking lines once those scripts go live
+- Photos of **outdoor/aluminium shutters and fly screens** (those cards and page heroes use CSS art for now; their galleries carry a "photos still being added" note), and whether `security-screens-patio-windows-01` and the bay-window shot are his jobs
 - Suburbs for the 4 reviewers, if he knows them (cards show first name + date only)
 - Quote turnaround and lead times (copy says "clear written quote" and "single day install" only)
 - Base suburb and real service radius (Gold/Sunshine Coast are on his current list)
 
 ## Lovable / launch
 
-Same pattern as Northland: the static file is the design source; Lovable gets it as the build brief.
+Same pattern as Northland: the static pages are the design source; Lovable gets them as the build brief.
 
-- Routes that would become pages: `/` (this file), service pages `/plantation-shutters-brisbane`,
-  `/outdoor-aluminium-shutters-brisbane`, `/security-screens-brisbane`, `/fly-screens-brisbane`,
-  `/blinds-brisbane`; guide pages (`/pvc-vs-basswood-vs-aluminium`); 20–30 **genuinely unique** suburb pages
-  `/areas/[suburb]` (real jobs + local review each, replacing the 68 clones with 301s); `/reviews`; `/review`
-  (this `review.html`); `/gallery`; `/privacy`.
+- Every static page maps to a route (see the page map above). Shared header, footer and mobile bar become
+  layout components; `assets/css/site.css` becomes the theme; `assets/js/site.js` splits into small components.
+- **Service areas:** `service-areas.html` lists all 35 areas as plain text. In the Lovable build each region and
+  suburb becomes its own route, `/areas/[region]` and `/areas/[suburb]`. Start with 20–30 **genuinely unique**
+  suburb pages (real jobs + a local review each) and 301 the 68 cloned suburb pages to them or to `/service-areas`.
+  Future suburb pages slot in under the same route without touching the static demo.
+- Guide pages to add later: `/pvc-vs-basswood-vs-aluminium` (the materials guide now on the plantation page),
+  `/plantation-shutter-cost-brisbane`, `/shutters-vs-blinds`.
 - Keep the Nimbata DNI script in the root layout; `#nb-source` carries 0411 885 227.
 - Form: static file uses `/functions/v1/send-lead-notification`; the Lovable build uses its own
   `/api/public/enquiry` → Resend to hello@leadhivenz.com (add srshuttersnscreens@gmail.com as second recipient).
@@ -145,7 +177,7 @@ Same pattern as Northland: the static file is the design source; Lovable gets it
 
 Launch checklist:
 1. Confirm the list above with Shane; add QBCC/ABN/warranty only once confirmed.
-2. Paste the real review link into `GOOGLE_REVIEW_URL` (both files) and test in a private window.
+2. Paste the real review link into `GOOGLE_REVIEW_URL` in `assets/js/site.js` and test in a private window.
 3. Build in Lovable, publish, attach the domain, 301 the old suburb/thank-you/maintenance URLs.
 4. Create the Nimbata project with 0411 885 227 as the number to replace; confirm the swap live.
 5. Send a test enquiry end to end; set up the Make/GHL review sequence and print the QR cards.

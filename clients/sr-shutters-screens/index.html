@@ -2,21 +2,16 @@
 <html lang="en-AU">
 <head>
 <!--
-  SR SHUTTERS & SCREENS — DEMO HOME PAGE (LeadHive, Oct 2026)
-  Single self-contained file: inline CSS + vanilla JS, Google Fonts, images in assets/img/.
+  SR SHUTTERS & SCREENS: HOME PAGE (LeadHive demo, Oct 2026). Static multi-page site.
+  Shared styles: assets/css/site.css. Shared script: assets/js/site.js. Images: assets/img/. Page map: README.md.
 
   TRUTH RULES (do not break when editing):
   - Photos: only Shane's real installs (see assets/img/INDEX.md). No AI, no stock.
-  - Reviews: only the 4 real Google reviews, verbatim. No AggregateRating schema.
+  - Reviews: only the 4 real Google reviews, verbatim. No AggregateRating schema anywhere.
   - No QBCC number, ABN, years trading, brand names or warranty years until Shane confirms (README).
 
-  PHONE: the #nb-source span must hold the number Nimbata is configured to REPLACE
-  (0411 885 227, the number on Shane's current site), never a tracking number.
-  Every [data-phone-display] / [data-phone-link] is re-synced from #nb-source, so when
-  Nimbata swaps that span, every visible number and tel: link on the page follows.
-
-  FORM: posts JSON to /functions/v1/send-lead-notification (house pattern). When opened
-  from file:// or with ?demo=1 it skips the network call and shows the success state.
+  PHONE: keep exactly ONE #nb-source span per page holding the number Nimbata is set to REPLACE
+  (0411 885 227), never a tracking number. Every [data-phone-display] / [data-phone-link] re-syncs from it.
 -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -41,643 +36,290 @@
 <link rel="preload" as="image" href="assets/img/plantation-shutters-bathroom-tiled-01.jpg" imagesrcset="assets/img/plantation-shutters-bathroom-tiled-01-1280.jpg 1280w, assets/img/plantation-shutters-bathroom-tiled-01.jpg 1920w" imagesizes="100vw" media="(min-width: 701px)" fetchpriority="high">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500&amp;family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&amp;family=Manrope:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/css/site.css">
 <script>document.documentElement.classList.add('js')</script>
-<style>
-:root{
-  --onyx:#0B0B0C; --charcoal:#17171A; --graphite:#232327; --night:#070708;
-  --gold:#C6A15B; --gold-light:#E2C78F; --gold-deep:#8A6A2F;
-  --ivory:#F7F3EC; --bone:#EDE6DA; --ink:#1A1A1A; --stone:#5B5750; --mist:#B9B4AA;
-  --eucalypt:#2E4A3F; --euc-deep:#22382F;
-  --hair:rgba(198,161,91,.4); --hair-soft:rgba(198,161,91,.2); --hair-ink:rgba(26,26,26,.12);
-  --serif:"Cormorant Garamond","Cormorant",Georgia,"Times New Roman",serif;
-  --sans:"Manrope",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
-  --caps:"Cinzel","Trajan Pro",Georgia,serif;
-  --wrap:1240px; --gut:clamp(22px,4.6vw,64px);
-  --ease:cubic-bezier(.2,.7,.2,1);
-  --shadow:0 24px 48px -28px rgba(11,11,12,.35);
-  --hdr:84px;
-}
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;scroll-padding-top:72px}
-body{background:var(--onyx);color:var(--ivory);font-family:var(--sans);font-size:17px;line-height:1.65;font-weight:400;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;overflow-x:hidden}
-img{display:block;max-width:100%;height:auto}
-a{color:inherit;text-decoration:none}
-button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
-:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
-.wrap{width:100%;max-width:calc(var(--wrap) + 2*var(--gut));margin:0 auto;padding:0 var(--gut)}
-.sr-only{position:absolute!important;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-.skip{position:absolute;left:12px;top:-60px;z-index:200;background:var(--gold);color:var(--onyx);padding:10px 16px;font-weight:600}
-.skip:focus{top:12px}
-
-/* type */
-h1,h2,h3{font-family:var(--serif);font-weight:500;line-height:1.04;letter-spacing:-.012em;text-wrap:balance;font-variant-numeric:lining-nums;font-feature-settings:"lnum" 1}
-.steps .sn,.score b,.promises .rn,.foot .ph,.card .num,.trust b,.chip b,.meta{font-variant-numeric:lining-nums;font-feature-settings:"lnum" 1}
-h2{font-size:clamp(38px,4.7vw,62px)}
-h2 em,h3 em{font-style:italic;color:var(--gold-light)}
-.light h2 em,.bone h2 em{color:var(--gold-deep)}
-p{text-wrap:pretty}
-.eyebrow{display:flex;align-items:center;gap:16px;font-family:var(--caps);font-weight:500;font-size:12.5px;letter-spacing:.26em;text-transform:uppercase;color:var(--gold);margin-bottom:26px;line-height:1.3}
-.eyebrow::before,.louvre-mark{content:"";flex:none;width:38px;height:13px;background:linear-gradient(currentColor,currentColor) 0 0/100% 1px no-repeat,linear-gradient(currentColor,currentColor) 0 6px/100% 1px no-repeat,linear-gradient(currentColor,currentColor) 0 12px/100% 1px no-repeat;opacity:.9}
-.light .eyebrow,.bone .eyebrow{color:var(--gold-deep)}
-.center .eyebrow{justify-content:center}
-.lede{font-size:clamp(17px,1.35vw,19px);line-height:1.7;color:var(--mist);max-width:52ch}
-.light .lede,.bone .lede{color:var(--stone)}
-
-/* buttons */
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:12px;min-height:56px;padding:0 30px;border-radius:2px;font:600 13px/1 var(--sans);letter-spacing:.16em;text-transform:uppercase;white-space:nowrap;transition:background .3s var(--ease),color .3s,border-color .3s,transform .3s var(--ease),box-shadow .3s}
-.btn-gold{background:var(--gold);color:var(--onyx);box-shadow:inset 0 0 0 1px rgba(226,199,143,0)}
-.btn-gold:hover{background:var(--gold-light);transform:translateY(-1px);box-shadow:inset 0 0 0 1px var(--gold-light),0 14px 32px -14px rgba(198,161,91,.75)}
-.btn-ghost{border:1px solid var(--hair);color:var(--ivory)}
-.btn-ghost:hover{border-color:var(--gold);color:var(--gold-light);transform:translateY(-1px)}
-.light .btn-ghost,.bone .btn-ghost{color:var(--gold-deep);border-color:rgba(138,106,47,.5)}
-.light .btn-ghost:hover,.bone .btn-ghost:hover{border-color:var(--gold-deep);background:rgba(138,106,47,.06)}
-.btn svg{width:17px;height:17px;flex:none}
-.link-line{position:relative;display:inline-flex;align-items:center;gap:10px;font:600 12px/1 var(--sans);letter-spacing:.18em;text-transform:uppercase;color:var(--gold-light);padding-bottom:8px}
-.link-line::after{content:"";position:absolute;left:0;right:0;bottom:0;height:1px;background:currentColor;transform:scaleX(.28);transform-origin:left;transition:transform .45s var(--ease)}
-a:hover .link-line::after,.link-line:hover::after{transform:scaleX(1)}
-
-/* sections */
-.sec{padding:clamp(88px,11vw,152px) 0;position:relative}
-.light{background:var(--ivory);color:var(--ink)}
-.bone{background:var(--bone);color:var(--ink)}
-.dark{background:var(--onyx)}
-.sec-head{display:grid;gap:28px;margin-bottom:clamp(48px,6vw,80px)}
-.sec-head.split{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);align-items:end;gap:64px}
-.sec-head.split .lede{justify-self:end}
-.sec-head.center{text-align:center;justify-items:center}
-.sec-head.center .lede{margin:0 auto}
-
-/* reveal (one-shot) */
-.js .rv{opacity:0;transform:translateY(16px);transition:opacity .7s var(--ease),transform .7s var(--ease);transition-delay:calc(var(--d,0) * 80ms)}
-.js .rv.in{opacity:1;transform:none}
-
-/* ===== header ===== */
-.hdr{position:fixed;inset:0 0 auto;z-index:60;height:var(--hdr);transition:background .4s,border-color .4s,height .4s var(--ease);border-bottom:1px solid transparent}
-.hdr::before{content:"";position:absolute;inset:0 0 -40px;background:linear-gradient(180deg,rgba(11,11,12,.7),rgba(11,11,12,0));pointer-events:none;transition:opacity .4s}
-.hdr.solid{background:rgba(11,11,12,.94);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-bottom-color:var(--hair-soft);height:72px}
-.hdr.solid::before{opacity:0}
-.hdr-in{position:relative;height:100%;display:flex;align-items:center;gap:32px}
-.brand{display:flex;align-items:center;gap:14px;flex:none}
-.brand img{width:54px;height:54px;transition:width .4s var(--ease),height .4s var(--ease)}
-.hdr.solid .brand img{width:46px;height:46px}
-.brand-t{font-family:var(--caps);font-size:13.5px;letter-spacing:.2em;text-transform:uppercase;line-height:1.25;color:var(--ivory)}
-.brand-t small{display:block;font-size:10px;letter-spacing:.32em;color:var(--gold)}
-.nav{display:flex;gap:30px;margin-left:auto}
-.nav a{font-size:13.5px;font-weight:500;letter-spacing:.04em;color:rgba(247,243,236,.82);position:relative;padding:8px 0;transition:color .3s}
-.nav a::after{content:"";position:absolute;left:0;right:0;bottom:2px;height:1px;background:var(--gold);transform:scaleX(0);transform-origin:left;transition:transform .35s var(--ease)}
-.nav a:hover{color:var(--ivory)}
-.nav a:hover::after{transform:scaleX(1)}
-.hdr-cta{display:flex;align-items:center;gap:22px}
-.hdr-tel{display:flex;align-items:center;gap:9px;font-weight:600;font-size:14.5px;letter-spacing:.02em;font-variant-numeric:tabular-nums;white-space:nowrap}
-.hdr-tel svg{width:16px;height:16px;color:var(--gold)}
-.hdr .btn{min-height:46px;padding:0 22px;font-size:12px}
-.burger{display:none;width:48px;height:48px;margin-right:-10px;flex-direction:column;justify-content:center;align-items:flex-end;gap:6px;padding:0 10px}
-.burger span{display:block;height:1px;background:var(--gold-light);transition:transform .35s var(--ease),opacity .3s,width .3s}
-.burger span:nth-child(1){width:26px}.burger span:nth-child(2){width:20px}.burger span:nth-child(3){width:26px}
-.burger[aria-expanded="true"] span:nth-child(1){transform:translateY(7px) rotate(45deg)}
-.burger[aria-expanded="true"] span:nth-child(2){opacity:0}
-.burger[aria-expanded="true"] span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
-.mnav{position:fixed;inset:0;z-index:55;background:var(--onyx);padding:104px var(--gut) 40px;display:flex;flex-direction:column;gap:6px;opacity:0;visibility:hidden;transition:opacity .35s,visibility .35s}
-.mnav.open{opacity:1;visibility:visible}
-.mnav a.m{font-family:var(--serif);font-size:34px;line-height:1.25;padding:8px 0;border-bottom:1px solid var(--hair-soft)}
-.mnav .btn{margin-top:28px}
-.mnav .mtel{margin-top:18px;text-align:center;color:var(--gold-light);font-weight:600;letter-spacing:.04em}
-
-/* ===== hero ===== */
-.hero{position:relative;min-height:640px;height:100vh;height:100svh;max-height:1040px;display:flex;align-items:flex-end;overflow:hidden;background:var(--onyx);isolation:isolate}
-.hero-media,.hero-media img{position:absolute;inset:0;width:100%;height:100%}
-.hero-media img{object-fit:cover;object-position:56% 46%}
-.hero-shade{position:absolute;inset:0;z-index:1;background:
-  linear-gradient(90deg,rgba(11,11,12,.78) 0%,rgba(11,11,12,.55) 34%,rgba(11,11,12,.08) 62%,rgba(11,11,12,0) 100%),
-  radial-gradient(ellipse 70% 85% at 0% 100%,rgba(11,11,12,.9) 0%,rgba(11,11,12,.5) 45%,rgba(11,11,12,0) 75%),
-  linear-gradient(180deg,rgba(11,11,12,.55) 0%,rgba(11,11,12,.12) 24%,rgba(11,11,12,.38) 58%,rgba(11,11,12,.9) 100%)}
-.louvres{position:absolute;inset:0;z-index:3;display:flex;flex-direction:column;pointer-events:none;perspective:1200px}
-.louvres i{flex:1;background:var(--onyx);border-bottom:1px solid rgba(198,161,91,.22);transform-origin:50% 50%;animation:louvre .66s cubic-bezier(.65,0,.25,1) forwards;animation-delay:calc(120ms + var(--i) * 30ms)}
-@keyframes louvre{0%{transform:rotateX(0)}100%{transform:rotateX(-90deg);visibility:hidden}}
-.hero-in{position:relative;z-index:2;padding-top:150px;padding-bottom:clamp(56px,9vh,104px)}
-.h1-k{display:flex;align-items:center;gap:16px;font-family:var(--caps);font-size:13px;letter-spacing:.26em;text-transform:uppercase;color:var(--gold);margin-bottom:28px;line-height:1.4}
-.h1-k::before{content:"";flex:none;width:38px;height:13px;background:linear-gradient(currentColor,currentColor) 0 0/100% 1px no-repeat,linear-gradient(currentColor,currentColor) 0 6px/100% 1px no-repeat,linear-gradient(currentColor,currentColor) 0 12px/100% 1px no-repeat}
-.h1-m{display:block;font-size:clamp(48px,6.6vw,100px);line-height:.96;letter-spacing:-.02em;max-width:10.6em;color:var(--ivory)}
-.h1-m em{font-style:italic;color:var(--gold-light)}
-.hero-sub{max-width:35em;font-size:clamp(17px,1.4vw,19.5px);line-height:1.65;color:rgba(247,243,236,.84);margin:30px 0 40px}
-.hero-ctas{display:flex;flex-wrap:wrap;gap:14px;align-items:center}
-.hero-call{display:none}
-.chip{display:inline-flex;align-items:center;gap:12px;margin-top:36px;padding:9px 18px 9px 10px;border:1px solid rgba(247,243,236,.16);border-radius:999px;background:rgba(11,11,12,.42);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);font-size:14px;color:rgba(247,243,236,.86);transition:border-color .3s}
-.chip:hover{border-color:var(--hair)}
-.chip .g{width:26px;height:26px;border-radius:50%;background:#fff;display:grid;place-items:center;flex:none}
-.chip .g svg{width:15px;height:15px}
-.chip .st{color:var(--gold);letter-spacing:.14em;font-size:13px}
-.chip b{font-weight:600;color:var(--ivory)}
-.hero-cap{position:absolute;z-index:2;right:var(--gut);bottom:clamp(56px,9vh,104px);font-family:var(--caps);font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:rgba(247,243,236,.62);display:flex;align-items:center;gap:14px}
-.hero-cap::before{content:"";width:46px;height:1px;background:var(--hair)}
-.js .hero-in>*{opacity:0;transform:translateY(18px);animation:up .9s var(--ease) forwards}
-.js .hero-in>*:nth-child(1){animation-delay:.55s}.js .hero-in>*:nth-child(2){animation-delay:.68s}.js .hero-in>*:nth-child(3){animation-delay:.8s}.js .hero-in>*:nth-child(4){animation-delay:.92s}
-@keyframes up{to{opacity:1;transform:none}}
-
-/* ===== trust strip ===== */
-.trust{background:var(--charcoal);border-top:1px solid var(--hair-soft);border-bottom:1px solid var(--hair-soft)}
-.trust ul{list-style:none;display:grid;grid-template-columns:repeat(5,1fr)}
-.trust li{padding:32px 22px 30px;display:flex;flex-direction:column;gap:6px;border-left:1px solid var(--hair-soft)}
-.trust li:first-child{border-left:0;padding-left:0}
-.trust b{font-family:var(--serif);font-weight:500;font-size:22.5px;line-height:1.1;color:var(--ivory);white-space:nowrap}
-.trust span .st{color:var(--gold);letter-spacing:.08em;margin-right:6px}
-.trust span{font-size:13.5px;color:var(--mist);line-height:1.45}
-
-/* ===== collection ===== */
-.cards{display:grid;grid-template-columns:repeat(6,1fr);gap:20px}
-.card{position:relative;display:block;overflow:hidden;background:var(--onyx);color:var(--ivory);isolation:isolate}
-.c-lg{grid-column:span 4;height:clamp(440px,42vw,580px)}
-.c-md{grid-column:span 2;height:clamp(440px,42vw,580px)}
-.c-sm{grid-column:span 2;height:clamp(400px,34vw,480px)}
-.card>img,.card .art{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transition:transform .9s var(--ease)}
-.card:hover>img,.card:hover .art{transform:scale(1.03)}
-.card::after{content:"";position:absolute;inset:0;z-index:1;background:linear-gradient(180deg,rgba(11,11,12,.5) 0%,rgba(11,11,12,0) 22%,rgba(11,11,12,0) 38%,rgba(11,11,12,.6) 62%,rgba(11,11,12,.94) 100%);pointer-events:none}
-.card-body{position:absolute;left:0;right:0;bottom:0;z-index:2;padding:34px 34px 32px}
-.card .num{font-family:var(--caps);font-size:12.5px;letter-spacing:.26em;color:var(--gold-light)}
-.card h3{font-size:clamp(30px,2.7vw,40px);margin:10px 0 12px}
-.card p{font-size:15.5px;line-height:1.6;color:rgba(247,243,236,.8);max-width:38ch}
-.card .link-line{margin-top:22px}
-.card .tag{position:absolute;z-index:2;top:26px;left:34px;font-family:var(--caps);font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:rgba(247,243,236,.9);text-shadow:0 1px 12px rgba(0,0,0,.5)}
-/* aluminium louvre art */
-.art.alu{background:radial-gradient(ellipse 60% 50% at 75% 18%,rgba(226,199,143,.2),transparent 70%),linear-gradient(165deg,#222226,#0c0c0e 70%)}
-.alu .frame{position:absolute;left:16%;right:16%;top:9%;bottom:36%;border:9px solid #26262b;box-shadow:inset 0 0 0 1px rgba(226,199,143,.3),0 30px 60px -24px #000,0 0 90px -20px rgba(226,199,143,.35);display:flex;flex-direction:column;justify-content:space-evenly;padding:2px 0;background:linear-gradient(180deg,#f3dfb2 0%,#d9b97c 45%,#8f7445 100%);perspective:520px;overflow:hidden}
-.alu .frame i{display:block;height:9.6%;background:linear-gradient(180deg,#55555d 0%,#303036 40%,#1a1a1e 100%);border-top:1px solid rgba(255,240,210,.55);transform:rotateX(46deg);transition:transform .9s var(--ease);box-shadow:0 7px 12px -5px rgba(40,25,5,.55)}
-.card:hover .alu .frame i{transform:rotateX(18deg)}
-/* fly screen mesh art */
-.art.mesh{background:radial-gradient(ellipse 60% 50% at 25% 15%,rgba(226,199,143,.18),transparent 70%),linear-gradient(165deg,#355447,#1a2b24 75%)}
-.mesh .door{position:absolute;left:22%;right:22%;top:8%;bottom:32%;border:9px solid #141416;box-shadow:inset 0 0 0 1px rgba(226,199,143,.3),0 30px 60px -30px #000;background:repeating-linear-gradient(0deg,rgba(247,243,236,.13) 0 1px,transparent 1px 5px),repeating-linear-gradient(90deg,rgba(247,243,236,.13) 0 1px,transparent 1px 5px),linear-gradient(180deg,rgba(247,243,236,.08),rgba(0,0,0,.25))}
-.mesh .door::before{content:"";position:absolute;top:0;bottom:0;left:50%;width:7px;margin-left:-3px;background:#141416}
-.mesh .door::after{content:"";position:absolute;top:42%;left:calc(50% + 12px);width:4px;height:44px;border-radius:2px;background:var(--gold)}
-
-/* ===== shane ===== */
-.shane-grid{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:clamp(48px,7vw,112px);align-items:center}
-.shane-fig{position:relative;margin:0}
-.shane-fig::before{content:"";position:absolute;inset:-18px 18px 18px -18px;border:1px solid var(--hair);pointer-events:none}
-.shane-fig img{position:relative;width:100%;aspect-ratio:4/5;object-fit:cover;object-position:50% 40%}
-.shane-fig figcaption{margin-top:18px;font-family:var(--caps);font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--mist);display:flex;gap:12px;align-items:center}
-.shane-fig figcaption::before{content:"";width:28px;height:1px;background:var(--hair)}
-.pull{font-family:var(--serif);font-style:italic;font-size:clamp(24px,2.2vw,30px);line-height:1.3;color:var(--gold-light);margin:34px 0 8px;padding-left:24px;border-left:1px solid var(--hair)}
-.promises{list-style:none;margin:40px 0 44px;display:grid;gap:0}
-.promises li{display:grid;grid-template-columns:56px 1fr;gap:18px;padding:22px 0;border-top:1px solid var(--hair-soft)}
-.promises li:last-child{border-bottom:1px solid var(--hair-soft)}
-.promises .rn{font-family:var(--serif);font-size:24px;color:var(--gold);line-height:1.2}
-.promises h3{font-size:25px;margin-bottom:6px}
-.promises p{color:var(--mist);font-size:16px;line-height:1.6}
-.sig{display:flex;align-items:center;gap:22px;flex-wrap:wrap}
-.sig-name{font-family:var(--serif);font-style:italic;font-size:34px;color:var(--ivory);line-height:1}
-.sig-name small{display:block;font-family:var(--caps);font-style:normal;font-size:10.5px;letter-spacing:.26em;text-transform:uppercase;color:var(--gold);margin-top:10px}
-.sig .btn{margin-left:auto}
-
-/* ===== before / after ===== */
-.ba-grid{display:grid;grid-template-columns:1fr 1fr;gap:28px}
-.ba{margin:0}
-.ba-frame{--p:50%;position:relative;aspect-ratio:4/3;overflow:hidden;background:var(--bone);cursor:ew-resize;touch-action:pan-y;user-select:none;-webkit-user-select:none;box-shadow:var(--shadow)}
-.ba-frame img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;pointer-events:none;-webkit-user-drag:none}
-.ba-before{position:absolute;inset:0;clip-path:inset(0 calc(100% - var(--p)) 0 0)}
-.ba-line{position:absolute;top:0;bottom:0;left:var(--p);width:1px;margin-left:-.5px;background:var(--gold-light);box-shadow:0 0 0 .5px rgba(11,11,12,.25)}
-.ba-knob{position:absolute;top:50%;left:var(--p);width:56px;height:56px;margin:-28px 0 0 -28px;border-radius:50%;background:var(--onyx);border:1px solid var(--gold);display:grid;place-items:center;box-shadow:0 10px 30px -8px rgba(0,0,0,.6);transition:transform .25s var(--ease)}
-.ba-knob svg{width:26px;height:26px;color:var(--gold-light)}
-.ba-frame:hover .ba-knob,.ba-frame.dragging .ba-knob{transform:scale(1.06)}
-.ba-tag{position:absolute;top:18px;z-index:2;font-family:var(--caps);font-size:11px;letter-spacing:.24em;text-transform:uppercase;padding:8px 13px;background:rgba(11,11,12,.72);color:var(--ivory);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);border-radius:2px;pointer-events:none}
-.ba-tag.l{left:18px}.ba-tag.r{right:18px;background:var(--gold);color:var(--onyx)}
-.ba figcaption{display:flex;justify-content:space-between;gap:16px;align-items:baseline;margin-top:22px;padding-top:18px;border-top:1px solid rgba(138,106,47,.3)}
-.ba figcaption b{font-family:var(--serif);font-weight:500;font-size:26px;line-height:1.2}
-.ba figcaption span{font-family:var(--caps);font-size:11px;letter-spacing:.24em;text-transform:uppercase;color:var(--gold-deep);white-space:nowrap}
-.ba-hint{margin-top:44px;text-align:center;font-size:14px;color:var(--stone)}
-
-/* ===== gallery ===== */
-.masonry{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;align-items:start}
-.mcol{display:flex;flex-direction:column;gap:18px}
-.tile{position:relative;display:block;width:100%;overflow:hidden;background:var(--charcoal);cursor:zoom-in;text-align:left}
-.tile.sq img{aspect-ratio:4/3;object-fit:cover}
-.tile img{width:100%;height:auto;transition:transform .9s var(--ease),opacity .5s}
-.tile:hover img{transform:scale(1.03)}
-.tile .cap{position:absolute;left:0;right:0;bottom:0;padding:44px 20px 16px;background:linear-gradient(180deg,rgba(11,11,12,0),rgba(11,11,12,.85));font-size:13.5px;line-height:1.4;color:var(--ivory);opacity:0;transform:translateY(8px);transition:opacity .4s,transform .4s var(--ease)}
-.tile .cap b{display:block;font-family:var(--serif);font-weight:500;font-size:20px}
-.tile:hover .cap,.tile:focus-visible .cap{opacity:1;transform:none}
-@media (hover:none){.tile .cap{opacity:1;transform:none;padding-top:36px}}
-.gal-foot{display:flex;justify-content:space-between;align-items:center;gap:24px;margin-top:40px;padding-top:28px;border-top:1px solid var(--hair-soft);color:var(--mist);font-size:15px}
-.lb{position:fixed;inset:0;width:100%;height:100%;max-width:none;max-height:none;border:0;background:rgba(7,7,8,.96);color:var(--ivory);display:none;place-items:center;padding:64px 80px;z-index:100}
-.lb[open]{display:grid}
-.lb::backdrop{background:rgba(7,7,8,.9)}
-.lb figure{margin:0;display:flex;flex-direction:column;align-items:center;gap:18px;max-height:100%}
-.lb img{max-width:min(1400px,100%);max-height:calc(100vh - 180px);width:auto;height:auto;object-fit:contain}
-.lb figcaption{font-family:var(--caps);font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold-light);text-align:center}
-.lb-btn{position:absolute;width:52px;height:52px;border:1px solid var(--hair);border-radius:50%;display:grid;place-items:center;color:var(--gold-light);background:rgba(11,11,12,.6);transition:border-color .3s,background .3s}
-.lb-btn:hover{border-color:var(--gold);background:var(--onyx)}
-.lb-btn svg{width:20px;height:20px}
-.lb-x{top:20px;right:20px}.lb-p{left:20px;top:50%;margin-top:-26px}.lb-n{right:20px;top:50%;margin-top:-26px}
-
-/* ===== process ===== */
-.steps{list-style:none;display:grid;grid-template-columns:repeat(4,1fr);gap:clamp(28px,3.4vw,48px);position:relative;border-top:1px solid rgba(138,106,47,.4);padding-top:44px}
-.steps li{position:relative}
-.steps li::before{content:"";position:absolute;top:-49px;left:0;width:9px;height:9px;background:var(--gold-deep);transform:rotate(45deg)}
-.steps .sn{font-family:var(--serif);font-size:64px;line-height:1;color:var(--gold-deep);display:block;margin-bottom:22px}
-.steps h3{font-size:27px;margin-bottom:12px}
-.steps p{color:var(--stone);font-size:16px;line-height:1.65}
-.proc-cta{margin-top:72px;display:flex;align-items:center;justify-content:space-between;gap:32px;padding:34px 40px;background:var(--bone);border-left:2px solid var(--gold-deep)}
-.proc-cta p{font-family:var(--serif);font-size:clamp(24px,2.2vw,30px);line-height:1.25}
-
-/* ===== materials ===== */
-.mats{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
-.mat{background:var(--ivory);padding:44px 38px 40px;box-shadow:var(--shadow);position:relative}
-.mat::before{content:"";position:absolute;top:0;left:38px;width:48px;height:2px;background:var(--gold-deep)}
-.mat .mk{font-family:var(--caps);font-size:11.5px;letter-spacing:.24em;text-transform:uppercase;color:var(--gold-deep)}
-.mat h3{font-size:36px;margin:12px 0 10px}
-.mat .ml{color:var(--stone);font-size:16px;margin-bottom:26px;min-height:3.2em}
-.mat dl{display:grid;gap:0}
-.mat dt{font-family:var(--caps);font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold-deep);padding-top:16px;border-top:1px solid var(--hair-ink)}
-.mat dd{font-size:15.5px;color:var(--ink);padding:6px 0 16px;line-height:1.55}
-.mat-foot{display:flex;justify-content:center;align-items:center;gap:28px;flex-wrap:wrap;margin-top:56px;text-align:center}
-.mat-foot p{font-family:var(--serif);font-style:italic;font-size:25px;color:var(--ink)}
-
-/* ===== reviews ===== */
-.rev-grid{display:grid;grid-template-columns:minmax(0,4.2fr) minmax(0,7fr);gap:clamp(48px,6vw,96px);align-items:start}
-.agg{position:sticky;top:120px}
-.score{display:flex;align-items:flex-end;gap:22px;margin:38px 0 10px}
-.score b{font-family:var(--serif);font-weight:500;font-size:clamp(110px,11vw,156px);line-height:.8;letter-spacing:-.03em;color:var(--ivory)}
-.score .sx{padding-bottom:10px}
-.score .st{display:block;color:var(--gold);font-size:22px;letter-spacing:.16em;line-height:1}
-.score .on{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:15px;color:var(--ivory);font-weight:600}
-.score .on svg{width:18px;height:18px}
-.agg .meta{color:var(--mist);font-size:15px;margin-bottom:34px}
-.rev-cards{display:grid;grid-template-columns:1fr 1fr;gap:20px;align-items:start}
-.rcol{display:flex;flex-direction:column;gap:20px}
-.rcol+.rcol{padding-top:64px}
-.rc{background:var(--ivory);color:var(--ink);padding:30px 30px 26px;border-radius:2px;display:flex;flex-direction:column;gap:16px;position:relative}
-.rc header{display:flex;align-items:center;gap:14px}
-.rc .av{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:600;font-size:18px;flex:none;background:var(--c)}
-.rc .who b{display:block;font-weight:600;font-size:16px;line-height:1.2}
-.rc .who time{font-size:13px;color:var(--stone)}
-.rc .gl{margin-left:auto;width:22px;height:22px;flex:none}
-.rc .st{color:#E8A317;font-size:17px;letter-spacing:.1em;line-height:1}
-.rc blockquote{font-size:16.5px;line-height:1.62;color:var(--ink)}
-.rc footer{font-size:12.5px;color:var(--stone);display:flex;align-items:center;gap:8px;padding-top:14px;border-top:1px solid var(--hair-ink)}
-.rc footer svg{width:13px;height:13px}
-
-/* ===== tell brisbane ===== */
-.tell{position:relative;overflow:hidden;padding:clamp(96px,11vw,148px) 0;background:var(--night);isolation:isolate}
-.tell>img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 50%;z-index:-2;opacity:.9}
-.tell::before{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,rgba(7,7,8,.96) 0%,rgba(7,7,8,.86) 45%,rgba(7,7,8,.62) 100%)}
-.tell-grid{display:grid;grid-template-columns:minmax(0,7fr) minmax(0,4fr);gap:clamp(48px,7vw,120px);align-items:center}
-.tell h2{font-size:clamp(42px,5.4vw,74px)}
-.tell h2 em{display:block}
-.tell .lede{color:rgba(247,243,236,.82);margin:28px 0 38px}
-.tell-actions{display:flex;flex-wrap:wrap;align-items:center;gap:18px 28px}
-.tell-actions small{font-size:13.5px;color:var(--mist)}
-.tell .fix{margin-top:34px;padding-top:24px;border-top:1px solid var(--hair-soft);font-size:15px;color:var(--mist)}
-.tell .fix a{color:var(--gold-light);font-weight:600;white-space:nowrap}
-.qr-card{justify-self:end;width:100%;max-width:340px;text-align:center}
-.qr-frame{position:relative;padding:22px;background:var(--ivory);border-radius:2px}
-.qr-frame::before{content:"";position:absolute;inset:-12px;border:1px solid var(--hair);pointer-events:none}
-.qr{aspect-ratio:1;display:grid;place-items:center;color:var(--stone);font-size:13px}
-.qr svg{width:100%;height:100%;display:block}
-.qr svg rect{fill:var(--ivory)}
-.qr svg path{fill:var(--onyx)}
-.qr-card p{margin-top:28px;font-family:var(--caps);font-size:11.5px;letter-spacing:.24em;text-transform:uppercase;color:var(--gold-light)}
-.qr-card span{display:block;margin-top:8px;font-size:14px;color:var(--mist)}
-
-/* ===== areas ===== */
-.euc{background:var(--eucalypt);color:var(--ivory)}
-.euc .eyebrow{color:var(--gold-light)}
-.euc .lede{color:rgba(247,243,236,.8)}
-.regions{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border-top:1px solid rgba(226,199,143,.3)}
-.region{padding:34px 34px 38px 0;border-bottom:1px solid rgba(226,199,143,.18)}
-.region:nth-child(3n+2),.region:nth-child(3n+3){padding-left:34px;border-left:1px solid rgba(226,199,143,.18)}
-.region h3{display:flex;justify-content:space-between;align-items:baseline;font-size:28px;margin-bottom:16px}
-.region h3 span{font-family:var(--caps);font-size:11px;letter-spacing:.2em;color:var(--gold-light)}
-.region ul{list-style:none;columns:2;column-gap:20px}
-.region li{font-size:15.5px;line-height:1.5;padding:4px 0 4px 16px;color:rgba(247,243,236,.88);position:relative;break-inside:avoid}
-.region li::before{content:"";position:absolute;left:0;top:50%;width:6px;height:1px;background:var(--gold-light)}
-.areas-foot{margin-top:48px;display:flex;justify-content:space-between;align-items:center;gap:28px;flex-wrap:wrap}
-.areas-foot p{color:rgba(247,243,236,.8);max-width:58ch}
-.euc .btn-ghost{border-color:rgba(226,199,143,.5)}
-
-/* ===== faq ===== */
-.faq-grid{display:grid;grid-template-columns:minmax(0,4fr) minmax(0,7fr);gap:clamp(48px,7vw,120px);align-items:start}
-.faq-side{position:sticky;top:120px}
-.faq-side h2{font-size:clamp(38px,3.7vw,52px)}
-.faq-side .lede{margin:24px 0 34px}
-.qa{border-bottom:1px solid var(--hair-ink)}
-.qa:first-child{border-top:1px solid var(--hair-ink)}
-.qa summary{list-style:none;cursor:pointer;position:relative;padding:28px 64px 28px 0;font-family:var(--serif);font-weight:500;font-size:clamp(22px,1.9vw,27px);line-height:1.25;color:var(--ink);transition:color .3s}
-.qa summary::-webkit-details-marker{display:none}
-.qa summary:hover{color:var(--gold-deep)}
-.qa summary::before,.qa summary::after{content:"";position:absolute;right:8px;top:50%;width:18px;height:1px;background:var(--gold-deep);transition:transform .4s var(--ease)}
-.qa summary::after{transform:rotate(90deg)}
-.qa[open] summary::after{transform:rotate(0)}
-.qa .ans{padding:0 64px 30px 0;color:var(--stone);font-size:16.5px;line-height:1.75;max-width:66ch}
-.qa[open] .ans{animation:fadeIn .5s var(--ease)}
-@keyframes fadeIn{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:none}}
-
-/* ===== quote ===== */
-.quote-grid{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6.4fr);gap:clamp(48px,7vw,112px);align-items:start}
-.quote-side .lede{margin:26px 0 36px}
-.ticks{list-style:none;display:grid;gap:14px;margin-bottom:44px}
-.ticks li{display:flex;gap:14px;align-items:flex-start;font-size:16px;color:rgba(247,243,236,.88)}
-.ticks svg{width:18px;height:18px;flex:none;margin-top:4px;color:var(--gold)}
-.contact{display:grid;gap:0;border-top:1px solid var(--hair-soft)}
-.contact a,.contact div{display:grid;grid-template-columns:92px 1fr;gap:16px;padding:18px 0;border-bottom:1px solid var(--hair-soft);font-size:16px;align-items:baseline}
-.contact span{font-family:var(--caps);font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold)}
-.contact b{font-weight:600;color:var(--ivory);word-break:break-word}
-.contact a:hover b{color:var(--gold-light)}
-.form{background:var(--charcoal);border:1px solid var(--hair-soft);padding:clamp(28px,3.6vw,52px);position:relative}
-.form::before{content:"";position:absolute;top:-1px;left:-1px;width:72px;height:2px;background:var(--gold)}
-.form h3{font-size:32px;margin-bottom:8px}
-.form .sub{color:var(--mist);font-size:15px;margin-bottom:30px}
-.fgrid{display:grid;grid-template-columns:1fr 1fr;gap:20px 18px}
-.f{display:flex;flex-direction:column;gap:9px}
-.f.full{grid-column:1/-1}
-.f label,.f legend{font-family:var(--caps);font-size:10.5px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold-light)}
-.f input,.f select,.f textarea{width:100%;min-height:54px;padding:14px 16px;border-radius:2px;border:1px solid #34343a;background:var(--onyx);color:var(--ivory);font:500 16px/1.4 var(--sans);transition:border-color .3s,box-shadow .3s;-webkit-appearance:none;appearance:none}
-.f textarea{min-height:110px;resize:vertical}
-.f select{background-image:linear-gradient(45deg,transparent 50%,var(--gold) 50%),linear-gradient(135deg,var(--gold) 50%,transparent 50%);background-position:calc(100% - 22px) 50%,calc(100% - 16px) 50%;background-size:6px 6px;background-repeat:no-repeat;padding-right:44px}
-.f select option,.f select optgroup{background:var(--charcoal);color:var(--ivory)}
-.f input::placeholder,.f textarea::placeholder{color:#7d7972}
-.f input:focus,.f select:focus,.f textarea:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px rgba(198,161,91,.18)}
-fieldset.f{border:0;min-width:0}
-fieldset.f legend{margin-bottom:12px}
-.chips{display:flex;flex-wrap:wrap;gap:10px}
-.chips label{position:relative;cursor:pointer}
-.chips input{position:absolute;opacity:0;width:1px;height:1px}
-.chips span{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 16px;border:1px solid #34343a;border-radius:999px;font:500 14.5px/1 var(--sans);color:rgba(247,243,236,.86);text-transform:none;letter-spacing:0;transition:all .25s}
-.chips span::before{content:"";width:8px;height:8px;border-radius:50%;border:1px solid var(--mist);transition:all .25s}
-.chips input:checked+span{border-color:var(--gold);color:var(--ivory);background:rgba(198,161,91,.12)}
-.chips input:checked+span::before{background:var(--gold);border-color:var(--gold)}
-.chips input:focus-visible+span{outline:2px solid var(--gold);outline-offset:2px}
-.hp{position:absolute!important;left:-9999px!important;width:1px;height:1px;overflow:hidden}
-.form .btn{width:100%;margin-top:28px;min-height:60px;font-size:13.5px}
-.form .btn[disabled]{opacity:.6;cursor:wait}
-.fine{margin-top:16px;font-size:13px;color:#8f8a81;line-height:1.55;text-align:center}
-.fine a{color:var(--gold-light);text-decoration:underline;text-underline-offset:3px}
-.ferr{margin-top:14px;color:#F1B8A6;font-size:14.5px;text-align:center;min-height:1px}
-.ferr a{color:var(--gold-light);font-weight:600}
-.ok{text-align:center;padding:40px 8px}
-.ok .okm{width:72px;height:72px;margin:0 auto 26px;border-radius:50%;border:1px solid var(--gold);display:grid;place-items:center;color:var(--gold-light)}
-.ok .okm svg{width:30px;height:30px}
-.ok h3{font-size:38px;margin-bottom:14px}
-.ok p{color:var(--mist);max-width:38ch;margin:0 auto}
-.ok .euc-chip{display:inline-flex;margin-top:26px;padding:8px 16px;border-radius:999px;background:var(--eucalypt);color:var(--ivory);font-size:13.5px;font-weight:600}
-
-/* ===== footer ===== */
-.foot{background:var(--night);border-top:1px solid var(--hair-soft);padding:88px 0 40px;color:var(--mist);font-size:15px}
-.foot-grid{display:grid;grid-template-columns:minmax(0,1.5fr) repeat(3,minmax(0,1fr));gap:48px}
-.foot-brand img{width:112px;height:112px;margin:-10px 0 18px -10px}
-.foot-brand p{max-width:34ch;line-height:1.65}
-.foot h4{font-family:var(--caps);font-weight:500;font-size:11.5px;letter-spacing:.24em;text-transform:uppercase;color:var(--gold);margin-bottom:20px}
-.foot ul{list-style:none;display:grid;gap:11px}
-.foot a{transition:color .25s}
-.foot a:hover{color:var(--gold-light)}
-.foot .ph{font-family:var(--serif);font-size:28px;color:var(--ivory);line-height:1.1;font-variant-numeric:lining-nums}
-.foot-review{display:inline-flex;align-items:center;gap:10px;margin-top:22px;padding:10px 16px;border:1px solid var(--hair);border-radius:2px;color:var(--gold-light);font-weight:600;font-size:14px}
-.foot-review svg{width:16px;height:16px}
-.foot-bot{margin-top:72px;padding-top:28px;border-top:1px solid rgba(198,161,91,.14);display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap;font-size:13.5px;color:#8a857c}
-.foot-bot .louvre-mark{display:inline-block;color:var(--gold);vertical-align:middle;margin-right:14px}
-.foot-bot nav{display:flex;gap:24px}
-
-/* ===== mobile bar ===== */
-.mbar{display:none}
-
-/* ===== responsive ===== */
-@media (max-width:1180px){
-  .nav{gap:22px}.nav a{font-size:13px}
-  .hdr-tel{display:none}
-}
-@media (max-width:1020px){
-  .nav,.hdr-cta .btn{display:none}
-  .hdr-tel{display:flex}
-  .burger{display:flex}
-  .hdr-cta{margin-left:auto;gap:8px}
-  .trust ul{grid-template-columns:repeat(3,1fr)}
-  .trust li:nth-child(4){border-left:0;padding-left:0}
-  .trust li:nth-child(n+4){border-top:1px solid var(--hair-soft)}
-  .sec-head.split{grid-template-columns:1fr;gap:24px}
-  .sec-head.split .lede{justify-self:start}
-  .cards{grid-template-columns:1fr 1fr}
-  .c-lg{grid-column:span 2}.c-md,.c-sm{grid-column:span 1}
-  .c-sm:last-child{grid-column:span 2}
-  .shane-grid,.rev-grid,.faq-grid,.quote-grid,.tell-grid{grid-template-columns:minmax(0,1fr)}
-  .rev-grid>*{min-width:0}
-  .shane-fig{max-width:560px}
-  .agg,.faq-side{position:static}
-  .steps{grid-template-columns:1fr 1fr;row-gap:56px}
-  .steps li:nth-child(n+3)::before{display:none}
-  .mats{grid-template-columns:1fr}
-  .mat .ml{min-height:0}
-  .regions{grid-template-columns:1fr 1fr}
-  .region,.region:nth-child(3n+2),.region:nth-child(3n+3){padding:30px 28px 32px 0;border-left:0}
-  .region:nth-child(2n){padding-left:28px;border-left:1px solid rgba(226,199,143,.18)}
-  .qr-card{justify-self:start}
-  .foot-grid{grid-template-columns:1fr 1fr}
-  .foot-brand{grid-column:1/-1}
-  .masonry{display:block;columns:2;column-gap:14px}
-  .mcol{display:contents}
-  .tile{margin-bottom:14px;break-inside:avoid}
-}
-@media (max-width:700px){
-  :root{--hdr:68px}
-  body{font-size:16.5px}
-  .hdr.solid{height:64px}
-  .brand img{width:44px;height:44px}.hdr.solid .brand img{width:40px;height:40px}
-  .brand-t{font-size:11.5px;letter-spacing:.17em}
-  .brand-t small{font-size:9px;letter-spacing:.3em}
-  .hdr-tel span{display:none}
-  .hdr-tel{width:44px;height:44px;justify-content:center;border:1px solid var(--hair);border-radius:50%}
-  .hero{min-height:600px;max-height:none}
-  .hero-media img{object-position:50% 30%}
-  .hero-shade{background:linear-gradient(180deg,rgba(11,11,12,.62) 0%,rgba(11,11,12,.05) 16%,rgba(11,11,12,.3) 32%,rgba(11,11,12,.86) 50%,rgba(11,11,12,.97) 100%)}
-  .hero-in{padding-bottom:28px}
-  .h1-k{font-size:11px;letter-spacing:.2em;margin-bottom:18px;gap:12px}
-  .h1-k::before{width:28px}
-  .h1-m{font-size:clamp(42px,11.6vw,52px);line-height:.98}
-  .hero-sub{font-size:16px;line-height:1.6;margin:18px 0 24px}
-  .hero-ctas{flex-direction:column;align-items:stretch;gap:12px}
-  .hero-ctas .btn-ghost{display:none}
-  .hero-call{display:flex;justify-content:center;align-items:center;gap:8px;font-size:14.5px;color:rgba(247,243,236,.82)}
-  .hero-call b{color:var(--gold-light);font-weight:600}
-  .chip{margin-top:18px;font-size:12.5px;gap:9px;padding:7px 14px 7px 8px}
-  .chip .g{width:22px;height:22px}.chip .g svg{width:13px;height:13px}
-  .chip .st{font-size:11px}
-  .chip>span:last-child{display:none}
-  .hero-cap{display:none}
-  .trust ul{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;-ms-overflow-style:none;scrollbar-width:none;padding-right:var(--gut)}
-  .trust ul::-webkit-scrollbar{display:none}
-  .trust .wrap{padding-right:0}
-  .trust li,.trust li:nth-child(4){flex:0 0 auto;min-width:190px;padding:24px 22px;border-left:1px solid var(--hair-soft);border-top:0;scroll-snap-align:start}
-  .trust li:first-child{padding-left:0;border-left:0}
-  .trust b{font-size:21px}
-  .cards{grid-template-columns:1fr;gap:16px}
-  .c-lg,.c-md,.c-sm,.c-sm:last-child{grid-column:auto;height:auto;aspect-ratio:4/4.3}
-  .c-lg{aspect-ratio:4/4.3}
-  .card-body{padding:26px 24px 24px}
-  .card .tag{left:24px;top:22px}
-  .card h3{font-size:31px}
-  .card p{font-size:15px}
-  .alu .frame,.mesh .door{bottom:40%}
-  .shane-fig::before{inset:-12px 12px 12px -12px}
-  .promises li{grid-template-columns:40px 1fr;gap:12px}
-  .sig .btn{margin-left:0;width:100%}
-  .ba-grid{grid-template-columns:1fr;gap:44px}
-  .ba figcaption{flex-direction:column;gap:6px}
-  .ba figcaption b{font-size:23px}
-  .ba-knob{width:50px;height:50px;margin:-25px 0 0 -25px}
-  .masonry{column-gap:10px}
-  .tile{margin-bottom:10px}
-  .tile .cap{display:none}
-  .gal-foot{flex-direction:column;align-items:flex-start}
-  .lb{padding:56px 12px}
-  .lb-p,.lb-n{top:auto;bottom:16px;margin:0}
-  .steps{grid-template-columns:1fr;row-gap:0;border-top:0;padding-top:0;border-left:1px solid rgba(138,106,47,.4);margin-left:5px}
-  .steps li{padding:0 0 40px 30px}
-  .steps li::before,.steps li:nth-child(n+3)::before{display:block;top:8px;left:-5px}
-  .steps .sn{font-size:52px;margin-bottom:12px}
-  .proc-cta{flex-direction:column;align-items:flex-start;padding:28px 24px;margin-top:32px}
-  .proc-cta .btn{width:100%}
-  .mat{padding:36px 26px 30px}
-  .mat::before{left:26px}
-  .mat-foot .btn{width:100%}
-  .rev-cards{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;gap:14px;margin:0 calc(-1 * var(--gut));padding:4px var(--gut) 8px;scrollbar-width:none}
-  .rev-cards::-webkit-scrollbar{display:none}
-  .rcol{display:contents}
-  .rc{flex:0 0 84%;margin:0;scroll-snap-align:center}
-  .score{margin-top:26px}
-  .agg .btn{width:100%}
-  .swipe-hint{display:flex!important}
-  .tell::before{background:linear-gradient(180deg,rgba(7,7,8,.9),rgba(7,7,8,.95))}
-  .tell-actions .btn{width:100%}
-  .qr-card{max-width:240px;justify-self:center;margin-top:8px}
-  .regions{grid-template-columns:1fr}
-  .region,.region:nth-child(2n),.region:nth-child(3n+2),.region:nth-child(3n+3){padding:26px 0 28px;border-left:0}
-  .areas-foot .btn{width:100%}
-  .qa summary{padding:24px 44px 24px 0;font-size:21px}
-  .qa .ans{padding-right:0}
-  .fgrid{grid-template-columns:1fr}
-  .contact a,.contact div{grid-template-columns:78px 1fr}
-  .foot{padding:72px 0 calc(100px + env(safe-area-inset-bottom))}
-  .foot-grid{grid-template-columns:1fr 1fr;gap:40px 24px}
-  .foot-contact{grid-column:1/-1}
-  .foot-bot{flex-direction:column;align-items:flex-start}
-  .foot-bot nav{flex-wrap:wrap;gap:10px 22px}
-  .foot-bot nav a{white-space:nowrap}
-  .mbar{display:grid;grid-template-columns:1fr 1.15fr;position:fixed;left:0;right:0;bottom:0;z-index:70;background:rgba(11,11,12,.96);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-top:1px solid var(--hair-soft);padding:10px 12px calc(10px + env(safe-area-inset-bottom));gap:10px;transform:translateY(110%);transition:transform .45s var(--ease)}
-  .mbar.show{transform:none}
-  .mbar a{min-height:52px;display:flex;align-items:center;justify-content:center;gap:10px;border-radius:2px;font:600 13px/1 var(--sans);letter-spacing:.14em;text-transform:uppercase}
-  .mbar .mb-call{border:1px solid var(--hair);color:var(--gold-light)}
-  .mbar .mb-call svg{width:16px;height:16px}
-  .mbar .mb-quote{background:var(--gold);color:var(--onyx)}
-}
-.swipe-hint{display:none;align-items:center;gap:10px;margin-top:18px;font-family:var(--caps);font-size:10.5px;letter-spacing:.24em;text-transform:uppercase;color:var(--mist)}
-.swipe-hint::after{content:"";width:36px;height:1px;background:var(--hair)}
-@media (prefers-reduced-motion:reduce){
-  html{scroll-behavior:auto}
-  .louvres{display:none}
-  *,*::before,*::after{transition-duration:.01ms!important;animation-duration:.01ms!important;animation-delay:0s!important}
-  .js .rv{transform:none;transition:opacity .4s linear!important}
-  .js .hero-in>*{transform:none}
-  .card:hover>img,.card:hover .art,.tile:hover img{transform:none}
-}
-</style>
-
 <script type="application/ld+json">
 {
-  "@context":"https://schema.org",
-  "@graph":[
+ "@context": "https://schema.org",
+ "@graph": [
+  {
+   "@type": "HomeAndConstructionBusiness",
+   "@id": "https://srshuttersandscreens.com.au/#business",
+   "name": "SR Shutters & Screens",
+   "url": "https://srshuttersandscreens.com.au/",
+   "logo": "https://srshuttersandscreens.com.au/assets/img/logo.png",
+   "image": [
+    "https://srshuttersandscreens.com.au/assets/img/plantation-shutters-bathroom-tiled-01.jpg",
+    "https://srshuttersandscreens.com.au/assets/img/plantation-shutters-queenslander-corner-01.jpg"
+   ],
+   "description": "Owner-operated plantation shutters, outdoor aluminium shutters, security screens and doors, fly screens and blinds, measured and installed by Shane Bartolo across Greater Brisbane.",
+   "founder": {
+    "@type": "Person",
+    "name": "Shane Bartolo"
+   },
+   "telephone": "+61411885227",
+   "email": "srshuttersnscreens@gmail.com",
+   "address": {
+    "@type": "PostalAddress",
+    "addressRegion": "QLD",
+    "addressCountry": "AU"
+   },
+   "areaServed": [
     {
-      "@type":"HomeAndConstructionBusiness",
-      "@id":"https://srshuttersandscreens.com.au/#business",
-      "name":"SR Shutters & Screens",
-      "url":"https://srshuttersandscreens.com.au/",
-      "logo":"https://srshuttersandscreens.com.au/assets/img/logo.png",
-      "image":["https://srshuttersandscreens.com.au/assets/img/plantation-shutters-bathroom-tiled-01.jpg","https://srshuttersandscreens.com.au/assets/img/plantation-shutters-queenslander-corner-01.jpg"],
-      "description":"Owner-operated plantation shutters, outdoor aluminium shutters, security screens and doors, fly screens and blinds, measured and installed by Shane Bartolo across Greater Brisbane.",
-      "telephone":"+61411885227",
-      "email":"srshuttersnscreens@gmail.com",
-      "address":{"@type":"PostalAddress","addressRegion":"QLD","addressCountry":"AU"},
-      "areaServed":[
-        {"@type":"City","name":"Brisbane"},{"@type":"Place","name":"Brisbane City"},{"@type":"AdministrativeArea","name":"Moreton Bay"},{"@type":"City","name":"Logan City"},{"@type":"AdministrativeArea","name":"Sunshine Coast"},{"@type":"City","name":"Ipswich"},{"@type":"City","name":"Gold Coast"},
-        {"@type":"Place","name":"Caboolture"},{"@type":"Place","name":"Morayfield"},{"@type":"Place","name":"North Lakes"},{"@type":"Place","name":"Forest Lake"},{"@type":"Place","name":"Kallangur"},{"@type":"Place","name":"Narangba"},{"@type":"Place","name":"Deception Bay"},{"@type":"Place","name":"Thornlands"},{"@type":"Place","name":"Coorparoo"},{"@type":"Place","name":"Holland Park"},{"@type":"Place","name":"Sunnybank Hills"},{"@type":"Place","name":"Capalaba"},{"@type":"Place","name":"Calamvale"},{"@type":"Place","name":"Bracken Ridge"},{"@type":"Place","name":"Redland Bay"},{"@type":"Place","name":"Carindale"},{"@type":"Place","name":"Burpengary"},{"@type":"Place","name":"Alexandra Hills"},{"@type":"Place","name":"Albany Creek"},{"@type":"Place","name":"Cleveland"},{"@type":"Place","name":"Eight Mile Plains"},{"@type":"Place","name":"Inala"},{"@type":"Place","name":"Rochedale South"},{"@type":"Place","name":"Victoria Point"},{"@type":"Place","name":"Mango Hill"},{"@type":"Place","name":"Birkdale"},{"@type":"Place","name":"West End"},{"@type":"Place","name":"South Brisbane"}
-      ],
-      "openingHoursSpecification":[
-        {"@type":"OpeningHoursSpecification","dayOfWeek":["Monday","Tuesday","Wednesday","Thursday","Friday"],"opens":"09:00","closes":"17:00"}
-      ],
-      "sameAs":["https://www.facebook.com/p/SR-Shutters-and-Blinds-61558514797373/","https://www.instagram.com/sr_shutters_and_blinds/","https://www.google.com/maps/place/?q=place_id:ChIJX0h2jR-nMAYRF8pfdpDSDkM"],
-      "makesOffer":[
-        {"@type":"Offer","itemOffered":{"@id":"https://srshuttersandscreens.com.au/#plantation-shutters"}},
-        {"@type":"Offer","itemOffered":{"@id":"https://srshuttersandscreens.com.au/#outdoor-shutters"}},
-        {"@type":"Offer","itemOffered":{"@id":"https://srshuttersandscreens.com.au/#security-screens"}},
-        {"@type":"Offer","itemOffered":{"@id":"https://srshuttersandscreens.com.au/#fly-screens"}},
-        {"@type":"Offer","itemOffered":{"@id":"https://srshuttersandscreens.com.au/#blinds"}}
-      ]
+     "@type": "City",
+     "name": "Brisbane"
     },
-    {"@type":"Service","@id":"https://srshuttersandscreens.com.au/#plantation-shutters","name":"Plantation shutters","serviceType":"Plantation shutter supply and installation","description":"Custom PVC and timber plantation shutters for every window, including bay, arched and odd shapes, measured and installed by Shane.","provider":{"@id":"https://srshuttersandscreens.com.au/#business"},"areaServed":{"@type":"City","name":"Brisbane"}},
-    {"@type":"Service","@id":"https://srshuttersandscreens.com.au/#outdoor-shutters","name":"Outdoor & aluminium shutters","serviceType":"Aluminium outdoor shutter installation","description":"Rust-proof, rot-proof and warp-proof aluminium shutters for patios, pools, balconies and alfresco areas, with powder-coated finishes.","provider":{"@id":"https://srshuttersandscreens.com.au/#business"},"areaServed":{"@type":"City","name":"Brisbane"}},
-    {"@type":"Service","@id":"https://srshuttersandscreens.com.au/#security-screens","name":"Security screens & doors","serviceType":"Security screen and door installation","description":"Made-to-measure stainless steel mesh security doors and window screens for front, rear, side and sliding doors.","provider":{"@id":"https://srshuttersandscreens.com.au/#business"},"areaServed":{"@type":"City","name":"Brisbane"}},
-    {"@type":"Service","@id":"https://srshuttersandscreens.com.au/#fly-screens","name":"Fly screens & screen doors","serviceType":"Fly screen and sliding screen door installation","description":"Sliding screen doors and window fly screens that let the breeze in and keep insects out.","provider":{"@id":"https://srshuttersandscreens.com.au/#business"},"areaServed":{"@type":"City","name":"Brisbane"}},
-    {"@type":"Service","@id":"https://srshuttersandscreens.com.au/#blinds","name":"Blinds","serviceType":"Blind supply and installation","description":"Roller, blockout, dual and vertical blinds, manual or motorised, for living areas, bedrooms, kitchens and offices.","provider":{"@id":"https://srshuttersandscreens.com.au/#business"},"areaServed":{"@type":"City","name":"Brisbane"}},
     {
-      "@type":"FAQPage",
-      "@id":"https://srshuttersandscreens.com.au/#faq",
-      "mainEntity":[
-        {"@type":"Question","name":"Will plantation shutters keep my house cooler in a Brisbane summer?","acceptedAnswer":{"@type":"Answer","text":"Yes. Closed shutters block direct sun and hold an insulating layer of air between the glass and the room, so west-facing rooms heat up far less in the afternoon. Tilt the blades up and you can bounce soft light off the ceiling while keeping the glare and heat out."}},
-        {"@type":"Question","name":"PVC or basswood: which is better for Queensland?","acceptedAnswer":{"@type":"Answer","text":"For bathrooms, laundries, kitchens and anywhere near moisture, PVC every time. It won't swell, warp or peel in Brisbane humidity, and it wipes clean. Basswood is a real timber that is lighter, suits wide living-area windows and takes paint or stain beautifully, but it should be kept away from wet areas. Many homes end up with both. For patios and alfresco areas, aluminium is the answer."}},
-        {"@type":"Question","name":"Are your outdoor shutters built for storm season?","acceptedAnswer":{"@type":"Answer","text":"Our aluminium outdoor shutters are made for Brisbane's heat, humidity and summer storms. Aluminium is rust-proof, rot-proof and warp-proof, and powder-coated finishes can be colour-matched to your home. If your patio or balcony is exposed, Shane will look at the site at your measure and recommend the right setup."}},
-        {"@type":"Question","name":"How secure are your security screens and doors?","acceptedAnswer":{"@type":"Answer","text":"Our security doors and window screens use stainless steel mesh, made to measure for each opening, so you can leave doors and windows open for the breeze without leaving the house open. Front, rear, side and sliding doors are all covered. A screen is only as strong as its installation, which is why Shane fits every one himself. Ask him at your measure for the specifications of the range he recommends for your home."}},
-        {"@type":"Question","name":"How long does it take from quote to install?","acceptedAnswer":{"@type":"Answer","text":"Everything is custom made to Shane's measurements, so timing depends on the product and the size of the job. Shane will give you a clear timeline with your quote, and most homes are fully installed in a single day."}},
-        {"@type":"Question","name":"What warranty do I get?","acceptedAnswer":{"@type":"Answer","text":"Two layers of cover. Your products carry the manufacturer's warranty, and SR backs the installation with its own workmanship guarantee. Shane sets out the exact terms for every product in writing with your quote, so you know precisely what's covered before you decide."}},
-        {"@type":"Question","name":"Do you offer payment plans?","acceptedAnswer":{"@type":"Answer","text":"Flexible payment options are available. Shane can talk you through them at your free measure, so you can plan the job around your budget."}},
-        {"@type":"Question","name":"Are the measure and quote really free? Will I be pressured to sign?","acceptedAnswer":{"@type":"Answer","text":"Completely free and obligation-free. There are no sales reps on commission at SR, just Shane. You'll get a clear written quote and can take as long as you like to decide. Plenty of people book a measure just to compare options, and that's fine by us."}}
-      ]
+     "@type": "Place",
+     "name": "Brisbane City"
+    },
+    {
+     "@type": "Place",
+     "name": "South Brisbane"
+    },
+    {
+     "@type": "Place",
+     "name": "West End"
+    },
+    {
+     "@type": "Place",
+     "name": "Coorparoo"
+    },
+    {
+     "@type": "Place",
+     "name": "Holland Park"
+    },
+    {
+     "@type": "Place",
+     "name": "Carindale"
+    },
+    {
+     "@type": "Place",
+     "name": "Albany Creek"
+    },
+    {
+     "@type": "Place",
+     "name": "Bracken Ridge"
+    },
+    {
+     "@type": "Place",
+     "name": "Calamvale"
+    },
+    {
+     "@type": "Place",
+     "name": "Sunnybank Hills"
+    },
+    {
+     "@type": "Place",
+     "name": "Eight Mile Plains"
+    },
+    {
+     "@type": "Place",
+     "name": "Inala"
+    },
+    {
+     "@type": "Place",
+     "name": "Forest Lake"
+    },
+    {
+     "@type": "AdministrativeArea",
+     "name": "Moreton Bay"
+    },
+    {
+     "@type": "Place",
+     "name": "North Lakes"
+    },
+    {
+     "@type": "Place",
+     "name": "Mango Hill"
+    },
+    {
+     "@type": "Place",
+     "name": "Kallangur"
+    },
+    {
+     "@type": "Place",
+     "name": "Narangba"
+    },
+    {
+     "@type": "Place",
+     "name": "Deception Bay"
+    },
+    {
+     "@type": "Place",
+     "name": "Burpengary"
+    },
+    {
+     "@type": "Place",
+     "name": "Morayfield"
+    },
+    {
+     "@type": "Place",
+     "name": "Caboolture"
+    },
+    {
+     "@type": "Place",
+     "name": "Capalaba"
+    },
+    {
+     "@type": "Place",
+     "name": "Birkdale"
+    },
+    {
+     "@type": "Place",
+     "name": "Alexandra Hills"
+    },
+    {
+     "@type": "Place",
+     "name": "Cleveland"
+    },
+    {
+     "@type": "Place",
+     "name": "Thornlands"
+    },
+    {
+     "@type": "Place",
+     "name": "Victoria Point"
+    },
+    {
+     "@type": "Place",
+     "name": "Redland Bay"
+    },
+    {
+     "@type": "City",
+     "name": "Logan City"
+    },
+    {
+     "@type": "Place",
+     "name": "Rochedale South"
+    },
+    {
+     "@type": "City",
+     "name": "Ipswich"
+    },
+    {
+     "@type": "City",
+     "name": "Gold Coast"
+    },
+    {
+     "@type": "AdministrativeArea",
+     "name": "Sunshine Coast"
     }
-  ]
+   ],
+   "openingHoursSpecification": [
+    {
+     "@type": "OpeningHoursSpecification",
+     "dayOfWeek": [
+      "Monday",
+      "Tuesday",
+      "Wednesday",
+      "Thursday",
+      "Friday"
+     ],
+     "opens": "09:00",
+     "closes": "17:00"
+    }
+   ],
+   "sameAs": [
+    "https://www.facebook.com/p/SR-Shutters-and-Blinds-61558514797373/",
+    "https://www.instagram.com/sr_shutters_and_blinds/",
+    "https://www.google.com/maps/place/?q=place_id:ChIJX0h2jR-nMAYRF8pfdpDSDkM"
+   ],
+   "makesOffer": [
+    {
+     "@type": "Offer",
+     "itemOffered": {
+      "@type": "Service",
+      "@id": "https://srshuttersandscreens.com.au/plantation-shutters#service",
+      "name": "Plantation shutters",
+      "url": "https://srshuttersandscreens.com.au/plantation-shutters"
+     }
+    },
+    {
+     "@type": "Offer",
+     "itemOffered": {
+      "@type": "Service",
+      "@id": "https://srshuttersandscreens.com.au/outdoor-aluminium-shutters#service",
+      "name": "Outdoor & aluminium shutters",
+      "url": "https://srshuttersandscreens.com.au/outdoor-aluminium-shutters"
+     }
+    },
+    {
+     "@type": "Offer",
+     "itemOffered": {
+      "@type": "Service",
+      "@id": "https://srshuttersandscreens.com.au/security-screens-doors#service",
+      "name": "Security screens & doors",
+      "url": "https://srshuttersandscreens.com.au/security-screens-doors"
+     }
+    },
+    {
+     "@type": "Offer",
+     "itemOffered": {
+      "@type": "Service",
+      "@id": "https://srshuttersandscreens.com.au/fly-screens#service",
+      "name": "Fly screens & screen doors",
+      "url": "https://srshuttersandscreens.com.au/fly-screens"
+     }
+    },
+    {
+     "@type": "Offer",
+     "itemOffered": {
+      "@type": "Service",
+      "@id": "https://srshuttersandscreens.com.au/blinds#service",
+      "name": "Blinds",
+      "url": "https://srshuttersandscreens.com.au/blinds"
+     }
+    }
+   ]
+  }
+ ]
 }
 </script>
 </head>
-<body>
+<body class="pg-index">
 <a class="skip" href="#main">Skip to content</a>
 
 <!-- NIMBATA SOURCE NUMBER: Nimbata replaces the text of this span with the tracking number.
-     Keep it as the number Nimbata is set to REPLACE (Shane's current 0411 885 227). -->
+     Keep it as the number Nimbata is set to REPLACE (Shane's current 0411 885 227). One per page. -->
 <span id="nb-source" data-fallback="0411 885 227" style="position:absolute;left:-9999px;top:0">0411 885 227</span>
 
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <symbol id="i-phone" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" d="M5 3.5h3.2l1.6 4.2-2.1 1.4a12.5 12.5 0 0 0 7.2 7.2l1.4-2.1 4.2 1.6V19a1.6 1.6 0 0 1-1.7 1.6C10.8 20.1 3.9 13.2 3.4 5.2A1.6 1.6 0 0 1 5 3.5z"/></symbol>
   <symbol id="i-arrow" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" d="M4 12h15M13 6l6 6-6 6"/></symbol>
   <symbol id="i-check" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.5l5 5 10-11"/></symbol>
-  <symbol id="i-star" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2.8l2.8 6 6.5.7-4.9 4.4 1.4 6.4L12 17l-5.8 3.3 1.4-6.4-4.9-4.4 6.5-.7z"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M5 9l7 7 7-7"/></symbol>
   <symbol id="i-g" viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.1H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 8 3l5.7-5.7C34 6.1 29.3 4 24 4 13 4 4 13 4 24s9 20 20 20 20-9 20-20c0-1.3-.1-2.6-.4-3.9z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 8 3l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z"/><path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2c-2 1.5-4.5 2.4-7.2 2.4-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z"/><path fill="#1976D2" d="M43.6 20.1H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.6-.4-3.9z"/></symbol>
 </svg>
 
 <header class="hdr" id="hdr">
   <div class="wrap hdr-in">
-    <a class="brand" href="#top" aria-label="SR Shutters &amp; Screens, back to top">
+    <a class="brand" href="index.html" aria-label="SR Shutters &amp; Screens home">
       <img src="assets/img/logo-gold-320.png" width="320" height="320" alt="SR Shutters &amp; Screens logo">
       <span class="brand-t">SR Shutters<small>&amp; Screens</small></span>
     </a>
     <nav class="nav" aria-label="Primary">
-      <a href="#collection">Shutters &amp; Screens</a>
-      <a href="#difference">Before &amp; After</a>
-      <a href="#work">Our Work</a>
-      <a href="#reviews">Reviews</a>
-      <a href="#faq">FAQ</a>
+      <div class="dd"><button class="dd-t" type="button" aria-expanded="false" aria-controls="dd-prod">Shutters &amp; Screens<svg aria-hidden="true"><use href="#i-chev"/></svg></button>
+        <div class="dd-p" id="dd-prod"><a href="plantation-shutters.html"><span>01</span>Plantation shutters</a><a href="security-screens-doors.html"><span>02</span>Security screens &amp; doors</a><a href="outdoor-aluminium-shutters.html"><span>03</span>Outdoor &amp; aluminium shutters</a><a href="fly-screens.html"><span>04</span>Fly screens &amp; screen doors</a><a href="blinds.html"><span>05</span>Blinds</a></div></div>
+      <a href="before-after.html">Before &amp; After</a><a href="our-work.html">Our Work</a><a href="about.html">About</a><a href="reviews.html">Reviews</a><a href="faq.html">FAQ</a><a href="contact.html">Contact</a>
     </nav>
     <div class="hdr-cta">
       <a class="hdr-tel" href="tel:+61411885227" data-phone-link aria-label="Call Shane"><svg aria-hidden="true"><use href="#i-phone"/></svg><span data-phone-display>0411 885 227</span></a>
-      <a class="btn btn-gold" href="#quote">Book a Free Measure</a>
-      <button class="burger" id="burger" aria-label="Open menu" aria-expanded="false" aria-controls="mnav"><span></span><span></span><span></span></button>
+      <a class="btn btn-gold" href="contact.html">Book a Free Measure</a>
+      <button class="burger" id="burger" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="mnav"><span></span><span></span><span></span></button>
     </div>
   </div>
 </header>
-<div class="mnav" id="mnav" aria-label="Menu">
-  <a class="m" href="#collection">Shutters &amp; Screens</a>
-  <a class="m" href="#difference">Before &amp; After</a>
-  <a class="m" href="#work">Our Work</a>
-  <a class="m" href="#reviews">Reviews</a>
-  <a class="m" href="#areas">Service Areas</a>
-  <a class="m" href="#faq">FAQ</a>
-  <a class="btn btn-gold" href="#quote">Book a Free Measure</a>
+<nav class="mnav" id="mnav" aria-label="Menu">
+  <a class="m" href="index.html" aria-current="page">Home</a>
+  <p class="mg">Shutters &amp; Screens</p>
+  <div class="mprod"><a href="plantation-shutters.html">Plantation shutters</a><a href="security-screens-doors.html">Security screens &amp; doors</a><a href="outdoor-aluminium-shutters.html">Outdoor shutters</a><a href="fly-screens.html">Fly screens</a><a href="blinds.html">Blinds</a></div>
+  <a class="m" href="before-after.html">Before &amp; After</a><a class="m" href="our-work.html">Our Work</a><a class="m" href="about.html">About Shane</a><a class="m" href="reviews.html">Reviews</a><a class="m" href="service-areas.html">Service Areas</a><a class="m" href="faq.html">FAQ</a><a class="m" href="contact.html">Contact</a>
+  <a class="btn btn-gold" href="contact.html">Book a Free Measure</a>
   <a class="mtel" href="tel:+61411885227" data-phone-link>Call Shane · <span data-phone-display>0411 885 227</span></a>
-</div>
+  <p class="msmall"><a href="review.html">Leave a Google review</a><a href="privacy.html">Privacy policy</a></p>
+</nav>
 
 <main id="main">
 
@@ -693,11 +335,11 @@ fieldset.f legend{margin-bottom:12px}
     <h1><span class="h1-k">Plantation Shutters &amp; Security Screens · Brisbane</span><span class="h1-m">Fitted by the man who <em>measured&nbsp;them.</em></span></h1>
     <p class="hero-sub">Plantation shutters, outdoor shutters, security screens, fly screens and blinds, custom made for Queensland homes. Measured, made to fit and installed by owner Shane&nbsp;Bartolo himself.</p>
     <div class="hero-ctas">
-      <a class="btn btn-gold" href="#quote">Book a Free Measure</a>
+      <a class="btn btn-gold" href="contact.html">Book a Free Measure</a>
       <a class="btn btn-ghost" href="tel:+61411885227" data-phone-link><svg aria-hidden="true"><use href="#i-phone"/></svg>Call Shane <span data-phone-display>0411 885 227</span></a>
       <a class="hero-call" href="tel:+61411885227" data-phone-link>or call Shane on <b data-phone-display>0411 885 227</b></a>
     </div>
-    <a class="chip" href="#reviews"><span class="g"><svg aria-hidden="true"><use href="#i-g"/></svg></span><span class="st" aria-hidden="true">★★★★★</span><b>5.0 on Google</b><span>· Every review five stars</span></a>
+    <a class="chip" href="reviews.html"><span class="g"><svg aria-hidden="true"><use href="#i-g"/></svg></span><span class="st" aria-hidden="true">★★★★★</span><b>5.0 on Google</b><span>· Every review five stars</span></a>
   </div>
   <p class="hero-cap">Bi-fold plantation shutters · A real SR install</p>
 </section>
@@ -715,7 +357,7 @@ fieldset.f legend{margin-bottom:12px}
   </div>
 </section>
 
-<!-- ===== COLLECTION ===== -->
+<!-- ===== COLLECTION: each card opens its product page ===== -->
 <section class="sec light" id="collection">
   <div class="wrap">
     <div class="sec-head split">
@@ -723,36 +365,16 @@ fieldset.f legend{margin-bottom:12px}
       <p class="lede rv" style="--d:1">Made-to-measure shutters, screens and blinds for Queensland light, heat and storm season. Every one measured, made to fit and installed by the same pair of hands.</p>
     </div>
     <div class="cards">
-      <a class="card c-lg rv" href="#quote" data-product="Plantation shutters" id="plantation-shutters">
-        <img src="assets/img/plantation-shutters-queenslander-corner-01.jpg" srcset="assets/img/plantation-shutters-queenslander-corner-01-800.jpg 800w, assets/img/plantation-shutters-queenslander-corner-01.jpg 1600w" sizes="(max-width:700px) 100vw, (max-width:1020px) 100vw, 820px" width="1600" height="1200" loading="lazy" decoding="async" alt="White plantation shutters wrapping a corner of a Queenslander room with VJ walls and ornate rosettes">
-        <span class="tag">PVC · Timber · Hinged · Bi-fold</span>
-        <div class="card-body"><span class="num">01</span><h3>Plantation shutters</h3><p>PVC and timber shutters, custom made for every window, including bay, arched and odd shapes.</p><span class="link-line">Book a Free Measure <svg width="16" height="16" aria-hidden="true"><use href="#i-arrow"/></svg></span></div>
-      </a>
-      <a class="card c-md rv" style="--d:1" href="#quote" data-product="Security screens &amp; doors" id="security-screens">
-        <img src="assets/img/security-screen-front-door-01.jpg" width="598" height="798" loading="lazy" decoding="async" alt="Dark security screen door with decorative panels fitted to a front entry">
-        <span class="tag">Stainless steel mesh</span>
-        <div class="card-body"><span class="num">02</span><h3>Security screens &amp; doors</h3><p>Near-invisible protection for front, rear, side and sliding doors, and every window.</p><span class="link-line">Book a Free Measure <svg width="16" height="16" aria-hidden="true"><use href="#i-arrow"/></svg></span></div>
-      </a>
-      <a class="card c-sm rv" href="#quote" data-product="Outdoor &amp; aluminium shutters" id="outdoor-shutters">
-        <div class="art alu" aria-hidden="true"><div class="frame"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
-        <span class="tag">Powder-coated aluminium</span>
-        <div class="card-body"><span class="num">03</span><h3>Outdoor &amp; aluminium shutters</h3><p>Rust-proof, rot-proof, warp-proof shutters for patios, pools and alfresco areas.</p><span class="link-line">Book a Free Measure <svg width="16" height="16" aria-hidden="true"><use href="#i-arrow"/></svg></span></div>
-      </a>
-      <a class="card c-sm rv" style="--d:1" href="#quote" data-product="Fly screens &amp; screen doors" id="fly-screens">
-        <div class="art mesh" aria-hidden="true"><div class="door"></div></div>
-        <span class="tag">Doors · Windows</span>
-        <div class="card-body"><span class="num">04</span><h3>Fly screens &amp; screen doors</h3><p>Smooth-gliding screen doors and window screens. The breeze comes in, the insects don't.</p><span class="link-line">Book a Free Measure <svg width="16" height="16" aria-hidden="true"><use href="#i-arrow"/></svg></span></div>
-      </a>
-      <a class="card c-sm rv" style="--d:2" href="#quote" data-product="Blinds" id="blinds">
-        <img src="assets/img/roller-blinds-dual-lounge-room-01-800.jpg" srcset="assets/img/roller-blinds-dual-lounge-room-01-800.jpg 800w, assets/img/roller-blinds-dual-lounge-room-01.jpg 1600w" sizes="(max-width:1020px) 100vw, 400px" width="800" height="600" loading="lazy" decoding="async" alt="Dual sunscreen and blockout roller blinds across large windows in a bright waterfront lounge room" style="object-position:30% 50%">
-        <span class="tag">Roller · Blockout · Motorised</span>
-        <div class="card-body"><span class="num">05</span><h3>Blinds</h3><p>Roller, blockout and dual blinds, manual or motorised, for every room in the house.</p><span class="link-line">Book a Free Measure <svg width="16" height="16" aria-hidden="true"><use href="#i-arrow"/></svg></span></div>
-      </a>
+      <a class="card c-lg rv" href="plantation-shutters.html"><img src="assets/img/plantation-shutters-queenslander-corner-01.jpg" srcset="assets/img/plantation-shutters-queenslander-corner-01-800.jpg 800w, assets/img/plantation-shutters-queenslander-corner-01.jpg 1600w" sizes="(max-width:700px) 100vw, (max-width:1020px) 100vw, 820px" width="1600" height="1200" loading="lazy" decoding="async" alt="White plantation shutters wrapping a corner of a Queenslander room with VJ walls and ornate rosettes"><span class="tag">PVC · Timber · Hinged · Bi-fold</span><div class="card-body"><span class="num">01</span><h3>Plantation shutters</h3><p>PVC and timber shutters, custom made for every window, including bay, arched and odd shapes.</p><span class="link-line">Explore <svg width="16" height="16" aria-hidden="true"><use href="#i-arrow"/></svg></span></div></a>
+      <a class="card c-md rv" style="--d:1" href="security-screens-doors.html"><img src="assets/img/security-screen-front-door-01.jpg" width="598" height="798" loading="lazy" decoding="async" alt="Dark security screen door with decorative panels fitted to a front entry"><span class="tag">Stainless steel mesh</span><div class="card-body"><span class="num">02</span><h3>Security screens &amp; doors</h3><p>Near-invisible protection for front, rear, side and sliding doors, and every window.</p><span class="link-line">Explore <svg width="16" height="16" aria-hidden="true"><use href="#i-arrow"/></svg></span></div></a>
+      <a class="card c-sm rv" href="outdoor-aluminium-shutters.html"><div class="art alu" aria-hidden="true"><div class="frame"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div><span class="tag">Powder-coated aluminium</span><div class="card-body"><span class="num">03</span><h3>Outdoor &amp; aluminium shutters</h3><p>Rust-proof, rot-proof, warp-proof shutters for patios, pools and alfresco areas.</p><span class="link-line">Explore <svg width="16" height="16" aria-hidden="true"><use href="#i-arrow"/></svg></span></div></a>
+      <a class="card c-sm rv" style="--d:1" href="fly-screens.html"><div class="art mesh" aria-hidden="true"><div class="door"></div></div><span class="tag">Doors · Windows</span><div class="card-body"><span class="num">04</span><h3>Fly screens &amp; screen doors</h3><p>Smooth-gliding screen doors and window screens. The breeze comes in, the insects don't.</p><span class="link-line">Explore <svg width="16" height="16" aria-hidden="true"><use href="#i-arrow"/></svg></span></div></a>
+      <a class="card c-sm rv" style="--d:2" href="blinds.html"><img src="assets/img/roller-blinds-dual-lounge-room-01-800.jpg" srcset="assets/img/roller-blinds-dual-lounge-room-01-800.jpg 800w, assets/img/roller-blinds-dual-lounge-room-01.jpg 1600w" sizes="(max-width:1020px) 100vw, 400px" width="1600" height="1200" loading="lazy" decoding="async" style="object-position:30% 50%" alt="Dual sunscreen and blockout roller blinds across large windows in a bright waterfront lounge room"><span class="tag">Roller · Blockout · Motorised</span><div class="card-body"><span class="num">05</span><h3>Blinds</h3><p>Roller, blockout and dual blinds, manual or motorised, for every room in the house.</p><span class="link-line">Explore <svg width="16" height="16" aria-hidden="true"><use href="#i-arrow"/></svg></span></div></a>
     </div>
   </div>
 </section>
 
-<!-- ===== SHANE ===== -->
+<!-- ===== SHANE (condensed; the full block is on about.html) ===== -->
 <section class="sec dark" id="shane">
   <div class="wrap shane-grid">
     <figure class="shane-fig rv">
@@ -762,281 +384,89 @@ fieldset.f legend{margin-bottom:12px}
     <div class="shane-copy">
       <div class="rv"><p class="eyebrow">The SR Difference</p><h2>You'll deal with Shane. <em>Start to finish.</em></h2></div>
       <p class="lede rv" style="--d:1;margin-top:28px">The national brands hand you to "a dealer in your area". At SR Shutters &amp; Screens there's no hand-off. The person who measures your windows is the person who fits them, and the person you call if anything ever needs a tweak.</p>
-      <p class="pull rv" style="--d:2">One owner. One standard. Every job.</p>
-      <ol class="promises">
-        <li class="rv"><span class="rn">I.</span><div><h3>Measured by Shane</h3><p>He comes to you, checks every opening and talks you through PVC, timber or aluminium in your own light.</p></div></li>
-        <li class="rv" style="--d:1"><span class="rn">II.</span><div><h3>Quoted in writing</h3><p>A clear written quote. No sales reps on commission and no pressure to sign on the night.</p></div></li>
-        <li class="rv" style="--d:2"><span class="rn">III.</span><div><h3>Installed by Shane</h3><p>No subcontractors. He fits every panel, adjusts it until it closes just right and leaves the place tidy.</p></div></li>
+      <ol class="prom-row rv" style="--d:2">
+        <li><span class="rn">I.</span><b>Measured by Shane</b></li>
+        <li><span class="rn">II.</span><b>Quoted in writing</b></li>
+        <li><span class="rn">III.</span><b>Installed by Shane</b></li>
       </ol>
       <div class="sig rv">
         <p class="sig-name">Shane Bartolo<small>Owner · Family-owned</small></p>
-        <a class="btn btn-gold" href="#quote">Book a Free Measure</a>
+        <div class="sig-acts"><a class="btn btn-ghost" href="about.html">Meet Shane</a><a class="btn btn-gold" href="contact.html">Book a Free Measure</a></div>
       </div>
     </div>
   </div>
 </section>
 
-<!-- ===== BEFORE / AFTER ===== -->
+<!-- ===== BEFORE / AFTER TEASER (both pairs on before-after.html) ===== -->
 <section class="sec light" id="difference">
-  <div class="wrap">
-    <div class="sec-head center rv">
+  <div class="wrap ba-teaser">
+    <div class="rv">
       <p class="eyebrow">Before &amp; After</p>
       <h2>See the difference <em>a day makes.</em></h2>
-      <p class="lede">Two real SR jobs, photographed before and after. Drag the handle to compare.</p>
+      <p class="lede">A real SR bedroom, photographed before and after Shane fitted the shutters. Drag the handle to compare.</p>
+      <div class="acts"><a class="btn btn-ghost" href="before-after.html">See both before &amp; afters <svg width="16" height="16" aria-hidden="true"><use href="#i-arrow"/></svg></a></div>
     </div>
-    <div class="ba-grid">
-      <figure class="ba rv">
-        <div class="ba-frame" role="slider" tabindex="0" aria-label="Compare before and after: plantation shutters in a bedroom" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" aria-valuetext="50% before">
+    <figure class="ba rv" style="--d:1">
+      <div class="ba-frame" role="slider" tabindex="0" aria-label="Compare before and after: plantation shutters in a bedroom" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" aria-valuetext="50% before">
           <img src="assets/img/plantation-shutters-bedroom-after-01.jpg" width="1080" height="810" loading="lazy" decoding="async" alt="After: four-panel white plantation shutters fitted across the bedroom window">
           <div class="ba-before"><img src="assets/img/plantation-shutters-bedroom-before-01.jpg" width="1080" height="810" loading="lazy" decoding="async" alt="Before: the same bedroom window with a bare aluminium frame and security grille"></div>
           <span class="ba-tag l">Before</span><span class="ba-tag r">After</span>
           <span class="ba-line" aria-hidden="true"></span>
           <span class="ba-knob" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" d="M9 7l-5 5 5 5M15 7l5 5-5 5"/></svg></span>
         </div>
-        <figcaption><b>Plantation shutters</b><span>Main bedroom</span></figcaption>
-      </figure>
-      <figure class="ba rv" style="--d:1">
-        <div class="ba-frame" role="slider" tabindex="0" aria-label="Compare before and after: sunscreen blinds in a balcony living room" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50" aria-valuetext="50% before">
-          <img src="assets/img/roller-blinds-balcony-after-01.jpg" width="1600" height="1200" loading="lazy" decoding="async" alt="After: sheer sunscreen blinds drawn across the balcony doors, softening the glare">
-          <div class="ba-before"><img src="assets/img/roller-blinds-balcony-before-01.jpg" width="1600" height="1200" loading="lazy" decoding="async" alt="Before: the same living room with bare balcony doors and harsh afternoon glare"></div>
-          <span class="ba-tag l">Before</span><span class="ba-tag r">After</span>
-          <span class="ba-line" aria-hidden="true"></span>
-          <span class="ba-knob" aria-hidden="true"><svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" d="M9 7l-5 5 5 5M15 7l5 5-5 5"/></svg></span>
-        </div>
-        <figcaption><b>Sunscreen blinds</b><span>Balcony living room</span></figcaption>
-      </figure>
-    </div>
+      <figcaption><b>Plantation shutters</b><span>Main bedroom</span></figcaption>
+    </figure>
   </div>
 </section>
 
-<!-- ===== GALLERY ===== -->
-<section class="sec dark" id="work">
-  <div class="wrap">
-    <div class="sec-head split">
-      <div class="rv"><p class="eyebrow">Our Work</p><h2>Recent work across <em>Brisbane.</em></h2></div>
-      <p class="lede rv" style="--d:1">No stock photos. No AI. Every image on this page is a real SR Shutters &amp; Screens install, photographed on the job.</p>
-    </div>
-    <div class="masonry" id="gallery">
-      <div class="mcol">
-        <button class="tile rv" data-full="assets/img/plantation-shutters-queenslander-sunroom-01.jpg"><img src="assets/img/plantation-shutters-queenslander-sunroom-01-800.jpg" width="800" height="600" loading="lazy" decoding="async" alt="White plantation shutters around a Queenslander sunroom with VJ walls"><span class="cap"><b>Plantation shutters</b>Queenslander sunroom</span></button>
-        <button class="tile rv" data-full="assets/img/plantation-shutters-arched-window-bedroom-01.jpg"><img src="assets/img/plantation-shutters-arched-window-bedroom-01-800.jpg" width="800" height="1067" loading="lazy" decoding="async" alt="Arched sunburst shutter above a two-panel plantation shutter in a bedroom"><span class="cap"><b>Arched sunburst shutter</b>Bedroom</span></button>
-        <button class="tile rv" data-full="assets/img/plantation-shutters-bathroom-freestanding-bath-01.jpg"><img src="assets/img/plantation-shutters-bathroom-freestanding-bath-01-800.jpg" width="800" height="600" loading="lazy" decoding="async" alt="Two-panel plantation shutter above a freestanding bath in a grey-tiled bathroom"><span class="cap"><b>Plantation shutters</b>Bathroom</span></button>
-        <button class="tile rv" data-full="assets/img/plantation-shutters-full-height-door-02.jpg"><img src="assets/img/plantation-shutters-full-height-door-02-800.jpg" width="800" height="1067" loading="lazy" decoding="async" alt="Full-height plantation shutter swung open beside a glass door in a bedroom"><span class="cap"><b>Full-height door shutter</b>Bedroom</span></button>
-      </div>
-      <div class="mcol">
-        <button class="tile rv" data-full="assets/img/security-screen-sliding-door-patio-01.jpg"><img src="assets/img/security-screen-sliding-door-patio-01.jpg" width="597" height="800" loading="lazy" decoding="async" alt="Black sliding security screen door with a pet door onto a covered patio"><span class="cap"><b>Sliding security screen door</b>Patio</span></button>
-        <button class="tile rv" data-full="assets/img/plantation-shutters-bedroom-full-height-01.jpg"><img src="assets/img/plantation-shutters-bedroom-full-height-01-800.jpg" width="800" height="600" loading="lazy" decoding="async" alt="Full-height plantation shutters behind a bed with a tufted bedhead"><span class="cap"><b>Full-height shutters</b>Main bedroom</span></button>
-        <button class="tile rv" data-full="assets/img/plantation-shutters-home-office-01.jpg"><img src="assets/img/plantation-shutters-home-office-01-800.jpg" width="800" height="1067" loading="lazy" decoding="async" alt="Plantation shutters behind sheer curtains in a home office"><span class="cap"><b>Plantation shutters</b>Home office</span></button>
-        <button class="tile rv" data-full="assets/img/plantation-shutters-bifold-window-01.jpg"><img src="assets/img/plantation-shutters-bifold-window-01-800.jpg" width="800" height="600" loading="lazy" decoding="async" alt="Bi-fold plantation shutter panels folded open on a wide window"><span class="cap"><b>Bi-fold shutters</b>Living room</span></button>
-      </div>
-      <div class="mcol">
-        <button class="tile rv" data-full="assets/img/vertical-blinds-sliding-door-01.jpg"><img src="assets/img/vertical-blinds-sliding-door-01-800.jpg" width="800" height="1067" loading="lazy" decoding="async" alt="White vertical blinds across a sliding door"><span class="cap"><b>Vertical blinds</b>Sliding door</span></button>
-        <button class="tile rv" data-full="assets/img/plantation-shutters-living-room-06.jpg"><img src="assets/img/plantation-shutters-living-room-06-800.jpg" width="800" height="600" loading="lazy" decoding="async" alt="Four-panel hinged plantation shutters swung open in a living room"><span class="cap"><b>Hinged shutters, panels open</b>Living room</span></button>
-        <button class="tile sq rv" data-full="assets/img/roller-blinds-apartment-corner-01.jpg"><img src="assets/img/roller-blinds-apartment-corner-01.jpg" width="550" height="600" loading="lazy" decoding="async" alt="Dual roller blinds on apartment corner glazing with a city view"><span class="cap"><b>Dual roller blinds</b>Apartment</span></button>
-        <button class="tile rv" data-full="assets/img/plantation-shutters-bathroom-shower-01.jpg"><img src="assets/img/plantation-shutters-bathroom-shower-01-800.jpg" width="800" height="1067" loading="lazy" decoding="async" alt="Plantation shutters with panels open in a shower room"><span class="cap"><b>Plantation shutters</b>Shower room</span></button>
-      </div>
-    </div>
-    <div class="gal-foot rv"><p>Tap any photo to view it full size.</p><a href="#quote" class="link-line">Book a Free Measure <svg width="16" height="16" aria-hidden="true"><use href="#i-arrow"/></svg></a></div>
-  </div>
-</section>
-
-<!-- ===== PROCESS ===== -->
-<section class="sec light" id="process">
-  <div class="wrap">
-    <div class="sec-head split">
-      <div class="rv"><p class="eyebrow">How It Works</p><h2>From first call to final fit, <em>in four steps.</em></h2></div>
-      <p class="lede rv" style="--d:1">No showroom visits, no sales reps, no guesswork. Shane brings the whole process to your home.</p>
-    </div>
-    <ol class="steps">
-      <li class="rv"><span class="sn">01</span><h3>Free in-home measure</h3><p>Shane visits at a time that suits you, measures every opening and talks you through the options. No pressure, no obligation.</p></li>
-      <li class="rv" style="--d:1"><span class="sn">02</span><h3>A clear written quote</h3><p>You'll know exactly what you're getting, room by room, before you decide anything.</p></li>
-      <li class="rv" style="--d:2"><span class="sn">03</span><h3>Made to measure</h3><p>Your shutters, screens and blinds are custom made to Shane's exact measurements. Nothing off the shelf.</p></li>
-      <li class="rv" style="--d:3"><span class="sn">04</span><h3>Installed by Shane</h3><p>Most homes are fully installed in a single day. Shane fits and adjusts every panel, cleans up and shows you how it all works.</p></li>
-    </ol>
-    <div class="proc-cta rv"><p>Step one costs nothing. <em style="color:var(--gold-deep)">Book it today.</em></p><a class="btn btn-gold" href="#quote">Book a Free Measure</a></div>
-  </div>
-</section>
-
-<!-- ===== MATERIALS ===== -->
-<section class="sec bone" id="materials">
-  <div class="wrap">
-    <div class="sec-head center rv">
-      <p class="eyebrow">Materials Guide</p>
-      <h2>PVC, basswood or aluminium? <em>The honest answer.</em></h2>
-      <p class="lede">The right shutter depends on the room, not the brochure. Here's how Shane thinks about it.</p>
-    </div>
-    <div class="mats">
-      <article class="mat rv"><span class="mk">For wet areas</span><h3>PVC</h3><p class="ml">The Queensland workhorse. Built to shrug off humidity.</p>
-        <dl><dt>Best for</dt><dd>Bathrooms, laundries, kitchens and kids' rooms</dd><dt>Moisture</dt><dd>Won't swell, warp or peel in Brisbane humidity</dd><dt>The look</dt><dd>Crisp painted finish that wipes clean</dd></dl></article>
-      <article class="mat rv" style="--d:1"><span class="mk">For living areas</span><h3>Basswood timber</h3><p class="ml">Real timber, lighter in weight, beautiful in paint or stain.</p>
-        <dl><dt>Best for</dt><dd>Living rooms, bedrooms and wide windows</dd><dt>Moisture</dt><dd>Keep away from wet areas</dd><dt>The look</dt><dd>Warm, natural grain with paint or stain finishes</dd></dl></article>
-      <article class="mat rv" style="--d:2"><span class="mk">For outdoors</span><h3>Aluminium</h3><p class="ml">For the parts of the house the weather actually reaches.</p>
-        <dl><dt>Best for</dt><dd>Patios, alfresco areas, pools and balconies</dd><dt>Moisture</dt><dd>Rust-proof, rot-proof and warp-proof</dd><dt>The look</dt><dd>Powder-coated, colour-matched to your home</dd></dl></article>
-    </div>
-    <div class="mat-foot rv"><p>Not sure? Shane will talk you through it at your measure.</p><a class="btn btn-ghost" href="#quote">Book a Free Measure</a></div>
-  </div>
-</section>
-
-<!-- ===== REVIEWS (the 4 real Google reviews, verbatim) ===== -->
+<!-- ===== REVIEWS TEASER (3 of the 4 real Google reviews, verbatim) ===== -->
 <section class="sec dark" id="reviews">
-  <div class="wrap rev-grid">
-    <div class="agg rv">
-      <p class="eyebrow">Google Reviews</p>
-      <h2>What Brisbane homeowners <em>say.</em></h2>
-      <div class="score"><b>5.0</b><div class="sx"><span class="st" aria-hidden="true">★★★★★</span><span class="on"><svg aria-hidden="true"><use href="#i-g"/></svg>5.0 on Google</span></div></div>
-      <p class="meta">4 reviews. Every one five stars.</p>
-      <a class="btn btn-ghost" href="https://www.google.com/maps/search/?api=1&amp;query=SR%20Shutters%20and%20Screens&amp;query_place_id=ChIJX0h2jR-nMAYRF8pfdpDSDkM" target="_blank" rel="noopener">Read all reviews on Google <svg aria-hidden="true"><use href="#i-arrow"/></svg></a>
+  <div class="wrap">
+    <div class="sec-head split">
+      <div class="rv"><p class="eyebrow">Google Reviews</p><h2>What Brisbane homeowners <em>say.</em></h2></div>
+      <div class="mscore end rv" style="--d:1"><b>5.0</b><div><span class="st" aria-hidden="true">★★★★★</span><span class="on"><svg aria-hidden="true"><use href="#i-g"/></svg>5.0 on Google</span><small>4 reviews. Every one five stars.</small></div></div>
     </div>
-    <div>
-      <div class="rev-cards">
-        <div class="rcol">
-        <article class="rc rv"><header><span class="av" style="--c:#7B5E3B" aria-hidden="true">M</span><div class="who"><b>Michelle</b><time datetime="2024-10-25">25 October 2024</time></div><svg class="gl" aria-label="Google review" role="img"><use href="#i-g"/></svg></header>
+    <div class="rev3">
+      <article class="rc rv"><header><span class="av" style="--c:#7B5E3B" aria-hidden="true">M</span><div class="who"><b>Michelle</b><time datetime="2024-10-25">25 October 2024</time></div><svg class="gl" aria-label="Google review" role="img"><use href="#i-g"/></svg></header>
           <div class="st" aria-label="5 out of 5 stars">★★★★★</div>
           <blockquote>Excellent customer service Shane went above and beyond to get my shutters done before my sons 21st birthday very helpful and price was reasonable, would highly recommend</blockquote>
           <footer><svg aria-hidden="true"><use href="#i-g"/></svg>Posted on Google</footer></article>
-        <article class="rc rv"><header><span class="av" style="--c:#5B5750" aria-hidden="true">N</span><div class="who"><b>Nez</b><time datetime="2025-02-09">9 February 2025</time></div><svg class="gl" aria-label="Google review" role="img"><use href="#i-g"/></svg></header>
+      <article class="rc rv" style="--d:1"><header><span class="av" style="--c:#5B5750" aria-hidden="true">N</span><div class="who"><b>Nez</b><time datetime="2025-02-09">9 February 2025</time></div><svg class="gl" aria-label="Google review" role="img"><use href="#i-g"/></svg></header>
           <div class="st" aria-label="5 out of 5 stars">★★★★★</div>
           <blockquote>Shane fitted 3 shutters and they are lovely<br>Punctual and friendly service<br>Great job<br>Highly recommend this company</blockquote>
           <footer><svg aria-hidden="true"><use href="#i-g"/></svg>Posted on Google</footer></article>
-        </div>
-        <div class="rcol">
-        <article class="rc rv" style="--d:1"><header><span class="av" style="--c:#2E4A3F" aria-hidden="true">J</span><div class="who"><b>John</b><time datetime="2025-02-22">22 February 2025</time></div><svg class="gl" aria-label="Google review" role="img"><use href="#i-g"/></svg></header>
+      <article class="rc rv" style="--d:2"><header><span class="av" style="--c:#2E4A3F" aria-hidden="true">J</span><div class="who"><b>John</b><time datetime="2025-02-22">22 February 2025</time></div><svg class="gl" aria-label="Google review" role="img"><use href="#i-g"/></svg></header>
           <div class="st" aria-label="5 out of 5 stars">★★★★★</div>
           <blockquote>Shane is a reliable , responsible worker. He does his job with perfection. Shane did some plantation shutters and security door for me. He competed his work timely and well. Thanks to Shane</blockquote>
           <footer><svg aria-hidden="true"><use href="#i-g"/></svg>Posted on Google</footer></article>
-        <article class="rc rv" style="--d:1"><header><span class="av" style="--c:#8A6A2F" aria-hidden="true">N</span><div class="who"><b>Nilesh</b><time datetime="2025-03-15">15 March 2025</time></div><svg class="gl" aria-label="Google review" role="img"><use href="#i-g"/></svg></header>
-          <div class="st" aria-label="5 out of 5 stars">★★★★★</div>
-          <blockquote>5 stars good job I'm happy</blockquote>
-          <footer><svg aria-hidden="true"><use href="#i-g"/></svg>Posted on Google</footer></article>
-        </div>
-      </div>
-      <p class="swipe-hint">Swipe for more reviews</p>
     </div>
+    <p class="swipe-hint">Swipe for more reviews</p>
+    <div class="rev-foot rv"><p>Real Google reviews, word for word.</p><a class="link-line" href="reviews.html">Read all reviews <svg width="16" height="16" aria-hidden="true"><use href="#i-arrow"/></svg></a></div>
   </div>
 </section>
 
-<!-- ===== TELL BRISBANE (review CTA) ===== -->
-<section class="tell" id="leave-a-review" aria-labelledby="tell-h">
-  <img src="assets/img/plantation-shutters-window-closeup-01.jpg" srcset="assets/img/plantation-shutters-window-closeup-01-800.jpg 800w, assets/img/plantation-shutters-window-closeup-01.jpg 1920w" sizes="100vw" width="1920" height="1524" loading="lazy" decoding="async" alt="">
-  <div class="wrap tell-grid">
+<!-- ===== QUOTE CTA ===== -->
+<section class="cta-band" aria-labelledby="cta-h" data-mbar-hide>
+  <img src="assets/img/plantation-shutters-living-room-01.jpg" srcset="assets/img/plantation-shutters-living-room-01-800.jpg 800w, assets/img/plantation-shutters-living-room-01.jpg 1920w" sizes="100vw" width="1920" height="1440" loading="lazy" decoding="async" alt="">
+  <div class="wrap cta-grid">
     <div>
-      <p class="eyebrow rv">Already an SR customer?</p>
-      <h2 id="tell-h" class="rv">Happy with your shutters? <em>Tell Brisbane.</em></h2>
-      <p class="lede rv" style="--d:1">Most of our work comes from neighbours recommending us. If Shane has fitted your shutters, screens or blinds, a 30-second Google review helps the next Brisbane family choose with confidence.</p>
-      <div class="tell-actions rv" style="--d:2">
-        <a class="btn btn-gold" href="review.html"><svg aria-hidden="true" style="background:#fff;border-radius:50%;padding:2px"><use href="#i-g"/></svg>Leave a Google review</a>
-        <small>Opens Google. Takes about 30 seconds.</small>
-      </div>
-      <p class="fix rv" style="--d:3">Something not quite right? Call Shane on <a href="tel:+61411885227" data-phone-link><span data-phone-display>0411 885 227</span></a> and he'll fix it.</p>
+      <p class="eyebrow rv">Free Measure &amp; Quote</p>
+      <h2 id="cta-h" class="rv">Book your free <span style="white-space:nowrap">in-home</span> <em>measure &amp; quote.</em></h2>
+      <p class="lede rv" style="--d:1">Tell Shane a little about the job and he'll be in touch to find a time that suits you. Free, obligation-free, and you'll deal with him directly.</p>
     </div>
-    <div class="qr-card rv" style="--d:2">
-      <div class="qr-frame"><div class="qr" id="qr" role="img" aria-label="QR code linking to SR Shutters &amp; Screens' Google review page">Loading QR…</div></div>
-      <p>Scan to review on your phone</p>
-      <span>Point your camera here. It opens Google straight away.</span>
-    </div>
-  </div>
-</section>
-
-<!-- ===== AREAS (the 35 areas from Shane's current site) ===== -->
-<section class="sec euc" id="areas">
-  <div class="wrap">
-    <div class="sec-head split">
-      <div class="rv"><p class="eyebrow">Service Areas</p><h2>From North Lakes to <em>Redland Bay.</em></h2></div>
-      <p class="lede rv" style="--d:1">Shane comes to you for a free measure and quote right across South East Queensland, from Brisbane and Moreton Bay to Logan, the Redlands, Ipswich and both coasts.</p>
-    </div>
-    <div class="regions">
-      <div class="region rv"><h3>Brisbane <span>14 areas</span></h3><ul><li>Brisbane</li><li>Brisbane City</li><li>South Brisbane</li><li>West End</li><li>Coorparoo</li><li>Holland Park</li><li>Carindale</li><li>Albany Creek</li><li>Bracken Ridge</li><li>Calamvale</li><li>Sunnybank Hills</li><li>Eight Mile Plains</li><li>Inala</li><li>Forest Lake</li></ul></div>
-      <div class="region rv" style="--d:1"><h3>Moreton Bay <span>9 areas</span></h3><ul><li>Moreton Bay</li><li>North Lakes</li><li>Mango Hill</li><li>Kallangur</li><li>Narangba</li><li>Deception Bay</li><li>Burpengary</li><li>Morayfield</li><li>Caboolture</li></ul></div>
-      <div class="region rv" style="--d:2"><h3>Redlands <span>7 areas</span></h3><ul><li>Capalaba</li><li>Birkdale</li><li>Alexandra Hills</li><li>Cleveland</li><li>Thornlands</li><li>Victoria Point</li><li>Redland Bay</li></ul></div>
-      <div class="region rv"><h3>Logan <span>2 areas</span></h3><ul><li>Logan City</li><li>Rochedale South</li></ul></div>
-      <div class="region rv" style="--d:1"><h3>Ipswich <span>1 area</span></h3><ul><li>Ipswich</li></ul></div>
-      <div class="region rv" style="--d:2"><h3>The Coasts <span>2 areas</span></h3><ul><li>Gold Coast</li><li>Sunshine Coast</li></ul></div>
-    </div>
-    <div class="areas-foot rv"><p>Don't see your suburb? Ask anyway. If it's in South East Queensland, Shane will tell you straight whether he can get to you.</p><a class="btn btn-ghost" href="#quote">Book a Free Measure</a></div>
-  </div>
-</section>
-
-<!-- ===== FAQ ===== -->
-<section class="sec light" id="faq">
-  <div class="wrap faq-grid">
-    <div class="faq-side rv">
-      <p class="eyebrow">Questions</p>
-      <h2>Questions Brisbane homeowners <em>ask us.</em></h2>
-      <p class="lede">Can't see yours? Shane is happy to talk it through on the phone.</p>
+    <div class="cta-acts rv" style="--d:2">
+      <a class="btn btn-gold" href="contact.html">Book a Free Measure</a>
       <a class="btn btn-ghost" href="tel:+61411885227" data-phone-link><svg aria-hidden="true"><use href="#i-phone"/></svg>Call Shane <span data-phone-display>0411 885 227</span></a>
-    </div>
-    <div class="faq-list rv" style="--d:1">
-      <details class="qa" open><summary>Will plantation shutters keep my house cooler in a Brisbane summer?</summary><p class="ans">Yes. Closed shutters block direct sun and hold an insulating layer of air between the glass and the room, so west-facing rooms heat up far less in the afternoon. Tilt the blades up and you can bounce soft light off the ceiling while keeping the glare and heat out.</p></details>
-      <details class="qa"><summary>PVC or basswood: which is better for Queensland?</summary><p class="ans">For bathrooms, laundries, kitchens and anywhere near moisture, PVC every time. It won't swell, warp or peel in Brisbane humidity, and it wipes clean. Basswood is a real timber that is lighter, suits wide living-area windows and takes paint or stain beautifully, but it should be kept away from wet areas. Many homes end up with both. For patios and alfresco areas, aluminium is the answer.</p></details>
-      <details class="qa"><summary>Are your outdoor shutters built for storm season?</summary><p class="ans">Our aluminium outdoor shutters are made for Brisbane's heat, humidity and summer storms. Aluminium is rust-proof, rot-proof and warp-proof, and powder-coated finishes can be colour-matched to your home. If your patio or balcony is exposed, Shane will look at the site at your measure and recommend the right setup.</p></details>
-      <details class="qa"><summary>How secure are your security screens and doors?</summary><p class="ans">Our security doors and window screens use stainless steel mesh, made to measure for each opening, so you can leave doors and windows open for the breeze without leaving the house open. Front, rear, side and sliding doors are all covered. A screen is only as strong as its installation, which is why Shane fits every one himself. Ask him at your measure for the specifications of the range he recommends for your home.</p></details>
-      <details class="qa"><summary>How long does it take from quote to install?</summary><p class="ans">Everything is custom made to Shane's measurements, so timing depends on the product and the size of the job. Shane will give you a clear timeline with your quote, and most homes are fully installed in a single day.</p></details>
-      <details class="qa"><summary>What warranty do I get?</summary><p class="ans">Two layers of cover. Your products carry the manufacturer's warranty, and SR backs the installation with its own workmanship guarantee. Shane sets out the exact terms for every product in writing with your quote, so you know precisely what's covered before you decide.</p></details>
-      <details class="qa"><summary>Do you offer payment plans?</summary><p class="ans">Flexible payment options are available. Shane can talk you through them at your free measure, so you can plan the job around your budget.</p></details>
-      <details class="qa"><summary>Are the measure and quote really free? Will I be pressured to sign?</summary><p class="ans">Completely free and obligation-free. There are no sales reps on commission at SR, just Shane. You'll get a clear written quote and can take as long as you like to decide. Plenty of people book a measure just to compare options, and that's fine by us.</p></details>
-    </div>
-  </div>
-</section>
-
-<!-- ===== QUOTE ===== -->
-<section class="sec dark" id="quote">
-  <div class="wrap quote-grid">
-    <div class="quote-side">
-      <div class="rv"><p class="eyebrow">Free Measure &amp; Quote</p><h2>Book your free <span style="white-space:nowrap">in-home</span> <em>measure &amp; quote.</em></h2></div>
-      <p class="lede rv" style="--d:1">Tell Shane a little about the job and he'll be in touch to find a time that suits you.</p>
-      <ul class="ticks rv" style="--d:2">
-        <li><svg aria-hidden="true"><use href="#i-check"/></svg>You'll speak with Shane directly, not a call centre</li>
+      <ul class="ticks">
         <li><svg aria-hidden="true"><use href="#i-check"/></svg>Free and obligation-free. No pushy sales</li>
         <li><svg aria-hidden="true"><use href="#i-check"/></svg>Measured and installed by Shane, never subcontracted</li>
       </ul>
-      <div class="contact rv" style="--d:3">
-        <a href="tel:+61411885227" data-phone-link><span>Call</span><b data-phone-display>0411 885 227</b></a>
-        <a href="mailto:srshuttersnscreens@gmail.com"><span>Email</span><b>srshuttersnscreens@gmail.com</b></a>
-        <div><span>Hours</span><b>Mon–Fri 9am–5pm<br>Sat &amp; Sun by appointment</b></div>
-      </div>
-    </div>
-    <div class="form rv" style="--d:1" id="form-card">
-      <form id="lead" novalidate>
-        <h3>Request your free measure</h3>
-        <p class="sub">Takes under a minute. Shane replies personally.</p>
-        <div class="fgrid">
-          <div class="f"><label for="f-name">Your name</label><input id="f-name" name="name" autocomplete="name" required placeholder="First and last name"></div>
-          <div class="f"><label for="f-phone">Mobile</label><input id="f-phone" name="phone" type="tel" inputmode="tel" autocomplete="tel" required placeholder="04xx xxx xxx" pattern="[0-9\s\+\(\)\-]{8,}"></div>
-          <div class="f full"><label for="f-suburb">Suburb</label>
-            <select id="f-suburb" name="suburb" required>
-              <option value="">Choose your area…</option>
-              <optgroup label="Brisbane"><option>Brisbane</option><option>Brisbane City</option><option>South Brisbane</option><option>West End</option><option>Coorparoo</option><option>Holland Park</option><option>Carindale</option><option>Albany Creek</option><option>Bracken Ridge</option><option>Calamvale</option><option>Sunnybank Hills</option><option>Eight Mile Plains</option><option>Inala</option><option>Forest Lake</option></optgroup>
-              <optgroup label="Moreton Bay"><option>Moreton Bay</option><option>North Lakes</option><option>Mango Hill</option><option>Kallangur</option><option>Narangba</option><option>Deception Bay</option><option>Burpengary</option><option>Morayfield</option><option>Caboolture</option></optgroup>
-              <optgroup label="Redlands"><option>Capalaba</option><option>Birkdale</option><option>Alexandra Hills</option><option>Cleveland</option><option>Thornlands</option><option>Victoria Point</option><option>Redland Bay</option></optgroup>
-              <optgroup label="Logan"><option>Logan City</option><option>Rochedale South</option></optgroup>
-              <optgroup label="Ipswich"><option>Ipswich</option></optgroup>
-              <optgroup label="The Coasts"><option>Gold Coast</option><option>Sunshine Coast</option></optgroup>
-              <option value="Other">Somewhere else in SEQ</option>
-            </select></div>
-          <fieldset class="f full"><legend>What are you interested in?</legend>
-            <div class="chips">
-              <label><input type="checkbox" name="product" value="Plantation shutters"><span>Plantation shutters</span></label>
-              <label><input type="checkbox" name="product" value="Outdoor &amp; aluminium shutters"><span>Outdoor &amp; aluminium shutters</span></label>
-              <label><input type="checkbox" name="product" value="Security screens &amp; doors"><span>Security screens &amp; doors</span></label>
-              <label><input type="checkbox" name="product" value="Fly screens &amp; screen doors"><span>Fly screens &amp; screen doors</span></label>
-              <label><input type="checkbox" name="product" value="Blinds"><span>Blinds</span></label>
-              <label><input type="checkbox" name="product" value="Not sure yet"><span>Not sure yet</span></label>
-            </div>
-          </fieldset>
-          <div class="f full"><label for="f-msg">Anything Shane should know? <span style="text-transform:none;letter-spacing:0;font-family:var(--sans);color:var(--mist)">(optional)</span></label><textarea id="f-msg" name="message" placeholder="e.g. 6 windows and a sliding door, west-facing lounge"></textarea></div>
-          <div class="hp" aria-hidden="true"><label for="f-web">Leave this empty</label><input id="f-web" name="website" tabindex="-1" autocomplete="off"></div>
-        </div>
-        <button class="btn btn-gold" type="submit" id="f-btn">Request my free measure</button>
-        <p class="ferr" id="f-err" role="alert"></p>
-        <p class="fine">We only use your details to arrange your measure and quote. See our <a href="/privacy">privacy policy</a>.</p>
-      </form>
     </div>
   </div>
 </section>
 
 </main>
 
-<!-- ===== FOOTER ===== -->
 <footer class="foot">
   <div class="wrap">
     <div class="foot-grid">
@@ -1047,11 +477,11 @@ fieldset.f legend{margin-bottom:12px}
       </div>
       <div>
         <h4>Products</h4>
-        <ul><li><a href="#plantation-shutters">Plantation shutters</a></li><li><a href="#outdoor-shutters">Outdoor &amp; aluminium shutters</a></li><li><a href="#security-screens">Security screens &amp; doors</a></li><li><a href="#fly-screens">Fly screens</a></li><li><a href="#blinds">Blinds</a></li></ul>
+        <ul><li><a href="plantation-shutters.html">Plantation shutters</a></li><li><a href="security-screens-doors.html">Security screens &amp; doors</a></li><li><a href="outdoor-aluminium-shutters.html">Outdoor &amp; aluminium shutters</a></li><li><a href="fly-screens.html">Fly screens &amp; screen doors</a></li><li><a href="blinds.html">Blinds</a></li></ul>
       </div>
       <div>
-        <h4>SR</h4>
-        <ul><li><a href="#shane">Meet Shane</a></li><li><a href="#work">Our work</a></li><li><a href="#difference">Before &amp; after</a></li><li><a href="#reviews">Reviews</a></li><li><a href="#areas">Service areas</a></li><li><a href="#faq">FAQ</a></li></ul>
+        <h4>Company</h4>
+        <ul><li><a href="about.html">About Shane</a></li><li><a href="our-work.html">Our work</a></li><li><a href="before-after.html">Before &amp; after</a></li><li><a href="reviews.html">Reviews</a></li><li><a href="service-areas.html">Service areas</a></li><li><a href="faq.html">FAQ</a></li><li><a href="contact.html">Contact</a></li><li><a href="review.html">Leave a Google review</a></li><li><a href="privacy.html">Privacy policy</a></li></ul>
       </div>
       <div class="foot-contact">
         <h4>Talk to Shane</h4>
@@ -1059,157 +489,22 @@ fieldset.f legend{margin-bottom:12px}
           <li><a class="ph" href="tel:+61411885227" data-phone-link><span data-phone-display>0411 885 227</span></a></li>
           <li><a href="mailto:srshuttersnscreens@gmail.com">srshuttersnscreens@gmail.com</a></li>
           <li>Mon–Fri 9am–5pm<br>Sat &amp; Sun by appointment</li>
-          <li><a href="#quote" style="color:var(--gold-light);font-weight:600">Book a Free Measure →</a></li>
+          <li><a href="contact.html" style="color:var(--gold-light);font-weight:600">Book a Free Measure →</a></li>
         </ul>
       </div>
     </div>
     <div class="foot-bot">
       <p><span class="louvre-mark" aria-hidden="true"></span>© 2026 SR Shutters &amp; Screens. Brisbane, Queensland.</p>
-      <nav aria-label="Legal"><a href="/privacy">Privacy policy</a><a href="review.html">Leave a review</a><a href="https://leadhivenz.com" rel="noopener">Website by LeadHive</a></nav>
+      <nav aria-label="Legal"><a href="privacy.html">Privacy policy</a><a href="review.html">Leave a review</a><a href="https://leadhivenz.com" rel="noopener">Website by LeadHive</a></nav>
     </div>
   </div>
 </footer>
 
-<!-- ===== MOBILE BAR ===== -->
 <div class="mbar" id="mbar" aria-label="Quick actions">
   <a class="mb-call" href="tel:+61411885227" data-phone-link><svg aria-hidden="true"><use href="#i-phone"/></svg>Call Shane</a>
-  <a class="mb-quote" href="#quote">Free Quote</a>
+  <a class="mb-quote" href="contact.html">Free Quote</a>
 </div>
 
-<!-- ===== LIGHTBOX ===== -->
-<dialog class="lb" id="lb" aria-label="Photo viewer">
-  <figure><img id="lb-img" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" width="1" height="1" alt=""><figcaption id="lb-cap"></figcaption></figure>
-  <button class="lb-btn lb-x" id="lb-x" aria-label="Close"><svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" d="M6 6l12 12M18 6L6 18"/></svg></button>
-  <button class="lb-btn lb-p" id="lb-p" aria-label="Previous photo"><svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" d="M15 5l-7 7 7 7"/></svg></button>
-  <button class="lb-btn lb-n" id="lb-n" aria-label="Next photo"><svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg></button>
-</dialog>
-
-<script>
-/* Google review link: same const as review.html. Joe: paste Shane's g.page/r/…/review short link
-   (GBP → Read reviews → Get more reviews → Copy). Current value is the write-review fallback built
-   from the "SR Shutters and Screens" GBP place_id found in research. Test in a private window. */
-const GOOGLE_REVIEW_URL = "https://search.google.com/local/writereview?placeid=ChIJX0h2jR-nMAYRF8pfdpDSDkM";
-const LEAD_ENDPOINT = "/functions/v1/send-lead-notification";
-const DEMO = location.protocol === "file:" || /[?&]demo=1/.test(location.search);
-
-(function(){
-  const $ = s => document.querySelector(s), $$ = s => [...document.querySelectorAll(s)];
-  const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-
-  /* --- phone propagation from #nb-source (Nimbata) --- */
-  const src = $("#nb-source");
-  const toDial = s => { const d = s.replace(/[^\d+]/g, ""); return d.startsWith("+") ? d : (d.startsWith("0") ? "+61" + d.slice(1) : d); };
-  function syncPhone(){
-    const shown = (src.textContent || "").trim() || src.dataset.fallback; if (!shown) return;
-    $$("[data-phone-display]").forEach(el => { if (el.textContent !== shown) el.textContent = shown; });
-    $$("[data-phone-link]").forEach(el => el.setAttribute("href", "tel:" + toDial(shown)));
-  }
-  syncPhone(); new MutationObserver(syncPhone).observe(src, {childList:true, characterData:true, subtree:true});
-  [300, 900, 2000, 4000].forEach(t => setTimeout(syncPhone, t));
-
-  /* --- header --- */
-  const hdr = $("#hdr");
-  const onScroll = () => hdr.classList.toggle("solid", scrollY > 80);
-  addEventListener("scroll", onScroll, {passive:true}); onScroll();
-
-  /* --- mobile menu --- */
-  const burger = $("#burger"), mnav = $("#mnav");
-  const setMenu = open => { burger.setAttribute("aria-expanded", open); burger.setAttribute("aria-label", open ? "Close menu" : "Open menu"); mnav.classList.toggle("open", open); document.body.style.overflow = open ? "hidden" : ""; hdr.classList.toggle("solid", open || scrollY > 80); };
-  burger.addEventListener("click", () => setMenu(burger.getAttribute("aria-expanded") !== "true"));
-  mnav.addEventListener("click", e => { if (e.target.closest("a")) setMenu(false); });
-  addEventListener("keydown", e => { if (e.key === "Escape" && mnav.classList.contains("open")) setMenu(false); });
-
-  /* --- reveal on scroll (once) --- */
-  if ("IntersectionObserver" in window) {
-    const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } }), {threshold:.15, rootMargin:"0px 0px -4% 0px"});
-    $$(".rv").forEach(el => io.observe(el));
-  } else $$(".rv").forEach(el => el.classList.add("in"));
-
-  /* --- before / after sliders --- */
-  $$(".ba-frame").forEach(f => {
-    let p = 50, drag = false, touched = false;
-    const set = v => { p = Math.max(0, Math.min(100, v)); f.style.setProperty("--p", p + "%"); f.setAttribute("aria-valuenow", Math.round(p)); f.setAttribute("aria-valuetext", Math.round(p) + "% before"); };
-    const at = e => { const r = f.getBoundingClientRect(); set((e.clientX - r.left) / r.width * 100); };
-    f.addEventListener("pointerdown", e => { drag = touched = true; f.classList.add("dragging"); try { f.setPointerCapture(e.pointerId); } catch(_){} at(e); });
-    f.addEventListener("pointermove", e => { if (drag) at(e); });
-    ["pointerup", "pointercancel", "lostpointercapture"].forEach(t => f.addEventListener(t, () => { drag = false; f.classList.remove("dragging"); }));
-    f.addEventListener("keydown", e => {
-      const k = {ArrowLeft:-5, ArrowDown:-5, ArrowRight:5, ArrowUp:5, PageDown:-20, PageUp:20}[e.key];
-      if (k) { touched = true; set(p + k); e.preventDefault(); }
-      else if (e.key === "Home") { set(0); e.preventDefault(); } else if (e.key === "End") { set(100); e.preventDefault(); }
-    });
-    set(50);
-    if (!reduce && "IntersectionObserver" in window) {
-      const nio = new IntersectionObserver(es => { if (!es[0].isIntersecting) return; nio.disconnect(); setTimeout(() => {
-        if (touched) return; const t0 = performance.now(), D = 1400;
-        (function step(t){ if (touched) return; const k = Math.min(1, (t - t0) / D); set(50 + 15 * Math.sin(k * Math.PI)); if (k < 1) requestAnimationFrame(step); })(t0);
-      }, 500); }, {threshold:.6});
-      nio.observe(f);
-    }
-  });
-
-  /* --- lightbox --- */
-  const tiles = $$("#gallery .tile"), lb = $("#lb"), lbImg = $("#lb-img"), lbCap = $("#lb-cap");
-  let cur = 0;
-  const show = i => { cur = (i + tiles.length) % tiles.length; const t = tiles[cur], im = t.querySelector("img"), c = t.querySelector(".cap");
-    lbImg.src = t.dataset.full; lbImg.alt = im.alt; lbCap.textContent = c ? c.querySelector("b").textContent + " · " + c.lastChild.textContent : ""; };
-  tiles.forEach((t, i) => t.addEventListener("click", () => { show(i); if (lb.showModal) lb.showModal(); else lb.setAttribute("open", ""); }));
-  $("#lb-x").addEventListener("click", () => lb.close());
-  $("#lb-p").addEventListener("click", () => show(cur - 1));
-  $("#lb-n").addEventListener("click", () => show(cur + 1));
-  lb.addEventListener("click", e => { if (e.target === lb) lb.close(); });
-  lb.addEventListener("keydown", e => { if (e.key === "ArrowLeft") show(cur - 1); if (e.key === "ArrowRight") show(cur + 1); });
-
-  /* --- product cards pre-select the form --- */
-  $$("[data-product]").forEach(c => c.addEventListener("click", () => {
-    const box = $$('#lead input[name="product"]').find(i => i.value === c.dataset.product); if (box) box.checked = true;
-  }));
-
-  /* --- quote form --- */
-  const form = $("#lead"), btn = $("#f-btn"), err = $("#f-err");
-  const esc = s => s.replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
-  const success = name => {
-    const first = esc((name || "").trim().split(/\s+/)[0] || "");
-    $("#form-card").innerHTML = '<div class="ok" role="status"><div class="okm"><svg aria-hidden="true"><use href="#i-check"/></svg></div><h3>Thanks' + (first ? ", " + first : "") + '.</h3><p>Your request is with Shane. He\'ll call you personally to book a time for your free measure and quote.</p><span class="euc-chip">Request received</span></div>';
-    $("#form-card").scrollIntoView({behavior: reduce ? "auto" : "smooth", block:"center"});
-  };
-  form.addEventListener("submit", async e => {
-    e.preventDefault(); err.textContent = "";
-    if (!form.reportValidity()) return;
-    if ($("#f-web").value) { success($("#f-name").value); return; }            /* honeypot: bots get a silent fake success */
-    const products = $$('#lead input[name="product"]:checked').map(i => i.value);
-    const msg = $("#f-msg").value.trim();
-    const body = { name: $("#f-name").value.trim(), phone: $("#f-phone").value.trim(), suburb: $("#f-suburb").value,
-      issue: (products.length ? products.join(", ") : "Not specified") + (msg ? " — " + msg : ""),
-      isUrgent: false, products, message: msg, source: "sr-shutters-screens", page: location.pathname };
-    if (DEMO) { success(body.name); return; }
-    btn.disabled = true; btn.textContent = "Sending…";
-    try {
-      const r = await fetch(LEAD_ENDPOINT, {method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(body)});
-      if (!r.ok) throw new Error(r.status); success(body.name);
-    } catch (_) {
-      btn.disabled = false; btn.textContent = "Request my free measure";
-      err.innerHTML = 'Sorry, that didn\'t send. Please call Shane on <a href="tel:' + toDial(src.textContent.trim() || src.dataset.fallback) + '">' + esc(src.textContent.trim() || src.dataset.fallback) + "</a>.";
-    }
-  });
-
-  /* --- mobile bar: after the hero, hidden while the quote form is on screen --- */
-  const mbar = $("#mbar"); let pastHero = false, formVis = false;
-  const upd = () => mbar.classList.toggle("show", pastHero && !formVis);
-  if ("IntersectionObserver" in window) {
-    new IntersectionObserver(es => { pastHero = !es[0].isIntersecting; upd(); }, {rootMargin:"-60% 0px 0px 0px"}).observe($("#top"));
-    new IntersectionObserver(es => { formVis = es[0].isIntersecting; upd(); }, {threshold:0}).observe($("#quote"));
-  }
-
-  /* --- QR (lazy-loads qrcode-generator 1.4.4 from cdnjs when the review band nears view) --- */
-  const qrEl = $("#qr");
-  const drawQR = () => { try { const q = qrcode(0, "M"); q.addData(GOOGLE_REVIEW_URL); q.make(); qrEl.innerHTML = q.createSvgTag({cellSize:4, margin:0, scalable:true}); } catch(_) { qrEl.textContent = "QR unavailable"; } };
-  const loadQR = () => { if (window.qrcode) return drawQR(); const s = document.createElement("script");
-    s.src = "https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js";
-    s.integrity = "sha384-mZT2gIty7ZDdOGkxfP6joZcYdMW1Jvj9dRlfpTmaJAKKXTqzygtB22k7FLe+KZC1"; s.crossOrigin = "anonymous";
-    s.onload = drawQR; s.onerror = () => { qrEl.textContent = "QR unavailable offline"; }; document.head.appendChild(s); };
-  if ("IntersectionObserver" in window) { const qio = new IntersectionObserver(es => { if (es[0].isIntersecting) { qio.disconnect(); loadQR(); } }, {rootMargin:"800px 0px"}); qio.observe(qrEl); } else loadQR();
-})();
-</script>
+<script src="assets/js/site.js" defer></script>
 </body>
 </html>

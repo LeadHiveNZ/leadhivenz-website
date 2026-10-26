@@ -1,5 +1,7 @@
 # Image index: SR Shutters & Screens (curated)
 
+> Note (multi-page build): the "Used on" column below was written for the original single page. Gallery photos now appear on `our-work.html` and the relevant product pages; see the page map in README.md.
+
 43 files, 5.9 MB. Every photo is one of Shane's **real installs** (grade A/B in the original research index). No AI images, no stock, no supplier shots.
 
 **What was done (26 Oct 2026):** the original 121-image / 117 MB download was cut to the files the two pages actually use. All `ai-*`, `stock-*`, collage, banner, C-grade, `-web` duplicates and the GPS-tagged supplier photo were deleted. Photos were resized (max 1920px), given a light consistent grade (slightly desaturated, a touch more contrast, a hint of warmth), re-encoded as progressive JPEG q80 (q66 for one tall file) and saved **without EXIF**. Every file is under 350 KB. `-800` files are 800px-wide variants used in `srcset` and for gallery thumbnails; the full-size file opens in the lightbox.
