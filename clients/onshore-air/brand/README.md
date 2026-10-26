@@ -137,3 +137,5 @@ npm run all            # = build (SVG sets) + png (renders) + site (presentation
 
 ## Publishing
 `presentation/` is a self-contained static site: every link is relative (`concept-1.html`, `styles.css`, `assets/...`, `downloads/...`), with no scripts, no external URLs and no build step. To publish it, upload the whole folder as is, with `index.html` as the entry page. Any static host works (a multi-file artifact, GitHub Pages, Netlify drop, an S3 bucket). The total is about 15 MB in 88 files; the downloads (7.3 MB) and screens (6.2 MB) are most of it, and a phone opening `index.html` loads about 150 KB (110 KB gzipped). Republish after every `npm run site`.
+
+The claude.ai artifact host does not serve `.zip` files, so for that host run `node source/present/stage-publish.js <out-dir>` first: it copies `presentation/` without the zip packs, rewrites their links (the PDF stays) and tells the client the logo packs are sent after they choose a direction. Publish the staged folder with `index.html` as the page. Send the chosen pack from `presentation/downloads/` by email once Luke has picked.
