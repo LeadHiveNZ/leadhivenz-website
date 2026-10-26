@@ -1,0 +1,85 @@
+# Netlify config for a drag-and-drop deploy: this folder is the publish directory.
+# Forms: the quote form uses Netlify Forms (data-netlify="true"); enable form detection in the site settings.
+
+[build]
+  publish = "."
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "DENY"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=(), microphone=(), geolocation=(), payment=(), usb=()"
+    Cross-Origin-Opener-Policy = "same-origin"
+
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+[[headers]]
+  for = "/site.webmanifest"
+  [headers.values]
+    Content-Type = "application/manifest+json"
+    Cache-Control = "public, max-age=86400"
+
+[[redirects]]
+  from = "/cleaning"
+  to = "/hydro-cleaning/"
+  status = 301
+
+[[redirects]]
+  from = "/contact-8"
+  to = "/contact/"
+  status = 301
+
+[[redirects]]
+  from = "/home"
+  to = "/"
+  status = 301
+
+[[redirects]]
+  from = "/installations.html"
+  to = "/installations/"
+  status = 301
+
+[[redirects]]
+  from = "/repairs.html"
+  to = "/repairs/"
+  status = 301
+
+[[redirects]]
+  from = "/hydro-cleaning.html"
+  to = "/hydro-cleaning/"
+  status = 301
+
+[[redirects]]
+  from = "/maintenance.html"
+  to = "/maintenance/"
+  status = 301
+
+[[redirects]]
+  from = "/about.html"
+  to = "/about/"
+  status = 301
+
+[[redirects]]
+  from = "/service-areas.html"
+  to = "/service-areas/"
+  status = 301
+
+[[redirects]]
+  from = "/contact.html"
+  to = "/contact/"
+  status = 301
+
+[[redirects]]
+  from = "/cleaning.html"
+  to = "/hydro-cleaning/"
+  status = 301
+
+[[redirects]]
+  from = "/contact-8.html"
+  to = "/contact/"
+  status = 301

@@ -12,6 +12,10 @@ clients/
     northland-handyman-master.html
     README.md                   routes, data sources, pre-launch checks
     screens/                    rendered previews of each page
+  onshore-air/                  Onshore Air (Luke), Sunshine Coast QLD: standalone multi-page Netlify site
+    README.md                   routes, Netlify deploy steps, pre-launch checks, rebuild commands
+    site/                       Netlify publish folder (dist/onshore-air-site.zip is the drag-and-drop zip)
+    site-tools/                 page generator and QA helpers; brand/ holds the logo concepts
 ```
 
 Preview any client file directly in a browser; add `?page=<key>` to view a service page.
