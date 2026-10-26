@@ -89,7 +89,7 @@ function indexBody(R, sizes) {
   const [e] = R;
   return `
 <section class="cover">
-  <div class="eyebrow">Logo refresh · Round 2 concepts</div>
+  <div class="eyebrow">Logo refresh · Concepts for review</div>
   <h1>Onshore Air</h1>
   <p>Three logo concepts for the Sunshine Coast's air-conditioning specialists. Each keeps the sun-meets-sea idea Luke already owns, rebuilt as a modern logo system that holds up on a 6 m van and at 16 px in a browser tab.</p>
   <div class="icons">${R.map(r => img(r, 'icon-on-navy.svg', '', `Concept ${r.n} icon`)).join('')}</div>
@@ -131,7 +131,7 @@ function indexBody(R, sizes) {
 <section id="how-to-choose">
   <div class="howto">
     <h3>How to choose</h3>
-    <p>Don't judge them only as logos on a white page. Open each concept and look at it on the van, the polo and your Google listing, or use <a href="compare.html">Compare</a> to see all three side by side. Pick the one that still feels like Onshore when it is small, far away or moving past. It's fine to say "this one, but with that colour". Mixing is part of round two.</p>
+    <p>Don't judge them only as logos on a white page. Open each concept and look at it on the van, the polo and your Google listing, or use <a href="compare.html">Compare</a> to see all three side by side. Pick the one that still feels like Onshore when it is small, far away or moving past. It's fine to say "this one, but with that colour". Mixing is part of the refinement round.</p>
   </div>
 </section>
 
@@ -314,7 +314,7 @@ function readme(r) {
   const c = r.cfg, pad = (s, n) => (s + ' '.repeat(n)).slice(0, n);
   return [
     `ONSHORE AIR · LOGO CONCEPT ${r.n}: ${c.title.toUpperCase()}${r.n === 1 ? '  (recommended)' : ''}`,
-    `Round 2 concept files · ${DATE} · prepared by LeadHive AU`, '',
+    `Concept files · ${DATE} · prepared by LeadHive AU`, '',
     'COLOURS',
     ...c.colours.map(k => `  ${pad(k.name, 15)} ${k.hex}   RGB ${rgb(k.hex)}`),
     '  White           #FFFFFF   RGB 255 255 255',
@@ -351,7 +351,7 @@ function makeZips(R) {
     execSync(`mkdir -p "${dir}" && cp "${path.join(OUT, r.cfg.id)}"/*.svg "${dir}/" && cp -r "${path.join(OUT, r.cfg.id, 'png')}" "${dir}/png"`);
     fs.writeFileSync(path.join(dir, 'README.txt'), readme(r));
   }
-  fs.writeFileSync(path.join(stage, 'README.txt'), ['ONSHORE AIR · LOGO CONCEPTS (ALL THREE)', `Round 2 · ${DATE} · prepared by LeadHive AU`, '',
+  fs.writeFileSync(path.join(stage, 'README.txt'), ['ONSHORE AIR · LOGO CONCEPTS (ALL THREE)', `Concepts for review · ${DATE} · prepared by LeadHive AU`, '',
     'Concept 1, Evolution (recommended) · Concept 2, Horizon · Concept 3, Monogram', 'Each folder has its own README.txt with colours, font, sizes and which file to use.', ''].join('\r\n'));
   execSync(`find "${stage}" -exec touch -h -d "2026-10-26 09:00:00" {} +`);
   for (const r of R) { const z = path.join(D, zipName(r)); fs.rmSync(z, { force: true }); execSync(`cd "${stage}" && zip -q -r -X -9 "${z}" "onshore-air-${r.cfg.id}"`); }
