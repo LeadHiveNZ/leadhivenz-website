@@ -495,6 +495,7 @@ a.method.big:hover{color:#fff}
 .site-foot{background:var(--deep);color:rgba(248,246,238,.85);padding:clamp(3.5rem,7vw,5rem) 0 0;margin-top:clamp(4rem,8vw,6rem);font-size:.98rem}
 .foot-grid{display:grid;grid-template-columns:1.35fr .8fr .8fr 1.45fr;gap:2.5rem;padding-bottom:3rem}
 .site-foot .brand{color:#fff;margin-bottom:1.1rem}
+.site-foot .brand img{width:84px;background:var(--cream);border-radius:18px;padding:8px 9px}  /* the mark is fine-lined, so it sits on a light tile against the dark footer */
 .site-foot .brand-sub{color:rgba(248,246,238,.75)}
 .site-foot .tagline{font-family:var(--serif);font-style:italic;font-size:1.25rem;color:var(--gold-lt);margin:0 0 .4rem}
 .site-foot .fh{font-family:var(--sans);font-size:.85rem;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-lt);margin-bottom:1.1rem;font-weight:600}

@@ -35,9 +35,9 @@ Made from the two images Joe supplied on 12/10/2026 (their logo, and their banne
 
 | File                  | From                                   | Used on                                   |
 |-----------------------|----------------------------------------|-------------------------------------------|
-| `logo-heart.png`      | Heart cut from the logo, transparent   | Header and footer of every page           |
-| `favicon.png`, `apple-touch-icon.png` | Same heart             | Browser tab and phone home-screen icon    |
-| `logo-full.jpg`       | Full logo                              | About page header                         |
+| `logo-heart.png`      | Heart cut from the **new logo** (27/10/2026), transparent | Header; footer (on a cream tile, as the fine lines vanish on dark green) |
+| `favicon.png`, `apple-touch-icon.png` | Same heart (new logo)  | Browser tab and phone home-screen icon    |
+| `logo-full.jpg`       | Full new logo, with "To Serve with Aroha" and the trust name | About page header; logo in the search-engine data |
 | `banner.jpg`          | Full banner                            | About page, above the values              |
 | `hero.jpg`            | Banner photo, three members with poi   | Home page hero                            |
 | `gatherings.jpg`      | Banner photo, two members with poi     | What we do, Friendship gatherings         |
