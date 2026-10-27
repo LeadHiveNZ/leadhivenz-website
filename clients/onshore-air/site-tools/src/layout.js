@@ -26,10 +26,23 @@ function picture(name, { alt, sizes, eager = false, priority = false, cls = '', 
   const loading = eager ? (priority ? ' fetchpriority="high"' : '') : ' loading="lazy"';
   return `<picture${cls ? ` class="${cls}"` : ''}><source type="image/webp" srcset="${set('webp')}" sizes="${sizes}"><img src="/assets/img/${name}-${fallback}.jpg" srcset="${set('jpg')}" sizes="${sizes}" width="${m.w}" height="${m.h}" alt="${esc(alt)}"${loading} decoding="async"${imgCls ? ` class="${imgCls}"` : ''}></picture>`;
 }
-function preloadImage(name, sizes) {
+function preloadImage(name, sizes, media = '') {
   const m = manifest[name];
   const set = m.widths.map((w) => `/assets/img/${name}-${w}.webp ${w}w`).join(', ');
-  return `<link rel="preload" as="image" type="image/webp" imagesrcset="${set}" imagesizes="${sizes}" fetchpriority="high">`;
+  return `<link rel="preload" as="image" type="image/webp" imagesrcset="${set}" imagesizes="${sizes}"${media ? ` media="${media}"` : ''} fetchpriority="high">`;
+}
+// Art-directed picture: `wide` from the media query up, `narrow` below it (both WebP + JPEG, intrinsic sizes on each source)
+function artPicture({ wide, narrow, media, wideSizes, narrowSizes, alt, cls = '', eager = false, priority = false }) {
+  const w = manifest[wide], n = manifest[narrow];
+  const set = (name, m, ext) => m.widths.map((x) => `/assets/img/${name}-${x}.${ext} ${x}w`).join(', ');
+  const loading = eager ? (priority ? ' fetchpriority="high"' : '') : ' loading="lazy"';
+  return `<picture${cls ? ` class="${cls}"` : ''}><source media="${media}" type="image/webp" srcset="${set(wide, w, 'webp')}" sizes="${wideSizes}" width="${w.w}" height="${w.h}"><source media="${media}" srcset="${set(wide, w, 'jpg')}" sizes="${wideSizes}" width="${w.w}" height="${w.h}"><source type="image/webp" srcset="${set(narrow, n, 'webp')}" sizes="${narrowSizes}"><img src="/assets/img/${narrow}-${n.widths[1] || n.widths[0]}.jpg" srcset="${set(narrow, n, 'jpg')}" sizes="${narrowSizes}" width="${n.w}" height="${n.h}" alt="${esc(alt)}"${loading} decoding="async"></picture>`;
+}
+// Manufacturer / licence logos exported by images.js (PNG, native resolution)
+function logoImg(name, { alt = '', cls = '', eager = false } = {}) {
+  const m = manifest[`logo-${name}`];
+  if (!m) throw new Error(`logo "${name}" missing from image-manifest.json (run node images.js)`);
+  return `<img class="${cls || `logo-${name}`}" src="/assets/img/${m.file}" width="${m.w}" height="${m.h}" alt="${esc(alt)}"${eager ? '' : ' loading="lazy"'} decoding="async">`;
 }
 // Vector logo (site-tools/logo/build-logo.js). Intrinsic sizes come from each SVG's viewBox.
 const svgSize = (file) => {
@@ -44,6 +57,13 @@ const logo = (cls = '', eager = true) => `<img class="${cls}" src="${LOGO.stacke
 const headerLogo = () => HEADER_HORIZONTAL_FROM
   ? `<picture class="brand-logo"><source media="(min-width: ${HEADER_HORIZONTAL_FROM}px)" srcset="${LOGO.horizontal.src}" width="${LOGO.horizontal.w}" height="${LOGO.horizontal.h}"><img src="${LOGO.stacked.src}" width="${LOGO.stacked.w}" height="${LOGO.stacked.h}" alt="Onshore Air" decoding="async"></picture>`
   : `<picture class="brand-logo">${logo()}</picture>`;
+
+/* ---------- marks: stars, Google G, workmanship seal, years badge ---------- */
+const STAR = '<path d="M12 2.4l2.95 6.1 6.65.85-4.9 4.6 1.25 6.6L12 17.3l-5.95 3.25 1.25-6.6-4.9-4.6 6.65-.85z"/>';
+const stars = () => `<span class="stars" aria-hidden="true">${Array.from({ length: 5 }, () => `<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" focusable="false">${STAR}</svg>`).join('')}</span>`;
+const googleG = () => '<svg class="g-logo" viewBox="0 0 48 48" width="22" height="22" aria-hidden="true" focusable="false"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>';
+// Workmanship seal: a plain drawn roundel (navy ring, orange centre, tick), no award claims
+const seal = (id = 'seal-arc') => `<svg class="seal" viewBox="0 0 120 120" width="60" height="60" aria-hidden="true" focusable="false"><circle cx="60" cy="60" r="59" fill="#0E1F4D"/><circle cx="60" cy="60" r="53" fill="none" stroke="#E0702A" stroke-width="2.5"/><circle cx="60" cy="60" r="31" fill="#E0702A"/><path d="M47.5 60.5l8.5 8.5 17-18" fill="none" stroke="#0A1636" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><defs><path id="${id}" d="M18 60a42 42 0 1 1 84 0a42 42 0 1 1-84 0"/></defs><text class="seal-text"><textPath href="#${id}" textLength="258" lengthAdjust="spacing">Workmanship • Guaranteed • </textPath></text></svg>`;
 
 /* ---------- small pieces ---------- */
 const callBtn = (cls = '', label = '') => `<a class="btn btn-call ${cls}" href="${TEL}" data-phone-link>${icon('phone')}<span>${label ? `<span class="call-word">${label} </span>` : ''}${PHONE}</span></a>`;
@@ -88,7 +108,7 @@ function footer(quoteHref) {
       <div class="footer-brand">
         <a href="/" class="footer-logo">${logo('', false)}<span class="visually-hidden"> home</span></a>
         <p>Air conditioning installs, repairs, hydro cleaning and servicing across the Sunshine Coast. Locally owned and operated from ${S.locality}.</p>
-        <p class="footer-facts">5.0 Google rating · Licensed &amp; insured</p>
+        <p class="footer-facts">5.0 on Google. Licensed and insured.</p>
       </div>
       <nav class="footer-col" aria-label="Services"><h2>Services</h2><ul class="footer-links">${S.services.map((s) => `<li><a href="${s.href}">${s.label}</a></li>`).join('')}</ul></nav>
       <nav class="footer-col" aria-label="Company"><h2>Company</h2><ul class="footer-links"><li><a href="/about/">About Luke</a></li><li><a href="/service-areas/">Service areas</a></li><li><a href="/contact/">Contact</a></li><li><a href="${quoteHref}">Get a free quote</a></li></ul></nav>
@@ -102,7 +122,6 @@ function footer(quoteHref) {
       </div>
     </div>
     <div class="footer-bottom">
-      ${stripeRule()}
       <div class="footer-bottom-row">
         <p>© ${YEAR} ${S.name}</p>
         <p>ABN ${S.abn}</p>
@@ -139,17 +158,31 @@ function pageHero({ crumb, h1, lede, photo, block = '', points = [], quoteHref =
 </section>`;
 }
 
-// Trust facts as one ruled row (Bricolage facts, small captions); wraps 2 + 3 on phones
-function trustStrip() {
-  const items = [
-    ['5.0 Google rating', 'From local customers'],
-    ['15+ years', 'Experience on the tools'],
-    [`ARC ${S.licence}`, 'Refrigerant handling licence'],
-    ['Licensed &amp; insured', 'Covered on every job'],
-    ['Workmanship guarantee', 'Luke backs his work'],
-  ];
-  return `<section class="facts" aria-label="Why you can trust Onshore Air">
-  <div class="container"><ul class="facts-row">${items.map(([t, s]) => `<li><strong>${t}</strong><span>${s}</span></li>`).join('')}</ul></div>
+// Trust card: white, overlapping the hero's bottom edge, five cells that each carry a real mark (ARCtick logo, Google
+// stars, a drawn workmanship seal, a shield, a years badge). 2 + 3 on phones, one row from 760px.
+function trustCard() {
+  const cell = (mark, title, sub) => `<li><span class="trust-mark">${mark}</span><span class="trust-text"><strong>${title}</strong>${sub}</span></li>`;
+  return `<section class="trust" aria-label="Licence, rating and guarantee">
+  <div class="container"><ul class="trust-card">
+    ${cell(logoImg('arc', { alt: 'ARCtick' }), 'ARC licence', S.licence)}
+    ${cell(`${googleG()}${stars()}`, '5.0 rating', 'on Google')}
+    ${cell(seal('seal-arc-trust'), 'Workmanship', 'guaranteed')}
+    ${cell(icon('shield'), 'Licensed', '&amp; insured')}
+    ${cell('<span class="badge-num" aria-hidden="true">15+</span>', '15+ years', 'on the tools')}
+  </ul></div>
+</section>`;
+}
+
+// Brand strip: the real manufacturer logos from Luke's current site, greyscale until hovered.
+// (No Mitsubishi Electric logo: the only file on the Wix site is cropped. It is named in the line underneath.)
+function brandStrip({ title = 'Brands Luke installs and services' } = {}) {
+  const logos = ['daikin', 'fujitsu', 'mhi', 'hisense', 'general'];
+  return `<section class="logos" aria-labelledby="brands-title">
+  <div class="container">
+    <h2 id="brands-title">${title}</h2>
+    <ul class="logo-row">${logos.map((n) => `<li>${logoImg(n, { alt: manifest[`logo-${n}`].label })}</li>`).join('')}</ul>
+    <p class="logo-note">Plus Mitsubishi Electric, Panasonic, LG and most other major brands.</p>
+  </div>
 </section>`;
 }
 
@@ -158,21 +191,49 @@ function brandBadges(note = true) {
   return `<ul class="brands">${S.brands.map((b) => `<li class="brand-badge">${b}</li>`).join('')}</ul>${note ? `<p class="brands-note">${text}</p>` : ''}`;
 }
 
-// Reviews: the longest review as a pull quote, the other two as ruled rows (no cards, no avatars)
-function reviews({ title = 'Locals rate Luke 5.0 on Google', eyebrowText = 'Reviews', sand = false } = {}) {
+// Reviews: Google-style cards (stars, the review in plain text, first name, "Google review") with the rating and an
+// outbound link to the Google results in the header row. The three real reviews from Luke's site, quoted verbatim.
+function reviews({ title = 'What locals say about Luke' } = {}) {
   const [renee, lovisa, anne] = S.reviews;
-  return `<section class="section${sand ? ' band-deep' : ''}" aria-labelledby="reviews-title">
+  return `<section class="reviews band-grey" aria-labelledby="reviews-title">
   <div class="container">
-    <div class="reviews-head">
-      ${sectionHead({ eyebrow: eyebrowText, title, id: 'reviews-title', rule: !sand })}
-      <p class="score"><strong>5.0</strong><span><span class="stars" aria-hidden="true">★★★★★</span><span class="label">on Google</span></span></p>
+    <div class="head-row">
+      <h2 id="reviews-title">${title}</h2>
+      <div class="g-score">
+        <p class="g-score-num">${googleG()}<span>5.0</span>${stars()}<small>on Google</small></p>
+        <a class="text-link" href="${S.googleReviews}" target="_blank" rel="noopener">Read reviews on Google${icon('arrow')}<span class="visually-hidden"> (opens in a new tab)</span></a>
+      </div>
     </div>
-    <figure class="pull">
-      <span class="pull-mark" aria-hidden="true">“</span>
-      <blockquote><p>${anne.text}</p></blockquote>
-      <figcaption class="label">${anne.name} · Google review</figcaption>
-    </figure>
-    <ul class="review-rows">${[renee, lovisa].map((r) => `<li><q>${r.text}</q><span class="label">${r.name} · Google review</span></li>`).join('')}</ul>
+    <ul class="review-cards">${[anne, renee, lovisa].map((r) => `
+      <li class="review-card">
+        <div class="review-card-top">${stars()}<span class="visually-hidden">Rated 5 out of 5.</span>${googleG()}</div>
+        <blockquote><p>${r.text}</p></blockquote>
+        <p class="review-who"><span class="avatar" aria-hidden="true">${r.name.charAt(0)}</span><span><strong>${r.name}</strong>Google review</span></p>
+      </li>`).join('')}
+    </ul>
+  </div>
+</section>`;
+}
+
+// Hydro clean drag comparison: the after photo underneath, the before photo clipped on top, a native range input
+// over the whole frame (keyboard and screen readers get a real slider; pointer drag anywhere works). site.js only
+// copies the input's value into --pos; without JS it rests at 50%.
+function beforeAfter({ sizes = '100vw' } = {}) {
+  return `<div class="compare" data-compare>
+  ${picture('hydro-after', { alt: 'After the hydro clean: the same unit with a clean coil, filter frame and fan', sizes, cls: 'compare-after' })}
+  <div class="compare-before">${picture('hydro-before', { alt: 'Before the hydro clean: the coil and filter frame furred with dust and black mould spots', sizes })}</div>
+  <span class="compare-tag compare-tag--before" aria-hidden="true">Before</span><span class="compare-tag compare-tag--after" aria-hidden="true">After</span>
+  <input class="compare-range" type="range" min="0" max="100" value="50" step="1" aria-label="Compare before and after: move left to see more of the clean unit, right to see more of the dirty one">
+  <span class="compare-handle" aria-hidden="true"><span class="compare-knob">${icon('arrows')}</span></span>
+</div>`;
+}
+
+// Closing CTA: a solid orange band with navy text, the phone as a big Barlow Condensed link, and the hours
+function ctaOrange({ title = 'Need a quote or a repair? Call Luke' } = {}) {
+  return `<section class="cta-orange" aria-labelledby="cta-title">
+  <div class="container cta-orange-inner">
+    <div><h2 id="cta-title">${title}</h2><p>Monday to Saturday, 7am to 5pm. Sunday closed.</p></div>
+    <a class="big-phone" href="${TEL}" data-phone-link>${icon('phone')}${PHONE}</a>
   </div>
 </section>`;
 }
@@ -217,11 +278,11 @@ function quoteForm({ heading = 'Get a free quote', lede, service = '', source, a
   return `<section class="section quote" id="quote" aria-labelledby="quote-title">
   <div class="container quote-grid">
     <div class="quote-aside">
-      ${aside || `${stripeRule()}${eyebrow('Free quotes')}
-      <h2 id="quote-title">${heading}</h2>
-      <p class="lede">${lede || `Tell Luke what you need and he'll call you back to talk it through. Prefer to talk now? Call ${NB_PHONE}.`}</p>
+      ${aside || `<h2 id="quote-title">${heading}</h2>
+      <p>${lede || `Tell me what you need and I'll call you back to talk it through. Prefer to talk now? Call me on ${NB_PHONE}.`}</p>
+      <ul class="ticks">${['Free quotes on new installs', 'Repairs quoted before any work starts', 'Workmanship guarantee on every job'].map((t) => `<li>${icon('check')}<span>${t}</span></li>`).join('')}</ul>
       <div class="call-block">
-        <p class="call-block-label label">Talk to Luke directly</p>
+        <p class="call-block-label">Talk to Luke directly</p>
         <a class="call-number" href="${TEL}" data-phone-link>${PHONE}</a>
         ${status()}
         <dl class="hours">${S.hours.map((h) => `<div><dt>${h.label}</dt><dd>${h.value}</dd></div>`).join('')}</dl>
@@ -301,8 +362,8 @@ ${canonical ? `<meta property="og:url" content="${url}">\n` : ''}<meta property=
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="Onshore Air logo and headline beside an aerial photo of the Sunshine Coast">
 <meta name="twitter:card" content="summary_large_image">
-<link rel="preload" href="/assets/fonts/bricolage-grotesque-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="/assets/fonts/instrument-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/assets/fonts/barlow-condensed-700-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/assets/fonts/barlow-400-latin.woff2" as="font" type="font/woff2" crossorigin>
 ${preload ? preload + '\n' : ''}<link rel="stylesheet" href="/assets/css/site.css?v=${hashOf('assets/css/site.css')}">
 <link rel="icon" href="/favicon.ico" sizes="32x32">
 <link rel="icon" href="/assets/img/favicon.svg?v=${hashOf('assets/img/favicon.svg')}" type="image/svg+xml">
@@ -323,6 +384,6 @@ ${callBar(quoteHref)}
 }
 
 module.exports = {
-  stripeRule, S, icon, esc, TEL, PHONE, NB_PHONE, picture, preloadImage, HERO_SIZES, logo, callBtn, quoteBtn, status, checklist, eyebrow, sectionHead,
-  pageHero, trustStrip, brandBadges, reviews, route, ctaBand, faq, steps, rows, quoteForm, breadcrumbLd, page,
+  stripeRule, S, icon, esc, TEL, PHONE, NB_PHONE, picture, artPicture, preloadImage, logoImg, stars, googleG, seal, HERO_SIZES, logo, callBtn, quoteBtn, status, checklist, eyebrow, sectionHead,
+  pageHero, trustCard, brandStrip, brandBadges, reviews, beforeAfter, ctaOrange, route, ctaBand, faq, steps, rows, quoteForm, breadcrumbLd, page,
 };

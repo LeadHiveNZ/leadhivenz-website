@@ -1,6 +1,7 @@
 /* Onshore Air · site.js
    1. mobile nav toggle  2. hours-aware status line (Australia/Brisbane)  3. quote form validation
    4. Nimbata call-tracking sync (LeadHive convention: mirrors the number in #nb-source to every phone link).
+   5. Before/after comparison slider (a native range input; this only mirrors its value into --pos).
    No dependencies, no network requests. The form posts natively to Netlify Forms. */
 (function () {
   'use strict';
@@ -105,4 +106,14 @@
     };
     new MutationObserver(sync).observe(source, { childList: true, characterData: true, subtree: true });
   }
+
+  /* 5. Before/after slider: the range input sits over the whole frame, so drag, click, keyboard and screen readers
+     all use the native control. Without JS it rests at 50%. */
+  each('[data-compare]', function (el) {
+    var input = el.querySelector('.compare-range');
+    if (!input) return;
+    var set = function () { el.style.setProperty('--pos', input.value + '%'); };
+    input.addEventListener('input', set);
+    set();
+  });
 })();

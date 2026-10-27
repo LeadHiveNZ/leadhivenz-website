@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 // QA checks for the built site:
 //  1. every internal href/src/srcset/url() resolves to a file in ../site (and #anchors exist)
-//  2. no external URL is fetched at runtime (only tel:, mailto:, canonical/og URLs and JSON-LD may mention http)
+//  2. no external URL is fetched at runtime (only tel:, mailto:, canonical/og URLs and JSON-LD may mention http;
+//     outbound <a> links that open in a new tab with rel="noopener" are listed separately, they are not fetches)
 //  3. one <h1> per page, unique titles/descriptions, alt on every <img>
 //  4. home page weight measured in Chromium (all lazy images loaded), phone and desktop
 const fs = require('fs');
@@ -20,7 +21,7 @@ const rel = (p) => path.relative(SITE, p);
 const htmlFiles = files.filter((f) => f.endsWith('.html'));
 const textAssets = files.filter((f) => /\.(css|js|svg|webmanifest|xml|txt|toml)$/.test(f) || path.basename(f) === '_redirects');
 
-let misses = 0, externals = 0, problems = 0;
+let misses = 0, externals = 0, problems = 0, outbound = 0;
 const fail = (kind, where, what) => { console.log(`  ${kind}: ${where} -> ${what}`); };
 
 function resolveLocal(ref, fromFile) {
@@ -68,6 +69,11 @@ for (const file of [...htmlFiles, ...textAssets]) {
   let text = fs.readFileSync(file, 'utf8');
   text = text.replace(/<script type="application\/ld\+json">[\s\S]*?<\/script>/g, ''); // JSON-LD is data, not fetched
   text = text.replace(/xmlns="http:\/\/www\.w3\.org\/2000\/svg"/g, '');           // SVG namespace, not a request
+  // outbound links the visitor clicks (new tab, rel=noopener) are navigation, not runtime fetches
+  text = text.replace(/<a\b[^>]*\shref="https:\/\/[^"]+"[^>]*>/g, (tag) => {
+    if (!/\starget="_blank"/.test(tag) || !/\srel="[^"]*noopener/.test(tag)) return tag;
+    outbound++; console.log(`  outbound link: ${rel(file)} -> ${tag.match(/href="([^"]+)"/)[1]}`); return '<a>';
+  });
   text.split('\n').forEach((line) => {
     for (const m of line.matchAll(/(?:https?:)?\/\/[a-z0-9.-]+\.[a-z]{2,}[^\s"'<>)]*/gi)) {
       if (allowedLine(line) && m[0].startsWith(require('./src/site').origin + '/')) continue;
@@ -75,7 +81,7 @@ for (const file of [...htmlFiles, ...textAssets]) {
     }
   });
 }
-console.log(`   ${externals} external runtime URLs`);
+console.log(`   ${externals} external runtime URLs (${outbound} outbound links, allowed)`);
 
 console.log('3) page basics');
 const titles = new Map(), descs = new Map();

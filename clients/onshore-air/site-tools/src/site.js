@@ -19,7 +19,9 @@ module.exports = {
     { label: 'Saturday', value: '7:00 am – 5:00 pm' },
     { label: 'Sunday', value: 'Closed' },
   ],
-  // Brands named on the client's site. Text badges only (no OEM logos).
+  // Google search results page with Luke's Business Profile and reviews (outbound link, opens in a new tab)
+  googleReviews: 'https://www.google.com/search?q=Onshore+Air+Pacific+Paradise+reviews',
+  // Brands named on the client's site (text, for inner pages; the home logo strip uses the real logo files).
   brands: ['Mitsubishi Electric', 'Fujitsu', 'Mitsubishi Heavy Industries', 'General', 'Hisense'],
   otherBrands: 'Daikin, Panasonic, LG',
   // Real public Google reviews shown on the client's site, quoted verbatim.

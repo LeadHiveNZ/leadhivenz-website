@@ -29,7 +29,9 @@ for (const p of cfg.photos) {
   const [sw, sh] = im([`${src}[0]`, '-auto-orient', '-format', '%w %h', 'info:']).trim().split(' ').map(Number);
   // Largest rectangle of the requested aspect, centred on the focal point and clamped to the frame.
   let cw = sw, ch = sh, cx = 0, cy = 0;
-  if (p.aspect) {
+  if (p.crop) {
+    [cw, ch, cx, cy] = p.crop; // explicit pixel crop [w, h, x, y] on the original (used to register before/after pairs)
+  } else if (p.aspect) {
     const a = p.aspect[0] / p.aspect[1];
     if (sw / sh > a) { ch = sh; cw = Math.round(sh * a); } else { cw = sw; ch = Math.round(sw / a); }
     const [fx, fy] = p.focus || [0.5, 0.5];
@@ -53,7 +55,22 @@ for (const p of cfg.photos) {
   }
   manifest[p.name] = entry;
 }
-// drop entries for photos no longer in the config
-for (const k of Object.keys(manifest)) if (!cfg.photos.some((p) => p.name === k)) delete manifest[k];
+// Logos: crop (optional), flatten on white, trim the whitespace (2 px margin kept), export PNG at native resolution
+const logoOnly = only.filter((n) => n.startsWith('logo-'));
+for (const l of cfg.logos || []) {
+  if (only.length && !logoOnly.includes(`logo-${l.name}`)) continue;
+  const src = path.join(CACHE, l.id);
+  if (!fs.existsSync(src)) execFileSync('curl', ['-sSL', '--fail', '-m', '120', '-A', UA, `https://static.wixstatic.com/media/${l.id}`, '-o', src]);
+  const [sw, sh] = im([`${src}[0]`, '-format', '%w %h', 'info:']).trim().split(' ').map(Number);
+  const args = [`${src}[0]`];
+  if (l.crop) { const [x, y, w, h] = l.crop; args.push('-crop', `${Math.round(w * sw)}x${Math.round(h * sh)}+${Math.round(x * sw)}+${Math.round(y * sh)}`, '+repage'); }
+  const out = path.join(OUT, `logo-${l.name}.png`);
+  im([...args, '-background', 'white', '-alpha', 'remove', '-alpha', 'off', '-fuzz', '6%', '-trim', '+repage', '-bordercolor', 'white', '-border', '2', '-colorspace', 'sRGB', '-colors', '64', '-strip', '-define', 'png:compression-level=9', out]);
+  const [w, h] = im([out, '-format', '%w %h', 'info:']).trim().split(' ').map(Number);
+  manifest[`logo-${l.name}`] = { logo: true, file: `logo-${l.name}.png`, w, h, label: l.label, source: l.id };
+  console.log(`logo-${l.name}.png: ${w}x${h}  ${(fs.statSync(out).size / 1024).toFixed(1)} KB`);
+}
+// drop entries for photos and logos no longer in the config
+for (const k of Object.keys(manifest)) if (!cfg.photos.some((p) => p.name === k) && !(cfg.logos || []).some((l) => `logo-${l.name}` === k)) delete manifest[k];
 fs.writeFileSync(MANIFEST, JSON.stringify(manifest, null, 2) + '\n');
 console.log(`manifest: ${Object.keys(manifest).length} images -> ${path.relative(process.cwd(), MANIFEST)}`);

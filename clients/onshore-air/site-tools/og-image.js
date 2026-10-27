@@ -3,6 +3,7 @@
 // horizontal logo and the stripe band, a Bricolage Grotesque headline with the orange underline, the stripe rule, and Luke's aerial
 // photo of the coast with the stripe field at its bottom-left corner. Uses the site's own fonts and logo; the photo is
 // read from the cached original (downloaded if missing). Saves an optimised JPEG to site/assets/img/og-image.jpg.
+// STAGE 1 NOTE: fonts point at the Barlow files so this still runs; the layout is redesigned in stage 2 (brief item 15).
 const path = require('path');
 const fs = require('fs');
 const { execFileSync } = require('child_process');
@@ -19,8 +20,8 @@ if (!fs.existsSync(photo)) {
 }
 
 const html = `<!doctype html><html><head><meta charset="utf-8"><style>
-@font-face{font-family:Bricolage;src:url(${url('assets/fonts/bricolage-grotesque-latin.woff2')}) format('woff2');font-weight:400 800}
-@font-face{font-family:Instrument;src:url(${url('assets/fonts/instrument-sans-latin.woff2')}) format('woff2');font-weight:400 700}
+@font-face{font-family:Bricolage;src:url(${url('assets/fonts/barlow-condensed-700-latin.woff2')}) format('woff2');font-weight:400 800}
+@font-face{font-family:Instrument;src:url(${url('assets/fonts/barlow-400-latin.woff2')}) format('woff2');font-weight:400 700}
 *{margin:0;box-sizing:border-box}
 body{width:1200px;height:630px;overflow:hidden;background:#F4EDE1;color:#0E1F4D;font-family:Instrument,sans-serif}
 .bar{height:104px;background:#0A1636;display:flex;align-items:center;padding:0 64px}
