@@ -14,8 +14,8 @@ clients/
     screens/                    rendered previews of each page
   aroha-seniors/                Aroha Seniors Charitable Trust (CC63126), Flat Bush, Auckland
     build.py                    builds site/ and preview/ from src/ (run after any edit)
-    src/                        layout, five pages, styles and script
-    site/                       the website to upload: five pages + assets/
+    src/                        layout, six pages (incl. policies), styles and script
+    site/                       the website to upload: six pages + assets/ (incl. policies PDF)
     preview/                    the same pages, each self-contained for previewing alone
     README.md                   content sources, items to confirm, photo slots, launch checklist
     screens/                    rendered previews of each page, desktop and mobile

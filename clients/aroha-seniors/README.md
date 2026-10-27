@@ -5,7 +5,7 @@ Contact: **Amelia Kolio**, 022 178 0876, amelia_asct@outlook.com.
 Meals on Wheels orders: **Korina Grace** (Kai Manager), 022 605 2361.
 Lead: LeadHive website demo request, 12/10/2026 (Resend notification to hello@leadhivenz.com).
 
-A five-page charity website in the trust's own branding: their heart logo, kawakawa green and
+A six-page charity website in the trust's own branding: their heart logo, kawakawa green and
 gold, their tagline "To serve with Aroha" and their values (manaakitanga, whanaungatanga,
 kotahitanga).
 
@@ -13,9 +13,9 @@ kotahitanga).
 build.py              run this after editing anything in src/ (standard-library Python only)
 src/                  the source: layout.html, pages/*.html, styles.css, site.js
 site/                 THE WEBSITE. Upload this folder to any host. One HTML file per page.
-  index.html  about.html  what-we-do.html  get-involved.html  contact.html
-  assets/styles.css  assets/site.js  assets/img/
-preview/              the same five pages, each self-contained (CSS, JS, images inlined),
+  index.html  about.html  what-we-do.html  get-involved.html  contact.html  policies.html
+  assets/styles.css  assets/site.js  assets/img/  assets/docs/ (the policies PDF)
+preview/              the same pages, each self-contained (CSS, JS, images inlined),
                       for previewing or emailing a single page on its own
 screens/              rendered screenshots, desktop and mobile
 ```
@@ -27,6 +27,7 @@ screens/              rendered screenshots, desktop and mobile
 | `what-we-do.html` | Seven programmes incl. Meals on Wheels, each with an anchor (`what-we-do.html#meals`) |
 | `get-involved.html` | Volunteer, donate, partner, interest form (`?i=Donate` preselects it) |
 | `contact.html`    | Call, email, Facebook, contact form, helplines                   |
+| `policies.html`   | The trust's Public Policies as a page, plus the PDF to download (footer "Our policies") |
 
 ## The trust's own images (site/assets/img/)
 
@@ -78,6 +79,26 @@ Each one replaces the illustration in its slot. Shape is portrait 4:5; on phones
 landscape, so keep faces near the centre.
 Still open: `digital.jpg`, `advice.jpg` and `amelia.jpg` (square).
 
+## Public policies (from Amelia, 23/10/2026)
+
+`site/assets/docs/aroha-seniors-public-policies.pdf` is the PDF exactly as Amelia sent it.
+`src/pages/policies.html` is the same text as a web page (easier to read on a phone), with a
+contents list and a download button. It's linked from the footer on every page, the About page's
+"Open & accountable" list, and the privacy note under both forms (`policies.html#privacy`).
+
+Two drafting notes in the PDF are left off the web page:
+
+- Section 4: "Please confirm these contact details before publication." (The Elder Abuse Response
+  Service numbers, 0800 32 668 65 and text 5032, are the published ones.)
+- Section 11: "The trustees should review and approve this document before it is published…"
+
+The PDF itself still has both lines. If Amelia sends a cleaned-up PDF, save it over the same file
+name and rebuild; the size on the download button updates itself.
+
+The policies also list services the What we do page doesn't (home help and house cleaning,
+shopping, laundry, foot pampering, transport) and give Amelia's title as "Kaiārahi / Senior
+Advocate". Worth lining the What we do page and `contact_role` up with them.
+
 ## Built for older readers
 
 - **Text size control** (A / A+ / A++) in the top bar. The choice carries from page to page.
@@ -86,7 +107,7 @@ Still open: `digital.jpg`, `advice.jpg` and `amelia.jpg` (square).
 - Phone number in the top bar, hero, every call-to-action and the footer.
 - Works without JavaScript: the mobile menu is a `<details>` element, links are plain pages, and the
   forms fall back to the visitor's email app. JavaScript only adds text size, animations and form posting.
-- axe-core (WCAG 2.1 AA plus best practice): 0 violations on all five pages, desktop and mobile,
+- axe-core (WCAG 2.1 AA plus best practice): 0 violations on all six pages, desktop and mobile,
   for both `site/` and `preview/`.
 - No sideways scroll from 320px to 1440px at all three text sizes.
 

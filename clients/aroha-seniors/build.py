@@ -7,7 +7,7 @@ Reads src/ (layout, pages, styles, script) and writes:
 
   site/     The real website: one HTML file per page, sharing site/assets/.
             Upload this whole folder to any host (Netlify, Lovable, cPanel...).
-  preview/  The same five pages, each fully self-contained (styles, script and
+  preview/  The same pages, each fully self-contained (styles, script and
             images inlined), so any single file can be opened or shared on its own.
 
 Contact details, bank account, form endpoint and the footer credit live in CONFIG.
@@ -58,11 +58,14 @@ PAGES = [
      'Volunteer, donate or partner with Aroha Seniors Charitable Trust and help make sure no one in our community grows old alone.'),
     ('contact', 'contact', f'Contact us | {SITE_NAME}',
      'Call or text 022 178 0876, email or send a message to Aroha Seniors Charitable Trust in Flat Bush, Auckland.'),
+    ('policies', 'policies', f'Our policies | {SITE_NAME}',
+     'Public policies of Aroha Seniors Charitable Trust: privacy, client rights, safeguarding and elder abuse prevention, advocacy, donations and koha, complaints, health and safety, and website terms.'),
 ]
 
 ROOT = Path(__file__).resolve().parent
 SRC, SITE, PREVIEW = ROOT / 'src', ROOT / 'site', ROOT / 'preview'
 IMG = SITE / 'assets' / 'img'
+DOCS = SITE / 'assets' / 'docs'    # downloadable files (the trust's policies PDF)
 
 
 def data_uri(path):
@@ -143,7 +146,16 @@ def render(page, key, title, desc, inline):
             return ''
         return f'<img src="{data_uri(path) if inline else "assets/img/" + path.name}" alt="" loading="lazy">'
 
+    def doc(m):
+        path = DOCS / m.group(2)
+        if not path.exists():
+            raise SystemExit(f'missing document: {path}')
+        if m.group(1) == 'DOC_SIZE':
+            return f'{path.suffix[1:].upper()}, {max(1, round(path.stat().st_size / 1024))} KB'
+        return f'assets/docs/{path.name}'
+
     out = re.sub(r'\{\{IMG:([\w.-]+)\}\}', img, out)
+    out = re.sub(r'\{\{(DOC|DOC_SIZE):([\w.-]+)\}\}', doc, out)
     out = re.sub(r'\{\{PHOTO:([\w-]+)\}\}', photo, out)
     out = re.sub(r'\{\{CUR:([\w-]+)\}\}', lambda m: ' aria-current="page"' if m.group(1) == key else '', out)
     left = re.findall(r'\{\{[^}]*\}\}', out)
@@ -157,6 +169,8 @@ def main():
     PREVIEW.mkdir(exist_ok=True)
     shutil.copyfile(SRC / 'styles.css', SITE / 'assets' / 'styles.css')
     shutil.copyfile(SRC / 'site.js', SITE / 'assets' / 'site.js')
+    if DOCS.exists():                      # preview pages link to the same files, so copy them alongside
+        shutil.copytree(DOCS, PREVIEW / 'assets' / 'docs', dirs_exist_ok=True)
     for page, key, title, desc in PAGES:
         (SITE / f'{page}.html').write_text(render(page, key, title, desc, inline=False), encoding='utf-8')
         (PREVIEW / f'{page}.html').write_text(render(page, key, title, desc, inline=True), encoding='utf-8')
