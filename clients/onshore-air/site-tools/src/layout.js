@@ -115,7 +115,7 @@ function footer(quoteHref) {
 const callBar = (quoteHref) => `<aside class="call-bar" aria-label="Quick contact">${callBtn('', 'Call')}${quoteBtn('btn-ghost', quoteHref, 'Free quote')}</aside>`;
 
 /* ---------- sections ---------- */
-// Inner-page hero, same composition as the home hero: Paper, breadcrumb as the eyebrow, Fraunces h1, lede, then the
+// Inner-page hero, same composition as the home hero: Paper, breadcrumb as the eyebrow, Bricolage h1, lede, then the
 // page photo (stripe field at its bottom-left corner) or a content block, then the CTA row, status line and key points.
 const HERO_SIZES = '(min-width: 1240px) 480px, (min-width: 900px) 40vw, calc(100vw - 64px)';
 function pageHero({ crumb, h1, lede, photo, block = '', points = [], quoteHref = '#quote' }) {
@@ -139,7 +139,7 @@ function pageHero({ crumb, h1, lede, photo, block = '', points = [], quoteHref =
 </section>`;
 }
 
-// Trust facts as one ruled row (Fraunces facts, small captions); wraps 2 + 3 on phones
+// Trust facts as one ruled row (Bricolage facts, small captions); wraps 2 + 3 on phones
 function trustStrip() {
   const items = [
     ['5.0 Google rating', 'From local customers'],
@@ -191,7 +191,7 @@ function ctaBand({ title, text, quoteHref = '#quote' }) {
 </div>`;
 }
 
-// FAQ: heading left, plain ruled rows right; Fraunces questions with a plus that turns into a minus
+// FAQ: heading left, plain ruled rows right; Bricolage questions with a plus that turns into a minus
 function faq(items, { title = 'Questions people ask', eyebrowText = 'FAQ', sand = false } = {}) {
   return `<section class="section${sand ? ' band-deep' : ''}" aria-labelledby="faq-title">
   <div class="container faq-layout">
@@ -201,7 +201,7 @@ function faq(items, { title = 'Questions people ask', eyebrowText = 'FAQ', sand 
 </section>`;
 }
 
-// Ruled rows in the language of the home services index: optional Fraunces number, h3, one paragraph.
+// Ruled rows in the language of the home services index: optional Bricolage number, h3, one paragraph.
 // cols: 1 (stacked), 2 (two ruled columns from 900px), 'steps' (three columns with big numbers from 900px).
 function rows(items, { numbered = true, cols = 1, cls = '' } = {}) {
   const tag = numbered ? 'ol' : 'ul';
@@ -301,7 +301,7 @@ ${canonical ? `<meta property="og:url" content="${url}">\n` : ''}<meta property=
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="Onshore Air logo and headline beside an aerial photo of the Sunshine Coast">
 <meta name="twitter:card" content="summary_large_image">
-<link rel="preload" href="/assets/fonts/fraunces-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/assets/fonts/bricolage-grotesque-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/assets/fonts/instrument-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
 ${preload ? preload + '\n' : ''}<link rel="stylesheet" href="/assets/css/site.css?v=${hashOf('assets/css/site.css')}">
 <link rel="icon" href="/favicon.ico" sizes="32x32">

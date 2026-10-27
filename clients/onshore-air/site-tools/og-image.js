@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Renders the 1200x630 Open Graph image in the site's "Onshore" look: Paper background, the navy header bar with the
-// horizontal logo and the stripe band, a Fraunces headline with the orange underline, the stripe rule, and Luke's aerial
+// horizontal logo and the stripe band, a Bricolage Grotesque headline with the orange underline, the stripe rule, and Luke's aerial
 // photo of the coast with the stripe field at its bottom-left corner. Uses the site's own fonts and logo; the photo is
 // read from the cached original (downloaded if missing). Saves an optimised JPEG to site/assets/img/og-image.jpg.
 const path = require('path');
@@ -19,7 +19,7 @@ if (!fs.existsSync(photo)) {
 }
 
 const html = `<!doctype html><html><head><meta charset="utf-8"><style>
-@font-face{font-family:Fraunces;src:url(${url('assets/fonts/fraunces-latin.woff2')}) format('woff2');font-weight:100 900}
+@font-face{font-family:Bricolage;src:url(${url('assets/fonts/bricolage-grotesque-latin.woff2')}) format('woff2');font-weight:400 800}
 @font-face{font-family:Instrument;src:url(${url('assets/fonts/instrument-sans-latin.woff2')}) format('woff2');font-weight:400 700}
 *{margin:0;box-sizing:border-box}
 body{width:1200px;height:630px;overflow:hidden;background:#F4EDE1;color:#0E1F4D;font-family:Instrument,sans-serif}
@@ -30,10 +30,10 @@ body{width:1200px;height:630px;overflow:hidden;background:#F4EDE1;color:#0E1F4D;
 .rule{width:72px;height:17px;background:url(${url('assets/img/stripes.svg')}) 0 0/72px 21px no-repeat;margin-bottom:22px}
 .eyebrow{display:flex;align-items:center;gap:12px;font-size:15px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:#1E5CB3}
 .eyebrow:before{content:"";width:24px;height:2px;background:#E0702A}
-h1{margin-top:14px;font-family:Fraunces,serif;font-variation-settings:"opsz" 144;font-weight:560;font-size:60px;line-height:1;letter-spacing:-.02em}
+h1{margin-top:14px;font-family:Bricolage,sans-serif;font-variation-settings:"opsz" 96;font-weight:700;font-size:60px;line-height:1;letter-spacing:-.02em}
 h1 span{text-decoration:underline;text-decoration-color:#E0702A;text-decoration-thickness:5px;text-underline-offset:9px;text-decoration-skip-ink:none}
 .contact{margin-top:26px;display:flex;align-items:baseline;gap:20px}
-.phone{font-family:Fraunces,serif;font-variation-settings:"opsz" 144;font-weight:560;font-size:38px;letter-spacing:-.01em}
+.phone{font-family:Bricolage,sans-serif;font-variation-settings:"opsz" 96;font-weight:700;font-size:38px;letter-spacing:-.01em}
 .services{font-size:19px;color:#34416A}
 .photo{position:relative;isolation:isolate;height:420px}
 .photo img{position:relative;z-index:1;width:100%;height:100%;object-fit:cover;object-position:62% 55%;border-radius:6px;outline:1px solid rgba(14,31,77,.2);outline-offset:-1px}

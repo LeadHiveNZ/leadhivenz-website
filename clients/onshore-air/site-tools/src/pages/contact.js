@@ -16,7 +16,7 @@ const mapArt = `<svg class="map-art" viewBox="0 0 360 300" role="img" aria-label
     <circle cx="246" cy="282" r="3.5" fill="#F4EDE1"/><text x="256" y="286">Caloundra</text>
     <g fill="#34416A" font-weight="500" text-anchor="middle"><circle cx="132" cy="198" r="3.5"/><text x="132" y="217">Nambour</text><circle cx="74" cy="250" r="3.5"/><text x="74" y="269">Maleny</text></g>
     <circle cx="230" cy="140" r="13" fill="#E0702A" fill-opacity=".25"/><circle cx="230" cy="140" r="6" fill="#E0702A"/>
-    <text x="214" y="144" text-anchor="end" fill="#0E1F4D" font-family="Fraunces, Georgia, serif" font-size="15" font-weight="600">Pacific Paradise</text>
+    <text x="214" y="144" text-anchor="end" fill="#0E1F4D" font-family="Bricolage Grotesque, Arial, sans-serif" font-size="14" font-weight="700">Pacific Paradise</text>
     <text x="214" y="160" text-anchor="end" fill="#34416A" font-size="10" font-weight="600" letter-spacing="1.2">HOME BASE</text>
   </g>
 </svg>`;

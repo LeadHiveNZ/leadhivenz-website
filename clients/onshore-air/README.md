@@ -147,8 +147,8 @@ clipper-lib 6.4.2): `cd site-tools/logo && npm install` once. Run from `clients/
 | `node build.js` | Regenerates every HTML page plus `sitemap.xml`, `robots.txt`, `netlify.toml`, `_redirects`, `site.webmanifest`, `stripes.svg` |
 | `node images.js` | Downloads Luke's original photos from Wix into `.cache/` (git-ignored) and exports WebP + JPEG sizes listed in `images.config.js` |
 | `cd logo && node build-logo.js` | Rebuilds the vector logo (stacked, horizontal, mark), its PNG exports, favicons, app icons and `out/logo-compare.png` |
-| `node og-image.js` | Renders the 1200x630 Open Graph image (Paper, logo bar, Fraunces headline, stripe rule, Luke's aerial coast photo) |
-| `bash fonts.sh` | Re-downloads the self-hosted Fraunces (roman + italic) and Instrument Sans woff2 files |
+| `node og-image.js` | Renders the 1200x630 Open Graph image (Paper, logo bar, Bricolage Grotesque headline, stripe rule, Luke's aerial coast photo) |
+| `bash fonts.sh` | Re-downloads the self-hosted Bricolage Grotesque and Instrument Sans (roman + italic) woff2 files |
 | `node check.js` | Link/asset checker, external-URL check, per-page SEO basics, home page weight |
 | `node screenshots.js` | Full-page screenshots into `site-screens/` (390x844 and 1280x800) |
 | `bash zip.sh` | Builds `dist/onshore-air-site.zip` with `index.html` at the zip root |
@@ -172,12 +172,12 @@ the next build overwrites it.
   `#0A1636` for the header, footer and the home service-area band only. Sunset orange `#E0702A` is the one accent that
   means "act" (call buttons carry Navy-deep text, 5.52:1); Ocean `#1E5CB3` for links and small labels; Seafoam `#7CC7DB`
   and Sun `#F2D45C` only in the stripe motif.
-- Type: Fraunces (headings, phone numbers, prices, "5.0", pull quotes in italic; `opsz` 144, SOFT 50) and Instrument
+- Type: Bricolage Grotesque (headings, phone numbers, prices, "5.0"; `opsz` 96, weight 700) and Instrument
   Sans (body and UI), self-hosted woff2 (latin subset), `font-display: swap`, with metric-matched fallbacks.
 - Signature: the stripe motif from the logo (`stripes.svg`: seafoam, sun and sunset lines). A 10px band under the header,
   a 72px rule that opens sections on plain Paper, and a diagonal field behind the bottom-left corner of each hero photo.
 - Shapes: 4px radius on buttons and inputs, 6px on photos with a 1px ink keyline, square chips and bands, no pills, no
-  gradient overlays, and one soft shadow (under the quote form). Lists are ruled rows with Fraunces numbers; there are no
+  gradient overlays, and one soft shadow (under the quote form). Lists are ruled rows with Bricolage numbers; there are no
   icon tiles (only functional icons: phone, arrow, check, chevron, menu, close).
 - Header: stacked logo at 56 px on phones (it fits beside the phone button at 320 to 390 px), stacked at 60 px with the
   desktop nav from 1180 px, horizontal lockup at 50 px from 1240 px. Nav links never wrap from 1180 px up.
