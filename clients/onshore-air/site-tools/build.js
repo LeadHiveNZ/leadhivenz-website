@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Generates every page of the Onshore Air site from src/layout.js (shared shell) + src/pages/*.js
 // (per-page content), plus sitemap.xml, robots.txt, netlify.toml, _redirects, site.webmanifest and the
-// decorative waves.svg. Output goes straight into ../site, which is the Netlify publish folder.
+// stripe motif (stripes.svg). Output goes straight into ../site, which is the Netlify publish folder.
 // CSS (site/assets/css/site.css) and JS (site/assets/js/site.js) are hand-written; the build only
 // fingerprints them (?v=hash) so the long-cache headers on /assets/* stay safe.
 const fs = require('fs');
@@ -16,19 +16,9 @@ const write = (rel, content) => {
   return rel;
 };
 
-// Decorative wave lines (echo the logo's stripes) used behind navy sections.
-function wavesSvg() {
-  const lines = [];
-  for (let i = 0; i < 13; i++) {
-    const y = 30 + i * 46;
-    const a = 26 + 12 * Math.sin(i * 0.7);
-    const op = (0.10 + 0.13 * Math.sin((i / 12) * Math.PI)).toFixed(3);
-    const col = i % 3 === 1 ? '#E49A2D' : (i % 2 ? '#3A6BC8' : '#5BB5D0');
-    lines.push(`<path d="M-40 ${y} C 110 ${(y - a).toFixed(1)}, 250 ${(y + a).toFixed(1)}, 400 ${y} S 690 ${(y - a).toFixed(1)}, 840 ${y}" stroke="${col}" stroke-opacity="${op}"/>`);
-  }
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 620" fill="none" stroke-width="2.4" stroke-linecap="round">${lines.join('')}</svg>\n`;
-}
-write('assets/img/waves.svg', wavesSvg());
+// The stripe motif, from the logo's colours: three 3px lines (seafoam, sun, sunset) with 4px gaps. The tile is 72x21 so
+// it repeats seamlessly; preserveAspectRatio="none" lets the full-width band under the header stretch it sideways.
+write('assets/img/stripes.svg', `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 72 21" width="72" height="21" preserveAspectRatio="none"><rect width="72" height="3" fill="#7CC7DB"/><rect y="7" width="72" height="3" fill="#F2D45C"/><rect y="14" width="72" height="3" fill="#E0702A"/></svg>\n`);
 
 const L = require('./src/layout');
 const S = L.S;
@@ -119,4 +109,4 @@ write('site.webmanifest', JSON.stringify({
   ],
 }, null, 2) + '\n');
 
-console.log(`built ${written.length} pages:\n  ${written.join('\n  ')}\n+ sitemap.xml robots.txt netlify.toml _redirects site.webmanifest assets/img/waves.svg`);
+console.log(`built ${written.length} pages:\n  ${written.join('\n  ')}\n+ sitemap.xml robots.txt netlify.toml _redirects site.webmanifest assets/img/stripes.svg`);

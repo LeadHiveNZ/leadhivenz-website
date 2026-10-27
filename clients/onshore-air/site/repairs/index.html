@@ -18,11 +18,12 @@
 <meta property="og:image" content="https://www.onshoreair.com.au/assets/img/og-image.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Onshore Air logo over an aerial view of the Sunshine Coast">
+<meta property="og:image:alt" content="Onshore Air logo and headline beside an aerial photo of the Sunshine Coast">
 <meta name="twitter:card" content="summary_large_image">
-<link rel="preload" href="/assets/fonts/inter-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="/assets/fonts/outfit-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/assets/css/site.css?v=6aa6d48cd6">
+<link rel="preload" href="/assets/fonts/fraunces-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/assets/fonts/instrument-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" as="image" type="image/webp" imagesrcset="/assets/img/repair-board-560.webp 560w, /assets/img/repair-board-900.webp 900w" imagesizes="(min-width: 1240px) 480px, (min-width: 900px) 40vw, calc(100vw - 64px)" fetchpriority="high">
+<link rel="stylesheet" href="/assets/css/site.css?v=53bc138b64">
 <link rel="icon" href="/favicon.ico" sizes="32x32">
 <link rel="icon" href="/assets/img/favicon.svg?v=c56b5b6567" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/assets/img/apple-touch-icon.png">
@@ -37,52 +38,53 @@
   <div class="container header-inner">
     <a class="brand" href="/"><picture class="brand-logo"><source media="(min-width: 1240px)" srcset="/assets/img/logo-horizontal.svg?v=b83e6d0d70" width="813" height="217"><img src="/assets/img/logo.svg?v=862196e54e" width="547" height="305" alt="Onshore Air" decoding="async"></picture><span class="visually-hidden"> home</span></a>
     <nav class="nav-desktop" aria-label="Main"><ul><li><a href="/installations/">Installations</a></li><li><a href="/repairs/" aria-current="page">Repairs</a></li><li><a href="/hydro-cleaning/">Hydro cleaning</a></li><li><a href="/maintenance/">Maintenance</a></li><li><a href="/about/">About</a></li><li><a href="/service-areas/">Service areas</a></li><li><a href="/contact/">Contact</a></li></ul></nav>
-    <a class="btn btn-call header-call" href="tel:+61444541409" data-phone-link><svg class="icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5.2 3.5h3.1l1.7 4.4-2.3 1.4a11.6 11.6 0 0 0 7 7l1.4-2.3 4.4 1.7v3.1a1.9 1.9 0 0 1-2 1.9A16.6 16.6 0 0 1 3.3 5.5a1.9 1.9 0 0 1 1.9-2z"/></svg><span class="header-call-text"><span data-phone-display>0444 541 409</span></span><span class="header-call-short" aria-hidden="true">Call</span></a>
-    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="mobile-menu"><span class="visually-hidden">Menu</span><svg class="icon icon-open" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16"/></svg><svg class="icon icon-close" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    <a class="btn btn-call header-call" href="tel:+61444541409" data-phone-link><svg class="icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5.2 3.5h3.1l1.7 4.4-2.3 1.4a11.6 11.6 0 0 0 7 7l1.4-2.3 4.4 1.7v3.1a1.9 1.9 0 0 1-2 1.9A16.6 16.6 0 0 1 3.3 5.5a1.9 1.9 0 0 1 1.9-2z"/></svg><span class="header-call-text"><span data-phone-display>0444 541 409</span></span><span class="header-call-short" aria-hidden="true">Call</span></a>
+    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="mobile-menu"><span class="visually-hidden">Menu</span><svg class="icon icon-open" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16"/></svg><svg class="icon icon-close" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
   </div>
+  <div class="stripe-band" aria-hidden="true"></div>
   <nav class="mobile-menu" id="mobile-menu" aria-label="Mobile">
     <div class="container">
       <ul><li><a href="/installations/">Installations</a></li><li><a href="/repairs/" aria-current="page">Repairs</a></li><li><a href="/hydro-cleaning/">Hydro cleaning</a></li><li><a href="/maintenance/">Maintenance</a></li><li><a href="/about/">About</a></li><li><a href="/service-areas/">Service areas</a></li><li><a href="/contact/">Contact</a></li></ul>
-      <a class="btn btn-call btn-lg btn-block" href="tel:+61444541409" data-phone-link><svg class="icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5.2 3.5h3.1l1.7 4.4-2.3 1.4a11.6 11.6 0 0 0 7 7l1.4-2.3 4.4 1.7v3.1a1.9 1.9 0 0 1-2 1.9A16.6 16.6 0 0 1 3.3 5.5a1.9 1.9 0 0 1 1.9-2z"/></svg><span><span class="call-word">Call </span><span data-phone-display>0444 541 409</span></span></a>
-      <p class="mobile-menu-hours"><svg class="icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></svg>Mon–Sat 7am–5pm · Sunday closed</p>
+      <a class="btn btn-call btn-lg btn-block" href="tel:+61444541409" data-phone-link><svg class="icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5.2 3.5h3.1l1.7 4.4-2.3 1.4a11.6 11.6 0 0 0 7 7l1.4-2.3 4.4 1.7v3.1a1.9 1.9 0 0 1-2 1.9A16.6 16.6 0 0 1 3.3 5.5a1.9 1.9 0 0 1 1.9-2z"/></svg><span><span class="call-word">Call </span><span data-phone-display>0444 541 409</span></span></a>
+      <p class="mobile-menu-hours">Mon–Sat 7am–5pm · Sunday closed</p>
     </div>
   </nav>
 </header>
 <main id="main">
 
-<section class="page-hero">
-  <div class="container page-hero-grid">
-    <div class="page-hero-copy">
-      <nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/">Home</a></li><li><span aria-current="page">Repairs</span></li></ol></nav>
-      <p class="status" data-status><span class="status-dot" aria-hidden="true"></span><span class="status-text">Mon–Sat 7am–5pm · answered by Luke</span></p>
-      <h1>Air conditioning repairs on the Sunshine Coast</h1>
-      <p class="page-hero-lede">Not cooling, leaking, making a racket or flashing an error code? Luke finds the actual fault, explains it in plain English and quotes the repair before any work starts. Same-day visits where possible.</p>
-      <div class="hero-actions"><a class="btn btn-call btn-lg" href="tel:+61444541409" data-phone-link><svg class="icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5.2 3.5h3.1l1.7 4.4-2.3 1.4a11.6 11.6 0 0 0 7 7l1.4-2.3 4.4 1.7v3.1a1.9 1.9 0 0 1-2 1.9A16.6 16.6 0 0 1 3.3 5.5a1.9 1.9 0 0 1 1.9-2z"/></svg><span><span class="call-word">Call </span><span data-phone-display>0444 541 409</span></span></a><a class="btn btn-ghost btn-lg" href="#quote">Get a free quote</a></div>
-      <ul class="hero-points"><li><svg class="icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12.5l4.2 4.2L19 7"/></svg>Same-day where possible</li><li><svg class="icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12.5l4.2 4.2L19 7"/></svg>All major brands</li><li><svg class="icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12.5l4.2 4.2L19 7"/></svg>Quoted before work starts</li></ul>
+<section class="hero hero--page" aria-labelledby="page-title">
+  <div class="container hero-grid">
+    <div class="hero-copy">
+      <nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/">Home</a></li><li aria-current="page">Repairs</li></ol></nav>
+      <h1 id="page-title">Air conditioning repairs on the Sunshine Coast</h1>
+      <p class="hero-lede">Not cooling, leaking, making a racket or flashing an error code? Luke finds the actual fault, explains it in plain English and quotes the repair before any work starts. Same-day visits where possible.</p>
     </div>
-    <div class="page-hero-media"><picture><source type="image/webp" srcset="/assets/img/repair-board-560.webp 560w, /assets/img/repair-board-900.webp 900w" sizes="(min-width: 960px) 460px, calc(100vw - 40px)"><img src="/assets/img/repair-board-560.jpg" srcset="/assets/img/repair-board-560.jpg 560w, /assets/img/repair-board-900.jpg 900w" sizes="(min-width: 960px) 460px, calc(100vw - 40px)" width="900" height="1125" alt="Air conditioner opened up to test the control board and wiring" decoding="async"></picture></div>
+    <figure class="hero-media"><div class="hero-photo"><span class="stripe-field" aria-hidden="true"></span><picture class="photo"><source type="image/webp" srcset="/assets/img/repair-board-560.webp 560w, /assets/img/repair-board-900.webp 900w" sizes="(min-width: 1240px) 480px, (min-width: 900px) 40vw, calc(100vw - 64px)"><img src="/assets/img/repair-board-560.jpg" srcset="/assets/img/repair-board-560.jpg 560w, /assets/img/repair-board-900.jpg 900w" sizes="(min-width: 1240px) 480px, (min-width: 900px) 40vw, calc(100vw - 64px)" width="900" height="1125" alt="Air conditioner opened up to test the control board and wiring" fetchpriority="high" decoding="async"></picture></div></figure>
+    <div class="hero-act">
+      <div class="cta-row"><a class="btn btn-call " href="tel:+61444541409" data-phone-link><svg class="icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5.2 3.5h3.1l1.7 4.4-2.3 1.4a11.6 11.6 0 0 0 7 7l1.4-2.3 4.4 1.7v3.1a1.9 1.9 0 0 1-2 1.9A16.6 16.6 0 0 1 3.3 5.5a1.9 1.9 0 0 1 1.9-2z"/></svg><span><span class="call-word">Call </span><span data-phone-display>0444 541 409</span></span></a><a class="btn btn-line" href="#quote">Get a free quote</a></div>
+      <p class="status" data-status><span class="status-dot" aria-hidden="true"></span><span class="status-text">Mon–Sat 7am–5pm · answered by Luke</span></p>
+      <p class="hero-meta hero-points"><span>Same-day where possible</span><span class="sep" aria-hidden="true">·</span><span>All major brands</span><span class="sep" aria-hidden="true">·</span><span>Quoted before work starts</span></p>
+    </div>
   </div>
 </section>
 
 <section class="section" aria-labelledby="symptoms-title">
   <div class="container">
-    <div class="section-head"><p class="eyebrow">Common problems</p><h2 id="symptoms-title">Sound familiar?</h2><p class="lede">These are the most common air con faults. If yours isn’t on the list, call anyway.</p></div>
-    <ul class="icon-grid icon-grid--3"><li class="icon-card"><span class="ic"><svg class="icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M14 14.6V5.2a2 2 0 0 0-4 0v9.4a4 4 0 1 0 4 0z"/><path d="M12 9v7"/></svg></span><h3>Not cooling (or heating)</h3><p>Blowing warm air, taking forever to cool down, or one room that never gets comfortable. Often low refrigerant, a blocked coil or a failing part.</p></li><li class="icon-card"><span class="ic"><svg class="icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3.2s6.2 6.5 6.2 11.2a6.2 6.2 0 0 1-12.4 0C5.8 9.7 12 3.2 12 3.2z"/><path d="M9.2 14.6a2.9 2.9 0 0 0 2.6 2.7"/></svg></span><h3>Leaking water</h3><p>Water dripping from the indoor unit or running down the wall usually means a blocked drain, a dirty coil or a unit that isn’t sitting level.</p></li><li class="icon-card"><span class="ic"><svg class="icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 9.5v5h3.6L13 19V5L7.6 9.5z"/><path d="M16.5 9a4.5 4.5 0 0 1 0 6M19 6.5a8 8 0 0 1 0 11"/></svg></span><h3>Noisy or rattling</h3><p>Buzzing, squealing, rattling or a loud outdoor unit. Noises tend to get worse, and cheaper to fix the earlier they are caught.</p></li><li class="icon-card"><span class="ic"><svg class="icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3.5 21.5 20h-19z"/><path d="M12 10v4.5M12 17.2v.1"/></svg></span><h3>Error codes and flashing lights</h3><p>A code or flashing light on the display is the system telling you something is wrong. Note it down or take a photo before you call.</p></li><li class="icon-card"><span class="ic"><svg class="icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3v8"/><path d="M7.3 6.7a7 7 0 1 0 9.4 0"/></svg></span><h3>Won’t turn on</h3><p>No response from the remote, or it starts and then cuts out. It could be power, the remote, a sensor or a control board.</p></li><li class="icon-card"><span class="ic"><svg class="icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 8.5h10.5a2.8 2.8 0 1 0-2.8-2.8M3 12.5h14.5a2.8 2.8 0 1 1-2.8 2.8M3 16.5h6.5"/></svg></span><h3>Bad smells</h3><p>A musty or mouldy smell when it starts up is usually a dirty coil. A <a href="/hydro-cleaning/">hydro clean</a> is often the fix.</p></li></ul>
+    <div class="section-head"><span class="rule" aria-hidden="true"></span><p class="eyebrow">Common problems</p><h2 id="symptoms-title">Sound familiar?</h2><p class="lede">These are the most common air con faults. If yours isn’t on the list, call anyway.</p></div>
+    <ol class="rows rows--2"><li class="row"><span class="row-num" aria-hidden="true">01</span><div class="row-body"><h3>Not cooling (or heating)</h3><p>Blowing warm air, taking forever to cool down, or one room that never gets comfortable. Often low refrigerant, a blocked coil or a failing part.</p></div></li><li class="row"><span class="row-num" aria-hidden="true">02</span><div class="row-body"><h3>Leaking water</h3><p>Water dripping from the indoor unit or running down the wall usually means a blocked drain, a dirty coil or a unit that isn’t sitting level.</p></div></li><li class="row"><span class="row-num" aria-hidden="true">03</span><div class="row-body"><h3>Noisy or rattling</h3><p>Buzzing, squealing, rattling or a loud outdoor unit. Noises tend to get worse, and cheaper to fix the earlier they are caught.</p></div></li><li class="row"><span class="row-num" aria-hidden="true">04</span><div class="row-body"><h3>Error codes and flashing lights</h3><p>A code or flashing light on the display is the system telling you something is wrong. Note it down or take a photo before you call.</p></div></li><li class="row"><span class="row-num" aria-hidden="true">05</span><div class="row-body"><h3>Won’t turn on</h3><p>No response from the remote, or it starts and then cuts out. It could be power, the remote, a sensor or a control board.</p></div></li><li class="row"><span class="row-num" aria-hidden="true">06</span><div class="row-body"><h3>Bad smells</h3><p>A musty or mouldy smell when it starts up is usually a dirty coil. A <a href="/hydro-cleaning/">hydro clean</a> is often the fix.</p></div></li></ol>
   </div>
 </section>
 
-<section class="section section--sand" aria-labelledby="pricing-title">
+<section class="section band-deep" aria-labelledby="pricing-title">
   <div class="container">
-    <div class="section-head"><p class="eyebrow">Straight up</p><h2 id="pricing-title">Fast when it matters, honest about the cost</h2></div>
-    <div class="split split--even">
-      <div class="panel">
-        <span class="ic"><svg class="icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></svg></span>
+    <div class="section-head"><span class="rule" aria-hidden="true"></span><p class="eyebrow">Straight up</p><h2 id="pricing-title">Fast when it matters, honest about the cost</h2></div>
+    <div class="blocks">
+      <div class="block">
         <h3>Same-day where possible</h3>
         <p>When your air con dies in the middle of a Sunshine Coast summer, you want it sorted now. Luke will get to you the same day wherever he can, and if he can’t, he’ll tell you honestly when he can. Call early in the day for the best chance.</p>
-        <p class="panel-cta"><a class="btn btn-call " href="tel:+61444541409" data-phone-link><svg class="icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5.2 3.5h3.1l1.7 4.4-2.3 1.4a11.6 11.6 0 0 0 7 7l1.4-2.3 4.4 1.7v3.1a1.9 1.9 0 0 1-2 1.9A16.6 16.6 0 0 1 3.3 5.5a1.9 1.9 0 0 1 1.9-2z"/></svg><span><span class="call-word">Call </span><span data-phone-display>0444 541 409</span></span></a></p>
+        <p class="block-cta"><a class="btn btn-call " href="tel:+61444541409" data-phone-link><svg class="icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5.2 3.5h3.1l1.7 4.4-2.3 1.4a11.6 11.6 0 0 0 7 7l1.4-2.3 4.4 1.7v3.1a1.9 1.9 0 0 1-2 1.9A16.6 16.6 0 0 1 3.3 5.5a1.9 1.9 0 0 1 1.9-2z"/></svg><span><span class="call-word">Call </span><span data-phone-display>0444 541 409</span></span></a></p>
       </div>
-      <div class="panel">
-        <span class="ic"><svg class="icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M14.9 9.3c-.5-1-1.6-1.6-2.9-1.6-1.7 0-2.9.9-2.9 2.1 0 2.9 6 1.6 6 4.4 0 1.3-1.3 2.2-3 2.2-1.4 0-2.6-.7-3.1-1.7M12 6v1.7M12 16.4V18"/></svg></span>
+      <div class="block">
         <h3>Quoted before work starts</h3>
         <p>Every repair starts with finding the actual fault. Luke will tell you upfront what the visit and diagnosis involves, explain what he has found, and quote the repair before any work starts.</p>
         <p>If it isn’t worth fixing, for example an old unit with a major failure, he will tell you straight and give you a replacement quote to compare. No surprises on the invoice.</p>
@@ -93,41 +95,41 @@
 
 <section class="section" aria-labelledby="process-title">
   <div class="container">
-    <div class="section-head section-head--center"><p class="eyebrow">How it works</p><h2 id="process-title">From breakdown to back up and running</h2></div>
-    <ol class="steps"><li class="step"><h3>Tell Luke what’s happening</h3><p>Call or send the form with the symptoms, the brand and any error code. The more detail, the better prepared he arrives.</p></li><li class="step"><h3>Find the real fault</h3><p>Luke tests the system properly to find the cause rather than guessing, then explains what he has found in plain English.</p></li><li class="step"><h3>Quote, fix and test</h3><p>You get a clear price before any work starts. Once you are happy, he repairs it and tests the system so you know it’s working properly.</p></li></ol>
+    <div class="section-head"><span class="rule" aria-hidden="true"></span><p class="eyebrow">How it works</p><h2 id="process-title">From breakdown to back up and running</h2></div>
+    <ol class="rows rows--steps"><li class="row"><span class="row-num" aria-hidden="true">01</span><div class="row-body"><h3>Tell Luke what’s happening</h3><p>Call or send the form with the symptoms, the brand and any error code. The more detail, the better prepared he arrives.</p></div></li><li class="row"><span class="row-num" aria-hidden="true">02</span><div class="row-body"><h3>Find the real fault</h3><p>Luke tests the system properly to find the cause rather than guessing, then explains what he has found in plain English.</p></div></li><li class="row"><span class="row-num" aria-hidden="true">03</span><div class="row-body"><h3>Quote, fix and test</h3><p>You get a clear price before any work starts. Once you are happy, he repairs it and tests the system so you know it’s working properly.</p></div></li></ol>
     <div class="mt-lg">
       <div class="cta-band">
   <div class="cta-band-copy"><h2>Air con playing up right now?</h2><p>Call Luke and describe what it’s doing. If he can get to you today, he will.</p></div>
-  <div class="cta-band-actions"><a class="btn btn-call btn-lg" href="tel:+61444541409" data-phone-link><svg class="icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5.2 3.5h3.1l1.7 4.4-2.3 1.4a11.6 11.6 0 0 0 7 7l1.4-2.3 4.4 1.7v3.1a1.9 1.9 0 0 1-2 1.9A16.6 16.6 0 0 1 3.3 5.5a1.9 1.9 0 0 1 1.9-2z"/></svg><span><span class="call-word">Call </span><span data-phone-display>0444 541 409</span></span></a><a class="btn btn-ghost btn-lg" href="#quote">Get a free quote</a></div>
+  <div class="cta-band-actions"><a class="btn btn-call " href="tel:+61444541409" data-phone-link><svg class="icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5.2 3.5h3.1l1.7 4.4-2.3 1.4a11.6 11.6 0 0 0 7 7l1.4-2.3 4.4 1.7v3.1a1.9 1.9 0 0 1-2 1.9A16.6 16.6 0 0 1 3.3 5.5a1.9 1.9 0 0 1 1.9-2z"/></svg><span><span class="call-word">Call </span><span data-phone-display>0444 541 409</span></span></a><a class="btn btn-line" href="#quote">Get a free quote</a></div>
 </div>
     </div>
   </div>
 </section>
 
-<section class="section section--tight section--sand" aria-labelledby="brands-title">
-  <div class="container">
-    <div class="section-head section-head--center"><p class="eyebrow">Brands</p><h2 id="brands-title">Repairs for all major brands</h2></div>
-    <ul class="brands"><li class="brand-badge">Mitsubishi Electric</li><li class="brand-badge">Fujitsu</li><li class="brand-badge">Mitsubishi Heavy Industries</li><li class="brand-badge">General</li><li class="brand-badge">Hisense</li></ul><p class="brands-note">Plus repairs on Daikin, Panasonic, LG and most other major brands.</p>
+<section class="section section--tight band-deep" aria-labelledby="brands-title">
+  <div class="container brands-block">
+    <div class="section-head"><span class="rule" aria-hidden="true"></span><p class="eyebrow">Brands</p><h2 id="brands-title">Repairs for all major brands</h2></div>
+    <div><ul class="brands"><li class="brand-badge">Mitsubishi Electric</li><li class="brand-badge">Fujitsu</li><li class="brand-badge">Mitsubishi Heavy Industries</li><li class="brand-badge">General</li><li class="brand-badge">Hisense</li></ul><p class="brands-note">Plus repairs on Daikin, Panasonic, LG and most other major brands.</p></div>
   </div>
 </section>
 
 <section class="section" aria-labelledby="faq-title">
-  <div class="container">
-    <div class="section-head section-head--center"><p class="eyebrow">FAQ</p><h2 id="faq-title">Repair questions</h2></div>
-    <div class="faq"><details><summary><span>How much does an air con repair cost?</span><span class="faq-icon"><svg class="icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg></span></summary><div class="faq-answer"><p>It depends on the fault and the parts needed. Luke diagnoses the problem first and quotes the repair before any work starts, so you can decide with the full picture.</p></div></details><details><summary><span>Is it worth repairing an old air conditioner?</span><span class="faq-icon"><svg class="icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg></span></summary><div class="faq-answer"><p>Often, yes. Many faults are minor and well worth fixing. But if a unit is old and needs a major part such as a compressor, replacing it can make more sense. Luke will give you both options and an honest opinion.</p></div></details><details><summary><span>Why is my air conditioner leaking water?</span><span class="faq-icon"><svg class="icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg></span></summary><div class="faq-answer"><p>Most leaks come from a blocked drain line or drain tray, a dirty coil that is icing up, or a unit that isn’t sitting level. It is usually a straightforward fix, but leave it too long and the water can damage plaster and paint.</p></div></details><details><summary><span>Why is my air con blowing warm air?</span><span class="faq-icon"><svg class="icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg></span></summary><div class="faq-answer"><p>First check it is set to Cool and the filters are clean. If it still blows warm, it could be low refrigerant, a faulty sensor or a problem with the outdoor unit. Give Luke a call and he will talk you through it.</p></div></details><details><summary><span>What does the error code on my unit mean?</span><span class="faq-icon"><svg class="icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg></span></summary><div class="faq-answer"><p>Codes differ between brands and models. Note the code (or take a photo of the display) and the model number, and tell Luke when you call. He can often tell you what it means over the phone.</p></div></details><details><summary><span>Do you do same-day repairs?</span><span class="faq-icon"><svg class="icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg></span></summary><div class="faq-answer"><p>Where possible, yes. It depends on the day’s bookings, so call early and Luke will tell you honestly when he can get there.</p></div></details></div>
+  <div class="container faq-layout">
+    <div class="section-head"><span class="rule" aria-hidden="true"></span><p class="eyebrow">FAQ</p><h2 id="faq-title">Repair questions</h2></div>
+    <div class="faq"><details><summary><span>How much does an air con repair cost?</span><span class="pm" aria-hidden="true"></span></summary><div class="faq-answer"><p>It depends on the fault and the parts needed. Luke diagnoses the problem first and quotes the repair before any work starts, so you can decide with the full picture.</p></div></details><details><summary><span>Is it worth repairing an old air conditioner?</span><span class="pm" aria-hidden="true"></span></summary><div class="faq-answer"><p>Often, yes. Many faults are minor and well worth fixing. But if a unit is old and needs a major part such as a compressor, replacing it can make more sense. Luke will give you both options and an honest opinion.</p></div></details><details><summary><span>Why is my air conditioner leaking water?</span><span class="pm" aria-hidden="true"></span></summary><div class="faq-answer"><p>Most leaks come from a blocked drain line or drain tray, a dirty coil that is icing up, or a unit that isn’t sitting level. It is usually a straightforward fix, but leave it too long and the water can damage plaster and paint.</p></div></details><details><summary><span>Why is my air con blowing warm air?</span><span class="pm" aria-hidden="true"></span></summary><div class="faq-answer"><p>First check it is set to Cool and the filters are clean. If it still blows warm, it could be low refrigerant, a faulty sensor or a problem with the outdoor unit. Give Luke a call and he will talk you through it.</p></div></details><details><summary><span>What does the error code on my unit mean?</span><span class="pm" aria-hidden="true"></span></summary><div class="faq-answer"><p>Codes differ between brands and models. Note the code (or take a photo of the display) and the model number, and tell Luke when you call. He can often tell you what it means over the phone.</p></div></details><details><summary><span>Do you do same-day repairs?</span><span class="pm" aria-hidden="true"></span></summary><div class="faq-answer"><p>Where possible, yes. It depends on the day’s bookings, so call early and Luke will tell you honestly when he can get there.</p></div></details></div>
   </div>
 </section>
 
 <section class="section quote" id="quote" aria-labelledby="quote-title">
   <div class="container quote-grid">
     <div class="quote-aside">
-      <p class="eyebrow">Free quotes</p>
+      <span class="rule" aria-hidden="true"></span><p class="eyebrow">Free quotes</p>
       <h2 id="quote-title">Book a repair</h2>
       <p class="lede">Tell Luke what the system is doing and he’ll call you back. For the fastest response, call 0444 541 409.</p>
-      <div class="call-card">
-        <p class="call-card-label">Talk to Luke directly</p>
-        <a class="call-card-number" href="tel:+61444541409" data-phone-link><svg class="icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5.2 3.5h3.1l1.7 4.4-2.3 1.4a11.6 11.6 0 0 0 7 7l1.4-2.3 4.4 1.7v3.1a1.9 1.9 0 0 1-2 1.9A16.6 16.6 0 0 1 3.3 5.5a1.9 1.9 0 0 1 1.9-2z"/></svg><span data-phone-display>0444 541 409</span></a>
-        <p class="status status--card" data-status><span class="status-dot" aria-hidden="true"></span><span class="status-text">Mon–Sat 7am–5pm · answered by Luke</span></p>
+      <div class="call-block">
+        <p class="call-block-label label">Talk to Luke directly</p>
+        <a class="call-number" href="tel:+61444541409" data-phone-link><span data-phone-display>0444 541 409</span></a>
+        <p class="status" data-status><span class="status-dot" aria-hidden="true"></span><span class="status-text">Mon–Sat 7am–5pm · answered by Luke</span></p>
         <dl class="hours"><div><dt>Monday – Friday</dt><dd>7:00 am – 5:00 pm</dd></div><div><dt>Saturday</dt><dd>7:00 am – 5:00 pm</dd></div><div><dt>Sunday</dt><dd>Closed</dd></div></dl>
       </div>
     </div>
@@ -154,7 +156,7 @@
           </div>
           <div class="field">
             <label for="q-service">What do you need?</label>
-            <div class="select"><select id="q-service" name="service" required aria-describedby="q-service-err"><option value="">Choose one</option><option>Installation</option><option selected>Repair</option><option>Hydro clean</option><option>Maintenance</option><option>Not sure</option></select><svg class="icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 9l6 6 6-6"/></svg></div>
+            <div class="select"><select id="q-service" name="service" required aria-describedby="q-service-err"><option value="">Choose one</option><option>Installation</option><option selected>Repair</option><option>Hydro clean</option><option>Maintenance</option><option>Not sure</option></select><svg class="icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 9l6 6 6-6"/></svg></div>
             <p class="field-error" id="q-service-err">Please choose the closest option.</p>
           </div>
           <div class="field field--full">
@@ -162,8 +164,8 @@
             <textarea id="q-message" name="message" rows="4" placeholder="The room, the brand of unit, what it's doing, best time to call…"></textarea>
           </div>
         </div>
-        <button class="btn btn-navy btn-lg btn-block quote-submit" type="submit"><span>Send my request</span><svg class="icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
-        <p class="form-note"><svg class="icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3l7 3v5.6c0 4.5-3 8-7 9.4-4-1.4-7-4.9-7-9.4V6z"/><path d="M9 12l2.2 2.2L15.5 10"/></svg>Sent straight to Luke. No spam, ever.</p>
+        <button class="btn btn-call btn-lg btn-block quote-submit" type="submit"><span>Send my request</span><svg class="icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg></button>
+        <p class="form-note">Sent straight to Luke. No spam, ever.</p>
       </form>
     </div>
   </div>
@@ -176,26 +178,29 @@
       <div class="footer-brand">
         <a href="/" class="footer-logo"><img class="" src="/assets/img/logo.svg?v=862196e54e" width="547" height="305" alt="Onshore Air" loading="lazy" decoding="async"><span class="visually-hidden"> home</span></a>
         <p>Air conditioning installs, repairs, hydro cleaning and servicing across the Sunshine Coast. Locally owned and operated from Pacific Paradise.</p>
-        <ul class="footer-badges"><li><svg class="icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path fill="currentColor" stroke="none" d="M12 2.8l2.8 5.9 6.4.7-4.8 4.4 1.4 6.4L12 16.9l-5.8 3.3 1.4-6.4-4.8-4.4 6.4-.7z"/></svg>5.0 Google rating</li><li><svg class="icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3l7 3v5.6c0 4.5-3 8-7 9.4-4-1.4-7-4.9-7-9.4V6z"/><path d="M9 12l2.2 2.2L15.5 10"/></svg>Licensed &amp; insured</li></ul>
+        <p class="footer-facts">5.0 Google rating · Licensed &amp; insured</p>
       </div>
       <nav class="footer-col" aria-label="Services"><h2>Services</h2><ul class="footer-links"><li><a href="/installations/">Installations</a></li><li><a href="/repairs/">Repairs</a></li><li><a href="/hydro-cleaning/">Hydro cleaning</a></li><li><a href="/maintenance/">Maintenance</a></li></ul></nav>
       <nav class="footer-col" aria-label="Company"><h2>Company</h2><ul class="footer-links"><li><a href="/about/">About Luke</a></li><li><a href="/service-areas/">Service areas</a></li><li><a href="/contact/">Contact</a></li><li><a href="#quote">Get a free quote</a></li></ul></nav>
       <div class="footer-col"><h2>Get in touch</h2>
+        <a class="footer-phone" href="tel:+61444541409" data-phone-link><span data-phone-display>0444 541 409</span></a>
         <ul class="footer-contact">
-          <li><svg class="icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5.2 3.5h3.1l1.7 4.4-2.3 1.4a11.6 11.6 0 0 0 7 7l1.4-2.3 4.4 1.7v3.1a1.9 1.9 0 0 1-2 1.9A16.6 16.6 0 0 1 3.3 5.5a1.9 1.9 0 0 1 1.9-2z"/></svg><a href="tel:+61444541409" data-phone-link><span data-phone-display>0444 541 409</span></a></li>
-          <li><svg class="icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="5" width="18" height="14" rx="2.5"/><path d="M3.8 6.8 12 13l8.2-6.2"/></svg><a href="mailto:onshoreair@outlook.com">onshoreair@outlook.com</a></li>
-          <li><svg class="icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></svg><span>Mon–Sat 7am–5pm<br>Sunday closed</span></li>
-          <li><svg class="icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 21s-6.5-5.7-6.5-11.2a6.5 6.5 0 0 1 13 0C18.5 15.3 12 21 12 21z"/><circle cx="12" cy="9.8" r="2.4"/></svg><span>Pacific Paradise QLD 4564<br>Servicing the whole Sunshine Coast</span></li>
+          <li><a href="mailto:onshoreair@outlook.com">onshoreair@outlook.com</a></li>
+          <li>Mon–Sat 7am–5pm<br>Sunday closed</li>
+          <li>Pacific Paradise QLD 4564<br>Servicing the whole Sunshine Coast</li>
         </ul>
       </div>
     </div>
     <div class="footer-bottom">
-      <p>© 2026 Onshore Air</p>
-      <p>ABN 22 594 945 437</p>
-      <p>ARC licence AU067414</p>
+      <span class="rule" aria-hidden="true"></span>
+      <div class="footer-bottom-row">
+        <p>© 2026 Onshore Air</p>
+        <p>ABN 22 594 945 437</p>
+        <p>ARC licence AU067414</p>
+      </div>
     </div>
   </div>
 </footer>
-<aside class="call-bar" aria-label="Quick contact"><a class="btn btn-call " href="tel:+61444541409" data-phone-link><svg class="icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5.2 3.5h3.1l1.7 4.4-2.3 1.4a11.6 11.6 0 0 0 7 7l1.4-2.3 4.4 1.7v3.1a1.9 1.9 0 0 1-2 1.9A16.6 16.6 0 0 1 3.3 5.5a1.9 1.9 0 0 1 1.9-2z"/></svg><span><span class="call-word">Call </span><span data-phone-display>0444 541 409</span></span></a><a class="btn btn-ghost" href="#quote">Free quote</a></aside>
+<aside class="call-bar" aria-label="Quick contact"><a class="btn btn-call " href="tel:+61444541409" data-phone-link><svg class="icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5.2 3.5h3.1l1.7 4.4-2.3 1.4a11.6 11.6 0 0 0 7 7l1.4-2.3 4.4 1.7v3.1a1.9 1.9 0 0 1-2 1.9A16.6 16.6 0 0 1 3.3 5.5a1.9 1.9 0 0 1 1.9-2z"/></svg><span><span class="call-word">Call </span><span data-phone-display>0444 541 409</span></span></a><a class="btn btn-ghost" href="#quote">Free quote</a></aside>
 </body>
 </html>

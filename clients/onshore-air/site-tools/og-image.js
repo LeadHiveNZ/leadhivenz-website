@@ -1,48 +1,70 @@
 #!/usr/bin/env node
-// Renders the 1200x630 Open Graph image (aerial hero + logo + tagline) with Playwright, using the
-// site's own self-hosted fonts and images, then saves it as an optimised JPEG.
+// Renders the 1200x630 Open Graph image in the site's "Onshore" look: Paper background, the navy header bar with the
+// horizontal logo and the stripe band, a Fraunces headline with the orange underline, the stripe rule, and Luke's aerial
+// photo of the coast with the stripe field at its bottom-left corner. Uses the site's own fonts and logo; the photo is
+// read from the cached original (downloaded if missing). Saves an optimised JPEG to site/assets/img/og-image.jpg.
 const path = require('path');
 const fs = require('fs');
 const { execFileSync } = require('child_process');
 const { chromium } = require('playwright');
+const { ogPhoto } = require('./images.config');
 
 const SITE = path.resolve(__dirname, '..', 'site');
+const CACHE = path.join(__dirname, '.cache');
 const url = (p) => 'file://' + path.join(SITE, p);
+const photo = path.join(CACHE, 'originals', ogPhoto);
+if (!fs.existsSync(photo)) {
+  fs.mkdirSync(path.dirname(photo), { recursive: true });
+  execFileSync('curl', ['-sSL', '--fail', '-m', '120', '-A', 'Mozilla/5.0', `https://static.wixstatic.com/media/${ogPhoto}`, '-o', photo]);
+}
+
 const html = `<!doctype html><html><head><meta charset="utf-8"><style>
-@font-face{font-family:Outfit;src:url(${url('assets/fonts/outfit-latin.woff2')}) format('woff2');font-weight:100 900}
-@font-face{font-family:Inter;src:url(${url('assets/fonts/inter-latin.woff2')}) format('woff2');font-weight:100 900}
+@font-face{font-family:Fraunces;src:url(${url('assets/fonts/fraunces-latin.woff2')}) format('woff2');font-weight:100 900}
+@font-face{font-family:Instrument;src:url(${url('assets/fonts/instrument-sans-latin.woff2')}) format('woff2');font-weight:400 700}
 *{margin:0;box-sizing:border-box}
-body{width:1200px;height:630px;position:relative;overflow:hidden;background:#0C1D45;font-family:Inter,sans-serif}
-.bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 70%}
-.shade{position:absolute;inset:0;background:linear-gradient(90deg,rgba(8,20,48,.94) 0%,rgba(8,20,48,.86) 38%,rgba(8,20,48,.25) 72%,rgba(8,20,48,0) 100%)}
-.copy{position:absolute;left:72px;top:64px;width:600px;color:#fff}
-.logo{height:150px;display:block;margin-bottom:34px}
-h1{font-family:Outfit,sans-serif;font-weight:700;font-size:60px;line-height:1.02;letter-spacing:-.02em}
-h1 span{color:#F3B941}
-p{margin-top:18px;font-size:24px;color:#D5E2F5;font-weight:500}
-.tel{margin-top:30px;display:inline-block;background:#F3B941;color:#0C1D45;font-family:Outfit,sans-serif;font-weight:700;font-size:28px;padding:14px 28px;border-radius:999px}
+body{width:1200px;height:630px;overflow:hidden;background:#F4EDE1;color:#0E1F4D;font-family:Instrument,sans-serif}
+.bar{height:104px;background:#0A1636;display:flex;align-items:center;padding:0 64px}
+.bar img{height:58px}
+.band{height:10px;background:#0A1636 url(${url('assets/img/stripes.svg')}) 0 0/100% 12.35px no-repeat}
+.main{display:grid;grid-template-columns:1fr 372px;gap:64px;padding:44px 64px 0}
+.rule{width:72px;height:17px;background:url(${url('assets/img/stripes.svg')}) 0 0/72px 21px no-repeat;margin-bottom:22px}
+.eyebrow{display:flex;align-items:center;gap:12px;font-size:15px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:#1E5CB3}
+.eyebrow:before{content:"";width:24px;height:2px;background:#E0702A}
+h1{margin-top:14px;font-family:Fraunces,serif;font-variation-settings:"opsz" 144;font-weight:560;font-size:60px;line-height:1;letter-spacing:-.02em}
+h1 span{text-decoration:underline;text-decoration-color:#E0702A;text-decoration-thickness:5px;text-underline-offset:9px;text-decoration-skip-ink:none}
+.contact{margin-top:26px;display:flex;align-items:baseline;gap:20px}
+.phone{font-family:Fraunces,serif;font-variation-settings:"opsz" 144;font-weight:560;font-size:38px;letter-spacing:-.01em}
+.services{font-size:19px;color:#34416A}
+.photo{position:relative;isolation:isolate;height:420px}
+.photo img{position:relative;z-index:1;width:100%;height:100%;object-fit:cover;object-position:62% 55%;border-radius:6px;outline:1px solid rgba(14,31,77,.2);outline-offset:-1px}
+.field{position:absolute;left:-22px;bottom:-22px;width:58%;height:42%;overflow:hidden;z-index:0}
+.field:before{content:"";position:absolute;inset:-70%;background:url(${url('assets/img/stripes.svg')}) 0 0/72px 21px repeat;transform:rotate(32deg)}
 </style></head><body>
-<img class="bg" src="${url('assets/img/coast-aerial-1600.jpg')}">
-<div class="shade"></div>
-<div class="copy">
-  <img class="logo" src="${url('assets/img/logo.svg')}">
-  <h1>Sunshine Coast air conditioning, <span>done properly.</span></h1>
-  <p>Installs · Repairs · Hydro cleaning · Servicing</p>
-  <div class="tel">0444 541 409</div>
-</div></body></html>`;
+<div class="bar"><img src="${url('assets/img/logo-horizontal.svg')}" alt=""></div>
+<div class="band"></div>
+<div class="main">
+  <div>
+    <div class="rule"></div>
+    <div class="eyebrow">Pacific Paradise · Sunshine Coast</div>
+    <h1>Sunshine Coast<br>air conditioning,<br><span>done properly.</span></h1>
+    <div class="contact"><span class="phone">0444 541 409</span><span class="services">Installs · Repairs · Hydro cleaning · Servicing</span></div>
+  </div>
+  <div class="photo"><span class="field"></span><img src="file://${photo}" alt=""></div>
+</div>
+</body></html>`;
 
 (async () => {
-  const tmpHtml = path.join(__dirname, '.cache', 'og.html');
-  fs.mkdirSync(path.dirname(tmpHtml), { recursive: true });
+  const tmpHtml = path.join(CACHE, 'og.html');
+  fs.mkdirSync(CACHE, { recursive: true });
   fs.writeFileSync(tmpHtml, html);
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 1200, height: 630 } });
   await page.goto('file://' + tmpHtml, { waitUntil: 'load' });
   await page.evaluate(() => document.fonts.ready);
-  const png = path.join(__dirname, '.cache', 'og.png');
+  const png = path.join(CACHE, 'og.png');
   await page.screenshot({ path: png });
   await browser.close();
   const out = path.join(SITE, 'assets', 'img', 'og-image.jpg');
-  execFileSync('convert', [png, '-strip', '-sampling-factor', '4:2:0', '-interlace', 'Plane', '-quality', '82', out]);
+  execFileSync('convert', [png, '-strip', '-sampling-factor', '4:2:0', '-interlace', 'Plane', '-quality', '84', out]);
   console.log('og-image.jpg', (fs.statSync(out).size / 1024).toFixed(0), 'KB');
 })();

@@ -53,5 +53,7 @@ for (const p of cfg.photos) {
   }
   manifest[p.name] = entry;
 }
+// drop entries for photos no longer in the config
+for (const k of Object.keys(manifest)) if (!cfg.photos.some((p) => p.name === k)) delete manifest[k];
 fs.writeFileSync(MANIFEST, JSON.stringify(manifest, null, 2) + '\n');
 console.log(`manifest: ${Object.keys(manifest).length} images -> ${path.relative(process.cwd(), MANIFEST)}`);

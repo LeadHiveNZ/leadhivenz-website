@@ -1,22 +1,25 @@
 #!/usr/bin/env bash
-# Self-host the two Google Fonts used by the site (latin subset, variable weight axis).
-# Outfit (display, 500-700) and Inter (body, 400-700). Re-run only if you change families/weights.
+# Self-host the two Google Fonts used by the site (latin subset, woff2):
+#   Fraunces  (display: headings, phone numbers, prices, "5.0", pull quotes), roman + italic, variable opsz 9-144 and
+#             wght, with the SOFT axis pinned at 50 in the download (the warmth we want; halves the file size)
+#   Instrument Sans (body/UI), variable wght 400-700
 # A modern Chrome UA is required so Google serves woff2.
 set -euo pipefail
 cd "$(dirname "$0")"
 OUT=../site/assets/fonts
 UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
 mkdir -p "$OUT"
-css=$(curl -sSL -A "$UA" "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Outfit:wght@500;600;700&display=swap")
-# Pick the latin-subset file for each family (same file serves every weight: it is a variable font).
-for fam in Inter Outfit; do
-  url=$(printf '%s' "$css" | awk -v fam="$fam" '
-    /\/\* latin \*\//{latin=1; next}
-    /\/\* /{latin=0}
-    latin && $0 ~ "font-family: .?"fam"[^ ]?;" {hit=1}
-    latin && hit && /src: url\(/ { match($0, /https:[^)]+\.woff2/); print substr($0, RSTART, RLENGTH); exit }')
-  [ -n "$url" ] || { echo "no latin woff2 found for $fam" >&2; exit 1; }
-  lc=$(echo "$fam" | tr 'A-Z' 'a-z')
-  curl -sSL "$url" -o "$OUT/$lc-latin.woff2"
-  echo "$fam -> $OUT/$lc-latin.woff2 ($(wc -c < "$OUT/$lc-latin.woff2") bytes) from $url"
+latin_url() { # $1 = css, $2 = font-style
+  printf '%s' "$1" | awk -v st="$2" '
+    /\/\* latin \*\//{latin=1; next} /\/\* /{latin=0}
+    latin && $0 ~ "font-style: "st";" {hit=1}
+    latin && hit && /src: url\(/ { match($0, /https:[^)]+\.woff2/); print substr($0, RSTART, RLENGTH); exit }'
+}
+fr=$(curl -sSL -A "$UA" "https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT@0,9..144,400..700,50;1,9..144,400..700,50&display=swap")
+is=$(curl -sSL -A "$UA" "https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400..700&display=swap")
+for pair in "fraunces-latin.woff2|$(latin_url "$fr" normal)" "fraunces-italic-latin.woff2|$(latin_url "$fr" italic)" "instrument-sans-latin.woff2|$(latin_url "$is" normal)"; do
+  file=${pair%%|*}; url=${pair#*|}
+  [ -n "$url" ] || { echo "no latin woff2 for $file" >&2; exit 1; }
+  curl -sSL "$url" -o "$OUT/$file"
+  echo "$file $(wc -c < "$OUT/$file") bytes  <- $url"
 done

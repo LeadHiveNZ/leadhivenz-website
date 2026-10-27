@@ -19,7 +19,7 @@ clients/onshore-air/
 
 | Route | File | Notes |
 |---|---|---|
-| `/` | `site/index.html` | Hero (aerial coast photo), status line, trust strip, services, why Onshore, brands, reviews, service area, quote form. `HVACBusiness` JSON-LD |
+| `/` | `site/index.html` | Hero (Luke at work), status line, ruled trust facts, services index, why Onshore, brands, reviews, service area, quote form. `HVACBusiness` JSON-LD |
 | `/installations/` | `site/installations/index.html` | Split, multi-head, ducted, new builds/replacements, what's included, process, gallery, brands, FAQ, form |
 | `/repairs/` | `site/repairs/index.html` | Symptoms, same-day where possible, "quoted before work starts", process, brands, FAQ, form |
 | `/hydro-cleaning/` | `site/hydro-cleaning/index.html` | What it is, real before/after photos, why, who it's for, how often, price, FAQ, form |
@@ -131,9 +131,9 @@ at the same size on black, navy and white.
   position. All text is converted to outlines: the SVGs need no font. Scoring tools, candidate list and results:
   `site-tools/logo/font-match/`; overlay sheet: `site-tools/out/font-candidates.jpg`.
 - **Files** in `site/assets/img/`: `logo.svg` (stacked, as the original), `logo-horizontal.svg` (sphere left, used in the
-  desktop header from 1240 px), `logo-mark.svg` / `favicon.svg` (sphere only), raster exports `logo.png`/`logo.webp`
-  (3x of the 56 px mobile header, used in the JSON-LD) and `logo-2x.png`/`logo-2x.webp` for email signatures and
-  directories, plus `favicon.ico` (16/32/48), `apple-touch-icon.png` and the 192/512 app icons. The header and footer use
+  desktop header from 1240 px), `favicon.svg` (sphere only), `logo.png` (used in the JSON-LD), `favicon.ico`
+  (16/32/48), `apple-touch-icon.png` and the 192/512 app icons. Extras that are not deployed live in `site-tools/out/`:
+  `logo-mark.svg`, `logo-stacked.png` and `logo-horizontal.png` for email signatures, social and directories. The header and footer use
   the SVGs directly in `<img>`, so they are sharp at any size.
 
 ## Rebuild / edit
@@ -144,11 +144,11 @@ clipper-lib 6.4.2): `cd site-tools/logo && npm install` once. Run from `clients/
 
 | Command | What it does |
 |---|---|
-| `node build.js` | Regenerates every HTML page plus `sitemap.xml`, `robots.txt`, `netlify.toml`, `_redirects`, `site.webmanifest`, `waves.svg` |
+| `node build.js` | Regenerates every HTML page plus `sitemap.xml`, `robots.txt`, `netlify.toml`, `_redirects`, `site.webmanifest`, `stripes.svg` |
 | `node images.js` | Downloads Luke's original photos from Wix into `.cache/` (git-ignored) and exports WebP + JPEG sizes listed in `images.config.js` |
-| `cd logo && node build-logo.js` | Rebuilds the vector logo (stacked, horizontal, mark), its PNG/WebP exports, favicons, app icons and `out/logo-compare.png` |
-| `node og-image.js` | Renders the 1200x630 Open Graph image from the hero photo and `logo.svg` |
-| `bash fonts.sh` | Re-downloads the self-hosted Outfit + Inter woff2 files |
+| `cd logo && node build-logo.js` | Rebuilds the vector logo (stacked, horizontal, mark), its PNG exports, favicons, app icons and `out/logo-compare.png` |
+| `node og-image.js` | Renders the 1200x630 Open Graph image (Paper, logo bar, Fraunces headline, stripe rule, Luke's aerial coast photo) |
+| `bash fonts.sh` | Re-downloads the self-hosted Fraunces (roman + italic) and Instrument Sans woff2 files |
 | `node check.js` | Link/asset checker, external-URL check, per-page SEO basics, home page weight |
 | `node screenshots.js` | Full-page screenshots into `site-screens/` (390x844 and 1280x800) |
 | `bash zip.sh` | Builds `dist/onshore-air-site.zip` with `index.html` at the zip root |
@@ -167,15 +167,22 @@ the next build overwrites it.
 
 ## Build notes
 
-- Palette sampled from the logo with ImageMagick: deep blue `#264BA1`, sky `#5BB5D0`, gold `#E2B656`, orange `#E49A2D`,
-  deep orange `#D9731F`, wordmark yellow `#EEDF60`. Brand navy `#0C1D45` / `#081430` is the logo blue's hue taken dark;
-  warm sand neutrals `#FBF8F3` / `#F6F0E6`. Call buttons use gold `#F3B941` with navy text.
-- Type: Outfit (headings) and Inter (body), self-hosted woff2 (latin subset, variable weight), `font-display: swap`,
-  with metric-matched Arial fallbacks to limit layout shift.
+- Art direction "Onshore": warm coastal, editorial, owner-operator. The logo's palette flipped light: Paper `#F4EDE1`
+  (background) and Paper-deep `#EADFCC` (alternate bands), Ink navy `#0E1F4D` for all text (13.65:1 on Paper), Navy-deep
+  `#0A1636` for the header, footer and the home service-area band only. Sunset orange `#E0702A` is the one accent that
+  means "act" (call buttons carry Navy-deep text, 5.52:1); Ocean `#1E5CB3` for links and small labels; Seafoam `#7CC7DB`
+  and Sun `#F2D45C` only in the stripe motif.
+- Type: Fraunces (headings, phone numbers, prices, "5.0", pull quotes in italic; `opsz` 144, SOFT 50) and Instrument
+  Sans (body and UI), self-hosted woff2 (latin subset), `font-display: swap`, with metric-matched fallbacks.
+- Signature: the stripe motif from the logo (`stripes.svg`: seafoam, sun and sunset lines). A 10px band under the header,
+  a 72px rule that opens sections on plain Paper, and a diagonal field behind the bottom-left corner of each hero photo.
+- Shapes: 4px radius on buttons and inputs, 6px on photos with a 1px ink keyline, square chips and bands, no pills, no
+  gradient overlays, and one soft shadow (under the quote form). Lists are ruled rows with Fraunces numbers; there are no
+  icon tiles (only functional icons: phone, arrow, check, chevron, menu, close).
 - Header: stacked logo at 56 px on phones (it fits beside the phone button at 320 to 390 px), stacked at 60 px with the
   desktop nav from 1180 px, horizontal lockup at 50 px from 1240 px. Nav links never wrap from 1180 px up.
 - No third-party requests: no CDN, analytics, map embed or Google Fonts at runtime. A Content-Security-Policy header was
   left out on purpose so the Nimbata snippet isn't blocked; add one once Nimbata's domains are known.
 - QA at handoff: 0 missing internal references, 0 external runtime URLs, one `h1` per page, no horizontal scroll from
-  320px to 1920px. Home page weight with every lazy image loaded: about 614 KB uncompressed (506 KB over the wire) on a
-  3x phone, about 460 KB (326 KB) on a 1280px desktop.
+  320px to 1920px. Home page weight with every lazy image loaded: about 577 KB uncompressed (486 KB over the wire) on a
+  3x phone, about 421 KB (305 KB) on a 1280px desktop.

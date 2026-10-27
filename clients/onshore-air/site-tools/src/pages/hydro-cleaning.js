@@ -1,5 +1,5 @@
 const L = require('../layout');
-const { S, icon, picture, sectionHead, checklist, eyebrow } = L;
+const { picture, sectionHead, checklist, eyebrow } = L;
 
 module.exports = {
   path: '/hydro-cleaning/',
@@ -8,25 +8,27 @@ module.exports = {
   description: 'Split system hydro cleaning across the Sunshine Coast. Clears mould, bacteria and grime for fresher air and lower running costs. Call 0444 541 409.',
   current: '/hydro-cleaning/',
   jsonld: [L.breadcrumbLd('Hydro cleaning', '/hydro-cleaning/')],
+  preload: L.preloadImage('luke-cleaning-coil', L.HERO_SIZES),
   main: `
 ${L.pageHero({
     crumb: 'Hydro cleaning',
     h1: 'Air con hydro cleaning on the Sunshine Coast',
     lede: 'A filter clean only gets what you can see. A hydro clean takes the covers off and washes out the coil, fan and drain tray, clearing the mould, bacteria and grime that build up inside. Fresher air, and a system that doesn’t have to work as hard.',
-    media: picture('luke-cleaning-coil', { alt: 'Luke hydro cleaning the coil of a split system, with a cleaning bag catching the water', sizes: '(min-width: 960px) 460px, calc(100vw - 40px)', eager: true }),
+    photo: { name: 'luke-cleaning-coil', alt: 'Luke hydro cleaning the coil of a split system, with a cleaning bag catching the water' },
     points: ['Mould &amp; bacteria treatment', 'No mess', 'All major brands'],
   })}
 
 <section class="section" aria-labelledby="what-title">
-  <div class="container split">
-    <div>
+  <div class="container split split--top">
+    <div class="prose">
+      ${L.stripeRule()}
       ${eyebrow('What is a hydro clean?')}
       <h2 id="what-title">A deep clean for the parts you can’t reach</h2>
       <p class="lede">Hydro cleaning (also called a hydro pressure clean) is a deep clean of your indoor split system unit.</p>
       <p>Luke removes the covers and filters, fits a waterproof cleaning bag under the unit, then washes the coil, fan and drain tray with a pressure washer and a cleaning solution made for air conditioners. The dirty water runs into the bag and away, not down your wall or onto the floor.</p>
       <p>It is the only way to properly clean the barrel fan and coil fins, which is where the mould and grime that cause musty smells actually live.</p>
     </div>
-    <div class="panel panel--sand">
+    <div class="side-list">
       <h3>What’s included in every clean</h3>
       ${checklist([
         'Check the system’s operation before we start',
@@ -42,7 +44,7 @@ ${L.pageHero({
   </div>
 </section>
 
-<section class="section section--sand" aria-labelledby="ba-title">
+<section class="section band-deep" aria-labelledby="ba-title">
   <div class="container">
     ${sectionHead({ eyebrow: 'Before and after', title: 'What’s hiding behind the covers', lede: 'The same split system before and after a hydro clean. From the outside, it looked fine.', id: 'ba-title' })}
     <div class="ba">
@@ -77,35 +79,33 @@ ${L.pageHero({
 <section class="section" aria-labelledby="why-title">
   <div class="container">
     ${sectionHead({ eyebrow: 'Why it matters', title: 'Cleaner air, lower running costs', lede: 'Air conditioners pull in dust, pet hair, salt and moisture every day. Over time, that gunk becomes a breeding ground inside the unit.', id: 'why-title' })}
-    ${L.iconCards([
-      ['leaf', 'Mould', 'The coil and fan are dark and damp, exactly where mould grows. Every time the system runs, it can blow spores into the room.'],
-      ['heart', 'Bacteria &amp; allergens', 'Dust, pet hair and bacteria collect on the coil and fan. Clearing them out helps if anyone at home has asthma or allergies.'],
-      ['gauge', 'Efficiency', 'A clogged coil can’t move heat properly, so the system works harder and longer to reach the same temperature.'],
-      ['dollar', 'Power bills', 'A system that works harder uses more electricity. A clean unit runs more efficiently, which helps keep running costs down.'],
-    ], 'icon-grid--4')}
+    ${L.rows([
+      ['Mould', 'The coil and fan are dark and damp, exactly where mould grows. Every time the system runs, it can blow spores into the room.'],
+      ['Bacteria &amp; allergens', 'Dust, pet hair and bacteria collect on the coil and fan. Clearing them out helps if anyone at home has asthma or allergies.'],
+      ['Efficiency', 'A clogged coil can’t move heat properly, so the system works harder and longer to reach the same temperature.'],
+      ['Power bills', 'A system that works harder uses more electricity. A clean unit runs more efficiently, which helps keep running costs down.'],
+    ], { cols: 2 })}
   </div>
 </section>
 
-<section class="section section--sand" aria-labelledby="who-title">
-  <div class="container split split--wide">
+<section class="section band-deep" aria-labelledby="who-title">
+  <div class="container split split--wide split--top">
     <div>
       ${eyebrow('Who it’s for')}
       <h2 id="who-title">Worth doing for most homes, essential for some</h2>
-      ${L.iconCards([
-        ['key', 'Rental properties', 'A clean between tenancies or before an inspection keeps units healthy and tenants happy.'],
-        ['heart', 'Allergy &amp; asthma households', 'Less dust, mould and bacteria blowing around the rooms you sleep and live in.'],
-        ['waves', 'Beachside homes', 'Salt air, sand and humidity mean faster build-up in coastal suburbs like Mudjimba, Marcoola, Twin Waters and Peregian.'],
-        ['users', 'Homes with pets', 'Pet hair and dander clog filters and coils faster than you would expect.'],
-      ])}
+      ${L.rows([
+        ['Rental properties', 'A clean between tenancies or before an inspection keeps units healthy and tenants happy.'],
+        ['Allergy &amp; asthma households', 'Less dust, mould and bacteria blowing around the rooms you sleep and live in.'],
+        ['Beachside homes', 'Salt air, sand and humidity mean faster build-up in coastal suburbs like Mudjimba, Marcoola, Twin Waters and Peregian.'],
+        ['Homes with pets', 'Pet hair and dander clog filters and coils faster than you would expect.'],
+      ], { numbered: false })}
     </div>
     <div class="stack">
-      <div class="panel">
-        <span class="ic">${icon('calendar')}</span>
+      <div class="block">
         <h3>How often?</h3>
         <p>Once a year is a good rule of thumb for most homes. Clean more often if you are beachside, have pets, run the system most days, or anyone at home has allergies or asthma.</p>
       </div>
-      <div class="panel">
-        <span class="ic">${icon('sparkle')}</span>
+      <div class="block">
         <h3>Do you need one? Check in 30 seconds</h3>
         <p>Turn the unit off. Gently open the front louvres (the flaps) and shine a torch inside at the barrel-shaped fan. If you see black spots or a furry build-up, that is mould, and it’s time for a hydro clean.</p>
       </div>

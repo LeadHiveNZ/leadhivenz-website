@@ -1,5 +1,5 @@
 const L = require('../layout');
-const { S, icon, picture, sectionHead, checklist, eyebrow } = L;
+const { picture, sectionHead, checklist, eyebrow } = L;
 
 module.exports = {
   path: '/maintenance/',
@@ -8,18 +8,20 @@ module.exports = {
   description: 'Annual air con servicing on the Sunshine Coast: filters, coil, drainage, refrigerant and electrical checks to keep your system efficient. 0444 541 409.',
   current: '/maintenance/',
   jsonld: [L.breadcrumbLd('Maintenance', '/maintenance/')],
+  preload: L.preloadImage('outdoor-daikin', L.HERO_SIZES),
   main: `
 ${L.pageHero({
     crumb: 'Maintenance',
     h1: 'Air conditioning servicing on the Sunshine Coast',
     lede: 'A yearly service keeps your system running efficiently, catches small problems before they turn into expensive ones and helps it last. Luke checks the whole system, indoors and out, and tells you plainly how it’s going.',
-    media: picture('outdoor-daikin', { alt: 'Daikin outdoor unit on a courtyard wall with a neat pipe cover', sizes: '(min-width: 960px) 460px, calc(100vw - 40px)', eager: true, imgCls: 'pos-low' }),
+    photo: { name: 'outdoor-daikin', alt: 'Daikin outdoor unit on a courtyard wall with a neat pipe cover', imgCls: 'pos-low' },
     points: ['Indoor &amp; outdoor checks', 'Homes, rentals &amp; businesses', 'All major brands'],
   })}
 
 <section class="section" aria-labelledby="checked-title">
-  <div class="container split">
+  <div class="container split split--top">
     <div>
+      ${L.stripeRule()}
       ${eyebrow('Annual service')}
       <h2 id="checked-title">What’s checked on a service</h2>
       <p class="lede">A proper service is more than a quick filter rinse. Here is what Luke works through on every visit.</p>
@@ -43,29 +45,27 @@ ${L.pageHero({
   </div>
 </section>
 
-<section class="section section--sand" aria-labelledby="benefits-title">
+<section class="section band-deep" aria-labelledby="benefits-title">
   <div class="container">
-    ${sectionHead({ eyebrow: 'Why service it', title: 'Small job now, fewer problems later', id: 'benefits-title', center: true })}
-    ${L.iconCards([
-      ['dollar', 'Lower running costs', 'Clean filters and coils let the system move heat efficiently, so it uses less power to keep you comfortable.'],
-      ['shield', 'Fewer breakdowns', 'Worn parts and blocked drains get picked up early, before they fail on the hottest day of the year.'],
-      ['sun', 'Longer life', 'Regular care helps your system cope with salt air, humidity and long Queensland summers.'],
-      ['wind', 'Healthier air', 'Less dust, mould and bacteria circulating through the rooms you live and sleep in.'],
-    ], 'icon-grid--4')}
+    ${sectionHead({ eyebrow: 'Why service it', title: 'Small job now, fewer problems later', id: 'benefits-title' })}
+    ${L.rows([
+      ['Lower running costs', 'Clean filters and coils let the system move heat efficiently, so it uses less power to keep you comfortable.'],
+      ['Fewer breakdowns', 'Worn parts and blocked drains get picked up early, before they fail on the hottest day of the year.'],
+      ['Longer life', 'Regular care helps your system cope with salt air, humidity and long Queensland summers.'],
+      ['Healthier air', 'Less dust, mould and bacteria circulating through the rooms you live and sleep in.'],
+    ], { cols: 2 })}
   </div>
 </section>
 
 <section class="section" aria-labelledby="who-title">
   <div class="container">
     ${sectionHead({ eyebrow: 'Who books a service', title: 'Homes, rentals and small businesses', id: 'who-title' })}
-    <div class="split split--even">
-      <div class="panel">
-        <span class="ic">${icon('home')}</span>
+    <div class="blocks">
+      <div class="block">
         <h3>Homeowners</h3>
         <p>Book a service in late winter or spring, before the summer rush, so your system is ready when the heat arrives. Or call whenever it starts to smell, drip or isn’t cooling like it used to.</p>
       </div>
-      <div class="panel">
-        <span class="ic">${icon('key')}</span>
+      <div class="block">
         <h3>Landlords, property managers &amp; businesses</h3>
         <p>Regular servicing keeps tenants comfortable, helps avoid breakdown call-outs and keeps your records tidy. Just let Luke know how to arrange access when you book.</p>
       </div>

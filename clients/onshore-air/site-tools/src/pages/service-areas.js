@@ -1,5 +1,5 @@
 const L = require('../layout');
-const { S, icon, sectionHead, eyebrow } = L;
+const { S, sectionHead } = L;
 
 const allSuburbs = S.areas.flatMap((a) => a.suburbs);
 
@@ -22,7 +22,7 @@ ${L.pageHero({
     crumb: 'Service areas',
     h1: 'Air conditioning across the Sunshine Coast',
     lede: 'Based in Pacific Paradise, right in the middle of the Coast, Luke covers everywhere from Caloundra to Noosa and up into the hinterland. If your suburb isn’t listed below, call anyway: chances are he can help.',
-    media: `<div class="route-card"><p class="route-title">The Coast, north to south</p>${L.route()}</div>`,
+    block: `<div class="route-card"><p class="route-title">The Coast, north to south</p>${L.route({ light: true })}</div>`,
     points: ['Caloundra to Noosa', 'Hinterland towns', 'Homes &amp; businesses'],
   })}
 
@@ -40,15 +40,13 @@ ${L.pageHero({
   </div>
 </section>
 
-<section class="section section--sand" aria-labelledby="local-title">
-  <div class="container split split--even">
-    <div class="panel">
-      <span class="ic">${icon('waves')}</span>
+<section class="section band-deep" aria-labelledby="local-title">
+  <div class="container blocks">
+    <div class="block">
       <h3 id="local-title">Built for coastal conditions</h3>
       <p>Salt air and humidity are tough on air conditioners. Outdoor units corrode faster near the beach, and coils clog sooner. Luke recommends the right placement and protection on new installs, and regular <a href="/maintenance/">servicing</a> and <a href="/hydro-cleaning/">hydro cleans</a> to keep coastal systems healthy.</p>
     </div>
-    <div class="panel">
-      <span class="ic">${icon('sun')}</span>
+    <div class="block">
       <h3>Hinterland heat, sorted</h3>
       <p>Up the range in Nambour, Palmwoods, Montville and Maleny, summers are still and sticky and winter nights get properly cool. A reverse-cycle system handles both, and Luke can size one to suit older Queenslanders and new builds alike.</p>
     </div>

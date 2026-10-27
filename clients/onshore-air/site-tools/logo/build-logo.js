@@ -2,8 +2,9 @@
 // Builds the vector Onshore Air logo and every raster derived from it.
 //   site/assets/img/logo.svg              stacked lockup (as the original): sphere above, wordmark below
 //   site/assets/img/logo-horizontal.svg   sphere left of the wordmark (desktop header)
-//   site/assets/img/logo-mark.svg         sphere only (favicon.svg is the same file)
-//   site/assets/img/logo.png|webp, logo-2x.png|webp  raster exports (3x / 2x of the 56 px mobile header)
+//   site/assets/img/favicon.svg           sphere only
+//   site/assets/img/logo.png              raster for the JSON-LD logo/image
+//   ../out/logo-mark.svg, ../out/logo-stacked.png, ../out/logo-horizontal.png  extras for email, social and directories
 //   favicon.ico (16/32/48), favicon.svg, apple-touch-icon.png (180), icon-192.png, icon-512.png (maskable-safe)
 //   ../out/logo-compare.png               acceptance check: original vs vector at the same size, navy + white
 // Usage: npm install && node build-logo.js
@@ -95,20 +96,19 @@ function mark() {
   const L = { stacked: stacked(), horizontal: horizontal(), mark: mark() };
   fs.writeFileSync(path.join(SITE_IMG, 'logo.svg'), L.stacked.svg);
   fs.writeFileSync(path.join(SITE_IMG, 'logo-horizontal.svg'), L.horizontal.svg);
-  fs.writeFileSync(path.join(SITE_IMG, 'logo-mark.svg'), L.mark.svg);
   fs.writeFileSync(path.join(SITE_IMG, 'favicon.svg'), L.mark.svg);
+  fs.writeFileSync(path.join(OUT, 'logo-mark.svg'), L.mark.svg);
   for (const [k, v] of Object.entries(L)) console.log(`${k.padEnd(10)} ${v.w.toFixed(1)} x ${v.h.toFixed(1)}  ${(Buffer.byteLength(v.svg) / 1024).toFixed(1)} KB svg`);
 
   // ---------- rasters ----------
   const tmp = path.join(OUT, '.tmp'); fs.mkdirSync(tmp, { recursive: true });
   const png = async (svg, file, w, h, bg = null) => { await R.svgToPng(svg, file, w, h, { background: bg }); return file; };
-  const toWebp = (src, dst) => execFileSync('convert', [src, '-strip', '-define', 'webp:lossless=false', '-define', 'webp:alpha-quality=100', '-quality', '92', dst]);
   const optPng = (src, dst) => execFileSync('convert', [src, '-strip', '-define', 'png:compression-level=9', dst]);
-  // stacked logo at 3x and 2x of the 56 px mobile header
-  for (const [name, hpx] of [['logo', 168], ['logo-2x', 112]]) {
-    const wpx = Math.round((L.stacked.w / L.stacked.h) * hpx);
-    const raw = await png(L.stacked.svg, path.join(tmp, name + '.png'), wpx, hpx);
-    optPng(raw, path.join(SITE_IMG, name + '.png')); toWebp(raw, path.join(SITE_IMG, name + '.webp'));
+  // logo.png for the JSON-LD; larger PNG exports (transparent) for email signatures, social and directories
+  const rasters = [[L.stacked.svg, L.stacked, 168, path.join(SITE_IMG, 'logo.png')], [L.stacked.svg, L.stacked, 610, path.join(OUT, 'logo-stacked.png')], [L.horizontal.svg, L.horizontal, 434, path.join(OUT, 'logo-horizontal.png')]];
+  for (const [svg, dim, hpx, dest] of rasters) {
+    const raw = await png(svg, path.join(tmp, path.basename(dest)), Math.round((dim.w / dim.h) * hpx), hpx);
+    optPng(raw, dest);
   }
   // favicons and app icons from the sphere mark
   const markSvg = L.mark.svg;

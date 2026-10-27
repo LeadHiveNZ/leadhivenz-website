@@ -1,7 +1,6 @@
 const L = require('../layout');
-const { S, icon, picture, sectionHead, checklist, eyebrow } = L;
+const { picture, sectionHead, checklist, eyebrow } = L;
 
-const HERO_IMG_SIZES = '(min-width: 960px) 460px, calc(100vw - 40px)';
 const gallery = [
   ['gallery-split-window', 'Wall split system above a bedroom window', 'Wall split above a bedroom window'],
   ['gallery-white-split', 'Slimline white wall-mounted split system', 'Slimline white wall split'],
@@ -18,28 +17,29 @@ module.exports = {
   description: 'Split system, multi-head and ducted air conditioning installed across the Sunshine Coast by a licensed local tech. Free quotes. Call 0444 541 409.',
   current: '/installations/',
   jsonld: [L.breadcrumbLd('Installations', '/installations/')],
+  preload: L.preloadImage('black-split', L.HERO_SIZES),
   main: `
 ${L.pageHero({
     crumb: 'Installations',
     h1: 'Air conditioning installation on the Sunshine Coast',
     lede: 'New build, renovation or replacing a tired old unit: Luke sizes the system to the room, installs it neatly and makes sure you know how to get the best from it. Free quotes, competitive pricing and a workmanship guarantee.',
-    media: picture('black-split', { alt: 'Black wall-mounted split system air conditioner installed by Onshore Air', sizes: HERO_IMG_SIZES, eager: true }),
+    photo: { name: 'black-split', alt: 'Black wall-mounted split system air conditioner installed by Onshore Air' },
     points: ['Free quotes', 'Split, multi-head &amp; ducted', 'Workmanship guarantee'],
   })}
 
 <section class="section" aria-labelledby="types-title">
   <div class="container">
     ${sectionHead({ eyebrow: 'What we install', title: 'The right system for the way you live', lede: 'Whether you want one cool bedroom or the whole house comfortable, Luke will recommend the system that suits your home and budget, not the one with the biggest margin.', id: 'types-title' })}
-    ${L.iconCards([
-      ['snow', 'Split systems', 'The go-to for bedrooms, living areas and granny flats. Quiet, efficient inverter units sized to the room, so they are not running flat out every summer afternoon.'],
-      ['multi', 'Multi-head systems', 'Two or more indoor units running off a single outdoor unit. Handy when you want several rooms cooled but only have space for one condenser.'],
-      ['wind', 'Ducted systems', 'Discreet ceiling vents throughout the house, with zoning so you only cool the rooms you are using. Ideal for larger and two-storey homes.'],
-      ['home', 'New builds &amp; replacements', 'Planning unit locations and pipe runs with you or your builder before the walls close in, or swapping an old system for a new one with minimal fuss.'],
-    ], 'icon-grid--4')}
+    ${L.rows([
+      ['Split systems', 'The go-to for bedrooms, living areas and granny flats. Quiet, efficient inverter units sized to the room, so they are not running flat out every summer afternoon.'],
+      ['Multi-head systems', 'Two or more indoor units running off a single outdoor unit. Handy when you want several rooms cooled but only have space for one condenser.'],
+      ['Ducted systems', 'Discreet ceiling vents throughout the house, with zoning so you only cool the rooms you are using. Ideal for larger and two-storey homes.'],
+      ['New builds &amp; replacements', 'Planning unit locations and pipe runs with you or your builder before the walls close in, or swapping an old system for a new one with minimal fuss.'],
+    ], { cols: 2 })}
   </div>
 </section>
 
-<section class="section section--sand" aria-labelledby="included-title">
+<section class="section band-deep" aria-labelledby="included-title">
   <div class="container split split--flip">
     <div>
       ${eyebrow('What’s included')}
@@ -65,7 +65,7 @@ ${L.pageHero({
 
 <section class="section" aria-labelledby="process-title">
   <div class="container">
-    ${sectionHead({ eyebrow: 'How it works', title: 'Quote, install, handover', lede: 'Three simple steps, with Luke looking after you at every one.', id: 'process-title', center: true })}
+    ${sectionHead({ eyebrow: 'How it works', title: 'Quote, install, handover', lede: 'Three simple steps, with Luke looking after you at every one.', id: 'process-title' })}
     ${L.steps([
       ['Free quote', 'Call or send the form. Luke talks through what you need, checks the space and gives you a clear quote, with options to suit your budget. No pressure.'],
       ['Installation', 'On the day, Luke turns up when he says he will, protects your floors and installs the system neatly, with tidy pipework and proper drainage.'],
@@ -74,7 +74,7 @@ ${L.pageHero({
   </div>
 </section>
 
-<section class="section section--sand" aria-labelledby="gallery-title">
+<section class="section band-deep" aria-labelledby="gallery-title">
   <div class="container">
     ${sectionHead({ eyebrow: 'Recent work', title: 'Installs Luke is proud of', lede: 'Real jobs from around the Coast, photographed on the day.', id: 'gallery-title' })}
     <ul class="gallery">
@@ -85,8 +85,10 @@ ${L.pageHero({
 
 <section class="section" aria-labelledby="brands-title">
   <div class="container">
-    ${sectionHead({ eyebrow: 'Brands', title: 'Brands we install', lede: 'Not sure which brand to choose? Luke will explain the differences in plain English and quote options to suit your budget.', id: 'brands-title', center: true })}
-    ${L.brandBadges(false)}
+    <div class="brands-block">
+      ${sectionHead({ eyebrow: 'Brands', title: 'Brands we install', lede: 'Not sure which brand to choose? Luke will explain the differences in plain English and quote options to suit your budget.', id: 'brands-title' })}
+      <div>${L.brandBadges(false)}</div>
+    </div>
     <div class="mt-lg">
       ${L.ctaBand({ title: 'Ready for a cooler summer?', text: 'Book your free quote now and get your new system in before the hottest months.' })}
     </div>
