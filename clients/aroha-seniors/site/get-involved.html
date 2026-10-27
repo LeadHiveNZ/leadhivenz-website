@@ -229,7 +229,10 @@
       <div class="form-card reveal">
         <h2 id="int-h">Register your interest</h2>
         <p>Tell us how you'd like to help and we'll be in touch.</p>
-        <form data-form="Get involved" action="mailto:amelia_asct@outlook.com?subject=Website%20enquiry" method="post" enctype="text/plain">
+        <form data-form="Get involved" name="get-involved" method="post" data-netlify="true" netlify-honeypot="bot-field">
+          <input type="hidden" name="form-name" value="get-involved">
+          <input type="hidden" name="subject" value="New enquiry from the Aroha Seniors website (Get involved form)">
+          <p hidden><label>Leave this empty <input name="bot-field" tabindex="-1" autocomplete="off"></label></p>
           <p class="form-err" role="alert"></p>
           <div class="fgrid">
             <div class="field"><label for="gi-name">Your name</label><input id="gi-name" name="name" autocomplete="name" required></div>
@@ -290,7 +293,7 @@
   </div>
 </footer>
 
-<script>window.ASCT = {"formEndpoint": "", "email": "amelia_asct@outlook.com", "phone": "022 178 0876"};</script>
+<script>window.ASCT = {"formEndpoint": "", "netlifyForms": true, "email": "amelia_asct@outlook.com", "phone": "022 178 0876"};</script>
 <script src="assets/site.js"></script>
 </body>
 </html>

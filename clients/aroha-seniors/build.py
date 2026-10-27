@@ -41,7 +41,8 @@ CONFIG = {
     'bank_account': '',          # e.g. '12-3456-0123456-00'. Blank shows "Request our bank details"
     'bank_name': 'Aroha Seniors Charitable Trust',
     'donee_status': False,       # True only once IRD approves donee status (shows the 33.33% tax credit line)
-    'form_endpoint': '',         # POST URL for enquiries. Blank opens the visitor's email app instead
+    'netlify_forms': True,       # forms post to Netlify Forms when the site is served from Netlify (see README)
+    'form_endpoint': '',         # optional JSON POST URL; overrides Netlify. With neither, forms open the visitor's email app
     'credit': ('Website by LeadHive', 'https://leadhivenz.co'),   # set to None to remove
 }
 
@@ -136,7 +137,7 @@ def render(page, key, title, desc, inline):
         'TAGLINE': c['tagline'], 'YEAR': str(datetime.date.today().year),
         'SITE_URL': c['site_url'], 'CANONICAL': page_url(page),
         'BANK_BLOCK': bank, 'TAX_BLOCK': tax, 'CREDIT_BLOCK': credit,
-        'JS_CONFIG': json.dumps({'formEndpoint': c['form_endpoint'], 'email': c['email'], 'phone': c['phone']}),
+        'JS_CONFIG': json.dumps({'formEndpoint': c['form_endpoint'], 'netlifyForms': c['netlify_forms'], 'email': c['email'], 'phone': c['phone']}),
     }
     for k, v in tokens.items():
         out = out.replace('{{' + k + '}}', v)

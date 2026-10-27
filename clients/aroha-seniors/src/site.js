@@ -1,6 +1,6 @@
 /* Aroha Seniors: small enhancements shared by every page.
    The site still works without this file: links, the menu (<details>), FAQ and the
-   forms' email fallback are all plain HTML. Settings arrive in window.ASCT from build.py. */
+   forms (a plain POST to Netlify Forms) are all plain HTML. Settings arrive in window.ASCT from build.py. */
 (function () {
   const cfg = window.ASCT || {};
   const d = document.documentElement;
@@ -46,14 +46,16 @@
   const sel = $('#gi-type');
   if (pick && sel && [...sel.options].some(o => o.value === pick)) sel.value = pick;
 
-  /* ---- Forms: post to the endpoint, or open the visitor's email app ---- */
+  /* ---- Forms: post to the endpoint or Netlify Forms; if that's not possible or fails,
+     open the visitor's email app with the message filled in, so nothing is lost ---- */
+  const hiddenFields = ['form-name', 'subject', 'bot-field'];
   $$('form[data-form]').forEach(form => {
     form.noValidate = true;
     const err = $('.form-err', form);
     const f = n => form.querySelector('[name="' + n + '"]');
     form.addEventListener('submit', async e => {
       e.preventDefault();
-      const data = Object.fromEntries(new FormData(form).entries());
+      const data = Object.fromEntries([...new FormData(form).entries()].filter(([k]) => !hiddenFields.includes(k)));
       const name = (data.name || '').trim(), phone = (data.phone || '').trim(), email = (data.email || '').trim();
       $$('[aria-invalid]', form).forEach(el => el.removeAttribute('aria-invalid'));
       let msg = '';
@@ -64,27 +66,37 @@
       if (msg) return;
 
       const btn = $('button[type="submit"]', form);
-      if (cfg.formEndpoint) {
+      const viaNetlify = !cfg.formEndpoint && cfg.netlifyForms && /^https?:$/.test(location.protocol);
+      if (cfg.formEndpoint || viaNetlify) {
         btn.disabled = true;
         try {
-          const res = await fetch(cfg.formEndpoint, {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(Object.assign({ form: form.dataset.form, page: location.href, sentAt: new Date().toISOString() }, data))
-          });
+          const res = cfg.formEndpoint
+            ? await fetch(cfg.formEndpoint, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(Object.assign({ form: form.dataset.form, page: location.href, sentAt: new Date().toISOString() }, data))
+              })
+            : await fetch('/', {
+                method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams(new FormData(form)).toString()
+              });
           if (!res.ok) throw new Error(res.status);
           thank(form, name, false);
         } catch (x) {
           btn.disabled = false;
+          if (viaNetlify) { emailApp(form, name, data); return; }
           err.textContent = 'Sorry, that didn\'t send. Please call or text us on ' + cfg.phone + '.';
           err.classList.add('on');
         }
       } else {
-        const lines = Object.entries(data).filter(([, v]) => String(v).trim()).map(([k, v]) => k.charAt(0).toUpperCase() + k.slice(1) + ': ' + v);
-        location.href = 'mailto:' + cfg.email + '?subject=' + encodeURIComponent('Website enquiry (' + form.dataset.form + '): ' + name) + '&body=' + encodeURIComponent(lines.join('\n'));
-        thank(form, name, true);
+        emailApp(form, name, data);
       }
     });
   });
+  function emailApp(form, name, data) {
+    const lines = Object.entries(data).filter(([, v]) => String(v).trim()).map(([k, v]) => k.charAt(0).toUpperCase() + k.slice(1) + ': ' + v);
+    location.href = 'mailto:' + cfg.email + '?subject=' + encodeURIComponent('Website enquiry (' + form.dataset.form + '): ' + name) + '&body=' + encodeURIComponent(lines.join('\n'));
+    thank(form, name, true);
+  }
   function thank(form, name, viaEmail) {
     const box = document.createElement('div');
     box.className = 'thanks';

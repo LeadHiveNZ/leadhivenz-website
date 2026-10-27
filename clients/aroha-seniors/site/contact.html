@@ -158,7 +158,10 @@
       <div class="form-card reveal d1">
         <h2>Send us a message</h2>
         <p>Fill in what you can and we'll get back to you as soon as we can.</p>
-        <form data-form="Contact" action="mailto:amelia_asct@outlook.com?subject=Website%20enquiry" method="post" enctype="text/plain">
+        <form data-form="Contact" name="contact" method="post" data-netlify="true" netlify-honeypot="bot-field">
+          <input type="hidden" name="form-name" value="contact">
+          <input type="hidden" name="subject" value="New enquiry from the Aroha Seniors website (Contact form)">
+          <p hidden><label>Leave this empty <input name="bot-field" tabindex="-1" autocomplete="off"></label></p>
           <p class="form-err" role="alert"></p>
           <div class="fgrid">
             <div class="field full"><label for="c-name">Your name</label><input id="c-name" name="name" autocomplete="name" required></div>
@@ -227,7 +230,7 @@
   </div>
 </footer>
 
-<script>window.ASCT = {"formEndpoint": "", "email": "amelia_asct@outlook.com", "phone": "022 178 0876"};</script>
+<script>window.ASCT = {"formEndpoint": "", "netlifyForms": true, "email": "amelia_asct@outlook.com", "phone": "022 178 0876"};</script>
 <script src="assets/site.js"></script>
 </body>
 </html>

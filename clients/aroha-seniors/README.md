@@ -145,12 +145,26 @@ policy, so the copy is built from web-search summaries plus the trust's logo and
 9. **FAQ answers** (cost, transport, language) are deliberately non-committal.
 10. **Credit**: the footer says "Website by LeadHive". Set `credit` to `None` in `build.py` to remove it.
 
-## Forms
+## Forms (Netlify Forms)
 
-Both forms (Get involved, Contact) post JSON to `form_endpoint` in `build.py`. When it's blank
-(as now), they open the visitor's email app addressed to Amelia with the message filled in.
-In Lovable, point it at the project's enquiry route (same Resend pattern as the trade sites) and add
-amelia_asct@outlook.com as a recipient.
+Both forms (Contact, Get involved) are Netlify forms: `name="contact"` / `name="get-involved"`,
+`data-netlify="true"`, a hidden `form-name`, a hidden `subject` (used as the notification email's
+subject) and a `bot-field` honeypot. `site.js` posts them to `/` in the background and shows the
+thank-you box. With JavaScript off they post as a normal form and Netlify shows its own thank-you page.
+
+If a post fails (form detection off, offline) or the page is opened as a local file, the form opens
+the visitor's email app addressed to Amelia with the message filled in, so nothing is lost.
+`form_endpoint` in `build.py` overrides all this with a JSON POST if ever needed.
+
+Netlify setup (once per site):
+
+1. Site configuration, Forms: **Enable form detection**. Do this before deploying; detection runs at
+   deploy time, so if it's switched on afterwards, deploy the zip again.
+2. Deploy. The Forms tab should list `contact` and `get-involved`.
+3. Site configuration, Notifications, Emails and webhooks, Form submission notifications:
+   add an email notification for any form to **amelia_asct@outlook.com**, and one to
+   **hello@leadhivenz.com** so LeadHive sees the enquiries too.
+4. Send a test from each form. The first notification can land in junk: ask Amelia to mark it safe.
 
 ## Domain and hosting
 
