@@ -34,6 +34,7 @@ CONFIG = {
     'kai_role': 'Kai Manager',
     'kai_phone': '022 605 2361',
     'kai_phone_intl': '+64226052361',
+    'site_url': 'https://arohaseniorscharitabletrust.com',   # live domain (bought on Cloudflare 27/10/2026)
     'charity_no': 'CC63126',
     'register_url': 'https://register.charities.govt.nz/Charity/CC63126',
     'tagline': 'To serve with Aroha',
@@ -98,9 +99,14 @@ def json_ld(c):
         'address': {'@type': 'PostalAddress', 'addressLocality': 'Flat Bush', 'addressRegion': 'Auckland', 'addressCountry': 'NZ'},
         'areaServed': 'South and East Auckland, New Zealand',
         'identifier': {'@type': 'PropertyValue', 'propertyID': 'NZ Charities Register', 'value': c['charity_no']},
+        'url': c['site_url'] + '/', 'logo': c['site_url'] + '/assets/img/logo-full.jpg',
         'sameAs': [c['facebook'], c['register_url']],
     }
     return '<script type="application/ld+json">\n' + json.dumps(data, indent=2, ensure_ascii=False) + '\n</script>'
+
+
+def page_url(page):
+    return CONFIG['site_url'] + '/' + ('' if page == 'index' else f'{page}.html')
 
 
 def render(page, key, title, desc, inline):
@@ -128,6 +134,7 @@ def render(page, key, title, desc, inline):
         'KAI_PHONE': f'<span class="nw">{c["kai_phone"]}</span>', 'KAI_TEL': 'tel:' + c['kai_phone_intl'],
         'KAI_INITIALS': ''.join(w[0] for w in c['kai_name'].split())[:2].upper(),
         'TAGLINE': c['tagline'], 'YEAR': str(datetime.date.today().year),
+        'SITE_URL': c['site_url'], 'CANONICAL': page_url(page),
         'BANK_BLOCK': bank, 'TAX_BLOCK': tax, 'CREDIT_BLOCK': credit,
         'JS_CONFIG': json.dumps({'formEndpoint': c['form_endpoint'], 'email': c['email'], 'phone': c['phone']}),
     }
@@ -175,6 +182,11 @@ def main():
         (SITE / f'{page}.html').write_text(render(page, key, title, desc, inline=False), encoding='utf-8')
         (PREVIEW / f'{page}.html').write_text(render(page, key, title, desc, inline=True), encoding='utf-8')
         print(f'built {page}.html  (preview {(PREVIEW / f"{page}.html").stat().st_size // 1024} KB)')
+    # search engines: where the pages are, and that they may be crawled
+    urls = ''.join(f'  <url><loc>{page_url(p)}</loc></url>\n' for p, *_ in PAGES)
+    (SITE / 'sitemap.xml').write_text('<?xml version="1.0" encoding="UTF-8"?>\n'
+                                      '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' + urls + '</urlset>\n')
+    (SITE / 'robots.txt').write_text(f"User-agent: *\nAllow: /\n\nSitemap: {CONFIG['site_url']}/sitemap.xml\n")
 
 
 if __name__ == '__main__':

@@ -152,10 +152,30 @@ Both forms (Get involved, Contact) post JSON to `form_endpoint` in `build.py`. W
 In Lovable, point it at the project's enquiry route (same Resend pattern as the trade sites) and add
 amelia_asct@outlook.com as a recipient.
 
+## Domain and hosting
+
+- Domain: **arohaseniorscharitabletrust.com**, bought by Joe on Cloudflare (27/10/2026). Cloudflare
+  Registrar domains must keep Cloudflare's nameservers, so DNS stays there and points at Netlify.
+- Hosting: Netlify site `aroha-seniors-preview` (https://aroha-seniors-preview.netlify.app).
+- `site_url` in `build.py` sets the canonical links, share image, `sitemap.xml` and `robots.txt`.
+
+Cloudflare DNS (both records **DNS only**, grey cloud, not proxied, so Netlify can issue the HTTPS certificate):
+
+| Type  | Name | Content                              |
+|-------|------|--------------------------------------|
+| A     | `@`  | `75.2.60.5` (Netlify's load balancer; use the value Netlify shows if it differs) |
+| CNAME | `www`| `aroha-seniors-preview.netlify.app`  |
+
+Netlify: Domain management, Add a domain you already own, `arohaseniorscharitabletrust.com`.
+Then HTTPS, Verify DNS configuration, and let it provision the certificate.
+
+Two zips: the **preview** zip adds a `_headers` file (`X-Robots-Tag: noindex`) so the preview stays out
+of Google. The **live** zip is `site/` as is. Deploy the live one when the domain goes on.
+
 ## Launch checklist
 
 1. Confirm the items above with Amelia. Add photos and the bank account. Run `python3 build.py`.
-2. Host `site/` (Netlify Drop, Lovable, or any static host). Attach their domain with HTTPS.
+2. Deploy the live zip to Netlify and attach the domain (above).
 3. Wire `form_endpoint`, rebuild, and send a test enquiry from each form.
 4. Add the website link to their Facebook page and Google Business Profile.
 5. Optional: apply for Google Ad Grants through Google for Nonprofits. Registered NZ charities with a
