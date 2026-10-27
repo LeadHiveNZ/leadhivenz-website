@@ -1,5 +1,5 @@
 const L = require('../layout');
-const { S, sectionHead } = L;
+const { S, secHead } = L;
 
 const allSuburbs = S.areas.flatMap((a) => a.suburbs);
 
@@ -17,45 +17,48 @@ module.exports = {
       areaServed: allSuburbs.map((n) => ({ '@type': 'Place', name: `${n}, QLD` })),
     },
   ],
+  preload: L.pageHeroPreload('area-coast', true),
   main: `
 ${L.pageHero({
     crumb: 'Service areas',
     h1: 'Air conditioning across the Sunshine Coast',
-    lede: 'Based in Pacific Paradise, right in the middle of the Coast, Luke covers everywhere from Caloundra to Noosa and up into the hinterland. If your suburb isn’t listed below, call anyway: chances are he can help.',
-    block: `<div class="route-card"><p class="route-title">The Coast, north to south</p>${L.route({ light: true })}</div>`,
-    points: ['Caloundra to Noosa', 'Hinterland towns', 'Homes &amp; businesses'],
+    lede: 'I’m based in Pacific Paradise, right in the middle of the Coast, and I cover everywhere from Caloundra to Noosa and up into the hinterland. If your suburb isn’t listed, call anyway: chances are I can help.',
+    photo: { name: 'area-coast', alt: 'Aerial view of the Sunshine Coast: sandbanks, river mouth and the coastline' },
+    full: true,
   })}
 
 <section class="section" aria-labelledby="areas-title">
   <div class="container">
-    ${sectionHead({ eyebrow: 'Where we work', title: 'Suburbs we cover', lede: 'Installs, repairs, hydro cleans and servicing are available in every suburb below, plus the streets and estates in between.', id: 'areas-title' })}
-    <div class="area-grid">
-      ${S.areas.map((a) => `<article class="area-card" aria-labelledby="area-${a.key}">
+    ${secHead({ title: 'Suburbs I cover', id: 'areas-title', intro: 'Installs, repairs, hydro cleans and servicing in every suburb below, plus the streets and estates in between.' })}
+    <div class="regions">
+      ${S.areas.map((a) => `<article class="region" aria-labelledby="area-${a.key}">
         <h3 id="area-${a.key}">${a.title}</h3>
-        <p class="area-range">${a.range}</p>
+        <p class="region-range">${a.range}</p>
         <p>${a.text}</p>
-        <ul class="chips">${a.suburbs.map((n) => `<li class="chip${n === S.locality ? ' chip--base' : ''}">${n}${n === S.locality ? ' · our base' : ''}</li>`).join('')}</ul>
+        <ul class="region-list">${a.suburbs.map((n) => `<li${n === S.locality ? ' class="is-base"' : ''}>${n}${n === S.locality ? ' (home base)' : ''}</li>`).join('')}</ul>
       </article>`).join('\n      ')}
     </div>
   </div>
 </section>
 
-<section class="section band-deep" aria-labelledby="local-title">
-  <div class="container blocks">
-    <div class="block">
-      <h3 id="local-title">Built for coastal conditions</h3>
-      <p>Salt air and humidity are tough on air conditioners. Outdoor units corrode faster near the beach, and coils clog sooner. Luke recommends the right placement and protection on new installs, and regular <a href="/maintenance/">servicing</a> and <a href="/hydro-cleaning/">hydro cleans</a> to keep coastal systems healthy.</p>
+<section class="section on-dark" aria-labelledby="local-title">
+  <div class="container">
+    ${secHead({ title: 'Coast and hinterland, sorted', id: 'local-title' })}
+    <div class="dark-cols">
+      <div>
+        <h3>Built for coastal conditions</h3>
+        <p>Salt air and humidity are tough on air conditioners. Outdoor units corrode faster near the beach, and coils clog sooner. I recommend the right placement and protection on new installs, and regular <a href="/maintenance/">servicing</a> and <a href="/hydro-cleaning/">hydro cleans</a> to keep coastal systems healthy.</p>
+      </div>
+      <div>
+        <h3>Hinterland heat</h3>
+        <p>Up the range in Nambour, Palmwoods, Montville and Maleny, summers are still and sticky and winter nights get properly cool. A reverse-cycle system handles both, and I can size one to suit older Queenslanders and new builds alike.</p>
+      </div>
     </div>
-    <div class="block">
-      <h3>Hinterland heat, sorted</h3>
-      <p>Up the range in Nambour, Palmwoods, Montville and Maleny, summers are still and sticky and winter nights get properly cool. A reverse-cycle system handles both, and Luke can size one to suit older Queenslanders and new builds alike.</p>
-    </div>
-  </div>
-  <div class="container mt-lg">
-    ${L.ctaBand({ title: 'Not sure if you’re covered?', text: 'Give Luke a call. If he can’t help, he’ll tell you straight away.' })}
   </div>
 </section>
 
-${L.quoteForm({ source: 'Service areas', heading: 'Get a free quote in your suburb', lede: `Tell Luke your suburb and what you need, and he’ll call you back. Or call ${L.NB_PHONE}.` })}
+${L.ctaOrange({ title: 'Not sure if you’re covered? Call Luke', text: 'If I can’t help, I’ll tell you straight away. Monday to Saturday, 7am to 5pm.' })}
+
+${L.quoteForm({ source: 'Service areas', heading: 'Get a free quote in your suburb', lede: `Tell me your suburb and what you need, and I’ll call you back. Or call ${L.NB_PHONE}.` })}
 `,
 };

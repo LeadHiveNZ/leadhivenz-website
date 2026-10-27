@@ -57,6 +57,7 @@
   "luke-cleaning-coil": {
     "widths": [
       560,
+      720,
       900,
       1120
     ],
@@ -65,16 +66,6 @@
     "w": 1120,
     "h": 1400
   },
-  "black-split": {
-    "widths": [
-      560,
-      900
-    ],
-    "aspect": "4:5",
-    "source": "dbd3e8_4844daecc0cf43e0acab396dba3b5122~mv2.png",
-    "w": 900,
-    "h": 1125
-  },
   "repair-board": {
     "widths": [
       560,
@@ -82,16 +73,6 @@
     ],
     "aspect": "4:5",
     "source": "dbd3e8_301188725a4141579d50e00cb8caeb08~mv2.png",
-    "w": 900,
-    "h": 1125
-  },
-  "outdoor-daikin": {
-    "widths": [
-      560,
-      900
-    ],
-    "aspect": "4:5",
-    "source": "dbd3e8_24ed7d48570349678bc4fb875c7b11a8~mv2.jpg",
     "w": 900,
     "h": 1125
   },
@@ -158,6 +139,7 @@
   "hydro-before": {
     "widths": [
       700,
+      900,
       1200,
       1600
     ],
@@ -169,6 +151,7 @@
   "hydro-after": {
     "widths": [
       700,
+      900,
       1200,
       1600
     ],
@@ -200,6 +183,7 @@
   },
   "area-coast": {
     "widths": [
+      900,
       1240,
       1600
     ],
@@ -255,5 +239,77 @@
     "h": 123,
     "label": "ARCtick",
     "source": "dbd3e8_deb9eea600fc4998876130b21d2ecc13~mv2.png"
+  },
+  "hero-installations": {
+    "widths": [
+      600,
+      900,
+      1200,
+      1600
+    ],
+    "aspect": "3:2",
+    "source": "dbd3e8_4844daecc0cf43e0acab396dba3b5122~mv2.png",
+    "w": 1600,
+    "h": 1067
+  },
+  "hero-repairs": {
+    "widths": [
+      600,
+      900,
+      1200,
+      1600
+    ],
+    "aspect": "3:2",
+    "source": "dbd3e8_301188725a4141579d50e00cb8caeb08~mv2.png",
+    "w": 1600,
+    "h": 1067
+  },
+  "hero-hydro": {
+    "widths": [
+      600,
+      900,
+      1200,
+      1600
+    ],
+    "aspect": "3:2",
+    "source": "dbd3e8_d79928f77f644034959fa0f166ff796e~mv2.jpg",
+    "w": 1600,
+    "h": 1066
+  },
+  "hero-maintenance": {
+    "widths": [
+      600,
+      900,
+      1200,
+      1600
+    ],
+    "aspect": "3:2",
+    "source": "dbd3e8_24ed7d48570349678bc4fb875c7b11a8~mv2.jpg",
+    "w": 1600,
+    "h": 1067
+  },
+  "hero-about": {
+    "widths": [
+      600,
+      900,
+      1200,
+      1600
+    ],
+    "aspect": "3:2",
+    "source": "dbd3e8_0324a86c541c40e5a109102c8bbc874a~mv2.png",
+    "w": 1600,
+    "h": 1067
+  },
+  "hero-contact": {
+    "widths": [
+      600,
+      900,
+      1200,
+      1600
+    ],
+    "aspect": "3:2",
+    "source": "dbd3e8_99869515a89d4cfa8ca81f5b2ff3d770~mv2.png",
+    "w": 1600,
+    "h": 1067
   }
 }

@@ -51,12 +51,12 @@ module.exports = {
   areas: [
     {
       key: 'north', title: 'Northern beaches', range: 'Noosa to Pacific Paradise',
-      text: 'Beachside homes from Noosa down to Mudjimba cop salt air, sand and humidity all year round. That is hard on outdoor units and coils, so regular servicing and hydro cleans pay off here.',
+      text: 'Beachside homes from Noosa down to Mudjimba cop salt air, sand and humidity all year round. That’s hard on outdoor units and coils, so regular servicing and hydro cleans pay off here.',
       suburbs: ['Noosa Heads', 'Noosaville', 'Tewantin', 'Sunshine Beach', 'Peregian Beach', 'Peregian Springs', 'Coolum Beach', 'Yaroomba', 'Marcoola', 'Mudjimba', 'Twin Waters', 'Pacific Paradise'],
     },
     {
       key: 'central', title: 'Central Coast', range: 'Bli Bli to Sippy Downs',
-      text: 'Just down the road from our Pacific Paradise base. From Maroochydore units and Mooloolaba holiday lets to family homes in Buderim and Sippy Downs.',
+      text: 'Just down the road from my Pacific Paradise base. From Maroochydore units and Mooloolaba holiday lets to family homes in Buderim and Sippy Downs.',
       suburbs: ['Bli Bli', 'Maroochydore', 'Kuluin', 'Alexandra Headland', 'Mooloolaba', 'Mountain Creek', 'Buderim', 'Forest Glen', 'Sippy Downs'],
     },
     {
@@ -66,7 +66,7 @@ module.exports = {
     },
     {
       key: 'hinterland', title: 'Hinterland', range: 'Nambour to Maleny',
-      text: 'Hot, still summer days and cool winter nights. A reverse-cycle system earns its keep in the hinterland, and Luke is happy to make the drive up the range.',
+      text: 'Hot, still summer days and cool winter nights. A reverse-cycle system earns its keep in the hinterland, and I’m happy to make the drive up the range.',
       suburbs: ['Nambour', 'Yandina', 'Eumundi', 'Woombye', 'Palmwoods', 'Mapleton', 'Montville', 'Maleny'],
     },
   ],

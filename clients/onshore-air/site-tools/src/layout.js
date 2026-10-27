@@ -18,25 +18,33 @@ const NB_PHONE = S.phone.display.replace(/ /g, '\u00A0');
 const YEAR = 2026;
 
 /* ---------- images ---------- */
-function picture(name, { alt, sizes, eager = false, priority = false, cls = '', imgCls = '' }) {
+// Phone weight cap: below 600px every photo gets an extra WebP <source> listing only the widths up to PHONE_CAP, so a
+// 3x phone downloads a ~900px file instead of the 1100-2000px desktop variants (no visible loss at phone size).
+const PHONE_MEDIA = '(max-width: 599px)';
+const PHONE_CAP = 900;
+const widthsUpTo = (m, cap) => { const w = m.widths.filter((x) => x <= cap); return w.length ? w : [m.widths[0]]; };
+const srcset = (name, widths, ext) => widths.map((w) => `/assets/img/${name}-${w}.${ext} ${w}w`).join(', ');
+function picture(name, { alt, sizes, eager = false, priority = false, cls = '', imgCls = '', cap = PHONE_CAP }) {
   const m = manifest[name];
   if (!m) throw new Error(`image "${name}" missing from image-manifest.json (run node images.js)`);
-  const set = (ext) => m.widths.map((w) => `/assets/img/${name}-${w}.${ext} ${w}w`).join(', ');
   const fallback = m.widths[m.widths.length > 2 ? 1 : 0];
   const loading = eager ? (priority ? ' fetchpriority="high"' : '') : ' loading="lazy"';
-  return `<picture${cls ? ` class="${cls}"` : ''}><source type="image/webp" srcset="${set('webp')}" sizes="${sizes}"><img src="/assets/img/${name}-${fallback}.jpg" srcset="${set('jpg')}" sizes="${sizes}" width="${m.w}" height="${m.h}" alt="${esc(alt)}"${loading} decoding="async"${imgCls ? ` class="${imgCls}"` : ''}></picture>`;
+  const capped = widthsUpTo(m, cap);
+  const phone = capped.length < m.widths.length ? `<source media="${PHONE_MEDIA}" type="image/webp" srcset="${srcset(name, capped, 'webp')}" sizes="${sizes}">` : '';
+  return `<picture${cls ? ` class="${cls}"` : ''}>${phone}<source type="image/webp" srcset="${srcset(name, m.widths, 'webp')}" sizes="${sizes}"><img src="/assets/img/${name}-${fallback}.jpg" srcset="${srcset(name, m.widths, 'jpg')}" sizes="${sizes}" width="${m.w}" height="${m.h}" alt="${esc(alt)}"${loading} decoding="async"${imgCls ? ` class="${imgCls}"` : ''}></picture>`;
 }
-function preloadImage(name, sizes, media = '') {
+// Preloads for a hero image (media-scoped so the browser fetches exactly what the <picture> will pick)
+function preloadImage(name, sizes, media = '', capped = false) {
   const m = manifest[name];
-  const set = m.widths.map((w) => `/assets/img/${name}-${w}.webp ${w}w`).join(', ');
-  return `<link rel="preload" as="image" type="image/webp" imagesrcset="${set}" imagesizes="${sizes}"${media ? ` media="${media}"` : ''} fetchpriority="high">`;
+  return `<link rel="preload" as="image" type="image/webp" imagesrcset="${srcset(name, capped ? widthsUpTo(m, PHONE_CAP) : m.widths, 'webp')}" imagesizes="${sizes}"${media ? ` media="${media}"` : ''} fetchpriority="high">`;
 }
+const preloadHero = (name, sizes) => `${preloadImage(name, sizes, PHONE_MEDIA, true)}\n${preloadImage(name, sizes, '(min-width: 600px)')}`;
 // Art-directed picture: `wide` from the media query up, `narrow` below it (both WebP + JPEG, intrinsic sizes on each source)
 function artPicture({ wide, narrow, media, wideSizes, narrowSizes, alt, cls = '', eager = false, priority = false }) {
   const w = manifest[wide], n = manifest[narrow];
-  const set = (name, m, ext) => m.widths.map((x) => `/assets/img/${name}-${x}.${ext} ${x}w`).join(', ');
   const loading = eager ? (priority ? ' fetchpriority="high"' : '') : ' loading="lazy"';
-  return `<picture${cls ? ` class="${cls}"` : ''}><source media="${media}" type="image/webp" srcset="${set(wide, w, 'webp')}" sizes="${wideSizes}" width="${w.w}" height="${w.h}"><source media="${media}" srcset="${set(wide, w, 'jpg')}" sizes="${wideSizes}" width="${w.w}" height="${w.h}"><source type="image/webp" srcset="${set(narrow, n, 'webp')}" sizes="${narrowSizes}"><img src="/assets/img/${narrow}-${n.widths[1] || n.widths[0]}.jpg" srcset="${set(narrow, n, 'jpg')}" sizes="${narrowSizes}" width="${n.w}" height="${n.h}" alt="${esc(alt)}"${loading} decoding="async"></picture>`;
+  const nCap = widthsUpTo(n, PHONE_CAP);
+  return `<picture${cls ? ` class="${cls}"` : ''}><source media="${media}" type="image/webp" srcset="${srcset(wide, w.widths, 'webp')}" sizes="${wideSizes}" width="${w.w}" height="${w.h}"><source media="${media}" srcset="${srcset(wide, w.widths, 'jpg')}" sizes="${wideSizes}" width="${w.w}" height="${w.h}"><source media="${PHONE_MEDIA}" type="image/webp" srcset="${srcset(narrow, nCap, 'webp')}" sizes="${narrowSizes}"><source type="image/webp" srcset="${srcset(narrow, n.widths, 'webp')}" sizes="${narrowSizes}"><img src="/assets/img/${narrow}-${n.widths[1] || n.widths[0]}.jpg" srcset="${srcset(narrow, n.widths, 'jpg')}" sizes="${narrowSizes}" width="${n.w}" height="${n.h}" alt="${esc(alt)}"${loading} decoding="async"></picture>`;
 }
 // Manufacturer / licence logos exported by images.js (PNG, native resolution)
 function logoImg(name, { alt = '', cls = '', eager = false } = {}) {
@@ -67,15 +75,12 @@ const seal = (id = 'seal-arc') => `<svg class="seal" viewBox="0 0 120 120" width
 
 /* ---------- small pieces ---------- */
 const callBtn = (cls = '', label = '') => `<a class="btn btn-call ${cls}" href="${TEL}" data-phone-link>${icon('phone')}<span>${label ? `<span class="call-word">${label} </span>` : ''}${PHONE}</span></a>`;
-const quoteBtn = (cls = 'btn-line', href = '#quote', label = 'Get a free quote') => `<a class="btn ${cls}" href="${href}">${label}</a>`;
+const quoteBtn = (cls = 'btn-ghost', href = '#quote', label = 'Get a free quote') => `<a class="btn ${cls}" href="${href}">${label}</a>`;
 const status = (cls = '') => `<p class="status${cls ? ' ' + cls : ''}" data-status><span class="status-dot" aria-hidden="true"></span><span class="status-text">${S.hoursShort} · answered by ${S.owner}</span></p>`;
-const checklist = (items, cls = '') => `<ul class="checklist${cls ? ' ' + cls : ''}">${items.map((t) => `<li><span class="check">${icon('check')}</span><span>${t}</span></li>`).join('')}</ul>`;
-const eyebrow = (t, cls = '') => `<p class="eyebrow${cls ? ' ' + cls : ''}">${t}</p>`;
-// Section opener: the logo-stripe rule, then the eyebrow, h2 and lede. The stripe rule is a signature, not wallpaper:
-// it opens sections on plain Paper only. Paper-deep and navy bands already divide themselves, so they skip it.
-const stripeRule = () => '<span class="rule" aria-hidden="true"></span>';
-const sectionHead = ({ eyebrow: e, title, lede, id, light = false, rule = !light }) =>
-  `<div class="section-head">${e && rule ? stripeRule() : ''}${e ? eyebrow(e, light ? 'eyebrow--light' : '') : ''}<h2${id ? ` id="${id}"` : ''}>${title}</h2>${lede ? `<p class="lede">${lede}</p>` : ''}</div>`;
+// Plain checklist with orange ticks (no rules)
+const ticks = (items, cls = '') => `<ul class="ticks${cls ? ' ' + cls : ''}">${items.map((t) => `<li>${icon('check')}<span>${t}</span></li>`).join('')}</ul>`;
+// Section heading: caps H2 and, at most, one short line under it
+const secHead = ({ title, id, intro = '', cls = '' }) => `<div class="sec-head${cls ? ' ' + cls : ''}"><h2${id ? ` id="${id}"` : ''}>${title}</h2>${intro ? `<p>${intro}</p>` : ''}</div>`;
 
 /* ---------- header / footer / call bar ---------- */
 function navLinks(current) {
@@ -134,43 +139,74 @@ function footer(quoteHref) {
 const callBar = (quoteHref) => `<aside class="call-bar" aria-label="Quick contact">${callBtn('', 'Call')}${quoteBtn('btn-ghost', quoteHref, 'Free quote')}</aside>`;
 
 /* ---------- sections ---------- */
-// Inner-page hero, same composition as the home hero: Paper, breadcrumb as the eyebrow, Bricolage h1, lede, then the
-// page photo (stripe field at its bottom-left corner) or a content block, then the CTA row, status line and key points.
-const HERO_SIZES = '(min-width: 1240px) 480px, (min-width: 900px) 40vw, calc(100vw - 64px)';
-function pageHero({ crumb, h1, lede, photo, block = '', points = [], quoteHref = '#quote' }) {
-  const media = photo
-    ? `<figure class="hero-media"><div class="hero-photo"><span class="stripe-field" aria-hidden="true"></span>${picture(photo.name, { alt: photo.alt, sizes: HERO_SIZES, eager: true, priority: true, cls: 'photo', imgCls: photo.imgCls || '' })}</div></figure>`
-    : `<div class="hero-media hero-media--block"><span class="stripe-field" aria-hidden="true"></span>${block}</div>`;
-  return `<section class="hero hero--page" aria-labelledby="page-title">
-  <div class="container hero-grid">
-    <div class="hero-copy">
+// Inner-page hero: the home hero's language at 420-520px. A 3:2 photo fills the right ~58% behind the navy gradient
+// (full width when `full`, for the landscape aerial), breadcrumb as small white text, caps H1, a short lede, one
+// orange call button plus a quote text link, and the open/closed status. Phones: photo full width, copy below on navy.
+const PAGE_HERO_SIZES = '(min-width: 900px) 58vw, 100vw';
+const PAGE_HERO_SIZES_FULL = '100vw';
+function pageHero({ crumb, h1, lede, photo, full = false, quoteHref = '#quote' }) {
+  return `<section class="masthead masthead--page${full ? ' masthead--full' : ''}" aria-labelledby="page-title">
+  ${picture(photo.name, { alt: photo.alt, sizes: full ? PAGE_HERO_SIZES_FULL : PAGE_HERO_SIZES, eager: true, priority: true, cls: 'masthead-photo', imgCls: photo.pos ? `pos-${photo.pos}` : '' })}
+  <div class="container masthead-inner">
+    <div class="masthead-copy">
       <nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/">Home</a></li><li aria-current="page">${crumb}</li></ol></nav>
       <h1 id="page-title">${h1}</h1>
-      <p class="hero-lede">${lede}</p>
-    </div>
-    ${media}
-    <div class="hero-act">
-      <div class="cta-row">${callBtn('', 'Call')}${quoteBtn('btn-line', quoteHref)}</div>
-      ${status()}
-      ${points.length ? `<p class="hero-meta hero-points">${points.map((pt) => `<span>${pt}</span>`).join('<span class="sep" aria-hidden="true">·</span>')}</p>` : ''}
+      <p class="masthead-lede">${lede}</p>
+      <div class="masthead-cta">
+        ${callBtn('btn-xl', 'Call Luke')}
+        <a class="masthead-link" href="${quoteHref}">or get a free quote${icon('arrow')}</a>
+      </div>
+      ${status('status--light')}
     </div>
   </div>
 </section>`;
 }
+const pageHeroPreload = (name, full = false) => preloadHero(name, full ? PAGE_HERO_SIZES_FULL : PAGE_HERO_SIZES);
 
-// Trust card: white, overlapping the hero's bottom edge, five cells that each carry a real mark (ARCtick logo, Google
-// stars, a drawn workmanship seal, a shield, a years badge). 2 + 3 on phones, one row from 760px.
-function trustCard() {
+// Text cards: title + one paragraph each, 2, 3 or 4 across. tone 'white' sits on a grey band, 'grey' on white.
+function infoCards(items, { cols = 2, tone = 'grey' } = {}) {
+  return `<ul class="info-cards info-cards--${cols} info-cards--${tone}">${items.map(([t, d]) => `<li class="info-card"><h3>${t}</h3><p>${d}</p></li>`).join('')}</ul>`;
+}
+// Process steps with chunky numbered badges (44px navy circle, white number)
+function steps(items) {
+  return `<ol class="steps">${items.map(([t, d], i) => `<li class="step"><span class="step-num" aria-hidden="true">${i + 1}</span><h3>${t}</h3><p>${d}</p></li>`).join('')}</ol>`;
+}
+// Photo grid with short plain captions
+function photoGrid(items, { sizes = '(min-width: 900px) 384px, calc(50vw - 24px)' } = {}) {
+  return `<ul class="photo-grid">${items.map(([img, alt, cap]) => `<li><figure>${picture(img, { alt, sizes })}<figcaption>${cap}</figcaption></figure></li>`).join('')}</ul>`;
+}
+// The four service photo cards (home and 404)
+const SERVICE_CARDS = [
+  ['card-installations', '/installations/', 'Installations', 'Split systems, multi-head and ducted, sized for your home and fitted neatly.', 'White split system installed above a bedroom window'],
+  ['card-repairs', '/repairs/', 'Repairs', 'Not cooling, leaking or showing an error code? I find the fault and quote before I start.', 'Control board and wiring of an air conditioner opened up for diagnosis'],
+  ['card-hydro', '/hydro-cleaning/', 'Hydro cleaning', 'A full wash of the coil, fan and drain tray. $180 + GST per standard wall split.', 'Luke washing the coil of a split system, with a cleaning bag catching the water'],
+  ['card-maintenance', '/maintenance/', 'Maintenance', 'A yearly service that keeps your system efficient and picks up problems early.', 'Daikin outdoor unit installed beside a brick home'],
+];
+const CARD_SIZES = '(min-width: 1240px) 282px, (min-width: 1100px) calc(25vw - 28px), (min-width: 640px) calc(50vw - 52px), calc(100vw - 32px)';
+function serviceCards(exclude = '') {
+  return `<ul class="cards">
+      ${SERVICE_CARDS.filter((c) => c[1] !== exclude).map(([img, href, title, text, alt]) => `<li class="card">
+        ${picture(img, { alt, sizes: CARD_SIZES, cls: 'card-photo' })}
+        <div class="card-body">
+          <h3><a href="${href}">${title}</a></h3>
+          <p>${text}</p>
+          <span class="card-more" aria-hidden="true">Learn more${icon('arrow')}</span>
+        </div>
+      </li>`).join('\n      ')}
+    </ul>`;
+}
+
+function trustCard({ flat = false } = {}) {
   const cell = (mark, title, sub) => `<li><span class="trust-mark">${mark}</span><span class="trust-text"><strong>${title}</strong>${sub}</span></li>`;
-  return `<section class="trust" aria-label="Licence, rating and guarantee">
-  <div class="container"><ul class="trust-card">
+  return `<${flat ? 'div' : 'section'} class="trust${flat ? ' trust--flat' : ''}"${flat ? '' : ' aria-label="Licence, rating and guarantee"'}>
+  <div class="${flat ? '' : 'container'}"><ul class="trust-card">
     ${cell(logoImg('arc', { alt: 'ARCtick' }), 'ARC licence', S.licence)}
     ${cell(`${googleG()}${stars()}`, '5.0 rating', 'on Google')}
     ${cell(seal('seal-arc-trust'), 'Workmanship', 'guaranteed')}
     ${cell(icon('shield'), 'Licensed', '&amp; insured')}
     ${cell('<span class="badge-num" aria-hidden="true">15+</span>', '15+ years', 'on the tools')}
   </ul></div>
-</section>`;
+</${flat ? 'div' : 'section'}>`;
 }
 
 // Brand strip: the real manufacturer logos from Luke's current site, greyscale until hovered.
@@ -184,11 +220,6 @@ function brandStrip({ title = 'Brands Luke installs and services' } = {}) {
     <p class="logo-note">Plus Mitsubishi Electric, Panasonic, LG and most other major brands.</p>
   </div>
 </section>`;
-}
-
-function brandBadges(note = true) {
-  const text = typeof note === 'string' ? note : `Plus servicing and cleaning for ${S.otherBrands} and most other major brands.`;
-  return `<ul class="brands">${S.brands.map((b) => `<li class="brand-badge">${b}</li>`).join('')}</ul>${note ? `<p class="brands-note">${text}</p>` : ''}`;
 }
 
 // Reviews: Google-style cards (stars, the review in plain text, first name, "Google review") with the rating and an
@@ -228,49 +259,46 @@ function beforeAfter({ sizes = '100vw' } = {}) {
 </div>`;
 }
 
+// Full-bleed navy band with the drag comparison and the hydro clean price (home and hydro page)
+function hydroBand({ title = 'What a hydro clean gets out', intro = 'Same unit, before and after. A filter clean only gets the filter. A hydro clean washes the coil, fan and drain tray, where the mould and grime build up.', id = 'hydro-title', link = true } = {}) {
+  return `<section class="hydro on-dark" aria-labelledby="${id}">
+  <div class="container hydro-head">
+    <div>
+      <h2 id="${id}">${title}</h2>
+      <p>${intro}</p>
+    </div>
+    <p class="price-tag"><strong>$180</strong><span>+ GST per standard wall split</span></p>
+  </div>
+  ${beforeAfter()}
+  <div class="container hydro-foot">
+    <p>Drag the handle to compare.</p>
+    <div class="cta-row">
+      <a class="btn btn-call" href="#quote">Book a hydro clean</a>
+      ${link ? `<a class="text-link" href="/hydro-cleaning/">How a hydro clean works${icon('arrow')}</a>` : ''}
+    </div>
+  </div>
+</section>`;
+}
+
 // Closing CTA: a solid orange band with navy text, the phone as a big Barlow Condensed link, and the hours
-function ctaOrange({ title = 'Need a quote or a repair? Call Luke' } = {}) {
+function ctaOrange({ title = 'Need a quote or a repair? Call Luke', text = 'Monday to Saturday, 7am to 5pm. Sunday closed.' } = {}) {
   return `<section class="cta-orange" aria-labelledby="cta-title">
   <div class="container cta-orange-inner">
-    <div><h2 id="cta-title">${title}</h2><p>Monday to Saturday, 7am to 5pm. Sunday closed.</p></div>
+    <div><h2 id="cta-title">${title}</h2><p>${text}</p></div>
     <a class="big-phone" href="${TEL}" data-phone-link>${icon('phone')}${PHONE}</a>
   </div>
 </section>`;
 }
 
-function route({ light = false } = {}) {
-  return `<ol class="route${light ? ' route--light' : ''}">${S.route.map((r) => r === S.locality
-    ? `<li class="is-base"><span class="route-name">${r}</span><small>Home base</small></li>`
-    : `<li><span class="route-name">${r}</span></li>`).join('')}</ol>`;
-}
-
-// CTA band: a Paper-deep strip between 1px ink rules (never a navy box)
-function ctaBand({ title, text, quoteHref = '#quote' }) {
-  return `<div class="cta-band">
-  <div class="cta-band-copy"><h2>${title}</h2><p>${text}</p></div>
-  <div class="cta-band-actions">${callBtn('', 'Call')}${quoteBtn('btn-line', quoteHref)}</div>
-</div>`;
-}
-
-// FAQ: heading left, plain ruled rows right; Bricolage questions with a plus that turns into a minus
-function faq(items, { title = 'Questions people ask', eyebrowText = 'FAQ', sand = false } = {}) {
-  return `<section class="section${sand ? ' band-deep' : ''}" aria-labelledby="faq-title">
+// FAQ accordion: each question a white box on a grey band (or grey on white); plus turns to minus when open
+function faq(items, { title = 'Questions people ask', grey = true } = {}) {
+  return `<section class="section faq-section${grey ? ' band-grey' : ''}" aria-labelledby="faq-title">
   <div class="container faq-layout">
-    ${sectionHead({ eyebrow: eyebrowText, title, id: 'faq-title', rule: !sand })}
+    ${secHead({ title, id: 'faq-title', intro: `Something else? Call Luke on ${PHONE}.` })}
     <div class="faq">${items.map(([q, a]) => `<details><summary><span>${q}</span><span class="pm" aria-hidden="true"></span></summary><div class="faq-answer"><p>${a}</p></div></details>`).join('')}</div>
   </div>
 </section>`;
 }
-
-// Ruled rows in the language of the home services index: optional Bricolage number, h3, one paragraph.
-// cols: 1 (stacked), 2 (two ruled columns from 900px), 'steps' (three columns with big numbers from 900px).
-function rows(items, { numbered = true, cols = 1, cls = '' } = {}) {
-  const tag = numbered ? 'ol' : 'ul';
-  const mod = cols === 'steps' ? ' rows--steps' : cols === 2 ? ' rows--2' : '';
-  return `<${tag} class="rows${numbered ? '' : ' rows--plain'}${mod}${cls ? ' ' + cls : ''}">${items.map(([t, d], i) => `<li class="row">${numbered ? `<span class="row-num" aria-hidden="true">${String(i + 1).padStart(2, '0')}</span>` : ''}<div class="row-body"><h3>${t}</h3><p>${d}</p></div></li>`).join('')}</${tag}>`;
-}
-const steps = (items) => rows(items, { cols: 'steps' });
-
 
 const SERVICE_OPTIONS = ['Installation', 'Repair', 'Hydro clean', 'Maintenance', 'Not sure'];
 function quoteForm({ heading = 'Get a free quote', lede, service = '', source, aside = '' }) {
@@ -360,7 +388,7 @@ ${canonical ? `<link rel="canonical" href="${url}">\n` : ''}<meta name="robots" 
 ${canonical ? `<meta property="og:url" content="${url}">\n` : ''}<meta property="og:image" content="${S.origin}/assets/img/og-image.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Onshore Air logo and headline beside an aerial photo of the Sunshine Coast">
+<meta property="og:image:alt" content="Onshore Air: Luke hydro cleaning a split system, beside the headline and a Call Luke button">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="preload" href="/assets/fonts/barlow-condensed-700-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/assets/fonts/barlow-400-latin.woff2" as="font" type="font/woff2" crossorigin>
@@ -384,6 +412,6 @@ ${callBar(quoteHref)}
 }
 
 module.exports = {
-  stripeRule, S, icon, esc, TEL, PHONE, NB_PHONE, picture, artPicture, preloadImage, logoImg, stars, googleG, seal, HERO_SIZES, logo, callBtn, quoteBtn, status, checklist, eyebrow, sectionHead,
-  pageHero, trustCard, brandStrip, brandBadges, reviews, beforeAfter, ctaOrange, route, ctaBand, faq, steps, rows, quoteForm, breadcrumbLd, page,
+  S, icon, esc, TEL, PHONE, NB_PHONE, picture, artPicture, preloadImage, preloadHero, logoImg, stars, googleG, seal, logo, callBtn, quoteBtn, status, ticks, secHead,
+  pageHero, pageHeroPreload, infoCards, steps, photoGrid, serviceCards, trustCard, brandStrip, reviews, beforeAfter, hydroBand, ctaOrange, faq, quoteForm, breadcrumbLd, page,
 };

@@ -18,11 +18,13 @@
 <meta property="og:image" content="https://www.onshoreair.com.au/assets/img/og-image.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:image:alt" content="Onshore Air logo and headline beside an aerial photo of the Sunshine Coast">
+<meta property="og:image:alt" content="Onshore Air: Luke hydro cleaning a split system, beside the headline and a Call Luke button">
 <meta name="twitter:card" content="summary_large_image">
 <link rel="preload" href="/assets/fonts/barlow-condensed-700-latin.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="preload" href="/assets/fonts/barlow-400-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="/assets/css/site.css?v=0445d7f9f3">
+<link rel="preload" as="image" type="image/webp" imagesrcset="/assets/img/area-coast-900.webp 900w" imagesizes="100vw" media="(max-width: 599px)" fetchpriority="high">
+<link rel="preload" as="image" type="image/webp" imagesrcset="/assets/img/area-coast-900.webp 900w, /assets/img/area-coast-1240.webp 1240w, /assets/img/area-coast-1600.webp 1600w" imagesizes="100vw" media="(min-width: 600px)" fetchpriority="high">
+<link rel="stylesheet" href="/assets/css/site.css?v=fdb395f236">
 <link rel="icon" href="/favicon.ico" sizes="32x32">
 <link rel="icon" href="/assets/img/favicon.svg?v=c56b5b6567" type="image/svg+xml">
 <link rel="apple-touch-icon" href="/assets/img/apple-touch-icon.png">
@@ -52,70 +54,74 @@
 </header>
 <main id="main">
 
-<section class="hero hero--page" aria-labelledby="page-title">
-  <div class="container hero-grid">
-    <div class="hero-copy">
+<section class="masthead masthead--page masthead--full" aria-labelledby="page-title">
+  <picture class="masthead-photo"><source media="(max-width: 599px)" type="image/webp" srcset="/assets/img/area-coast-900.webp 900w" sizes="100vw"><source type="image/webp" srcset="/assets/img/area-coast-900.webp 900w, /assets/img/area-coast-1240.webp 1240w, /assets/img/area-coast-1600.webp 1600w" sizes="100vw"><img src="/assets/img/area-coast-1240.jpg" srcset="/assets/img/area-coast-900.jpg 900w, /assets/img/area-coast-1240.jpg 1240w, /assets/img/area-coast-1600.jpg 1600w" sizes="100vw" width="1600" height="901" alt="Aerial view of the Sunshine Coast: sandbanks, river mouth and the coastline" fetchpriority="high" decoding="async"></picture>
+  <div class="container masthead-inner">
+    <div class="masthead-copy">
       <nav class="crumbs" aria-label="Breadcrumb"><ol><li><a href="/">Home</a></li><li aria-current="page">Service areas</li></ol></nav>
       <h1 id="page-title">Air conditioning across the Sunshine Coast</h1>
-      <p class="hero-lede">Based in Pacific Paradise, right in the middle of the Coast, Luke covers everywhere from Caloundra to Noosa and up into the hinterland. If your suburb isn’t listed below, call anyway: chances are he can help.</p>
-    </div>
-    <div class="hero-media hero-media--block"><span class="stripe-field" aria-hidden="true"></span><div class="route-card"><p class="route-title">The Coast, north to south</p><ol class="route route--light"><li><span class="route-name">Caloundra</span></li><li><span class="route-name">Kawana</span></li><li><span class="route-name">Mooloolaba</span></li><li><span class="route-name">Maroochydore</span></li><li class="is-base"><span class="route-name">Pacific Paradise</span><small>Home base</small></li><li><span class="route-name">Coolum</span></li><li><span class="route-name">Peregian</span></li><li><span class="route-name">Noosa</span></li></ol></div></div>
-    <div class="hero-act">
-      <div class="cta-row"><a class="btn btn-call " href="tel:+61444541409" data-phone-link><svg class="icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5.2 3.5h3.1l1.7 4.4-2.3 1.4a11.6 11.6 0 0 0 7 7l1.4-2.3 4.4 1.7v3.1a1.9 1.9 0 0 1-2 1.9A16.6 16.6 0 0 1 3.3 5.5a1.9 1.9 0 0 1 1.9-2z"/></svg><span><span class="call-word">Call </span><span data-phone-display>0444 541 409</span></span></a><a class="btn btn-line" href="#quote">Get a free quote</a></div>
-      <p class="status" data-status><span class="status-dot" aria-hidden="true"></span><span class="status-text">Mon–Sat 7am–5pm · answered by Luke</span></p>
-      <p class="hero-meta hero-points"><span>Caloundra to Noosa</span><span class="sep" aria-hidden="true">·</span><span>Hinterland towns</span><span class="sep" aria-hidden="true">·</span><span>Homes &amp; businesses</span></p>
+      <p class="masthead-lede">I’m based in Pacific Paradise, right in the middle of the Coast, and I cover everywhere from Caloundra to Noosa and up into the hinterland. If your suburb isn’t listed, call anyway: chances are I can help.</p>
+      <div class="masthead-cta">
+        <a class="btn btn-call btn-xl" href="tel:+61444541409" data-phone-link><svg class="icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5.2 3.5h3.1l1.7 4.4-2.3 1.4a11.6 11.6 0 0 0 7 7l1.4-2.3 4.4 1.7v3.1a1.9 1.9 0 0 1-2 1.9A16.6 16.6 0 0 1 3.3 5.5a1.9 1.9 0 0 1 1.9-2z"/></svg><span><span class="call-word">Call Luke </span><span data-phone-display>0444 541 409</span></span></a>
+        <a class="masthead-link" href="#quote">or get a free quote<svg class="icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12h14M13 6l6 6-6 6"/></svg></a>
+      </div>
+      <p class="status status--light" data-status><span class="status-dot" aria-hidden="true"></span><span class="status-text">Mon–Sat 7am–5pm · answered by Luke</span></p>
     </div>
   </div>
 </section>
 
 <section class="section" aria-labelledby="areas-title">
   <div class="container">
-    <div class="section-head"><span class="rule" aria-hidden="true"></span><p class="eyebrow">Where we work</p><h2 id="areas-title">Suburbs we cover</h2><p class="lede">Installs, repairs, hydro cleans and servicing are available in every suburb below, plus the streets and estates in between.</p></div>
-    <div class="area-grid">
-      <article class="area-card" aria-labelledby="area-north">
+    <div class="sec-head"><h2 id="areas-title">Suburbs I cover</h2><p>Installs, repairs, hydro cleans and servicing in every suburb below, plus the streets and estates in between.</p></div>
+    <div class="regions">
+      <article class="region" aria-labelledby="area-north">
         <h3 id="area-north">Northern beaches</h3>
-        <p class="area-range">Noosa to Pacific Paradise</p>
-        <p>Beachside homes from Noosa down to Mudjimba cop salt air, sand and humidity all year round. That is hard on outdoor units and coils, so regular servicing and hydro cleans pay off here.</p>
-        <ul class="chips"><li class="chip">Noosa Heads</li><li class="chip">Noosaville</li><li class="chip">Tewantin</li><li class="chip">Sunshine Beach</li><li class="chip">Peregian Beach</li><li class="chip">Peregian Springs</li><li class="chip">Coolum Beach</li><li class="chip">Yaroomba</li><li class="chip">Marcoola</li><li class="chip">Mudjimba</li><li class="chip">Twin Waters</li><li class="chip chip--base">Pacific Paradise · our base</li></ul>
+        <p class="region-range">Noosa to Pacific Paradise</p>
+        <p>Beachside homes from Noosa down to Mudjimba cop salt air, sand and humidity all year round. That’s hard on outdoor units and coils, so regular servicing and hydro cleans pay off here.</p>
+        <ul class="region-list"><li>Noosa Heads</li><li>Noosaville</li><li>Tewantin</li><li>Sunshine Beach</li><li>Peregian Beach</li><li>Peregian Springs</li><li>Coolum Beach</li><li>Yaroomba</li><li>Marcoola</li><li>Mudjimba</li><li>Twin Waters</li><li class="is-base">Pacific Paradise (home base)</li></ul>
       </article>
-      <article class="area-card" aria-labelledby="area-central">
+      <article class="region" aria-labelledby="area-central">
         <h3 id="area-central">Central Coast</h3>
-        <p class="area-range">Bli Bli to Sippy Downs</p>
-        <p>Just down the road from our Pacific Paradise base. From Maroochydore units and Mooloolaba holiday lets to family homes in Buderim and Sippy Downs.</p>
-        <ul class="chips"><li class="chip">Bli Bli</li><li class="chip">Maroochydore</li><li class="chip">Kuluin</li><li class="chip">Alexandra Headland</li><li class="chip">Mooloolaba</li><li class="chip">Mountain Creek</li><li class="chip">Buderim</li><li class="chip">Forest Glen</li><li class="chip">Sippy Downs</li></ul>
+        <p class="region-range">Bli Bli to Sippy Downs</p>
+        <p>Just down the road from my Pacific Paradise base. From Maroochydore units and Mooloolaba holiday lets to family homes in Buderim and Sippy Downs.</p>
+        <ul class="region-list"><li>Bli Bli</li><li>Maroochydore</li><li>Kuluin</li><li>Alexandra Headland</li><li>Mooloolaba</li><li>Mountain Creek</li><li>Buderim</li><li>Forest Glen</li><li>Sippy Downs</li></ul>
       </article>
-      <article class="area-card" aria-labelledby="area-south">
+      <article class="region" aria-labelledby="area-south">
         <h3 id="area-south">Southern suburbs</h3>
-        <p class="area-range">Kawana to Caloundra</p>
+        <p class="region-range">Kawana to Caloundra</p>
         <p>Kawana Waters, Caloundra and the canal estates of Pelican Waters and Golden Beach. Plenty of new builds and renovations, plus older systems ready for a clean or an upgrade.</p>
-        <ul class="chips"><li class="chip">Kawana Waters</li><li class="chip">Buddina</li><li class="chip">Warana</li><li class="chip">Birtinya</li><li class="chip">Currimundi</li><li class="chip">Little Mountain</li><li class="chip">Caloundra</li><li class="chip">Kings Beach</li><li class="chip">Golden Beach</li><li class="chip">Pelican Waters</li></ul>
+        <ul class="region-list"><li>Kawana Waters</li><li>Buddina</li><li>Warana</li><li>Birtinya</li><li>Currimundi</li><li>Little Mountain</li><li>Caloundra</li><li>Kings Beach</li><li>Golden Beach</li><li>Pelican Waters</li></ul>
       </article>
-      <article class="area-card" aria-labelledby="area-hinterland">
+      <article class="region" aria-labelledby="area-hinterland">
         <h3 id="area-hinterland">Hinterland</h3>
-        <p class="area-range">Nambour to Maleny</p>
-        <p>Hot, still summer days and cool winter nights. A reverse-cycle system earns its keep in the hinterland, and Luke is happy to make the drive up the range.</p>
-        <ul class="chips"><li class="chip">Nambour</li><li class="chip">Yandina</li><li class="chip">Eumundi</li><li class="chip">Woombye</li><li class="chip">Palmwoods</li><li class="chip">Mapleton</li><li class="chip">Montville</li><li class="chip">Maleny</li></ul>
+        <p class="region-range">Nambour to Maleny</p>
+        <p>Hot, still summer days and cool winter nights. A reverse-cycle system earns its keep in the hinterland, and I’m happy to make the drive up the range.</p>
+        <ul class="region-list"><li>Nambour</li><li>Yandina</li><li>Eumundi</li><li>Woombye</li><li>Palmwoods</li><li>Mapleton</li><li>Montville</li><li>Maleny</li></ul>
       </article>
     </div>
   </div>
 </section>
 
-<section class="section band-deep" aria-labelledby="local-title">
-  <div class="container blocks">
-    <div class="block">
-      <h3 id="local-title">Built for coastal conditions</h3>
-      <p>Salt air and humidity are tough on air conditioners. Outdoor units corrode faster near the beach, and coils clog sooner. Luke recommends the right placement and protection on new installs, and regular <a href="/maintenance/">servicing</a> and <a href="/hydro-cleaning/">hydro cleans</a> to keep coastal systems healthy.</p>
-    </div>
-    <div class="block">
-      <h3>Hinterland heat, sorted</h3>
-      <p>Up the range in Nambour, Palmwoods, Montville and Maleny, summers are still and sticky and winter nights get properly cool. A reverse-cycle system handles both, and Luke can size one to suit older Queenslanders and new builds alike.</p>
+<section class="section on-dark" aria-labelledby="local-title">
+  <div class="container">
+    <div class="sec-head"><h2 id="local-title">Coast and hinterland, sorted</h2></div>
+    <div class="dark-cols">
+      <div>
+        <h3>Built for coastal conditions</h3>
+        <p>Salt air and humidity are tough on air conditioners. Outdoor units corrode faster near the beach, and coils clog sooner. I recommend the right placement and protection on new installs, and regular <a href="/maintenance/">servicing</a> and <a href="/hydro-cleaning/">hydro cleans</a> to keep coastal systems healthy.</p>
+      </div>
+      <div>
+        <h3>Hinterland heat</h3>
+        <p>Up the range in Nambour, Palmwoods, Montville and Maleny, summers are still and sticky and winter nights get properly cool. A reverse-cycle system handles both, and I can size one to suit older Queenslanders and new builds alike.</p>
+      </div>
     </div>
   </div>
-  <div class="container mt-lg">
-    <div class="cta-band">
-  <div class="cta-band-copy"><h2>Not sure if you’re covered?</h2><p>Give Luke a call. If he can’t help, he’ll tell you straight away.</p></div>
-  <div class="cta-band-actions"><a class="btn btn-call " href="tel:+61444541409" data-phone-link><svg class="icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5.2 3.5h3.1l1.7 4.4-2.3 1.4a11.6 11.6 0 0 0 7 7l1.4-2.3 4.4 1.7v3.1a1.9 1.9 0 0 1-2 1.9A16.6 16.6 0 0 1 3.3 5.5a1.9 1.9 0 0 1 1.9-2z"/></svg><span><span class="call-word">Call </span><span data-phone-display>0444 541 409</span></span></a><a class="btn btn-line" href="#quote">Get a free quote</a></div>
-</div>
+</section>
+
+<section class="cta-orange" aria-labelledby="cta-title">
+  <div class="container cta-orange-inner">
+    <div><h2 id="cta-title">Not sure if you’re covered? Call Luke</h2><p>If I can’t help, I’ll tell you straight away. Monday to Saturday, 7am to 5pm.</p></div>
+    <a class="big-phone" href="tel:+61444541409" data-phone-link><svg class="icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5.2 3.5h3.1l1.7 4.4-2.3 1.4a11.6 11.6 0 0 0 7 7l1.4-2.3 4.4 1.7v3.1a1.9 1.9 0 0 1-2 1.9A16.6 16.6 0 0 1 3.3 5.5a1.9 1.9 0 0 1 1.9-2z"/></svg><span data-phone-display>0444 541 409</span></a>
   </div>
 </section>
 
@@ -123,7 +129,7 @@
   <div class="container quote-grid">
     <div class="quote-aside">
       <h2 id="quote-title">Get a free quote in your suburb</h2>
-      <p>Tell Luke your suburb and what you need, and he’ll call you back. Or call 0444 541 409.</p>
+      <p>Tell me your suburb and what you need, and I’ll call you back. Or call 0444 541 409.</p>
       <ul class="ticks"><li><svg class="icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Free quotes on new installs</span></li><li><svg class="icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Repairs quoted before any work starts</span></li><li><svg class="icon" viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M5 12.5l4.2 4.2L19 7"/></svg><span>Workmanship guarantee on every job</span></li></ul>
       <div class="call-block">
         <p class="call-block-label">Talk to Luke directly</p>

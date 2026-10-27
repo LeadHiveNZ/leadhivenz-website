@@ -19,15 +19,15 @@ clients/onshore-air/
 
 | Route | File | Notes |
 |---|---|---|
-| `/` | `site/index.html` | Hero (Luke at work), status line, ruled trust facts, services index, why Onshore, brands, reviews, service area, quote form. `HVACBusiness` JSON-LD |
-| `/installations/` | `site/installations/index.html` | Split, multi-head, ducted, new builds/replacements, what's included, process, gallery, brands, FAQ, form |
-| `/repairs/` | `site/repairs/index.html` | Symptoms, same-day where possible, "quoted before work starts", process, brands, FAQ, form |
-| `/hydro-cleaning/` | `site/hydro-cleaning/index.html` | What it is, real before/after photos, why, who it's for, how often, price, FAQ, form |
-| `/maintenance/` | `site/maintenance/index.html` | Annual service checklist, benefits, who books, FAQ, form |
-| `/about/` | `site/about/index.html` | Luke, 15+ years, Pacific Paradise, licence/insurance, how he works, photos, reviews, form |
-| `/service-areas/` | `site/service-areas/index.html` | Suburbs grouped north / central / south / hinterland, form |
-| `/contact/` | `site/contact/index.html` | Phone, email, hours, suburb-level address, stylised map note (no embed), form |
-| `/thanks/` | `site/thanks/index.html` | Form success page (`noindex`) |
+| `/` | `site/index.html` | Photo hero (Luke at work) with Google and ARCtick chips, trust card, service photo cards, brand logo strip, hydro before/after slider band, Meet Luke, Google review cards, aerial service-area band, orange call band, quote form. `HVACBusiness` JSON-LD |
+| `/installations/` | `site/installations/index.html` | System types, what's included (photo + ticks), numbered steps, photo grid, brand logos, FAQ, call band, form |
+| `/repairs/` | `site/repairs/index.html` | Symptom cards, same-day / quoted-first navy band, numbered steps, brand logos, FAQ, call band, form |
+| `/hydro-cleaning/` | `site/hydro-cleaning/index.html` | What it is + what's included, before/after drag slider band, why, who it's for, price block, FAQ, call band, form |
+| `/maintenance/` | `site/maintenance/index.html` | Service checklist (photo + ticks), benefit cards, who books, FAQ, call band, form |
+| `/about/` | `site/about/index.html` | "G'day, I'm Luke" hero, half-bleed coil-cleaning photo with his story, trust card and business facts, photo grid, reviews, call band, form |
+| `/service-areas/` | `site/service-areas/index.html` | Full-width aerial hero, every suburb grouped north / central / south / hinterland, coast and hinterland band, call band, form |
+| `/contact/` | `site/contact/index.html` | Navy contact card (phone, email, hours, suburb, ABN, licence), stylised inline SVG map (no embed), what to have handy, call band, form |
+| `/thanks/` | `site/thanks/index.html` | Form success page with service cards (`noindex`) |
 | any missing URL | `site/404.html` | Netlify serves it automatically (`noindex`) |
 
 Also in `site/`: `robots.txt`, `sitemap.xml`, `site.webmanifest`, `favicon.ico`, `netlify.toml`
@@ -145,11 +145,11 @@ clipper-lib 6.4.2): `cd site-tools/logo && npm install` once. Run from `clients/
 | Command | What it does |
 |---|---|
 | `node build.js` | Regenerates every HTML page plus `sitemap.xml`, `robots.txt`, `netlify.toml`, `_redirects`, `site.webmanifest`, `stripes.svg` |
-| `node images.js` | Downloads Luke's original photos from Wix into `.cache/` (git-ignored) and exports WebP + JPEG sizes listed in `images.config.js` |
+| `node images.js [name ...]` | Downloads Luke's original photos and logos from Wix into `.cache/` (git-ignored) and exports the WebP + JPEG sizes and trimmed logo PNGs listed in `images.config.js` (pass names, e.g. `hero-home logo-daikin`, to redo only those) |
 | `cd logo && node build-logo.js` | Rebuilds the vector logo (stacked, horizontal, mark), its PNG exports, favicons, app icons and `out/logo-compare.png` |
-| `node og-image.js` | Renders the 1200x630 Open Graph image (Paper, logo bar, Bricolage Grotesque headline, stripe rule, Luke's aerial coast photo) |
-| `bash fonts.sh` | Re-downloads the self-hosted Bricolage Grotesque and Instrument Sans (roman + italic) woff2 files |
-| `node check.js` | Link/asset checker, external-URL check, per-page SEO basics, home page weight |
+| `node og-image.js` | Renders the 1200x630 Open Graph image in the hero style (navy, logo and stripe band, Luke's hydro-clean photo behind the gradient, caps Barlow Condensed headline, orange "Call Luke" button with the number from `site.js`) |
+| `bash fonts.sh` | Re-downloads the self-hosted Barlow (400, 600, 700) and Barlow Condensed (600, 700) woff2 files |
+| `node check.js` | Link/asset checker, external-URL check (outbound new-tab links listed separately), per-page SEO basics, home page weight |
 | `node screenshots.js` | Full-page screenshots into `site-screens/` (390x844 and 1280x800) |
 | `bash zip.sh` | Builds `dist/onshore-air-site.zip` with `index.html` at the zip root |
 | `node stage-preview.js <dir>` | Stages a click-through preview copy with relative URLs (for hosts without directory indexes) |
@@ -160,29 +160,43 @@ Where to edit:
 - Business facts (phone, email, hours, suburbs, reviews, brands): `site-tools/src/site.js`
 - Shared header, footer, mobile call bar, quote form, schema and page shell: `site-tools/src/layout.js`
 - Page copy: `site-tools/src/pages/*.js`
-- Styles: `site/assets/css/site.css` (one file). Script: `site/assets/js/site.js` (nav toggle, status line, form validation, Nimbata sync)
+- Styles: `site/assets/css/site.css` (one file). Script: `site/assets/js/site.js` (nav toggle, status line, form validation, Nimbata sync, before/after slider)
 
 Edit the source, run `node build.js`, then `node check.js` and `bash zip.sh`. Do not hand-edit the generated HTML in `site/`:
 the next build overwrites it.
 
 ## Build notes
 
-- Art direction "Onshore": warm coastal, editorial, owner-operator. The logo's palette flipped light: Paper `#F4EDE1`
-  (background) and Paper-deep `#EADFCC` (alternate bands), Ink navy `#0E1F4D` for all text (13.65:1 on Paper), Navy-deep
-  `#0A1636` for the header, footer and the home service-area band only. Sunset orange `#E0702A` is the one accent that
-  means "act" (call buttons carry Navy-deep text, 5.52:1); Ocean `#1E5CB3` for links and small labels; Seafoam `#7CC7DB`
-  and Sun `#F2D45C` only in the stripe motif.
-- Type: Bricolage Grotesque (headings, phone numbers, prices, "5.0"; `opsz` 96, weight 700) and Instrument
-  Sans (body and UI), self-hosted woff2 (latin subset), `font-display: swap`, with metric-matched fallbacks.
-- Signature: the stripe motif from the logo (`stripes.svg`: seafoam, sun and sunset lines). A 10px band under the header,
-  a 72px rule that opens sections on plain Paper, and a diagonal field behind the bottom-left corner of each hero photo.
-- Shapes: 4px radius on buttons and inputs, 6px on photos with a 1px ink keyline, square chips and bands, no pills, no
-  gradient overlays, and one soft shadow (under the quote form). Lists are ruled rows with Bricolage numbers; there are no
-  icon tiles (only functional icons: phone, arrow, check, chevron, menu, close).
-- Header: stacked logo at 56 px on phones (it fits beside the phone button at 320 to 390 px), stacked at 60 px with the
-  desktop nav from 1180 px, horizontal lockup at 50 px from 1240 px. Nav links never wrap from 1180 px up.
+- Art direction "Trade": one real local trade business, modelled on Static Electrics (owner up front, dark trust band,
+  licence badges) and Thelen (condensed caps, photo cards, solid colour bands) in Onshore Air's colours. White page
+  (`#FFFFFF`) with cool grey alternate sections (`#F2F4F7`), Navy-deep `#0A1636` for the header, heroes, dark bands and
+  footer, Ink `#0E1F4D` for text and cards. Sunset `#E0702A` is used only on CTAs (navy-deep text, 5.52:1), band edges
+  (the 6px line under each hero, the orange call band) and small ticks; Ocean `#1E5CB3` for links. The logo's Seafoam
+  `#7CC7DB` and Sun `#F2D45C` appear only in the 8px stripe band under the header.
+- Type: Barlow Condensed 700 in caps for H1 (about 72px at 1440, 44px on phones), H2 (about 48 / 34px) and the big phone
+  numbers and prices; Barlow 600 sentence case for H3 and buttons; Barlow 400/600 body at 17-18px, line-height 1.55.
+  Tracking 0 to +.01em, no italics. Self-hosted woff2 (latin subset, `font-display: swap`) with metric-matched Arial
+  fallbacks measured in Chromium.
+- Photography carries the page: full-bleed photo heroes (home 620-860px, inner pages 420-520px; the photo fills the
+  right ~60% behind a navy gradient, full width for the landscape aerial), three full-bleed image bands on the home page
+  (hero, before/after slider, aerial service area), 3:2 service photo cards and 4:5 photo grids. 4px radius, no frames.
+- Trust signals use real marks: the ARCtick logo with licence AU067414, Google G and stars, a drawn workmanship seal,
+  a shield, a 15+ years badge, and the manufacturer logos from Luke's Wix site (greyscale until hover). The Mitsubishi
+  Electric file on Wix is cropped, so it is named in text instead.
+- Structure: no eyebrow labels, no hairline rules as structure (rules only as card edges), no numbered index rows.
+  Sections alternate dense strips (trust card, logo strip) with image bands and solid navy or orange bands; process
+  steps use 52px numbered badges; FAQs are an accordion of boxes. One element overlaps a band edge (the home trust card).
+- Copy is in Luke's first person and uses only facts already on his site (15+ years, 5.0 on Google, ARC AU067414,
+  ABN, hours, Pacific Paradise, $180 + GST hydro clean, brands, suburbs).
+- The before/after slider is a native `<input type="range">` over the photo pair (keyboard, screen reader and pointer
+  drag all work; site.js only mirrors its value into a CSS variable). The after photo has an explicit crop in
+  `images.config.js` that registers it on the before photo.
+- Phone weight: below 600px every photo gets a WebP `<source>` limited to widths up to 900px (`PHONE_CAP` in
+  `layout.js`), and hero preloads are media-scoped to match.
+- Header: navy-deep, stacked logo at 56 px on phones (it fits beside the phone button at 320 to 390 px), stacked at 60 px
+  with the desktop nav (Barlow Condensed caps) from 1180 px, horizontal lockup at 50 px from 1240 px.
 - No third-party requests: no CDN, analytics, map embed or Google Fonts at runtime. A Content-Security-Policy header was
   left out on purpose so the Nimbata snippet isn't blocked; add one once Nimbata's domains are known.
 - QA at handoff: 0 missing internal references, 0 external runtime URLs, one `h1` per page, no horizontal scroll from
-  320px to 1920px. Home page weight with every lazy image loaded: about 577 KB uncompressed (486 KB over the wire) on a
-  3x phone, about 421 KB (305 KB) on a 1280px desktop.
+  320px to 1920px. Home page weight with every lazy image loaded: about 607 KB uncompressed (496 KB over the wire) on a
+  3x phone, about 622 KB (486 KB) on a 1280px desktop, about 875 KB (739 KB) on a 1440px 2x screen.

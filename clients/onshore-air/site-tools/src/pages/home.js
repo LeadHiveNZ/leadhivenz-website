@@ -5,15 +5,6 @@ const { S, icon, picture, artPicture, preloadImage, logoImg, googleG, stars, cal
 // gradient; phones get the 4:5 crop (luke-hydro-clean) shown square, full width, above the copy.
 const HERO_MEDIA = '(min-width: 900px)';
 const HERO_WIDE_SIZES = '(min-width: 1100px) 64vw, 58vw';
-const CARD_SIZES = '(min-width: 1240px) 282px, (min-width: 1100px) calc(25vw - 28px), (min-width: 640px) calc(50vw - 52px), calc(100vw - 32px)';
-
-const services = [
-  ['card-installations', '/installations/', 'Installations', 'Split systems, multi-head and ducted, sized for your home and fitted neatly.', 'White split system installed above a bedroom window'],
-  ['card-repairs', '/repairs/', 'Repairs', 'Not cooling, leaking or showing an error code? I find the fault and quote before I start.', 'Control board and wiring of an air conditioner opened up for diagnosis'],
-  ['card-hydro', '/hydro-cleaning/', 'Hydro cleaning', 'A full wash of the coil, fan and drain tray. $180 + GST per standard wall split.', 'Luke washing the coil of a split system, with a cleaning bag catching the water'],
-  ['card-maintenance', '/maintenance/', 'Maintenance', 'A yearly service that keeps your system efficient and picks up problems early.', 'Daikin outdoor unit installed beside a brick home'],
-];
-
 // Suburbs from the service-areas page, in the same order (northern beaches, central, southern, hinterland)
 const suburbs = S.areas.flatMap((a) => a.suburbs);
 
@@ -43,7 +34,7 @@ module.exports = {
   title: 'Air Conditioning Sunshine Coast | Onshore Air',
   description: `Air con installs, repairs, hydro cleaning and servicing from Caloundra to Noosa. Licensed local tech, 15+ years experience. Free quotes on ${S.phone.display}.`,
   current: '/',
-  preload: [preloadImage('hero-home', HERO_WIDE_SIZES, HERO_MEDIA), preloadImage('luke-hydro-clean', '100vw', '(max-width: 899px)')].join('\n'),
+  preload: [preloadImage('hero-home', HERO_WIDE_SIZES, HERO_MEDIA), preloadImage('luke-hydro-clean', '100vw', '(max-width: 599px)', true), preloadImage('luke-hydro-clean', '100vw', '(min-width: 600px) and (max-width: 899px)')].join('\n'),
   jsonld: [ld],
   main: `
 <section class="masthead" aria-labelledby="hero-title">
@@ -72,43 +63,18 @@ ${L.trustCard()}
     <div class="head-row">
       <h2 id="services-title">Installs, repairs, cleans and servicing</h2>
     </div>
-    <ul class="cards">
-      ${services.map(([img, href, title, text, alt]) => `<li class="card">
-        ${picture(img, { alt, sizes: CARD_SIZES, cls: 'card-photo' })}
-        <div class="card-body">
-          <h3><a href="${href}">${title}</a></h3>
-          <p>${text}</p>
-          <span class="card-more" aria-hidden="true">Learn more${icon('arrow')}</span>
-        </div>
-      </li>`).join('\n      ')}
-    </ul>
+    ${L.serviceCards()}
   </div>
 </section>
 
 ${L.brandStrip()}
 
-<section class="hydro on-dark" aria-labelledby="hydro-title">
-  <div class="container hydro-head">
-    <div>
-      <h2 id="hydro-title">What a hydro clean gets out</h2>
-      <p>Same unit, before and after. A filter clean only gets the filter. A hydro clean washes the coil, fan and drain tray, where the mould and grime build up.</p>
-    </div>
-    <p class="price-tag"><strong>$180</strong><span>+ GST per standard wall split</span></p>
-  </div>
-  ${L.beforeAfter()}
-  <div class="container hydro-foot">
-    <p>Drag the handle to compare.</p>
-    <div class="cta-row">
-      <a class="btn btn-call" href="#quote">Book a hydro clean</a>
-      <a class="text-link" href="/hydro-cleaning/">How a hydro clean works${icon('arrow')}</a>
-    </div>
-  </div>
-</section>
+${L.hydroBand()}
 
 <section class="luke" aria-labelledby="luke-title">
   <div class="container luke-grid">
     <!-- Photo: replace with a front-on portrait of Luke (landscape or 4:5, face visible) when he supplies one. -->
-    ${picture('luke-cleaning-coil', { alt: 'Luke cleaning the coil of a split system', sizes: '(min-width: 960px) 560px, calc(100vw - 32px)', cls: 'luke-photo' })}
+    ${picture('luke-cleaning-coil', { alt: 'Luke cleaning the coil of a split system', sizes: '(min-width: 960px) 560px, calc(100vw - 32px)', cls: 'luke-photo', cap: 720 })}
     <div class="luke-copy">
       <h2 id="luke-title">G’day, I’m Luke</h2>
       <p>Onshore Air is me. I’ve been working on air conditioners for more than 15 years, and I’m based in Pacific Paradise, right in the middle of the Coast.</p>
