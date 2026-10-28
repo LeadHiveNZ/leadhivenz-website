@@ -174,8 +174,8 @@ export function JobScreen({ jobId }: { jobId: string }) {
         {/* Photos */}
         <section className="card p-4">
           <div className="flex items-center justify-between">
-            <h3 className="text-lg">Photos ({bundle.photos.length})</h3>
-            <select className="input min-h-11 w-auto py-1 text-base" value={photoKind} onChange={(e) => setPhotoKind(e.target.value as PhotoKind)} aria-label="Photo type">
+            <h3 className="shrink-0 whitespace-nowrap text-lg">Photos ({bundle.photos.length})</h3>
+            <select className="input min-h-12 w-36 py-1 text-base" value={photoKind} onChange={(e) => setPhotoKind(e.target.value as PhotoKind)} aria-label="Photo type">
               <option value="before">Before</option>
               <option value="after">After</option>
               <option value="issue">Issue</option>

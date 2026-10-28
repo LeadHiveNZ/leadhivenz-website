@@ -80,9 +80,7 @@ export function WeekScreen() {
           <button className="btn btn-ghost w-14 text-3xl" onClick={() => setWeekStart(addDays(weekStart, -7))} aria-label="Previous week">
             ‹
           </button>
-          <h2 className="text-2xl">
-            Week of {fmtDateShort(weekStart)}
-          </h2>
+          <h2 className="whitespace-nowrap text-2xl">Week of {fmtDateShort(weekStart)}</h2>
           <button className="btn btn-ghost w-14 text-3xl" onClick={() => setWeekStart(addDays(weekStart, 7))} aria-label="Next week">
             ›
           </button>

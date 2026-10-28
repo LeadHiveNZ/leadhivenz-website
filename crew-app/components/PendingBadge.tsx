@@ -29,7 +29,8 @@ export function PendingBadge() {
   if (count === 0 && online) return null;
   return (
     <div
-      className="fixed bottom-3 left-1/2 z-40 -translate-x-1/2 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white shadow-lg"
+      className="pointer-events-none fixed left-1/2 z-40 -translate-x-1/2 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white shadow-lg"
+      style={{ top: "calc(env(safe-area-inset-top) + 72px)" }}
       role="status"
     >
       {count > 0 ? `Saved on phone, will upload (${count})` : "No signal — working offline"}
