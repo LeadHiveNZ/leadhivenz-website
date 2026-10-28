@@ -1,0 +1,14 @@
+date,start,end,who,customer,address,suburb,job,notes
+2026-10-28,07:30,09:00,Mike,Sarah,14 Kilmore Street,Christchurch Central,Hot water cylinder replacement,Gas: yes. Quoted hours: 3. Key under the pot by the back door.
+2026-10-28,09:30,11:00,Mike,Dave,8 Colombo Street,Sydenham,Gas hob install,Gas: yes. Quoted hours: 2. Dog in the yard - friendly but loud.
+2026-10-28,13:00,15:00,Mike,Priya,22 Innes Road,St Albans,Leaking toilet cistern,Quoted hours: 1.5. Phone: 021 555 0101
+2026-10-28,07:30,09:30,Jono + Tama,Karen,45 Riccarton Road,Riccarton,Blocked kitchen drain,Quoted hours: 2. Phone: 021 555 0202. Side gate code 1234
+2026-10-28,10:00,12:00,Jono + Tama,Tom,3 Ivory Street,Rangiora,Burst pipe under house,Quoted hours: 2.5. Phone: 027 555 0303. Crawl space access at rear. No cell signal under the house.
+2026-10-28,13:30,16:30,Jono + Tama,Linda,19 Tennyson Street,Rolleston,Bathroom tapware replacement x3,Quoted hours: 3. Phone: 021 555 0404. Customer home all day
+2026-10-29,08:00,10:00,Mike,Hemi,67 Papanui Road,Merivale,Gas califont service,Gas: yes. Quoted hours: 1.5. Phone: 022 555 0505
+2026-10-29,08:00,12:00,Jono + Tama,Steve,120 Main South Road,Hornby,Laundry tub and mixer install,Quoted hours: 4. Phone: 021 555 0606. Park on the street
+2026-10-29,13:00,15:00,Jono + Tama,Anna,5 Harbour Road,Lyttelton,Leaking shower mixer,Quoted hours: 2. Phone: 027 555 0707. Steep driveway
+2026-10-29,15:30,17:30,Jono,Mark,88 Memorial Avenue,Burnside,Replace outside tap,Quoted hours: 1. Phone: 021 555 0808
+2026-10-27,08:00,11:00,Jono + Tama,Rachel,31 Beach Road,Kaiapoi,Replace hot water cylinder valve,Quoted hours: 2.5. Phone: 021 555 0909. Done yesterday - photos on Jono's phone
+2026-10-30,08:00,10:00,Tama,Grace,12 Fendalton Road,Fendalton,Gas leak check,Gas: yes. Quoted hours: 1. Phone: 021 555 1010. THIS ROW SHOULD BE FLAGGED - Tama cannot be assigned a gas job
+2026-10-30,10:30,12:00,Jono + Tama,Ben,,Spreydon,Dripping tap,Phone: 021 555 1111. Address missing on purpose - should show as an unparsed event

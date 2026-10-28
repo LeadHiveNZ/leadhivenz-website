@@ -1,0 +1,79 @@
+@import "tailwindcss";
+
+/* Brand colours are injected as CSS variables on <html> from config/brand.ts.
+   These theme tokens just alias them so Tailwind utilities like bg-primary work. */
+@theme inline {
+  --color-primary: var(--brand-primary);
+  --color-accent: var(--brand-accent);
+  --color-page: var(--brand-background);
+  --color-surface: var(--brand-surface);
+  --color-success: var(--brand-success);
+  --color-danger: var(--brand-danger);
+  --color-ink: var(--brand-text);
+  --color-muted: var(--brand-muted);
+  --color-line: var(--brand-border);
+  --font-heading: var(--font-heading), "Arial Narrow", sans-serif;
+  --font-body: var(--font-body), system-ui, sans-serif;
+}
+
+html {
+  background: var(--brand-background);
+  color: var(--brand-text);
+  font-family: var(--font-body), system-ui, sans-serif;
+  font-size: 16px;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  min-height: 100dvh;
+  font-size: 1rem;
+  line-height: 1.4;
+}
+
+h1, h2, h3, .heading {
+  font-family: var(--font-heading), "Arial Narrow", sans-serif;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+/* Big, glove-friendly controls */
+.btn {
+  @apply flex w-full items-center justify-center gap-2 rounded-xl px-5 font-semibold select-none;
+  min-height: 56px;
+  font-size: 1.125rem;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn:active { transform: scale(0.98); }
+.btn:disabled { opacity: 0.5; }
+.btn-accent { background: var(--brand-accent); color: #fff; }
+.btn-primary { background: var(--brand-primary); color: #fff; }
+.btn-success { background: var(--brand-success); color: #fff; }
+.btn-outline { background: var(--brand-surface); color: var(--brand-primary); border: 2px solid var(--brand-primary); }
+.btn-ghost { background: transparent; color: var(--brand-primary); }
+
+.card {
+  background: var(--brand-surface);
+  border: 1px solid var(--brand-border);
+  border-radius: 1rem;
+}
+
+.chip {
+  @apply inline-flex items-center rounded-full px-3 py-1 text-sm font-bold uppercase tracking-wide;
+  font-family: var(--font-heading), sans-serif;
+  font-size: 0.95rem;
+}
+
+.input {
+  @apply w-full rounded-xl border px-4;
+  border-color: var(--brand-border);
+  background: var(--brand-surface);
+  min-height: 56px;
+  font-size: 1.0625rem;
+}
+.input:focus { outline: 3px solid var(--brand-accent); outline-offset: 1px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .btn:active { transform: none; }
+}

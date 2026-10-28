@@ -5,6 +5,8 @@ master template with only the `CONFIG` block changed; template logic, markup and
 locked so every site behaves the same (hours-aware status line, Nimbata phone swap, lead form).
 
 ```
+crew-app/                       Crew app (phase 1): installable PWA for a tradie crew — today's jobs,
+                                photos, hours, offline sync, office board. Next.js + Supabase. See crew-app/README.md
 templates/                      master templates (edit CONFIG only in client copies)
   handyman-master.html          handyman / building maintenance, "planned intent" variant
 clients/
