@@ -35,6 +35,8 @@ CONFIG = {
     'kai_phone': '022 605 2361',
     'kai_phone_intl': '+64226052361',
     'site_url': 'https://arohaseniorscharitabletrust.com',   # live domain (bought on Cloudflare 27/10/2026)
+    'netlify_host': 'aroha-seniors-preview.netlify.app',      # Netlify's own address for the site: 301s to site_url
+    'indexnow_key': '7f82489049f8134898653b21c9599bcc',       # IndexNow (Bing etc.): served as /<key>.txt
     'charity_no': 'CC63126',
     'register_url': 'https://register.charities.govt.nz/Charity/CC63126',
     'tagline': 'To serve with Aroha',
@@ -48,21 +50,24 @@ CONFIG = {
 
 SITE_NAME = 'Aroha Seniors Charitable Trust'
 PAGES = [
-    # file, nav key, <title>, meta description
-    ('index', 'home',
-     'Aroha Seniors Charitable Trust | Friendship & support for older people in Flat Bush, Auckland',
-     'Caring for our seniors, strengthening our community. Aroha Seniors Charitable Trust (CC63126) brings older people in Flat Bush and across South & East Auckland together for friendship, outings, Meals on Wheels and support.'),
-    ('about', 'about', f'About us | {SITE_NAME}',
-     'Our story, our values (manaakitanga, whanaungatanga and kotahitanga) and the people behind Aroha Seniors Charitable Trust in Flat Bush, Auckland.'),
-    ('what-we-do', 'what-we-do', f'What we do | {SITE_NAME}',
-     'Friendship gatherings, fortnightly Meals on Wheels, outings, companionship, digital help, advice and disability support for older people in Flat Bush and South & East Auckland.'),
-    ('get-involved', 'get-involved', f'Get involved: volunteer, donate or partner | {SITE_NAME}',
-     'Volunteer, donate or partner with Aroha Seniors Charitable Trust and help make sure no one in our community grows old alone.'),
-    ('contact', 'contact', f'Contact us | {SITE_NAME}',
-     'Call or text 022 178 0876, email or send a message to Aroha Seniors Charitable Trust in Flat Bush, Auckland.'),
-    ('policies', 'policies', f'Our policies | {SITE_NAME}',
-     'Public policies of Aroha Seniors Charitable Trust: privacy, client rights, safeguarding and elder abuse prevention, advocacy, donations and koha, complaints, health and safety, and website terms.'),
+    # file, nav key, <title> (keep under ~60 characters so Google shows it whole), meta description
+    ('index', 'home', 'Aroha Seniors Charitable Trust | Seniors Charity in Auckland',
+     'Aroha Seniors Charitable Trust is a registered charity in Flat Bush, Auckland: friendship, outings, Meals on Wheels and support for older people and kaumātua.'),
+    ('about', 'about', 'About Aroha Seniors Charitable Trust | Flat Bush, Auckland',
+     'Meet Aroha Seniors Charitable Trust, a registered charity (CC63126) in Flat Bush, Auckland. Our story, our values and the people behind our mahi.'),
+    ('what-we-do', 'what-we-do', 'Support for Older People in South Auckland | Aroha Seniors',
+     'Friendship gatherings, fortnightly Meals on Wheels, outings, companionship, advice and disability support for older people in Flat Bush and South Auckland.'),
+    ('get-involved', 'get-involved', f'Volunteer, Donate or Partner | {SITE_NAME}',
+     'Volunteer, donate or partner with Aroha Seniors Charitable Trust in Auckland, and help make sure no older person in our community is left alone.'),
+    ('contact', 'contact', 'Contact Aroha Seniors Charitable Trust | Flat Bush, Auckland',
+     'Contact Aroha Seniors Charitable Trust in Flat Bush, Auckland. Call or text Amelia on 022 178 0876, or Korina on 022 605 2361 for Meals on Wheels.'),
+    ('policies', 'policies', f'Our Policies | {SITE_NAME}',
+     'Public policies of Aroha Seniors Charitable Trust: privacy, client rights, safeguarding, elder abuse prevention, complaints, and donations and koha.'),
+    ('404', '404', f'Page not found | {SITE_NAME}', 'Sorry, we can\'t find that page.'),
 ]
+NOINDEX = {'404'}                       # built for the live site only, kept out of search and the sitemap
+CRUMB = {'about': 'About us', 'what-we-do': 'What we do', 'get-involved': 'Get involved',
+         'contact': 'Contact', 'policies': 'Our policies'}
 
 ROOT = Path(__file__).resolve().parent
 SRC, SITE, PREVIEW = ROOT / 'src', ROOT / 'site', ROOT / 'preview'
@@ -91,18 +96,37 @@ def blocks(c):
     return bank, tax, credit
 
 
-def json_ld(c):
-    data = {
-        '@context': 'https://schema.org', '@type': 'NGO', 'name': SITE_NAME, 'alternateName': 'Aroha Seniors',
-        'slogan': c['tagline'],
-        'description': 'A registered New Zealand charity bringing older people, vulnerable adults and adults living with disability together for friendship, outings, Meals on Wheels, companionship and support.',
-        'telephone': c['phone_intl'], 'email': c['email'],
-        'address': {'@type': 'PostalAddress', 'addressLocality': 'Flat Bush', 'addressRegion': 'Auckland', 'addressCountry': 'NZ'},
-        'areaServed': 'South and East Auckland, New Zealand',
-        'identifier': {'@type': 'PropertyValue', 'propertyID': 'NZ Charities Register', 'value': c['charity_no']},
-        'url': c['site_url'] + '/', 'logo': c['site_url'] + '/assets/img/logo-full.jpg',
-        'sameAs': [c['facebook'], c['register_url']],
-    }
+def json_ld(c, page):
+    site = c['site_url']
+    if page == 'index':
+        org = {
+            '@type': 'NGO', '@id': site + '/#org', 'name': SITE_NAME,
+            'alternateName': ['Aroha Seniors', 'Aroha Seniors Group', 'ASCT'],
+            'slogan': c['tagline'],
+            'description': 'A registered New Zealand charity in Flat Bush, Auckland, bringing older people, kaumātua, vulnerable adults and adults living with disability together for friendship, outings, Meals on Wheels, companionship, advice and support.',
+            'url': site + '/',
+            'logo': {'@type': 'ImageObject', 'url': site + '/assets/img/logo-full.jpg', 'width': 760, 'height': 738},
+            'image': site + '/assets/img/banner.jpg',
+            'telephone': c['phone_intl'], 'email': c['email'],
+            'address': {'@type': 'PostalAddress', 'addressLocality': 'Flat Bush', 'addressRegion': 'Auckland', 'addressCountry': 'NZ'},
+            'areaServed': [{'@type': 'Place', 'name': n} for n in ('Flat Bush, Auckland', 'South Auckland', 'East Auckland')]
+                          + [{'@type': 'City', 'name': 'Auckland'}],
+            'contactPoint': [
+                {'@type': 'ContactPoint', 'name': c['contact_name'], 'telephone': c['phone_intl'], 'email': c['email'], 'contactType': 'general enquiries', 'areaServed': 'NZ'},
+                {'@type': 'ContactPoint', 'name': c['kai_name'], 'telephone': c['kai_phone_intl'], 'contactType': 'Meals on Wheels orders', 'areaServed': 'NZ'},
+            ],
+            'identifier': {'@type': 'PropertyValue', 'propertyID': 'NZ Charities Register', 'value': c['charity_no']},
+            'sameAs': [c['facebook'], c['register_url']],
+        }
+        website = {'@type': 'WebSite', '@id': site + '/#website', 'url': site + '/', 'name': SITE_NAME,
+                   'alternateName': 'Aroha Seniors', 'inLanguage': 'en-NZ', 'publisher': {'@id': site + '/#org'}}
+        data = {'@context': 'https://schema.org', '@graph': [website, org]}
+    elif page in CRUMB:
+        data = {'@context': 'https://schema.org', '@type': 'BreadcrumbList', 'itemListElement': [
+            {'@type': 'ListItem', 'position': 1, 'name': 'Home', 'item': site + '/'},
+            {'@type': 'ListItem', 'position': 2, 'name': CRUMB[page], 'item': page_url(page)}]}
+    else:
+        return ''
     return '<script type="application/ld+json">\n' + json.dumps(data, indent=2, ensure_ascii=False) + '\n</script>'
 
 
@@ -125,7 +149,9 @@ def render(page, key, title, desc, inline):
         js = '<script src="assets/site.js"></script>'
     tokens = {
         'TITLE': html.escape(title), 'DESCRIPTION': html.escape(desc),
-        'CSS': css, 'JS': js, 'HEAD_EXTRA': json_ld(c) if key == 'home' else '',
+        'CSS': css, 'JS': js, 'HEAD_EXTRA': json_ld(c, page),
+        'URL_TAGS': ('<meta name="robots" content="noindex">' if page in NOINDEX else
+                     f'<meta property="og:url" content="{page_url(page)}">\n<link rel="canonical" href="{page_url(page)}">'),
         'PHONE': f'<span class="nw">{c["phone"]}</span>', 'TEL': 'tel:' + c['phone_intl'],   # phone numbers never split across lines
         'EMAIL': c['email'], 'EMAIL_WBR': f'{local}<wbr>@{domain}', 'MAILTO': 'mailto:' + c['email'],
         'FACEBOOK': c['facebook'], 'CHARITY_NO': c['charity_no'], 'REGISTER_URL': c['register_url'],
@@ -135,7 +161,7 @@ def render(page, key, title, desc, inline):
         'KAI_PHONE': f'<span class="nw">{c["kai_phone"]}</span>', 'KAI_TEL': 'tel:' + c['kai_phone_intl'],
         'KAI_INITIALS': ''.join(w[0] for w in c['kai_name'].split())[:2].upper(),
         'TAGLINE': c['tagline'], 'YEAR': str(datetime.date.today().year),
-        'SITE_URL': c['site_url'], 'CANONICAL': page_url(page),
+        'SITE_URL': c['site_url'],
         'BANK_BLOCK': bank, 'TAX_BLOCK': tax, 'CREDIT_BLOCK': credit,
         'JS_CONFIG': json.dumps({'formEndpoint': c['form_endpoint'], 'netlifyForms': c['netlify_forms'], 'email': c['email'], 'phone': c['phone']}),
     }
@@ -180,14 +206,27 @@ def main():
     if DOCS.exists():                      # preview pages link to the same files, so copy them alongside
         shutil.copytree(DOCS, PREVIEW / 'assets' / 'docs', dirs_exist_ok=True)
     for page, key, title, desc in PAGES:
-        (SITE / f'{page}.html').write_text(render(page, key, title, desc, inline=False), encoding='utf-8')
+        out = render(page, key, title, desc, inline=False)
+        if page == '404':
+            # Netlify serves this at whatever address was mistyped (e.g. /old/page), so every
+            # link and asset must start from the site root
+            out = re.sub(r'(href|src)="(?!https?:|mailto:|tel:|sms:|data:|#|/)', r'\1="/', out)
+            (SITE / '404.html').write_text(out, encoding='utf-8')
+            print('built 404.html')
+            continue
+        (SITE / f'{page}.html').write_text(out, encoding='utf-8')
         (PREVIEW / f'{page}.html').write_text(render(page, key, title, desc, inline=True), encoding='utf-8')
         print(f'built {page}.html  (preview {(PREVIEW / f"{page}.html").stat().st_size // 1024} KB)')
     # search engines: where the pages are, and that they may be crawled
-    urls = ''.join(f'  <url><loc>{page_url(p)}</loc></url>\n' for p, *_ in PAGES)
+    today = datetime.date.today().isoformat()
+    urls = ''.join(f'  <url><loc>{page_url(p)}</loc><lastmod>{today}</lastmod></url>\n' for p, *_ in PAGES if p not in NOINDEX)
     (SITE / 'sitemap.xml').write_text('<?xml version="1.0" encoding="UTF-8"?>\n'
                                       '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' + urls + '</urlset>\n')
     (SITE / 'robots.txt').write_text(f"User-agent: *\nAllow: /\n\nSitemap: {CONFIG['site_url']}/sitemap.xml\n")
+    # Netlify: send its own .netlify.app address to the real domain, so Google sees one site, not two
+    (SITE / '_redirects').write_text(f"https://{CONFIG['netlify_host']}/* {CONFIG['site_url']}/:splat 301!\n")
+    # IndexNow (Bing, Yandex, Seznam...): the key file proves we own the site when we ping new pages
+    (SITE / f"{CONFIG['indexnow_key']}.txt").write_text(CONFIG['indexnow_key'])
 
 
 if __name__ == '__main__':

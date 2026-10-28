@@ -183,8 +183,40 @@ Cloudflare DNS (both records **DNS only**, grey cloud, not proxied, so Netlify c
 Netlify: Domain management, Add a domain you already own, `arohaseniorscharitabletrust.com`.
 Then HTTPS, Verify DNS configuration, and let it provision the certificate.
 
-Two zips: the **preview** zip adds a `_headers` file (`X-Robots-Tag: noindex`) so the preview stays out
-of Google. The **live** zip is `site/` as is. Deploy the live one when the domain goes on.
+The site is live, so deploy `site/` only (the live zip). `_redirects` sends the old
+`aroha-seniors-preview.netlify.app` address to the domain. Don't deploy the old preview zip with its
+`_headers` file again: it tells Google not to index the site.
+
+## Search (SEO)
+
+On the site (28/10/2026):
+
+- Titles of about 60 characters or less with the trust's name and Auckland (Google cuts longer ones), and
+  descriptions of about 160 characters or less.
+- Canonical link on every page; `sitemap.xml` with dates; `robots.txt`; `404.html` (noindex, root links so it
+  works at any address).
+- Structured data: home has `WebSite` (site name) and `NGO` (also known as Aroha Seniors, Aroha Seniors
+  Group, ASCT; charity number; contacts for Amelia and Korina; Flat Bush, South and East Auckland). Inner
+  pages have breadcrumbs.
+- `_redirects` 301s the netlify.app address to the domain, so Google sees one site.
+- IndexNow key file (`/<indexnow_key>.txt`) so Bing and friends can be told about new pages straight away:
+
+  ```
+  curl -X POST https://api.indexnow.org/indexnow -H 'Content-Type: application/json' -d '{"host":"arohaseniorscharitabletrust.com","key":"<indexnow_key>","keyLocation":"https://arohaseniorscharitabletrust.com/<indexnow_key>.txt","urlList":["https://arohaseniorscharitabletrust.com/","https://arohaseniorscharitabletrust.com/about.html"]}'
+  ```
+
+Off the site, once:
+
+1. Google Search Console: add a Domain property, verify with the TXT record in Cloudflare DNS, submit
+   `sitemap.xml`, then URL inspection and Request indexing for the home page and About.
+2. Bing Webmaster Tools: sign in and import from Search Console. Covers Bing, DuckDuckGo, Yahoo, Ecosia and ChatGPT search.
+3. Google Business Profile: "Aroha Seniors Charitable Trust", category non-profit organisation, service
+   area (Flat Bush, South and East Auckland) with the address hidden, website and Amelia's phone.
+4. Links back to the site: website field on the Charities Register entry (Amelia, through Charities
+   Services), the Facebook page's website field, and free listings on the Family Services Directory,
+   Volunteering Auckland and Neighbourly.
+5. Broad searches like "charitable trusts in Auckland" are owned by directories and big funders. Organic
+   rank there takes months and links; Google Ad Grants is the quick way onto that page.
 
 ## Launch checklist
 
