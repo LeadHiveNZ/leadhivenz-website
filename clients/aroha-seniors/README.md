@@ -39,7 +39,7 @@ Made from the two images Joe supplied on 12/10/2026 (their logo, and their banne
 | `favicon.png`, `apple-touch-icon.png` | Same heart (new logo)  | Browser tab and phone home-screen icon    |
 | `logo-full.jpg`       | Full new logo, with "To Serve with Aroha" and the trust name | About page header; logo in the search-engine data |
 | `banner.jpg`          | Full banner                            | About page, above the values              |
-| `hero.jpg`            | Banner photo, three members with poi   | Home page hero                            |
+| `hero.jpg`            | Two members in green Aroha t-shirts holding hands (Amelia's pick for the first photo, 1/11/2026) | Home page hero. Badge and labels sit clear of their faces |
 | `gatherings.jpg`      | Banner photo, two members with poi     | What we do, Friendship gatherings         |
 
 Photos Amelia sent on 12/10/2026 (her feedback round):

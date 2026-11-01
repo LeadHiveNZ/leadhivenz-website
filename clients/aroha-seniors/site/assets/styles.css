@@ -149,17 +149,17 @@ h1 em,h2 em{font-style:italic;font-weight:500;color:var(--leaf);letter-spacing:-
 .hero-photo::after{content:"";position:absolute;inset:0;border-radius:inherit;box-shadow:inset 0 0 0 1px rgba(255,255,255,.3)}
 .hero-art .leaf-a{width:34%;left:-13%;bottom:-7%;transform:rotate(-28deg)}
 .hero-art .leaf-b{width:22%;left:6%;bottom:-11%;transform:rotate(12deg)}
-.hero-art .leaf-c{width:17%;right:-5%;top:34%;transform:rotate(38deg)}
+.hero-art .leaf-c{width:17%;right:-5%;top:55%;transform:rotate(38deg)}
 .chip{position:absolute;z-index:2;display:flex;align-items:center;gap:.65rem;background:#fff;border-radius:999px;padding:.6rem 1.15rem .6rem .6rem;box-shadow:var(--shadow-lg);font-weight:600;font-size:.92rem;color:var(--ink);white-space:nowrap}
 .chip i{width:40px;height:40px;border-radius:50%;display:grid;place-items:center;flex:none}
 .chip i .ic{width:1.2rem;height:1.2rem}
-.chip-1{top:16%;right:-7%}
+.chip-1{top:38%;right:-7%}
 .chip-1 i{background:var(--tint);color:var(--green)}
 .chip-2{top:58%;left:-11%}
 .chip-2 i{background:var(--gold-soft);color:var(--gold-ink)}
 .chip-3{bottom:9%;right:-5%}
 .chip-3 i{background:var(--teal-tint);color:var(--teal)}
-.badge{position:absolute;z-index:2;top:-3%;left:-7%;width:132px;height:132px}
+.badge{position:absolute;z-index:2;top:-3%;right:-7%;width:132px;height:132px}   /* top corners sit outside the arch; faces are top-left */
 .badge svg{width:100%;height:100%}
 .badge .ring{transform-origin:66px 66px;animation:spin 30s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -568,7 +568,7 @@ a.method.big:hover{color:#fff}
   .chip-1{right:-2%}
   .chip-2{left:-3%;top:62%}
   .chip-3{right:-1%;bottom:4%}
-  .badge{width:104px;height:104px;left:-3%}
+  .badge{width:104px;height:104px;right:-3%}
   .hero-art .leaf-a{left:-8%}
   .hero-art .leaf-c{right:-3%}
   .cta-band .leaf{display:none}
