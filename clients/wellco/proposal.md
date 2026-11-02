@@ -4,7 +4,9 @@ JOE ONLY. Delete this whole comment block before sending to Dan.
 =====================================================================
 
 BEFORE SENDING
-- Fill [DEMO LINK] (Netlify Drop / Lovable link, test on mobile data first).
+- Demo link is the private claude.ai page https://claude.ai/artifact/PLBSD85NfHUDxkKS8Z3tiB. Share it with
+  dan.wellman@wellco.au from the page's Share menu BEFORE sending, or he can't open it. Test it on your
+  phone on mobile data first. Backup: attach clients/wellco/wellco-demo.html, it opens offline on any device.
 - Square-bracket numbers are placeholders: [6,500] [250] [390] [50%]. Remove the brackets once set.
 - GST on your fees: LeadHive is NZ based. Check with your accountant whether you add anything for
   an Australian business client, then set the "(AUD, ...)" line in Investment.
@@ -57,7 +59,7 @@ LIKELY OBJECTIONS
 **Proposal for Dan Wellman, Wellco Developments Pty Ltd**
 Prepared by Joe Ingram, LeadHive · hello@leadhivenz.com · November 2026
 
-**Have a click around the demo first: [DEMO LINK]**
+**Have a click around the demo first: https://claude.ai/artifact/PLBSD85NfHUDxkKS8Z3tiB**
 It works on your phone, iPad and laptop. Nothing you do in it gets sent anywhere.
 
 ---
