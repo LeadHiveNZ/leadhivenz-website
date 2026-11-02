@@ -66,8 +66,10 @@ Marko supplies a bigger job.
 
 ## Heater sizing
 - Volume ranges per model are in rates.md. Pick the smallest NM-family heater of at least 6 kW
-  whose range covers the volume, allowing 0.5 m³ under the minimum. Offer every other priced
-  heater that fits as an upgrade.
+  whose range covers the volume, allowing 0.5 m³ under the minimum. If no NM model covers it
+  (large or glass-heavy rooms), pick the cheapest residential model that does (Smooth, Velvet,
+  Saana). Commercial heater-only models are never chosen automatically for a home sauna. Offer
+  every other priced heater that fits as an upgrade.
 - Residential models include their controls. Commercial "E" and Ultra/Peak models are heater
   only and need a control panel added.
 - From January 2026 all heaters ship with a Wifi controller; no Wifi upgrade line on quotes.

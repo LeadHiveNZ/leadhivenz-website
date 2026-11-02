@@ -470,10 +470,13 @@ function activeTimbers(){ const a=[]; rates.timbers.forEach((t,i)=>{ if(t.on) a.
 function fittingHeaters(vol){ return rates.heaters.map((h,i)=>({h,i})).filter(x=>x.h.price>0 && vol>=x.h.min-S().sizeTol-1e-9 && vol<=x.h.max+1e-9); }
 function autoHeater(){
   const {vol}=roomVolume(); const fits=fittingHeaters(vol);
+  const resi = x=>x.h.family!=="Commercial";
   const fam = fits.filter(x=>x.h.family===S().heaterFamily && x.h.kw>=S().minKw-1e-9).sort((a,b)=>a.h.kw-b.h.kw);
   if(fam.length) return fam[0].i;
   const fam2 = fits.filter(x=>x.h.family===S().heaterFamily).sort((a,b)=>b.h.kw-a.h.kw);
   if(fam2.length) return fam2[0].i;
+  const resiFits = fits.filter(resi).sort((a,b)=>a.h.price-b.h.price);
+  if(resiFits.length) return resiFits[0].i;
   if(fits.length) return fits.sort((a,b)=>a.h.price-b.h.price)[0].i;
   // nothing priced fits: nearest priced heater by kW need
   const priced=rates.heaters.map((h,i)=>({h,i})).filter(x=>x.h.price>0);
