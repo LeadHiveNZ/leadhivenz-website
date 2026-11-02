@@ -121,7 +121,7 @@ ul.mat li{margin:2px 0}
   </div>
 </header>
 
-<div class="banner" id="banner">Calibrated to the Suren Chandrajit job (2010 × 1320 × 2100) and updated with Marko's bench rules: 85 wall boards and 27 + 1 ceiling boards, 7 planks for the top bench, 6 for the bottom, a 4-slat infill panel and skirting in 3.6 m lengths. The infill panel and the spare ceiling board add about $250 at cost over the original sheet, which left the infill row blank. Thermo Aspen cover, black skirting price, and Narvi models outside the four on that quote still need figures under <strong>Rates and standards</strong>.</div>
+<div class="banner" id="banner">Loaded with Sauna HQ's November 2026 rates: cedar, Alder and Accoya per lineal metre, black skirting at $58.50 a length, and the full Narvi residential and commercial price lists. Board rules follow Marko's method: cover width per species, two extra boards per wall and one per ceiling, 7 and 6 planks for the standard benches, 4-slat infill, trims in all 8 corners. On the Chandrajit room that gives 85 wall boards and 27 ceiling boards, the same counts as his spreadsheet. Heater prices are the October 2023 lists and are due for a refresh.</div>
 
 <div class="tabs" role="tablist">
   <button class="tab" role="tab" aria-selected="true" data-tab="build">Build the quote</button>
@@ -201,11 +201,12 @@ ul.mat li{margin:2px 0}
       <h2>Heater, lighting and extras</h2>
       <div class="row">
         <label>Heater <span class="u" id="heaterWhy">sized from the room volume</span><select id="heater"></select></label>
+        <label>Control panel <span class="u">for heater-only commercial models</span><select id="control"></select></label>
         <label>Lighting included <select id="lighting"></select></label>
       </div>
       <div class="row" style="margin-top:10px">
         <label class="inline"><input type="checkbox" id="accessories" checked> Accessory pack (bucket, ladle, thermometer)</label>
-        <label class="inline"><input type="checkbox" id="wifi"> Include Wifi control panel in the price</label>
+        <label class="inline" id="wifiLabel"><input type="checkbox" id="wifi"> Add Wifi control panel upgrade (old stock only)</label>
       </div>
       <div class="row" style="margin-top:10px">
         <label>Labour <span class="u">$, by eye</span><input id="labour" type="number" min="0" step="100" value="7000"></label>
@@ -269,6 +270,7 @@ ul.mat li{margin:2px 0}
       <label>Bracing cleat factor <span class="u">lm of plank per lm of bench</span><input id="s_brace" type="number" step="0.1"></label>
       <label>Leg needed past span <span class="u">mm</span><input id="s_legspan" type="number" step="50"></label>
       <label>Backrest height <span class="u">mm, for drawings</span><input id="s_backrest" type="number" step="5"></label>
+      <label>Backrest rails <span class="u">lengths bought per backrest</span><input id="s_backrestRails" type="number" step="1"></label>
     </div>
     <div class="row" style="margin-top:10px">
       <label>Stock board lengths <span class="u">m, comma separated</span><input id="s_stock" type="text"></label>
@@ -276,15 +278,17 @@ ul.mat li{margin:2px 0}
       <label>Extra boards per ceiling <input id="s_extraCeil" type="number" step="1"></label>
       <label>Skirting stock length <span class="u">mm</span><input id="s_skirtLen" type="number" step="100"></label>
       <label>Glass adds to heater volume <span class="u">m³ per m² of glass</span><input id="s_glassVol" type="number" step="0.1"></label>
+      <label>Heater sizing tolerance <span class="u">m³ below a heater's minimum still allowed</span><input id="s_sizeTol" type="number" step="0.1"></label>
+      <label>Smallest heater to quote <span class="u">kW</span><input id="s_minKw" type="number" step="0.5"></label>
       <label>Default heater family <input id="s_heaterFamily" type="text"></label>
     </div>
   </section>
 
   <section class="card">
     <h2>Timber options</h2>
-    <p class="hint" style="margin:0 0 8px">Cover is the exposed width once fitted. The 85 × 12 cedar board covers 75 mm, which is what makes Marko's ceiling count come out at 27 boards. Rates are per lineal metre before the 35% markup.</p>
+    <p class="hint" style="margin:0 0 8px">Cover is the exposed width once fitted (cedar 85 × 12 covers 80, Alder 120 × 15 covers 107, Accoya 140 × 15 covers 124). Planks also price the bracing cleats; the infill rate also prices the backrest. All rates per lineal metre before the 35% markup. Tick "quote" to put a timber on every quote by default.</p>
     <div class="tblwrap"><table id="timberTable">
-      <thead><tr><th>Name</th><th class="n">Lining cover mm</th><th class="n">Lining $/lm</th><th class="n">Plank $/lm</th><th class="n">Trim $/lm</th><th class="n">Backrest $/lm</th><th></th></tr></thead>
+      <thead><tr><th>Name</th><th class="n">Cover mm</th><th class="n">Lining $/lm</th><th class="n">Planks, cleats $/lm</th><th class="n">Infill, backrest $/lm</th><th class="n">Trims $/lm</th><th></th></tr></thead>
       <tbody></tbody></table></div>
     <div class="actions"><button class="btn small" id="addTimber">Add timber</button></div>
   </section>
@@ -328,9 +332,10 @@ ul.mat li{margin:2px 0}
     <h2>Lighting, controls and accessories</h2>
     <div class="row" style="align-items:start">
       <div><h3 style="margin-top:0">Lighting (first row is the standard inclusion)</h3><div class="tblwrap"><table id="lightTable"><thead><tr><th>Name</th><th class="n">Price $</th><th></th></tr></thead><tbody></tbody></table></div><div class="actions"><button class="btn small" id="addLight">Add package</button></div></div>
-      <div><h3 style="margin-top:0">Fixed extras</h3>
+      <div><h3 style="margin-top:0">Control panels (for heater-only models)</h3><div class="tblwrap"><table id="controlTable"><thead><tr><th>Name</th><th class="n">Price $</th><th></th></tr></thead><tbody></tbody></table></div><div class="actions"><button class="btn small" id="addControl">Add control</button></div>
+        <h3>Fixed extras</h3>
         <div class="row"><label>Accessory pack <span class="u">$</span><input id="r_accessories" type="number" step="10"></label>
-        <label>Wifi control panel <span class="u">$</span><input id="r_wifi" type="number" step="10"></label></div></div>
+        <label>Wifi upgrade for old stock <span class="u">$, 0 hides it</span><input id="r_wifi" type="number" step="10"></label></div></div>
     </div>
   </section>
 
@@ -361,38 +366,53 @@ ul.mat li{margin:2px 0}
 'use strict';
 const $ = id => document.getElementById(id);
 const DEFAULT_RATES = {
-  std:{ceiling:2100,lowH:450,lowD:460,topH:900,topD:560,plankPitch:110,fascia:2,infillSlats:4,infillBrace:2,brace:1.8,legspan:2400,backrest:265,
-       stock:[1.5,1.8,2.1,2.4,2.7,3.0],extraWall:1,extraCeil:1,skirtLen:3600,glassVol:1.2,heaterFamily:"NM"},
+  std:{ceiling:2100,lowH:450,lowD:460,topH:900,topD:560,plankPitch:110,fascia:2,infillSlats:4,infillBrace:2,brace:1.8,legspan:2400,backrest:265,backrestRails:3,
+       stock:[1.5,1.8,2.1,2.4,2.7,3.0],extraWall:2,extraCeil:1,skirtLen:3600,glassVol:1.2,sizeTol:0.5,minKw:6,heaterFamily:"NM"},
   timbers:[
-    {name:"Western Red Cedar",spec:"Premium Grade Western Red Cedar lining boards 85 x 12mm",plankSpec:"90 x 35mm Western Red Cedar planks",liningCover:75,liningRate:17.5,plankRate:38.5,trimRate:12,backrestRate:157,on:true},
-    {name:"Thermo Aspen or Alder (Finland)",spec:"Thermo Aspen or Alder lining boards imported from Finland",plankSpec:"Thermo Aspen or Alder bench planks",liningCover:75,liningRate:15,plankRate:26,trimRate:9.5,backrestRate:149,on:true}
+    {name:"Western Red Cedar",spec:"Premium Grade Western Red Cedar lining boards 85 x 12mm",plankSpec:"90 x 35mm Western Red Cedar planks",infillSpec:"90 x 17mm Western Red Cedar",liningCover:80,liningRate:17.8,plankRate:38.5,infillRate:28.5,trimRate:6.5,on:true},
+    {name:"Alder (Finland)",spec:"Alder lining boards 120 x 15mm imported from Finland",plankSpec:"120 x 28mm Alder planks",infillSpec:"90 x 15mm Alder",liningCover:107,liningRate:16.8,plankRate:29,infillRate:17,trimRate:6,on:true},
+    {name:"Accoya",spec:"Accoya lining boards 140 x 15mm",plankSpec:"140 x 20mm Accoya planks",infillSpec:"140 x 15mm Accoya",liningCover:124,liningRate:22.1,plankRate:23.7,infillRate:23.2,trimRate:7.9,on:false}
   ],
   t1:3, t2:6, ins:23, wallcleat:80,
   wf:[180,220,280], cf:[280,350,450], fo:[250,250,300], ba:[300,350,450], fx:[250,300,350],
-  door:2150, glass:950, leg:35, waterfall:60, skirting:0, markup:35, gst:10,
+  door:2150, glass:950, leg:35, waterfall:60, skirting:58.5, markup:35, gst:10,
   heaters:[
-    {name:"Narvi NM 600 (6.0kW) with built-in manual controls and 25kgs of sauna rocks",family:"NM",kw:6,min:5,max:8,price:1380},
-    {name:"Narvi NM 450 (4.5kW) with built-in manual controls",family:"NM",kw:4.5,min:3,max:6,price:0},
-    {name:"Narvi NM 900 (9.0kW) with built-in manual controls",family:"NM",kw:9,min:8,max:14,price:0},
-    {name:"Narvi NS 600 (6.0kW) with built-in manual controls and 35kgs of sauna rocks",family:"NS",kw:6,min:5,max:8,price:1570},
-    {name:"Narvi NS 450 (4.5kW) mesh heater",family:"NS",kw:4.5,min:3,max:6,price:0},
-    {name:"Narvi NS 900 (9.0kW) mesh heater",family:"NS",kw:9,min:8,max:14,price:0},
-    {name:"Narvi NC Electric 600 (6.0kW) with N2014 control panel and 25kgs of sauna rocks",family:"NC",kw:6,min:6,max:9,price:2070},
-    {name:"Narvi NC Electric 900 (9.0kW) with control panel",family:"NC",kw:9,min:9,max:15,price:0},
-    {name:"Narvi Saana 680 (6.8kW) with N2014 control panel and 80kgs of sauna rocks",family:"Saana",kw:6.8,min:5,max:8,price:2760},
-    {name:"Narvi Saana 900 (9.0kW) with control panel and 80kgs of sauna rocks",family:"Saana",kw:9,min:8,max:14,price:0},
-    {name:"Narvi Smooth 6.8kW pillar heater",family:"Smooth",kw:6.8,min:5,max:8,price:0},
-    {name:"Narvi Smooth 9.0kW pillar heater",family:"Smooth",kw:9,min:8,max:14,price:0},
-    {name:"Narvi Velvet Electric 6.8kW",family:"Velvet",kw:6.8,min:5,max:8,price:0},
-    {name:"Narvi Velvet Electric 9.0kW",family:"Velvet",kw:9,min:8,max:14,price:0},
-    {name:"Narvi Minex 3.6kW",family:"Minex",kw:3.6,min:2,max:4,price:0},
-    {name:"Narvi NS Mini 3.6kW",family:"NS Mini",kw:3.6,min:2,max:4,price:0},
-    {name:"Narvi Ultra Small 9.0kW (commercial)",family:"Ultra",kw:9,min:8,max:14,price:0},
-    {name:"Narvi Peak 12kW (commercial)",family:"Peak",kw:12,min:10,max:18,price:0},
-    {name:"Narvi Peak 15kW (commercial)",family:"Peak",kw:15,min:14,max:24,price:0}
+    {name:"Narvi Minex 3.6kW with built-in controls and 15kgs of sauna rocks",family:"Minex",kw:3.6,min:2,max:4,price:1214},
+    {name:"Narvi NM 450 (4.5kW) with built-in controls and 30kgs of sauna rocks",family:"NM",kw:4.5,min:4,max:6,price:1190},
+    {name:"Narvi NM 600 (6.0kW) with built-in controls and 30kgs of sauna rocks",family:"NM",kw:6,min:6,max:9,price:1280},
+    {name:"Narvi NM 900 (9.0kW) with built-in controls and 30kgs of sauna rocks",family:"NM",kw:9,min:9,max:15,price:1360},
+    {name:"Narvi NS 600 (6.0kW) with built-in controls and 35kgs of sauna rocks",family:"NS",kw:6,min:5,max:8,price:1490},
+    {name:"Narvi NS 900 (9.0kW) with built-in controls and 35kgs of sauna rocks",family:"NS",kw:9,min:8,max:14,price:1580},
+    {name:"Narvi NC Electric 60 (6.0kW) with N2014 control panel and 30kgs of sauna rocks",family:"NC",kw:6,min:4,max:9,price:1890},
+    {name:"Narvi NC Electric 90 (9.0kW) with N2014 control panel and 30kgs of sauna rocks",family:"NC",kw:9,min:9,max:15,price:1990},
+    {name:"Narvi Saana 680 (6.8kW) with N2014 control panel and 80kgs of sauna rocks",family:"Saana",kw:6.8,min:5,max:8,price:2490},
+    {name:"Narvi Saana 900 (9.0kW) with N2014 control panel and 80kgs of sauna rocks",family:"Saana",kw:9,min:8,max:14,price:2550},
+    {name:"Narvi Smooth 680 (6.8kW) with N2014 control panel and 100kgs of sauna rocks",family:"Smooth",kw:6.8,min:5,max:8,price:2990},
+    {name:"Narvi Smooth 900 (9.0kW) with N2014 control panel and 100kgs of sauna rocks",family:"Smooth",kw:9,min:8,max:14,price:3140},
+    {name:"Narvi Smooth 105 (10.5kW) with N2014 control panel and 100kgs of sauna rocks",family:"Smooth",kw:10.5,min:10,max:18,price:3290},
+    {name:"Narvi Velvet 680 (6.8kW) with N2014 control panel and 140kgs of sauna rocks",family:"Velvet",kw:6.8,min:5,max:8,price:3840},
+    {name:"Narvi Velvet 900 (9.0kW) with N2014 control panel and 140kgs of sauna rocks",family:"Velvet",kw:9,min:8,max:14,price:3980},
+    {name:"Narvi Velvet 105 (10.5kW) with N2014 control panel and 140kgs of sauna rocks",family:"Velvet",kw:10.5,min:10,max:18,price:4290},
+    {name:"Narvi NC Electric E 600 (6.0kW) heater only, control panel extra",family:"Commercial",kw:6,min:4,max:9,price:1320},
+    {name:"Narvi NC Electric E 900 (9.0kW) heater only, control panel extra",family:"Commercial",kw:9,min:9,max:15,price:1395},
+    {name:"Narvi Saana 680 E (6.8kW) heater only, control panel extra",family:"Commercial",kw:6.8,min:5,max:8,price:1610},
+    {name:"Narvi Saana 900 E (9.0kW) heater only, control panel extra",family:"Commercial",kw:9,min:8,max:14,price:1690},
+    {name:"Narvi Ultra Small 600 (6.0kW) heater only, control panel extra",family:"Commercial",kw:6,min:5,max:8,price:1790},
+    {name:"Narvi Ultra Small 900 (9.0kW) heater only, control panel extra",family:"Commercial",kw:9,min:8,max:14,price:1890},
+    {name:"Narvi Ultra 900 (9.0kW) heater only, control panel extra",family:"Commercial",kw:9,min:8,max:12,price:2760},
+    {name:"Narvi Ultra 105 (10.5kW) heater only, control panel extra",family:"Commercial",kw:10.5,min:9,max:15,price:2860},
+    {name:"Narvi Ultra 120 (12.0kW) heater only, control panel extra",family:"Commercial",kw:12,min:10,max:18,price:3025},
+    {name:"Narvi Ultra 150 (15kW) heater only, control panel extra",family:"Commercial",kw:15,min:14,max:24,price:3210},
+    {name:"Narvi Ultra Big 180 (18kW) heater only, control panel extra",family:"Commercial",kw:18,min:18,max:30,price:4958},
+    {name:"Narvi Ultra Big 210 (21kW) heater only, control panel extra",family:"Commercial",kw:21,min:24,max:36,price:5355},
+    {name:"Narvi Ultra Big 240 (24kW) heater only, control panel extra",family:"Commercial",kw:24,min:27,max:40,price:5750},
+    {name:"Narvi Ultra Big 270 (27kW) heater only, control panel extra",family:"Commercial",kw:27,min:30,max:46,price:6143},
+    {name:"Narvi Peak 150 (15kW) heater only, control panel extra",family:"Commercial",kw:15,min:14,max:24,price:5560},
+    {name:"Narvi Peak 240 (24kW) heater only, control panel extra",family:"Commercial",kw:24,min:27,max:40,price:10280}
   ],
+  controls:[{name:"Control panel included with heater",price:0},{name:"N2014 control panel (up to 10.5kW)",price:1290},{name:"Narvi Basic control panel",price:910},{name:"T2003 daily timer control",price:1410},{name:"B2003 weekly timer control",price:1490},{name:"Narvi Wifi control panel",price:2640},{name:"ND 105 control panel",price:1770}],
   lights:[{name:"Wall mounted sauna light fitting with timber shade",price:280},{name:"6 x 15mm LED downlights for the sauna ceiling (rated at 125°C)",price:764},{name:"LED strip lighting to the ceiling above the top bench with pelmet",price:1010}],
-  accessories:300, wifi:1353,
+  accessories:300, wifi:0,
   excl:"Electrical power supply for sauna heater (32amp single phase OR 16amp three phase)\nElectrical supply and switching for the sauna lights. Light switch must be outside the sauna.\nElectrical fit-off to sauna heater and lighting.\nAny work or finishes for the sauna floor\nExterior painting or cladding to the sauna walls",
   terms:"Terms of Payment: 40% deposit with order confirmation and balance due on our completion of works.\nQuote Validity: our quotes remain valid for 90 days after which they are subject to review."
 };
@@ -403,7 +423,7 @@ function defaultProject(){
   return {client:"",address:"",qdate:new Date().toISOString().slice(0,10),roomL:2010,roomW:1320,roomH:2100,
     walls:[{glass:0,door:false},{glass:0,door:false},{glass:0,door:false},{glass:0,door:true}],
     doorW:700,waterfall:0,autoBench:true,returnBench:false,benches:[],
-    primary:0,heater:-1,lighting:0,accessories:true,wifi:false,labour:7000,rubbish:0,other:0,siteNotes:""};
+    primary:0,heater:-1,control:0,lighting:0,accessories:true,wifi:false,labour:7000,rubbish:0,other:0,siteNotes:""};
 }
 function sampleProject(){
   const p = defaultProject();
@@ -413,10 +433,10 @@ function sampleProject(){
 }
 const WALLS = ["Long wall A (benches)","Long wall B","Short wall C","Short wall D"];
 function loadRates(){
-  try{ const s=localStorage.getItem("saunaRates3"); if(s){ const r=JSON.parse(s); if(r&&r.timbers&&r.std) return Object.assign(JSON.parse(JSON.stringify(DEFAULT_RATES)),r);} }catch(e){}
+  try{ const s=localStorage.getItem("saunaRates4"); if(s){ const r=JSON.parse(s); if(r&&r.timbers&&r.std) return Object.assign(JSON.parse(JSON.stringify(DEFAULT_RATES)),r);} }catch(e){}
   return JSON.parse(JSON.stringify(DEFAULT_RATES));
 }
-function saveRates(){ try{ localStorage.setItem("saunaRates3",JSON.stringify(rates)); }catch(e){} }
+function saveRates(){ try{ localStorage.setItem("saunaRates4",JSON.stringify(rates)); }catch(e){} }
 function loadProject(){ try{ const s=localStorage.getItem("saunaProject2"); if(s){const p=JSON.parse(s); if(p&&p.walls) return Object.assign(defaultProject(),p);} }catch(e){} return sampleProject(); }
 function saveProject(){ try{ localStorage.setItem("saunaProject2",JSON.stringify(project)); }catch(e){} }
 
@@ -447,11 +467,13 @@ function autoBenches(){
 }
 function benches(){ return project.autoBench ? autoBenches() : project.benches; }
 function activeTimbers(){ const a=[]; rates.timbers.forEach((t,i)=>{ if(t.on) a.push(i); }); return a.length?a:[0]; }
-function fittingHeaters(vol){ return rates.heaters.map((h,i)=>({h,i})).filter(x=>x.h.price>0 && vol>=x.h.min-1e-9 && vol<=x.h.max+1e-9); }
+function fittingHeaters(vol){ return rates.heaters.map((h,i)=>({h,i})).filter(x=>x.h.price>0 && vol>=x.h.min-S().sizeTol-1e-9 && vol<=x.h.max+1e-9); }
 function autoHeater(){
   const {vol}=roomVolume(); const fits=fittingHeaters(vol);
-  const fam = fits.filter(x=>x.h.family===S().heaterFamily).sort((a,b)=>a.h.kw-b.h.kw);
+  const fam = fits.filter(x=>x.h.family===S().heaterFamily && x.h.kw>=S().minKw-1e-9).sort((a,b)=>a.h.kw-b.h.kw);
   if(fam.length) return fam[0].i;
+  const fam2 = fits.filter(x=>x.h.family===S().heaterFamily).sort((a,b)=>b.h.kw-a.h.kw);
+  if(fam2.length) return fam2[0].i;
   if(fits.length) return fits.sort((a,b)=>a.h.price-b.h.price)[0].i;
   // nothing priced fits: nearest priced heater by kW need
   const priced=rates.heaters.map((h,i)=>({h,i})).filter(x=>x.h.price>0);
@@ -500,19 +522,19 @@ function cost(ti){
   const plankLm = plankRows.reduce((a,r)=>a+r.planks*r.len,0);
   lines.push({k:"planks",item:"Bench planks, "+T.name,detail:plankRows.map(r=>r.name.toLowerCase()+" "+r.top+" top + "+r.fascia+" fascia = "+r.planks+" × "+r.len.toFixed(1)+" m").join("; ")+" = "+fm(plankLm)+" lm × "+rate(T.plankRate),amt:plankLm*T.plankRate,q:plankRows});
   const infillSlats=(s.infillSlats+s.infillBrace), infillLen=mainRun>0?stockLen(mainRun):0, infillLm=infillSlats*infillLen;
-  if(infillLm>0) lines.push({k:"infill",item:"Bench infill panel",detail:s.infillSlats+" slats + "+s.infillBrace+" back bracing slats × "+infillLen.toFixed(1)+" m = "+fm(infillLm)+" lm × "+rate(T.liningRate),amt:infillLm*T.liningRate,q:{slats:infillSlats,len:infillLen}});
+  if(infillLm>0) lines.push({k:"infill",item:"Bench infill panel, "+(T.infillSpec||T.name),detail:s.infillSlats+" slats + "+s.infillBrace+" back bracing slats × "+infillLen.toFixed(1)+" m = "+fm(infillLm)+" lm × "+rate(T.infillRate),amt:infillLm*T.infillRate,q:{slats:infillSlats,len:infillLen}});
   const braceLm=benchRun*s.brace;
   lines.push({k:"brace",item:"Bracing cleats",detail:fm(benchRun)+" lm of bench × "+s.brace+" = "+fm(braceLm)+" lm × "+rate(T.plankRate),amt:braceLm*T.plankRate,q:{lm:braceLm}});
   lines.push({k:"wallcleat",item:"Wall cleats",detail:"flat rate",amt:rates.wallcleat});
   if(legs>0) lines.push({k:"legs",item:"Supporting legs",detail:legs+" × "+money(rates.leg),amt:legs*rates.leg});
-  const trimLm=4*hStock;
-  lines.push({k:"trims",item:"Corner trims 17 x 17mm",detail:"4 × "+hStock.toFixed(1)+" m × "+rate(T.trimRate),amt:trimLm*T.trimRate,q:{lm:trimLm,len:hStock}});
-  lines.push({k:"skirting",item:"100mm black aluminium skirting",detail:skirtPieces+" × "+(s.skirtLen/1000).toFixed(1)+" m lengths, cut to fit, never joined"+(rates.skirting>0?" × "+money(rates.skirting):" (rate not set)"),amt:skirtPieces*rates.skirting,q:{pieces:skirtPieces}});
+  const trimLm=4*hStock+2*stockLen(L)+2*stockLen(W);
+  lines.push({k:"trims",item:"Corner trims 17 x 17mm, "+T.name,detail:"4 vertical × "+hStock.toFixed(1)+" m + ceiling 2 × "+stockLen(L).toFixed(1)+" m + 2 × "+stockLen(W).toFixed(1)+" m = "+fm(trimLm)+" lm × "+rate(T.trimRate),amt:trimLm*T.trimRate,q:{lm:trimLm,len:hStock,cl:stockLen(L),cw:stockLen(W)}});
+  lines.push({k:"skirting",item:"100mm black aluminium skirting",detail:skirtPieces+" × "+(s.skirtLen/1000).toFixed(1)+" m lengths, cut to fit, never joined"+(rates.skirting>0?" × "+rate(rates.skirting):" (rate not set)"),amt:skirtPieces*rates.skirting,q:{pieces:skirtPieces}});
   const wf=num(project.waterfall); if(wf>0) lines.push({k:"waterfall",item:"Waterfall edge",detail:fm(wf)+" lm × "+rate(rates.waterfall),amt:wf*rates.waterfall});
   lines.push({k:"door",item:"Sauna door, custom built with ½ lite window",detail:"1 × "+money(rates.door),amt:rates.door});
   if(glassArea>0) lines.push({k:"glass",item:"Glazing",detail:fm(glassArea)+" m² × "+rate(rates.glass),amt:glassArea*rates.glass});
-  const br=topRun||benchRun;
-  lines.push({k:"backrest",item:"2½ rail backrest",detail:fm(br)+" lm × "+rate(T.backrestRate),amt:br*T.backrestRate,q:{lm:br}});
+  const br=topRun||benchRun, brLen=br>0?stockLen(br):0, brLm=s.backrestRails*brLen;
+  lines.push({k:"backrest",item:"2½ rail backrest, "+(T.infillSpec||T.name),detail:s.backrestRails+" rails × "+brLen.toFixed(1)+" m = "+fm(brLm)+" lm × "+rate(T.infillRate),amt:brLm*T.infillRate,q:{lm:brLm,rails:s.backrestRails,len:brLen}});
   const other=num(project.other); if(other>0) lines.push({k:"other",item:"Other materials",detail:"entered per job",amt:other});
   const materials=lines.reduce((a,l)=>a+l.amt,0);
   const markup=materials*rates.markup/100;
@@ -520,9 +542,10 @@ function cost(ti){
   const gst=(materials+markup+labour)*rates.gst/100;
   const hi=heaterIndex(); const heater=hi>=0?rates.heaters[hi].price:0;
   const light=rates.lights[project.lighting]?rates.lights[project.lighting].price:0;
-  const acc=project.accessories?rates.accessories:0, wifi=project.wifi?rates.wifi:0, rubbish=num(project.rubbish);
-  const total=materials+markup+labour+gst+heater+light+acc+wifi+rubbish;
-  return {T,lines,materials,markup,labour,gst,heater,hi,light,acc,wifi,rubbish,total,exGst:total/(1+rates.gst/100),hStock,glassArea,insArea,benchRun,legs};
+  const control=rates.controls&&rates.controls[project.control]?rates.controls[project.control].price:0;
+  const acc=project.accessories?rates.accessories:0, wifi=(project.wifi&&rates.wifi>0)?rates.wifi:0, rubbish=num(project.rubbish);
+  const total=materials+markup+labour+gst+heater+control+light+acc+wifi+rubbish;
+  return {T,lines,materials,markup,labour,gst,heater,hi,control,light,acc,wifi,rubbish,total,exGst:total/(1+rates.gst/100),hStock,glassArea,insArea,benchRun,legs};
 }
 
 // ---------- render: build tab ----------
@@ -559,9 +582,12 @@ function renderSelects(){
   const {vol}=roomVolume(); const ai=autoHeater();
   $("heater").innerHTML = `<option value="-1">Auto: ${ai>=0?esc(rates.heaters[ai].name):"no priced heater fits"}</option>`+rates.heaters.map((h,i)=>`<option value="${i}">${esc(h.name)} · ${h.price>0?money(h.price):"price TBC"} · ${h.min}–${h.max} m³${vol>=h.min&&vol<=h.max?"":" (outside range)"}</option>`).join("");
   $("heater").value = project.heater>=0&&rates.heaters[project.heater]?project.heater:-1;
-  $("heaterWhy").textContent = "room "+fm(roomVolume().base)+" m³"+(roomVolume().glassArea>0?" + glass = "+fm(vol)+" m³":"")+", "+S().heaterFamily+" family first";
+  $("heaterWhy").textContent = "room "+fm(roomVolume().base)+" m³"+(roomVolume().glassArea>0?" + glass = "+fm(vol)+" m³":"")+", "+S().heaterFamily+" family, "+S().minKw+" kW minimum, "+S().sizeTol+" m³ tolerance";
   $("lighting").innerHTML = rates.lights.map((h,i)=>`<option value="${i}">${esc(h.name)} · ${money(h.price)}</option>`).join("");
   $("lighting").value=Math.min(project.lighting,rates.lights.length-1);
+  $("control").innerHTML = (rates.controls||[]).map((h,i)=>`<option value="${i}">${esc(h.name)}${h.price>0?" · "+money(h.price):""}</option>`).join("");
+  $("control").value=Math.min(project.control||0,(rates.controls||[]).length-1);
+  $("wifiLabel").hidden = !(rates.wifi>0);
   renderPicks();
 }
 function fillProjectInputs(){
@@ -590,7 +616,9 @@ function renderCosting(){
   <tr><td>Mark up</td><td class="note">${rates.markup}%</td><td class="n">${money(r.markup)}</td></tr>
   <tr><td>Labour charge</td><td class="note">entered per job</td><td class="n">${money(r.labour)}</td></tr>
   <tr><td>GST</td><td class="note">${rates.gst}% on materials, markup and labour</td><td class="n">${money(r.gst)}</td></tr>
-  <tr><td>Sauna heater</td><td class="note">${r.hi>=0?esc(rates.heaters[r.hi].name):"none"}</td><td class="n">${money(r.heater)}</td></tr>
+  <tr><td>Sauna heater</td><td class="note">${r.hi>=0?esc(rates.heaters[r.hi].name):"none"}</td><td class="n">${money(r.heater)}</td></tr>`;
+  if(r.control) rows+=`<tr><td>Control panel</td><td class="note">${esc(rates.controls[project.control].name)}</td><td class="n">${money(r.control)}</td></tr>`;
+  rows+=`
   <tr><td>Sauna light</td><td class="note">${esc(rates.lights[project.lighting]?rates.lights[project.lighting].name:"")}</td><td class="n">${money(r.light)}</td></tr>`;
   if(r.acc) rows+=`<tr><td>Accessories</td><td class="note">bucket, ladle, thermometer</td><td class="n">${money(r.acc)}</td></tr>`;
   if(r.wifi) rows+=`<tr><td>Wifi control panel</td><td></td><td class="n">${money(r.wifi)}</td></tr>`;
@@ -607,8 +635,8 @@ function materialsText(r){
   q("planks").q.forEach(p=>out.push(`Bench planks, ${p.name.toLowerCase()}: ${p.planks} × ${p.len.toFixed(1)} m (${p.top} top + ${p.fascia} fascia)`));
   if(q("infill")) out.push(`Infill panel: ${q("infill").q.slats} slats × ${q("infill").q.len.toFixed(1)} m (${s.infillSlats} face + ${s.infillBrace} bracing)`);
   out.push(`Bracing cleats: ${fm(q("brace").q.lm)} lm of plank stock`);
-  out.push(`Corner trims 17 x 17: 4 × ${q("trims").q.len.toFixed(1)} m`);
-  out.push(`Backrest, 2½ rail: ${fm(q("backrest").q.lm)} lm`);
+  out.push(`Corner trims 17 x 17: 4 × ${q("trims").q.len.toFixed(1)} m vertical + 2 × ${q("trims").q.cl.toFixed(1)} m + 2 × ${q("trims").q.cw.toFixed(1)} m ceiling = ${fm(q("trims").q.lm)} lm`);
+  out.push(`Backrest, 2½ rail (${r.T.infillSpec||r.T.name}): ${q("backrest").q.rails} × ${q("backrest").q.len.toFixed(1)} m`);
   if(r.legs) out.push(`Supporting legs: ${r.legs}`);
   out.push(`Insulation: ${fm(r.insArea)} m²`);
   out.push(`Aluminium foil and tape: 1 roll`);
@@ -617,9 +645,10 @@ function materialsText(r){
   out.push(`Sauna door: 1, custom built with ½ lite window`);
   if(r.glassArea>0) out.push(`Glazing: ${fm(r.glassArea)} m²`);
   out.push(`Heater: ${r.hi>=0?rates.heaters[r.hi].name:"not selected"}`);
+  if(r.control) out.push(`Control panel: ${rates.controls[project.control].name}`);
   out.push(`Lighting: ${rates.lights[project.lighting]?rates.lights[project.lighting].name:""}`);
   if(project.accessories) out.push(`Accessory pack: bucket, ladle, thermometer`);
-  if(project.wifi) out.push(`Narvi Flow Wifi control panel`);
+  if(r.wifi) out.push(`Narvi Wifi control panel upgrade`);
   out.push(`Bench heights: bottom ${s.lowH} mm, top ${s.topH} mm; backrest ${s.backrest} mm above top bench`);
   return out.join("\n");
 }
@@ -646,10 +675,10 @@ function renderQuote(results,pi){
   const B=benches();
   steps.push(`Install ${B.length>2?"two-tiered sauna benches with return bench":"two-tiered sauna benches"}, built using ${p.T.plankSpec||p.T.name+" planks"}. Bottom bench at ${s.lowH}mm, top bench at ${s.topH}mm, infill panel between. All sauna benches are built with concealed fixings.`);
   steps.push("Supply and hang a custom built sauna door with ½ lite window, timber push/pull handles and heavy duty roller catch.");
-  if(p.hi>=0) steps.push(`Mount a ${rates.heaters[p.hi].name}.`);
+  if(p.hi>=0) steps.push(`Mount a ${rates.heaters[p.hi].name.replace(" heater only, control panel extra","")}${p.control?" with "+rates.controls[project.control].name:""}.`);
   steps.push(`Supply ${rates.lights[project.lighting]?rates.lights[project.lighting].name.replace(/^./,c=>c.toLowerCase()):"sauna lighting"}.`);
   steps.push("Supply and install a 2½ rail back rest above bench.");
-  if(project.wifi) steps.push("Supply Narvi Flow Wifi control panel, allowing control from the app on your phone.");
+  if(p.wifi) steps.push("Supply Narvi Wifi control panel, allowing control from the app on your phone.");
   if(project.accessories) steps.push("Supply Sauna Accessory pack, including bucket, ladle and thermometer.");
   steps.forEach(x=>{ q+=`• ${x}\n`; });
   q+=`\nTotal Cost ${money2(p.exGst)} + GST = ${money2(p.total)} Inc GST\n`;
@@ -657,8 +686,10 @@ function renderQuote(results,pi){
   if(alts.length){ q+=`\nAlternative Timber Choice:\n`; alts.forEach(r=>{ const diff=p.total-r.total; q+=`Replace all ${p.T.name} timber components with ${r.T.name}. ${diff>=0?"Saving":"Add"} ${money2(Math.abs(diff))} Inc GST\n`; }); }
   const lUp=rates.lights.filter((h,i)=>i!==project.lighting && h.price>(rates.lights[project.lighting]||{price:0}).price);
   if(lUp.length){ q+=`\nOptional Lighting Upgrade (rated at 125°C):\n`; lUp.forEach(h=>{ q+=`${h.name}  Add ${money2(h.price-p.light)} Inc GST\n`; }); }
-  const hUp=fittingHeaters(roomVolume().vol).filter(x=>x.i!==p.hi && x.h.price>p.heater);
-  if(hUp.length||!project.wifi){ q+=`\nOptional Heater & Control Upgrades:\n`; hUp.forEach(x=>{ q+=`${x.h.name}  Add ${money2(x.h.price-p.heater)}\n`; }); if(!project.wifi) q+=`Sauna Wifi Control Panel (allowing control from app on phone)  Add ${money2(rates.wifi)} Inc GST\n`; }
+  const chosenFam = p.hi>=0?rates.heaters[p.hi].family:"";
+  const hUp=fittingHeaters(roomVolume().vol).filter(x=>x.i!==p.hi && x.h.price>p.heater && (chosenFam==="Commercial" ? x.h.family==="Commercial" : x.h.family!=="Commercial"));
+  const wifiUp = rates.wifi>0 && !p.wifi;
+  if(hUp.length||wifiUp){ q+=`\nOptional Heater & Control Upgrades:\n`; hUp.forEach(x=>{ q+=`${x.h.name.replace(" heater only, control panel extra"," (heater only)")}  Add ${money2(x.h.price-p.heater)}\n`; }); if(wifiUp) q+=`Sauna Wifi Control Panel (allowing control from app on phone)  Add ${money2(rates.wifi)} Inc GST\n`; }
   q+=`\nOther Specifications for the Sauna not supplied by Sauna HQ:\n`+rates.excl.split("\n").filter(Boolean).map(x=>"  "+x).join("\n")+`\n\n${rates.terms}\n\nIf you have any questions in relation to our proposal, please do not hesitate to get in contact with me.\n`;
   const unpriced=fittingHeaters(roomVolume().vol).length===0;
   if(unpriced) q+=`\n[Note for Marko: no priced heater covers ${fm(roomVolume().vol)} m³. Add a price under Rates.]\n`;
@@ -668,15 +699,15 @@ function renderQuote(results,pi){
 // ---------- render: rates tab ----------
 function renderRates(){
   const s=S();
-  ["ceiling","lowH","lowD","topH","topD","plankPitch","fascia","infillSlats","infillBrace","brace","legspan","backrest","extraWall","extraCeil","skirtLen","glassVol","heaterFamily"].forEach(k=>{$("s_"+k).value=s[k];});
+  ["ceiling","lowH","lowD","topH","topD","plankPitch","fascia","infillSlats","infillBrace","brace","legspan","backrest","backrestRails","extraWall","extraCeil","skirtLen","glassVol","sizeTol","minKw","heaterFamily"].forEach(k=>{$("s_"+k).value=s[k];});
   $("s_stock").value=s.stock.join(", ");
   $("timberTable").querySelector("tbody").innerHTML=rates.timbers.map((t,i)=>`<tr>
     <td><input type="text" data-timber="${i}" data-k="name" value="${esc(t.name)}"></td>
     <td class="n"><input type="number" step="1" data-timber="${i}" data-k="liningCover" value="${t.liningCover}"></td>
     <td class="n"><input type="number" step="0.5" data-timber="${i}" data-k="liningRate" value="${t.liningRate}"></td>
     <td class="n"><input type="number" step="0.5" data-timber="${i}" data-k="plankRate" value="${t.plankRate}"></td>
+    <td class="n"><input type="number" step="0.5" data-timber="${i}" data-k="infillRate" value="${t.infillRate}"></td>
     <td class="n"><input type="number" step="0.5" data-timber="${i}" data-k="trimRate" value="${t.trimRate}"></td>
-    <td class="n"><input type="number" step="1" data-timber="${i}" data-k="backrestRate" value="${t.backrestRate}"></td>
     <td><button class="btn small ghost" data-deltimber="${i}">✕</button></td></tr>`).join("");
   $("heaterTable").querySelector("tbody").innerHTML=rates.heaters.map((h,i)=>`<tr>
     <td><input type="text" data-heater="${i}" data-k="name" value="${esc(h.name)}"></td>
@@ -687,6 +718,8 @@ function renderRates(){
     <td class="n"><input type="number" step="10" data-heater="${i}" data-k="price" value="${h.price}" style="width:90px"></td>
     <td><button class="btn small ghost" data-delheater="${i}">✕</button></td></tr>`).join("");
   $("lightTable").querySelector("tbody").innerHTML=rates.lights.map((h,i)=>`<tr><td><input type="text" data-light="${i}" data-k="name" value="${esc(h.name)}"></td><td class="n"><input type="number" step="10" data-light="${i}" data-k="price" value="${h.price}"></td><td><button class="btn small ghost" data-dellight="${i}">✕</button></td></tr>`).join("");
+  rates.controls=rates.controls||[];
+  $("controlTable").querySelector("tbody").innerHTML=rates.controls.map((h,i)=>`<tr><td><input type="text" data-control="${i}" data-k="name" value="${esc(h.name)}"></td><td class="n"><input type="number" step="10" data-control="${i}" data-k="price" value="${h.price}"></td><td><button class="btn small ghost" data-delcontrol="${i}">✕</button></td></tr>`).join("");
   ["t1","t2","ins","wallcleat","door","glass","leg","waterfall","skirting","markup","gst","accessories","wifi","excl","terms"].forEach(k=>{$("r_"+k).value=rates[k];});
   [["wf","wf"],["cf","cf"],["fo","fo"],["ba","ba"],["fx","fx"]].forEach(([id,k])=>{[1,2,3].forEach(i=>{$("r_"+id+i).value=rates[k][i-1];});});
   $("ratesJson").value=JSON.stringify(rates);
@@ -788,6 +821,7 @@ $("tab-rates").addEventListener("input",e=>{
   if(el.dataset.timber!=null){ rates.timbers[el.dataset.timber][el.dataset.k]= el.dataset.k==="name"?el.value:num(el.value); }
   else if(el.dataset.heater!=null){ rates.heaters[el.dataset.heater][el.dataset.k]= (el.dataset.k==="name"||el.dataset.k==="family")?el.value:num(el.value); }
   else if(el.dataset.light!=null){ rates.lights[el.dataset.light][el.dataset.k]= el.dataset.k==="name"?el.value:num(el.value); }
+  else if(el.dataset.control!=null){ rates.controls[el.dataset.control][el.dataset.k]= el.dataset.k==="name"?el.value:num(el.value); }
   else if(el.id==="s_stock"){ rates.std.stock=el.value.split(/[,\s]+/).map(num).filter(x=>x>0); }
   else if(el.id==="s_heaterFamily"){ rates.std.heaterFamily=el.value.trim(); }
   else if(el.id.startsWith("s_")){ rates.std[el.id.slice(2)]=num(el.value); }
@@ -802,11 +836,13 @@ $("tab-rates").addEventListener("click",e=>{
   if(el.dataset.deltimber!=null && rates.timbers.length>1){ rates.timbers.splice(el.dataset.deltimber,1); }
   else if(el.dataset.delheater!=null && rates.heaters.length>1){ rates.heaters.splice(el.dataset.delheater,1); project.heater=-1; }
   else if(el.dataset.dellight!=null && rates.lights.length>1){ rates.lights.splice(el.dataset.dellight,1); project.lighting=0; }
+  else if(el.dataset.delcontrol!=null && rates.controls.length>1){ rates.controls.splice(el.dataset.delcontrol,1); project.control=0; }
   else return;
   saveRates(); renderRates(); renderSelects(); renderCosting();
 });
-$("addTimber").addEventListener("click",()=>{ rates.timbers.push({name:"New timber",spec:"",plankSpec:"",liningCover:75,liningRate:0,plankRate:0,trimRate:0,backrestRate:0,on:false}); saveRates(); renderRates(); renderSelects(); renderCosting(); });
+$("addTimber").addEventListener("click",()=>{ rates.timbers.push({name:"New timber",spec:"",plankSpec:"",infillSpec:"",liningCover:80,liningRate:0,plankRate:0,infillRate:0,trimRate:0,on:false}); saveRates(); renderRates(); renderSelects(); renderCosting(); });
 $("addHeater").addEventListener("click",()=>{ rates.heaters.push({name:"New heater",family:"NM",kw:6,min:5,max:8,price:0}); saveRates(); renderRates(); renderSelects(); renderCosting(); });
+$("addControl").addEventListener("click",()=>{ rates.controls.push({name:"New control panel",price:1000}); saveRates(); renderRates(); renderSelects(); renderCosting(); });
 $("addLight").addEventListener("click",()=>{ rates.lights.push({name:"New lighting package",price:500}); saveRates(); renderRates(); renderSelects(); renderCosting(); });
 $("resetRates").addEventListener("click",()=>{ rates=JSON.parse(JSON.stringify(DEFAULT_RATES)); saveRates(); renderRates(); renderSelects(); renderCosting(); toast("Calibrated defaults restored"); });
 $("importRates").addEventListener("click",()=>{ try{ const r=JSON.parse($("ratesJson").value); if(!r.timbers||!r.std) throw 0; rates=Object.assign(JSON.parse(JSON.stringify(DEFAULT_RATES)),r); saveRates(); renderRates(); renderSelects(); renderCosting(); toast("Rates imported"); }catch(e){ toast("That text is not a rates file"); } });

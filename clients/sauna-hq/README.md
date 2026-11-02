@@ -41,10 +41,17 @@ not on a server. Use **Rates and standards > Copy rates** to back them up or mov
 another computer, and **Import pasted rates** on the other end. To change the shipped
 defaults for everyone, edit `DEFAULT_RATES` near the top of the `<script>` block.
 
-## Still to fill in (as of 2 Nov 2026)
+## Loaded rates (2 Nov 2026, from Marko)
 
-- Thermo Aspen / Alder cover width and its own board count.
-- Black aluminium skirting price per 3.6 m length (currently 0, quantity still shown).
-- Narvi charge prices beyond NM 600, NS 600, NC 600 and Saana 680.
+- Cedar 85 x 12 lining $17.80/lm (80 cover), 90 x 35 planks and cleats $38.50, 90 x 17 infill and backrest $28.50, trims $6.50.
+- Alder 120 x 15 lining $16.80/lm (107 cover), 120 x 28 planks $29.00, 90 x 15 infill and backrest $17.00, trims $6.00.
+- Accoya 140 x 15 lining $22.10/lm (124 cover), 140 x 20 planks $23.70, 140 x 15 infill and backrest $23.20, trims $7.90.
+- Black aluminium skirting $58.50 per 3.6 m length.
+- Narvi residential and commercial price lists (retail inc GST, October 2023 lists, due for a refresh).
+
+## Still to fill in
+
 - Glazing rate per m2 (placeholder $950).
 - Medium and large job flat rates (only the small-job tier is calibrated).
+- Backrest: priced as 3 rails of the infill board. Marko's sheet carried $315 for the Chandrajit backrest, the material alone is $180, so confirm what else is in his number.
+- Heater prices once Marko refreshes the lists. From January all heaters ship with a Wifi controller; the Wifi upgrade line is hidden (rate 0) and can be switched back on under Rates for old stock.
