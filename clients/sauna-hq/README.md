@@ -55,3 +55,11 @@ defaults for everyone, edit `DEFAULT_RATES` near the top of the `<script>` block
 - Medium and large job flat rates (only the small-job tier is calibrated).
 - Backrest: priced as 3 rails of the infill board. Marko's sheet carried $315 for the Chandrajit backrest, the material alone is $180, so confirm what else is in his number.
 - Heater prices once Marko refreshes the lists. From January all heaters ship with a Wifi controller; the Wifi upgrade line is hidden (rate 0) and can be switched back on under Rates for old stock.
+
+## Handing it to Marko's own Claude
+
+- `sauna-hq-quoting.skill`  upload in claude.ai under Settings > Capabilities > Skills. Source is in `skill/`.
+- `INSTALL-for-Marko.md`    the one-page install and usage guide to send with it.
+- `skill/references/`       rates, build standards, quote wording and the Chandrajit worked example. Edit these and `DEFAULT_RATES` in the HTML together so the skill and the tool agree.
+
+Re-package after edits with the skill-creator `package_skill` script, or zip the `skill/` folder so that `sauna-hq-quoting/SKILL.md` is at the top level and rename the zip to `.skill`.
