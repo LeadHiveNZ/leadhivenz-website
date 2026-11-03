@@ -15,8 +15,9 @@ A phone app for Joe and Kieran that turns a signed contract into a booked job: t
 
 1. Client signs. Open the app → **Book** → attach the agreement or quote PDF (or a photo once the AI function is on), or paste the email thread.
 2. Tap **Book it in**. That's it. The job is saved, it's on the shared calendar, the run sheet is built (depart time, set-up, bar hours, pack-down, home), the checklist is created with due dates and each task already assigned (client, money and paperwork to Joe; caravan, stock and gear to Kieran; day-of jobs to both), and you're both rostered as crew.
-3. Anything it couldn't read is listed at the top of the job page ("no bar hours found", "venue says TBC"). Fix it with **Edit booking** and tap **All sorted**.
-4. If it can't find the client's name or the date it shows the check screen instead of guessing. Untick "Book it straight in" on the Book screen if you'd rather always review first.
+3. Anything it couldn't read is listed at the top of the job page ("no bar hours found", "venue says TBC"). Tap any tile (guests, bar hours) or **Edit details** to fix it, then **All sorted**.
+4. When the client changes something later, tap **Add an update** on the job and paste their message ("we're now 110 and want cocktails"). It shows each change for you to confirm, then recalculates crew, estimates and the checklist.
+5. If it can't find the client's name or the date it shows the check screen instead of guessing. Untick "Book it straight in" on the Book screen if you'd rather always review first.
 
 Who gets which tasks is set in `app/config.js` (`ASSIGN`). Swap the names if Kieran does the paperwork and you do the gear.
 

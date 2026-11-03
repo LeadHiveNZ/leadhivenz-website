@@ -1,6 +1,6 @@
 // Minimal service worker: caches the app shell so it opens instantly (and offline).
 // Data always comes live from Supabase when online.
-const CACHE = "tipsy-tui-v1";
+const CACHE = "tipsy-tui-v2";
 const SHELL = ["./", "./index.html", "./styles.css", "./app.js", "./config.js", "./logo-small.jpg", "./icons/icon-192.png", "./manifest.webmanifest"];
 
 self.addEventListener("install", (e) => {
