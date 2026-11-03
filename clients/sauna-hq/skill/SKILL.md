@@ -27,27 +27,28 @@ order, the same order the costing spreadsheet uses:
 1. **Room.** Length, width, ceiling in mm. Ceiling defaults to 2100 if not given. Note each
    wall's glass width and which wall has the door. Compute floor area and volume.
 2. **Shell items.** Wall frames, ceiling frame, insulation, foil, battens, fixings from the
-   flat rates for the job size.
+   domestic or commercial allowances.
 3. **Lining boards.** Per timber: ceiling boards span the width and are bought at the next
    stock length above the width; count = ceil(length / cover) + 1 spare. Each wall:
    ceil((wall width - glass - door) / cover) + 2, bought at the next stock length above the
    ceiling height. Fully glazed walls get no boards.
 4. **Benches.** Standard layout is a top bench (900 high, 560 deep) and a bottom bench
    (450 high, 460 deep) running the full long wall. Planks per bench = round(depth / 110) top
-   planks + 2 fascia. Infill panel between benches = 4 slats + 2 bracing slats of the thinner
-   board. Bracing cleats = 1.8 lineal metres of plank stock per metre of bench. Wall cleats
-   flat. Supporting legs on spans over 2.4 m.
+   planks + 2 fascia. Infill panels are optional (between benches is the usual recommendation,
+   under the bottom bench on request) at $125/$115 per metre of bench. Bracing cleats = 1.8
+   lineal metres of plank stock per metre of bench. Wall cleats flat. Supporting legs: one on
+   any bench over 2.1 m, one every metre past 2.7 m, $250 each.
 5. **Trims, backrest, skirting, door, glass.** Corner trims in all 8 corners (4 vertical at
-   ceiling height, 4 around the ceiling perimeter). Backrest = 3 rails of the thinner board
-   along the top bench. Skirting in whole 3.6 m lengths per wall, never joined. Door is a
-   fixed price. Glazing per square metre.
+   ceiling height, 4 around the ceiling perimeter). Backrest priced per metre of top bench
+   ($125 cedar, $115 other). Skirting in whole 3.6 m lengths per wall, never joined. Door is a
+   fixed price. Glazing $600 per square metre.
 6. **Totals.** Materials subtotal, then 35% markup, then labour (Marko's judgement, ask if
    not given, do not invent it), then 10% GST on those three. Then add heater, control panel if
    needed, lighting, accessory pack and demolition at retail. That sum is the price inc GST;
    divide by 1.1 for the ex GST figure shown on the quote.
-7. **Heater.** Pick the smallest heater in the NM family that is at least 6 kW and whose
-   volume range covers the room (allow 0.5 m³ under the minimum). Glass adds 1.2 m³ per m²
-   to the sizing volume. List every other priced heater that fits as an upgrade with the
+7. **Heater.** Volume is L × W × H plus 1 m³ per m² of glass. Pick the smallest heater in the
+   NM family that is at least 6 kW and whose range covers it; when the volume sits within
+   0.5 m³ of a heater's maximum, go to the next range up, as Marko does. List every other priced heater that fits as an upgrade with the
    price difference.
 8. **Alternative timbers.** Run the whole take-off again for each other timber Marko wants
    quoted. Board counts differ because cover widths differ. Present the primary timber as the
@@ -55,7 +56,7 @@ order, the same order the costing spreadsheet uses:
 
 Check your work against `references/worked-example.md` (the Chandrajit job) whenever you
 change a rule. If the formulas stop reproducing 85 wall boards, 27 ceiling boards, 13 bench
-planks and a $101 trim line on that room, something is wrong.
+planks, a $101 trim line and about $25,540 inc GST on that room, something is wrong.
 
 ### What to hand back
 

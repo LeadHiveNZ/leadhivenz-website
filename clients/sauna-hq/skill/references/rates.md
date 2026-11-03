@@ -4,11 +4,15 @@ All timber prices are buy prices per lineal metre before the 35% markup. Heater 
 prices are retail, inc GST, charged as-is after GST.
 
 ## Timber
-| Timber | Lining board | Cover | Lining $/lm | Planks and cleats | $/lm | Infill and backrest board | $/lm | Corner trim 17 × 17 $/lm |
+| Timber | Lining board | Cover | Lining $/lm | Planks and cleats | $/lm | Infill panel $/lm of bench | Backrest $/lm of bench | Corner trim 17 × 17 $/lm |
 |---|---|---|---|---|---|---|---|---|
-| Western Red Cedar | 85 × 12 | 80 | 17.80 | 90 × 35 | 38.50 | 90 × 17 | 28.50 | 6.50 |
-| Alder (Finland) | 120 × 15 | 107 | 16.80 | 120 × 28 | 29.00 | 90 × 15 | 17.00 | 6.00 |
-| Accoya | 140 × 15 | 124 | 22.10 | 140 × 20 | 23.70 | 140 × 15 | 23.20 | 7.90 |
+| Western Red Cedar | 85 × 12 | 80 | 17.80 | 90 × 35 | 38.50 | 125 | 125 | 6.50 |
+| Alder (Finland) | 120 × 15 | 107 | 16.80 | 120 × 28 | 29.00 | 115 | 115 | 6.00 |
+| Accoya | 140 × 15 | 124 | 22.10 | 140 × 20 | 23.70 | 115 | 115 | 7.90 |
+
+Infill panels and backrests are made from the thinner board (90 × 17 cedar $28.50/lm, 90 × 15
+Alder $17.00/lm, 140 × 15 Accoya $23.20/lm) but Marko prices them as finished items per lineal
+metre of bench, so use the per-metre figures above.
 
 Cedar is the usual headline timber. Alder is the usual alternative. Accoya on request.
 
@@ -16,12 +20,12 @@ Cedar is the usual headline timber. Alder is the usual alternative. Accoya on re
 - Black aluminium skirting, 3600 length: $58.50
 - Sauna door, custom built: $2,150
 - Wall cleats: $80 per job
-- Supporting leg: $35
+- Supporting leg: $250 flat
 - Insulation: $23 per m²
-- Glazing: $950 per m² (placeholder)
+- Glazing, glass front walls and windows: $600 per m²
 - Waterfall edge: $60 per lm (placeholder)
 - Accessory pack (bucket, ladle, thermometer): $300
-- Shell flat rates by job size: see standards.md
+- Frame, foil, batten and fixing allowances by job type: see standards.md
 
 ## Narvi heaters, residential (controls included, rocks included)
 | Model | kW | Volume m³ | Retail |
@@ -72,6 +76,5 @@ When he does, update this file and `DEFAULT_RATES.heaters` in the tool together.
 - Upgrade: LED strip lighting above the top bench with pelmet, add $730.
 
 ## Known open questions
-- Backrest: material is about $180 on a 2 m bench; Marko's sheet had $315. Ask what else is in it.
-- NM 600 was charged at $1,380 on the Chandrajit job against a list price of $1,280.
-- Glazing rate and the medium/large shell flat rates are unconfirmed.
+- Foil, batten and fixing allowances for commercial jobs (domestic figures confirmed).
+- Heater prices once Marko refreshes the Narvi lists (October 2023 lists loaded).

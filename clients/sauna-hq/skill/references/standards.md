@@ -6,7 +6,7 @@ and his emails of 2 November 2026.
 ## Room
 - Internal sizes of the framed room: length (long dimension), width, ceiling height.
 - Standard ceiling 2100 (a false ceiling is built at this height). Never above 3000.
-- Volume for heater sizing = L × W × H in m³, plus 1.2 m³ for every m² of glass.
+- Volume for heater sizing = L × W × H in m³, plus 1 m³ for every m² of glass (Marko's rule).
 
 ## Board stock lengths
 - Lining boards and planks are bought in 1.5, 1.8, 2.1, 2.4, 2.7 and 3.0 m.
@@ -32,41 +32,45 @@ and his emails of 2 November 2026.
 - Top planks per bench = round(depth / 110). Add 2 fascia planks (front and back).
   560 deep → 5 + 2 = 7. 460 deep → 4 + 2 = 6. 1050 wide custom bench → 10 + 2 = 12.
 - Plank length = stockLen(bench length).
-- Infill panel between the two tiers = 4 slats + 2 back bracing slats of the thinner board
-  (90 × 17 cedar, 90 × 15 Alder, 140 × 15 Accoya) at stockLen(bench length).
+- Infill panels are optional. Two positions: between the top and bottom bench (recommended, so
+  the floor under the bottom bench can be cleaned) and below the bottom bench. Some clients take
+  both. Priced per lineal metre of bench: $125 cedar, $115 other timbers.
 - Bracing cleats (underframe) = 1.8 lineal metres of plank stock per lineal metre of bench, at
   the plank rate. This reproduces Marko's spreadsheet to the dollar.
 - Wall cleats: flat $80 per job.
-- Supporting legs: one per span over 2400, $35 each.
+- Supporting legs: any bench over 2100 long gets one leg; over 2700, one leg every 1000
+  (a 3000 bench has 2). $250 per leg, flat.
 
 ## Trims, backrest, skirting
 - Corner trims 17 × 17 in all 8 corners: 4 vertical at stockLen(height) + 2 × stockLen(length)
   + 2 × stockLen(width) around the ceiling.
-- Backrest: 2½ rail, 265 high above the top bench, costed as 3 rails of the thinner board at
-  stockLen(top bench length). Marko's sheet carried more than the material for this line
-  ($315 on a 2 m bench); confirm what else he includes.
+- Backrest: 2½ rail, 265 high above the top bench. Priced per lineal metre of top bench (the
+  wall length): $125 cedar, $115 other timbers.
 - Skirting: 100 mm black aluminium, 3600 lengths, cut to each wall, never joined. Count
   ceil(wall / 3600) per non-glass wall.
 
-## Shell items (flat rates by floor area)
-| Item | Small ≤ 3 m² | Medium ≤ 6 m² | Large |
-|---|---|---|---|
-| Wall frame allowance | 180 | 220 | 280 |
-| Ceiling frame | 280 | 350 | 450 |
-| Foil and tape | 250 | 250 | 300 |
-| Battens 42 × 19 | 300 | 350 | 450 |
-| Fixings | 250 | 300 | 350 |
+## Shell items (flat allowances by job type)
+| Item | Domestic | Commercial |
+|---|---|---|
+| Wall frame allowance | 150 | 200 |
+| Ceiling frame | 280 | 600 |
+| Foil and tape | 250 | 300 |
+| Battens 42 × 19 | 300 | 450 |
+| Fixings | 250 | 350 |
 
-Only the small tier is calibrated against a real job. Medium and large are estimates until
-Marko supplies a bigger job.
+Wall and ceiling frame figures are Marko's. Foil, battens and fixings for commercial are
+estimates until he confirms them.
 
 - Insulation: $23 per m² of clad wall plus ceiling.
 - Door: custom built with ½ lite window, timber push/pull handles, roller catch, $2,150 each.
-- Glazing: $950 per m² placeholder, not yet confirmed.
+- Glazing (glass front walls and windows): $600 per m².
 
 ## Heater sizing
 - Volume ranges per model are in rates.md. Pick the smallest NM-family heater of at least 6 kW
-  whose range covers the volume, allowing 0.5 m³ under the minimum. If no NM model covers it
+  whose range covers the volume. Marko does not round the volume, but when it sits within about
+  0.5 m³ of a heater's maximum he recommends the next range up, so treat the top of each range
+  as max − 0.5. (A 0.5 m³ allowance under the minimum is kept so his NM 600 choice for the
+  5.6 m³ Chandrajit room reproduces.) If no NM model covers it
   (large or glass-heavy rooms), pick the cheapest residential model that does (Smooth, Velvet,
   Saana). Commercial heater-only models are never chosen automatically for a home sauna. Offer
   every other priced heater that fits as an upgrade.

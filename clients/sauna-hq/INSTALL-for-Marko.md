@@ -45,10 +45,8 @@ File: `quote-builder.html`
 - **Load the Chandrajit job** button shows a real job so you can see your numbers come back.
 
 ## What still needs your numbers
-- Glass price per square metre (placeholder $950).
-- Wall frame, ceiling frame, foil, battens and fixings for medium and large jobs (only small
-  jobs are calibrated from the Chandrajit sheet).
-- Backrest: tool prices the timber only (about $180 on a 2 m bench); your sheet carried $315.
+- Foil, batten and fixing allowances for commercial jobs (I've estimated them above the domestic figures).
 - Heater prices when you refresh the Narvi lists.
+- Quote letter as a Word file on your letterhead: coming, now that I have your template.
 
 Questions: Joe Ingram, hello@leadhivenz.com, +61 0450 925 145.
