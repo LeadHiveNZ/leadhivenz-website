@@ -159,6 +159,8 @@
     calendar: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
     sparkle: '<path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8"/>',
     dot: '<circle cx="12" cy="12" r="4" fill="currentColor" stroke="none"/>',
+    mic: '<rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 17v4M8 21h8"/>',
+    stop: '<rect x="6" y="6" width="12" height="12" rx="2" fill="currentColor"/>',
   };
   const ic = (name, cls = "") => `<svg class="i ${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[name] || ""}</svg>`;
 
@@ -270,6 +272,29 @@
     return out;
   }
 
+  // Local fallback for talking to a job: tick tasks by keyword, pull changes with localUpdate, catch "add a task to ...".
+  const STOP = new Set(["the", "a", "an", "and", "to", "of", "for", "with", "on", "in", "at", "is", "it", "its", "it's", "up", "off", "out", "&", "+", "i", "ive", "i've", "we", "weve", "we've", "got", "have", "has", "been", "done", "did", "do", "that", "this", "all", "now", "also", "just", "so", "then", "them", "sorted", "finished", "ticked", "tick", "please", "can", "you", "yeah", "ok", "okay", "um", "ah", "hey", "job", "client", "check", "confirm"]);
+  const words = (t) => String(t || "").toLowerCase().replace(/[^a-z0-9$'& ]+/g, " ").split(/\s+/).filter((w) => w && !STOP.has(w)).map((w) => w.replace(/s$/, ""));
+  function localCommand(text, booking, tasks) {
+    const out = { done: [], undone: [], newTasks: [], changes: localUpdate(text, booking), notesAppend: "", reply: "" };
+    const segs = text.split(/\s*(?:,|\.|;|\band\b|\balso\b|\bplus\b)\s*/i).map((x) => x.trim()).filter(Boolean);
+    const open = tasks.filter((t) => !t.done), done = tasks.filter((t) => t.done);
+    for (const seg of segs) {
+      const add = seg.match(/(?:add (?:a )?(?:task|reminder|to-?do)(?: to| for)?|remind (?:me|us) to|need to|needs? to|note to)\s+(.+)/i);
+      if (add) { out.newTasks.push({ title: add[1].replace(/^(?:to|that)\s+/i, "").trim(), due_date: "", who: "both" }); continue; }
+      if (/\d+\s*(?:people|pax|guests|heads)|\d\s*[ap]m|\$\s*\d/i.test(seg) && !/done|sorted|finished|paid|sent|bought|collected|booked|ticked/i.test(seg)) continue;
+      const undo = /not (?:actually )?done|haven'?t|hasn'?t|didn'?t|untick|undo|still need/i.test(seg);
+      const pool = undo ? done : open, sw = new Set(words(seg)); if (!sw.size) continue;
+      let best = null, bestScore = 0;
+      for (const t of pool) { const tw = words(t.title); const score = tw.filter((w) => sw.has(w) || [...sw].some((x) => x.length > 3 && (w.startsWith(x) || x.startsWith(w)))).length; const ratio = tw.length ? score / tw.length : 0; if (score > bestScore || (score === bestScore && best && ratio > (words(best.title).filter((w) => sw.has(w)).length / words(best.title).length))) { best = t; bestScore = score; } }
+      if (best && bestScore >= 1 && (bestScore >= 2 || words(best.title).length <= 3 || bestScore / words(best.title).length >= 0.5)) { (undo ? out.undone : out.done).push(best.title); }
+    }
+    out.done = [...new Set(out.done)]; out.undone = [...new Set(out.undone)];
+    const n = out.done.length + Object.keys(out.changes).length + out.newTasks.length;
+    out.reply = n ? `Got ${out.done.length ? out.done.length + " ticked off" : ""}${out.done.length && Object.keys(out.changes).length ? ", " : ""}${Object.keys(out.changes).length ? Object.keys(out.changes).length + " change" + (Object.keys(out.changes).length === 1 ? "" : "s") : ""}${out.newTasks.length ? (out.done.length || Object.keys(out.changes).length ? ", " : "") + out.newTasks.length + " new task" + (out.newTasks.length === 1 ? "" : "s") : ""}. Check and apply.` : "Couldn't match that to a task or a detail. Try naming the task.";
+    return out;
+  }
+
   // ============================================================ data layers
   const uuid = () => (crypto.randomUUID ? crypto.randomUUID() : "id-" + Math.random().toString(36).slice(2) + Date.now());
   const lsGet = (k) => { try { return localStorage.getItem(k); } catch { return null; } };
@@ -291,6 +316,7 @@
     async setCrew(bookingId, staffIds) { this.data.booking_staff = this.data.booking_staff.filter((x) => x.booking_id !== bookingId).concat(staffIds.map((sid) => ({ id: uuid(), booking_id: bookingId, staff_id: sid }))); this.write(this.data); },
     async intake(text) { return { booking: localParse(text), source_text: text, engine: "local" }; },
     async intakeUpdate(text, existing) { return { changes: localUpdate(text, existing), engine: "local" }; },
+    async command(text, booking, tasks) { return { ...localCommand(text, booking, tasks), engine: "local" }; },
     reset() { this.data = demoSeed(); this.write(this.data); },
   };
 
@@ -357,6 +383,19 @@
       return { changes, engine: "claude" };
     },
   };
+  SupabaseDB.command = async function (text, booking, tasks) {
+    const keep = {}; for (const k of UPDATE_FIELDS) keep[k] = booking[k] ?? null; keep.notes = booking.notes ?? "";
+    const r = await this.callIntake({ mode: "command", text, booking: keep, open_tasks: tasks.filter((t) => !t.done).map((t) => t.title), done_tasks: tasks.filter((t) => t.done).map((t) => t.title) });
+    if (r.error || !r.command) return { ...localCommand(text, booking, tasks), engine: "local", warning: r.error || "No answer" };
+    const c = r.command, changes = {};
+    for (const k of ["guest_count", "bartender_count", "total", "travel_minutes"]) if (c[k] != null && String(c[k]) !== String(booking[k] ?? "")) changes[k] = c[k];
+    for (const k of ["event_date", "venue", "address", "kegs_on_tap", "drinks_notes"]) if (c[k] && c[k] !== (booking[k] ?? "")) changes[k] = c[k];
+    for (const k of ["start_time", "finish_time"]) if (c[k] && hm(c[k]) !== hm(booking[k])) changes[k] = c[k];
+    for (const k of ["package", "status"]) if (c[k] && c[k] !== "unchanged" && c[k] !== booking[k]) changes[k] = c[k];
+    for (const k of ["cocktails", "generator", "fairy_lights", "glassware", "accommodation", "deposit_paid", "balance_paid"]) if (c[k] === "yes" || c[k] === "no") { const v = c[k] === "yes"; if (v !== !!booking[k]) changes[k] = v; }
+    const titles = new Set(tasks.map((t) => t.title));
+    return { done: (c.done_tasks || []).filter((t) => titles.has(t)), undone: (c.undone_tasks || []).filter((t) => titles.has(t)), newTasks: c.new_tasks || [], changes, notesAppend: c.notes_append || "", reply: c.reply || "", engine: "claude" };
+  };
   const UPDATE_FIELDS = ["client_name", "contact_name", "email", "phone", "event_name", "event_type", "event_date", "start_time", "finish_time", "venue", "address", "travel_minutes", "guest_count", "package", "bartender_count", "glassware", "generator", "fairy_lights", "cocktails", "accommodation", "kegs_on_tap", "drinks_notes", "total", "deposit_amount", "bond_amount", "status", "deposit_paid", "balance_paid"];
   const FIELD_LABEL = { client_name: "Client", contact_name: "Contact", email: "Email", phone: "Phone", event_name: "Event", event_type: "Type", event_date: "Date", start_time: "Bar opens", finish_time: "Last drinks", venue: "Venue", address: "Suburb / town", travel_minutes: "Drive (min)", guest_count: "Guests", package: "Package", bartender_count: "Bartenders", glassware: "Glassware", generator: "Generator", fairy_lights: "Fairy lights", cocktails: "Cocktails", accommodation: "Accommodation", kegs_on_tap: "On tap", drinks_notes: "Drinks", total: "Total", deposit_amount: "Deposit", bond_amount: "Bond", status: "Status", deposit_paid: "Deposit paid", balance_paid: "Balance paid", notes: "Notes" };
   const fileToBase64 = (file) => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result).split(",")[1]); r.onerror = rej; r.readAsDataURL(file); });
@@ -407,7 +446,7 @@
     document.body.style.overflow = "hidden";
     if (onMount) onMount(el("sheet"));
   }
-  function closeSheet() { el("sheet").innerHTML = ""; document.body.style.overflow = ""; }
+  function closeSheet() { if (recog) { try { recog.stop(); } catch { /* */ } recog = null; } el("sheet").innerHTML = ""; document.body.style.overflow = ""; }
 
   async function boot() {
     try {
@@ -511,7 +550,7 @@
         <h1>${h(b.client_name)}</h1>
         <div class="where">${h(b.event_name || PKG[b.package].alt)} · ${h([b.venue, b.address].filter(Boolean).join(", ") || "Venue TBC")}</div>
         <div class="chips"><span class="chip pkg">${PKG[b.package].label}</span>${b.event_type ? `<span class="chip">${h(b.event_type)}</span>` : ""}<span class="chip">${b.travel_minutes ? b.travel_minutes + " min drive" : "Local"}</span></div>
-        <div class="actions"><button class="btn gold" data-action="edit">${ic("edit")} Edit details</button><button class="btn" data-action="update">${ic("sparkle")} Add an update</button></div>
+        <div class="actions"><button class="btn gold" data-action="edit">${ic("edit")} Edit details</button><button class="btn" data-action="talk">${ic("mic")} Talk to the job</button></div>
       </div>
       <div class="tiles hero-tiles">
         <button class="tile" data-action="edit" data-focus="f_guest_count">${ic("edit", "corner")}<span class="label">Guests</span><div class="v num">${b.guest_count || "?"}</div><div class="s">${rs.drinks ? "~" + rs.drinks + " drinks" : "add a number"}</div></button>
@@ -683,25 +722,64 @@
         if (focusId) { const f = $("#" + focusId, root); if (f) { f.scrollIntoView({ block: "center" }); f.focus(); } }
       } });
   }
-  function openUpdateSheet(b) {
-    openSheet({ title: "Add an update", body: `<p class="small muted" style="margin-bottom:10px">Paste the client's message or type what changed. It merges into the booking and you confirm each change.</p><div class="field"><textarea id="updText" placeholder="e.g. We're now 110 people, and can we add cocktails? Bar till midnight please."></textarea></div><div id="updResult"></div>`,
-      foot: `<button class="btn" data-action="sheet-close" type="button">Cancel</button><button class="btn primary" id="updRead" type="button">Read the update</button>`,
+  let recog = null;
+  function openTalkSheet(b) {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    openSheet({ title: "Talk to the job", body: `
+      <p class="small muted" style="margin-bottom:10px">Say what's done and what's changed, in one go. “Agreement's signed and the deposit's in, we're 100 people now, and remind me to call the venue about parking.”</p>
+      <div class="talk-box"><textarea id="talkText" placeholder="${SR ? "Tap the mic and talk, or type here…" : "Type here, or use the mic key on your keyboard…"}"></textarea>
+        <button class="btn mic ${SR ? "" : "hidden"}" id="talkMic" type="button" aria-label="Talk">${ic("mic")}<span>Talk</span></button></div>
+      <div id="talkResult"></div>`,
+      foot: `<button class="btn" data-action="sheet-close" type="button">Cancel</button><button class="btn primary" id="talkGo" type="button">Read it</button>`,
       onMount: (root) => {
-        $("#updRead", root).addEventListener("click", async () => {
-          const text = $("#updText", root).value.trim(); if (!text) return toast("Paste something first");
-          const btn = $("#updRead", root); btn.disabled = true; btn.textContent = "Reading…";
+        const ta = $("#talkText", root), mic = $("#talkMic", root), go = $("#talkGo", root);
+        if (mic) mic.addEventListener("click", () => {
+          if (recog) { recog.stop(); return; }
           try {
-            const { changes, warning } = await DB.intakeUpdate(text, b);
-            const keys = Object.keys(changes);
-            $("#updResult", root).innerHTML = keys.length ? `<div class="card" style="margin-top:12px"><b>Changes found</b>${warning ? `<p class="small muted">AI unavailable (${h(warning)}), used the basic reader.</p>` : ""}<div class="diff" style="margin-top:6px">${keys.map((k) => `<label><input type="checkbox" name="${k}" checked><div><div class="k">${FIELD_LABEL[k] || k}</div><span class="from">${h(showVal(k, b[k]))}</span><span class="to">${h(showVal(k, changes[k]))}</span></div></label>`).join("")}</div></div>` : `<div class="card" style="margin-top:12px"><b>No changes found.</b><p class="small muted">Nothing in that message matched a booking detail. The message will still be saved to the job.</p></div>`;
-            btn.textContent = "Apply"; btn.disabled = false;
-            btn.onclick = async () => {
-              btn.disabled = true;
-              const nb = { ...b }; for (const k of keys) if ($(`input[name="${k}"]`, root)?.checked) nb[k] = changes[k];
-              nb.source_text = (b.source_text ? b.source_text + "\n\n" : "") + `--- Update ${fmtDate(todayISO())} ---\n` + text;
-              try { await saveBooking(nb, { quiet: true }); closeSheet(); toast(keys.length ? "Updated. Checklist refreshed." : "Message saved to the job."); } catch (err) { btn.disabled = false; toast("Couldn't save: " + err.message); }
+            recog = new SR(); recog.lang = "en-NZ"; recog.interimResults = true; recog.continuous = true;
+            const base = ta.value ? ta.value.trim() + " " : "";
+            recog.onresult = (e) => { let fin = "", interim = ""; for (const r of e.results) { if (r.isFinal) fin += r[0].transcript + " "; else interim += r[0].transcript; } ta.value = base + fin + interim; };
+            recog.onerror = (e) => { toast(e.error === "not-allowed" ? "Mic blocked. Allow the microphone, or use the keyboard mic key." : "Mic hiccup: " + e.error); };
+            recog.onend = () => { recog = null; mic.classList.remove("live"); mic.innerHTML = ic("mic") + "<span>Talk</span>"; if (ta.value.trim()) go.click(); };
+            recog.start(); mic.classList.add("live"); mic.innerHTML = ic("stop") + "<span>Done</span>"; ta.value = base;
+          } catch (err) { recog = null; toast("Mic not available here. Use the keyboard mic key."); }
+        });
+        go.addEventListener("click", async () => {
+          const text = ta.value.trim(); if (!text) return toast("Say or type something first");
+          go.disabled = true; go.textContent = "Reading…";
+          try {
+            const tasks = tasksFor(b.id);
+            const r = await DB.command(text, b, tasks);
+            const ck = Object.keys(r.changes);
+            const any = r.done.length || r.undone.length || r.newTasks.length || ck.length || r.notesAppend;
+            $("#talkResult", root).innerHTML = `
+              ${r.reply ? `<p class="summary-quote" style="margin:12px 0 8px">“${h(r.reply)}”</p>` : ""}
+              ${r.warning ? `<p class="small muted">AI unavailable (${h(r.warning)}), used the basic reader.</p>` : ""}
+              ${any ? `<div class="card diff-card">
+                ${r.done.length ? `<div class="label">Tick off</div><div class="diff">${r.done.map((t, i) => `<label><input type="checkbox" name="done" value="${h(t)}" checked><div>${ic("check")} ${h(t)}</div></label>`).join("")}</div>` : ""}
+                ${r.undone.length ? `<div class="label" style="margin-top:10px">Un-tick</div><div class="diff">${r.undone.map((t) => `<label><input type="checkbox" name="undone" value="${h(t)}" checked><div>${h(t)}</div></label>`).join("")}</div>` : ""}
+                ${r.newTasks.length ? `<div class="label" style="margin-top:10px">Add to checklist</div><div class="diff">${r.newTasks.map((t, i) => `<label><input type="checkbox" name="new" value="${i}" checked><div><b>${h(t.title)}</b>${t.due_date ? ` <span class="muted small">· ${fmtShort(t.due_date)}</span>` : ""}${t.who && t.who !== "both" ? ` <span class="muted small">· ${h(t.who)}</span>` : ""}</div></label>`).join("")}</div>` : ""}
+                ${ck.length ? `<div class="label" style="margin-top:10px">Change</div><div class="diff">${ck.map((k) => `<label><input type="checkbox" name="chg" value="${k}" checked><div><div class="k">${FIELD_LABEL[k] || k}</div><span class="from">${h(showVal(k, b[k]))}</span><span class="to">${h(showVal(k, r.changes[k]))}</span></div></label>`).join("")}</div>` : ""}
+                ${r.notesAppend ? `<div class="label" style="margin-top:10px">Add to notes</div><div class="diff"><label><input type="checkbox" name="notes" checked><div>${h(r.notesAppend)}</div></label></div>` : ""}
+              </div>` : `<div class="card"><b>Nothing matched.</b><p class="small muted">Try naming the task as it appears in the list, or the detail you want changed.</p></div>`}`;
+            go.textContent = any ? "Apply" : "Try again"; go.disabled = false;
+            if (!any) { go.onclick = null; return; }
+            go.onclick = async () => {
+              go.disabled = true;
+              try {
+                const picked = (name) => [...root.querySelectorAll(`input[name="${name}"]:checked`)].map((x) => x.value);
+                for (const title of picked("done")) { const t = tasks.find((x) => x.title === title && !x.done); if (t) await DB.updateTask(t.id, { done: true, done_at: new Date().toISOString() }); }
+                for (const title of picked("undone")) { const t = tasks.find((x) => x.title === title && x.done); if (t) await DB.updateTask(t.id, { done: false, done_at: null }); }
+                const adds = picked("new").map((i) => r.newTasks[+i]).filter(Boolean);
+                if (adds.length) await DB.insertTasks(adds.map((t, i) => ({ booking_id: b.id, title: t.title, phase: "prep", due_date: t.due_date || null, assigned_to: t.who === "both" || !t.who ? null : t.who, sort: 900 + i })));
+                const chg = picked("chg"); const nb = { ...b }; for (const k of chg) nb[k] = r.changes[k];
+                if (root.querySelector('input[name="notes"]:checked')) nb.notes = (b.notes ? b.notes + "\n" : "") + r.notesAppend;
+                nb.source_text = (b.source_text ? b.source_text + "\n\n" : "") + `--- Said ${fmtDate(todayISO())} ---\n` + text;
+                if (chg.length || root.querySelector('input[name="notes"]:checked')) await saveBooking(nb, { quiet: true }); else { await reload(); render(); }
+                closeSheet(); toast("Done. " + (r.reply || "Updated."));
+              } catch (err) { go.disabled = false; toast("Couldn't apply: " + err.message); }
             };
-          } catch (err) { btn.disabled = false; btn.textContent = "Read the update"; toast("Couldn't read it: " + err.message); }
+          } catch (err) { go.disabled = false; go.textContent = "Read it"; toast("Couldn't read it: " + err.message); }
         });
       } });
   }
@@ -815,7 +893,7 @@
       if (a === "manual") { state.editing = { status: "confirmed", package: "byo", setup_hours: 1, packdown_hours: 1, travel_minutes: 0, bond_amount: 0, event_type: "wedding" }; return render(); }
       if (a === "form-cancel") { const id = state.editing?.id; state.editing = null; return id ? setView("detail", { bookingId: id }) : setView("jobs"); }
       if (a === "edit") return openEditSheet(bookingById(state.bookingId), t.dataset.focus);
-      if (a === "update") return openUpdateSheet(bookingById(state.bookingId));
+      if (a === "talk" || a === "update") return openTalkSheet(bookingById(state.bookingId));
       if (a === "delete") { if (!state.confirmDelete) { state.confirmDelete = true; return render(); } await DB.deleteBooking(state.bookingId); await reload(); toast("Deleted"); return setView("jobs"); }
       if (a === "cancel-delete") { state.confirmDelete = false; return render(); }
       if (a === "clear-flags") { const b = bookingById(state.bookingId); b.review_flags = []; await DB.upsertBooking(b); toast("Cleared"); return render(); }
@@ -847,8 +925,8 @@
       if (f.dataset.action === "add-staff") { await DB.upsertStaff({ name: el("s_name").value.trim(), phone: el("s_phone").value.trim() || null, hourly_rate: Number(el("s_rate").value) || 0, role: "bartender", active: true }); await reload(); toast("Added"); return render(); }
     } catch (err) { toast("Couldn't save: " + err.message); }
   });
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && el("sheet").firstChild) closeSheet(); if (e.key === "Enter" && e.target.matches('[role="button"][data-action]')) e.target.click(); });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape" && el("sheet").firstChild) { if (recog) recog.stop(); closeSheet(); } if (e.key === "Enter" && e.target.matches('[role="button"][data-action]')) e.target.click(); });
 
-  window.__tipsy = { localParse, localUpdate, runSheet, generateTasks, runSheetText, icsForBooking, gcalUrl, syncTasks };
+  window.__tipsy = { localParse, localUpdate, localCommand, runSheet, generateTasks, runSheetText, icsForBooking, gcalUrl, syncTasks };
   boot();
 })();

@@ -76,6 +76,50 @@ const BOOKING_SCHEMA = {
   ],
 };
 
+// "Command" mode: Joe talks or types to a job that is already booked. We get back what to tick off and what to change.
+const COMMAND_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    done_tasks: { type: "array", items: { type: "string" }, description: "Exact titles from the OPEN TASKS list that Joe says are done" },
+    undone_tasks: { type: "array", items: { type: "string" }, description: "Exact titles from the DONE TASKS list Joe says are not actually done" },
+    new_tasks: { type: "array", items: { type: "object", additionalProperties: false, properties: { title: { type: "string" }, due_date: { type: "string", description: "YYYY-MM-DD or empty" }, who: { type: "string", enum: ["Joe", "Kieran", "both"] } }, required: ["title", "due_date", "who"] }, description: "Things Joe asks to add to the checklist" },
+    guest_count: { type: ["integer", "null"] },
+    bartender_count: { type: ["integer", "null"] },
+    total: { type: ["number", "null"] },
+    travel_minutes: { type: ["integer", "null"] },
+    event_date: { type: "string", description: "YYYY-MM-DD, or empty if unchanged" },
+    start_time: { type: "string", description: "HH:MM 24h, or empty if unchanged" },
+    finish_time: { type: "string", description: "HH:MM 24h, or empty if unchanged" },
+    venue: { type: "string", description: "empty if unchanged" },
+    address: { type: "string", description: "empty if unchanged" },
+    kegs_on_tap: { type: "string", description: "empty if unchanged" },
+    drinks_notes: { type: "string", description: "empty if unchanged" },
+    notes_append: { type: "string", description: "Anything worth adding to the notes for the day, or empty" },
+    package: { type: "string", enum: ["unchanged", "dry_hire", "byo", "fully_catered"] },
+    status: { type: "string", enum: ["unchanged", "enquiry", "quoted", "confirmed", "completed", "cancelled"] },
+    cocktails: { type: "string", enum: ["unchanged", "yes", "no"] },
+    generator: { type: "string", enum: ["unchanged", "yes", "no"] },
+    fairy_lights: { type: "string", enum: ["unchanged", "yes", "no"] },
+    glassware: { type: "string", enum: ["unchanged", "yes", "no"] },
+    accommodation: { type: "string", enum: ["unchanged", "yes", "no"] },
+    deposit_paid: { type: "string", enum: ["unchanged", "yes", "no"] },
+    balance_paid: { type: "string", enum: ["unchanged", "yes", "no"] },
+    reply: { type: "string", description: "One short, casual line back to Joe confirming what you understood. Kiwi, direct." },
+  },
+  required: ["done_tasks", "undone_tasks", "new_tasks", "guest_count", "bartender_count", "total", "travel_minutes", "event_date", "start_time", "finish_time", "venue", "address", "kegs_on_tap", "drinks_notes", "notes_append", "package", "status", "cocktails", "generator", "fairy_lights", "glassware", "accommodation", "deposit_paid", "balance_paid", "reply"],
+};
+
+const COMMAND_SYSTEM = `You are the booking assistant for The Tipsy Tui, a mobile caravan bar in Christchurch run by Joe and Kieran. Joe is talking to you about ONE job that is already booked. He may be dictating, so expect loose wording, filler words and speech-to-text slips.
+
+You get the current booking, the job's open tasks and done tasks, and what Joe said. Work out:
+- Which open tasks he says are done. Use the EXACT title from the list. Match loosely on meaning ("ice is sorted" = "Buy ice", "agreement's signed" = "Send booking agreement", "deposit came in" = "Collect $325 deposit" and also deposit_paid = yes).
+- Anything he says is not done after all (from the done list).
+- New tasks he asks to add.
+- Booking details that changed (numbers, times, date, venue, package, extras, payments, status).
+- Anything else useful for the day goes in notes_append.
+Only report what he actually said. Leave fields empty / null / "unchanged" otherwise. Never invent a number. Times are 24h "HH:MM"; "midnight" is "00:00". Dates are New Zealand (day first).`;
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
@@ -110,6 +154,7 @@ async function handle(req: Request): Promise<Response> {
   if (authError || !user) return json({ error: "Not logged in (" + (authError?.message ?? "no user") + ")" }, 401);
 
   const body = await req.json().catch(() => ({}));
+  if (body.mode === "command") return handleCommand(body);
   const text: string = (body.text ?? "").trim();
   const fileBase64: string | undefined = body.file_base64;
   const fileType: string | undefined = body.file_type;
@@ -157,6 +202,37 @@ async function handle(req: Request): Promise<Response> {
     return json({ booking, source_text: text || `(uploaded ${fileType})` });
   } catch (err) {
     console.error("intake failed:", err);
+    if (err instanceof Anthropic.AuthenticationError) return json({ error: "The Claude key is wrong or revoked" }, 500);
+    if (err instanceof Anthropic.RateLimitError) return json({ error: "Rate limited, try again in a minute" }, 429);
+    if (err instanceof Anthropic.APIError) return json({ error: `Claude API error ${err.status}: ${err.message}` }, 502);
+    return json({ error: String(err) }, 500);
+  }
+}
+
+async function handleCommand(body: { text?: string; booking?: Record<string, unknown>; open_tasks?: string[]; done_tasks?: string[] }): Promise<Response> {
+  const text = (body.text ?? "").trim();
+  if (!text) return json({ error: "Nothing to read" }, 400);
+  const apiKey = findApiKey();
+  if (!apiKey) return json({ error: "No Claude key found. Add a secret named ANTHROPIC_API_KEY under Edge Functions → Secrets." }, 500);
+  const workspaceId = Deno.env.get("ANTHROPIC_WORKSPACE_ID");
+  const client = new Anthropic({ apiKey, defaultHeaders: workspaceId ? { "anthropic-workspace-id": workspaceId } : undefined });
+  const material = `Today's date is ${new Date().toISOString().slice(0, 10)}.\n\nCURRENT BOOKING (JSON):\n${JSON.stringify(body.booking ?? {})}\n\nOPEN TASKS:\n${(body.open_tasks ?? []).map((t) => "- " + t).join("\n") || "(none)"}\n\nDONE TASKS:\n${(body.done_tasks ?? []).map((t) => "- " + t).join("\n") || "(none)"}\n\nJOE SAID:\n${text}`;
+  try {
+    const response = await client.beta.messages.create({
+      model: "claude-opus-5-5",
+      max_tokens: 8000,
+      betas: ["server-side-fallback-2026-07-01"],
+      fallbacks: "default",
+      system: COMMAND_SYSTEM,
+      messages: [{ role: "user", content: [{ type: "text", text: material }] }],
+      output_config: { format: { type: "json_schema", schema: COMMAND_SCHEMA } },
+    });
+    if (response.stop_reason === "refusal") return json({ error: "The assistant declined that one. Try rewording it." }, 422);
+    const textBlock = response.content.find((b) => b.type === "text");
+    if (!textBlock || textBlock.type !== "text") return json({ error: "Didn't get an answer" }, 422);
+    return json({ command: JSON.parse(textBlock.text) });
+  } catch (err) {
+    console.error("command failed:", err);
     if (err instanceof Anthropic.AuthenticationError) return json({ error: "The Claude key is wrong or revoked" }, 500);
     if (err instanceof Anthropic.RateLimitError) return json({ error: "Rate limited, try again in a minute" }, 429);
     if (err instanceof Anthropic.APIError) return json({ error: `Claude API error ${err.status}: ${err.message}` }, 502);
