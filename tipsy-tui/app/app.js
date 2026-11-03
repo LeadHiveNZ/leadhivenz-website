@@ -129,6 +129,39 @@
     return set;
   })();
 
+  // Titles from the previous checklist template, so existing jobs migrate cleanly to the short names.
+  const OLD_TEMPLATE_TITLES = new Set([
+    "send the booking agreement for signing", "collect the # deposit (#%) to secure the date", "collect the deposit (#%) to secure the date", "add to the shared calendar and tell kieran", "check the job is on the shared calendar and tell kieran", "send the local pour guide (kegs, local beer and wine partners)", "send the drinks list guide and ask for their wish list",
+    "roster # bartender and confirm they're keen", "roster # bartenders and confirm they're keen", "confirm with client: site access, power, where the caravan parks", "check whether the venue needs a liquor licence or permit (client's job, but chase it)", "book staff accommodation", "price the drinks list and get it approved", "order stock from suppliers", "check the client has ordered their kegs and drinks", "confirm final guest count and bar hours with the client",
+    "chase the balance (#): due # days out", "chase the balance: due # days out", "collect the # bond", "send the run sheet to the crew", "pick up stock and get it chilling", "check co# bottle, keg couplers and tap lines", "fuel and test the generator", "charge and test the lights",
+    "buy ice", "clean the caravan, stock bar tools, napkins, straws, water station", "pack glassware and ice bins", "hitch up and road check: tyres, lights, hitch, gas off", "text the client and the crew to confirm times",
+    "depart base with the caravan", "set up on site and run a pour test on every tap", "bar service", "pack down, final clean, photos for socials",
+    "settle unopened stock: buy back at cost or leave with client", "thank-you message, ask for a google review and tag us in photos", "inspect for damage, then refund the bond within # business days", "mark the balance paid and close the job",
+  ].map(normTitle));
+
+  const ICONS = {
+    clock: '<path d="M12 6v6l4 2"/><circle cx="12" cy="12" r="9"/>',
+    users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/>',
+    dollar: '<path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>',
+    list: '<path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4" cy="6" r="1" fill="currentColor"/><circle cx="4" cy="12" r="1" fill="currentColor"/><circle cx="4" cy="18" r="1" fill="currentColor"/>',
+    truck: '<path d="M1 3h15v13H1zM16 8h4l3 3v5h-7z"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/>',
+    beer: '<path d="M17 11h1a3 3 0 0 1 0 6h-1M9 12v5M13 12v5M5 8v12a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V8H5z"/><path d="M5 8a3 3 0 0 1 3-5 3 3 0 0 1 5-1 3 3 0 0 1 4 6"/>',
+    pin: '<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="3"/>',
+    phone: '<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.6a2 2 0 0 1-.5 2.1L8.1 9.6a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.8.3 1.7.6 2.6.7A2 2 0 0 1 22 16.9z"/>',
+    edit: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+    plus: '<path d="M12 5v14M5 12h14"/>',
+    check: '<path d="M5 12l5 5L20 7"/>',
+    note: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h5"/>',
+    user: '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+    alert: '<path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4M12 17h.01"/>',
+    upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/>',
+    back: '<path d="m15 18-6-6 6-6"/>',
+    calendar: '<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/>',
+    sparkle: '<path d="M12 3v4M12 17v4M3 12h4M17 12h4M5.6 5.6l2.8 2.8M15.6 15.6l2.8 2.8M5.6 18.4l2.8-2.8M15.6 8.4l2.8-2.8"/>',
+    dot: '<circle cx="12" cy="12" r="4" fill="currentColor" stroke="none"/>',
+  };
+  const ic = (name, cls = "") => `<svg class="i ${cls}" viewBox="0 0 24 24" aria-hidden="true">${ICONS[name] || ""}</svg>`;
+
   function runSheetText(b, rs) {
     const L = [`THE TIPSY TUI — RUN SHEET`, `${b.event_name || b.client_name} · ${PKG[b.package].label}`, `${fmtDate(b.event_date)} · ${[b.venue, b.address].filter(Boolean).join(", ") || "Venue TBC"}`, `${rs.guests || "?"} guests · ${rs.bartenders} bartender${rs.bartenders === 1 ? "" : "s"}${rs.crewNames.length ? " (" + rs.crewNames.join(", ") + ")" : " (not rostered yet)"}`, "", "TIMES"];
     if (rs.t.depart) L.push(`${fmt12(rs.t.depart).padEnd(8)} leave ${BASE}${rs.travel ? " (" + rs.travel + " min drive)" : ""}`);
@@ -381,10 +414,21 @@
       const { user } = await DB.init(); state.user = user;
       el("modePill").hidden = !DEMO;
       if (!user) { el("tabbar").hidden = true; el("appbar").hidden = true; renderAuth(); return; }
-      await reload(); el("tabbar").hidden = false; el("appbar").hidden = false; render();
+      await reload(); await migrateChecklists(); el("tabbar").hidden = false; el("appbar").hidden = false; render();
     } catch (e) { el("view").innerHTML = `<div class="card"><h2>Couldn't start</h2><p class="muted">${h(e.message || e)}</p><p class="small muted" style="margin-top:8px">Check the Supabase URL and key in config.js, and that schema.sql has been run.</p></div>`; }
   }
   async function reload() { Object.assign(state, await DB.load()); }
+  // One-off: jobs booked under the old checklist get the new short task set (ticked items stay ticked).
+  async function migrateChecklists() {
+    const flag = "tipsy-checklist-v3"; if (lsGet(flag)) return;
+    try {
+      for (const b of state.bookings.filter(isLive)) {
+        const ts = state.tasks.filter((t) => t.booking_id === b.id);
+        if (ts.some((t) => OLD_TEMPLATE_TITLES.has(normTitle(t.title)))) await syncTasks(b);
+      }
+      await reload();
+    } finally { lsSet(flag, "1"); }
+  }
   function setView(v, extra = {}) { Object.assign(state, { view: v, confirmDelete: false }, extra); render(); window.scrollTo({ top: 0 }); }
   const BAR_TITLES = { jobs: "Jobs", detail: "Job", calendar: "Calendar", todo: "To-do", new: "Book a job", more: "More" };
   function render() {
@@ -412,8 +456,8 @@
     return `<div class="card job ${past ? "past" : ""} ${b.status !== "confirmed" ? "quoted" : ""}" data-action="open" data-id="${b.id}" role="button" tabindex="0">
       <div class="datebox"><div class="d num">${d.getDate()}</div><div class="m">${MON[d.getMonth()]}</div><div class="w">${DOW[d.getDay()]}</div></div>
       <div style="min-width:0"><div class="title"><h3>${h(b.client_name)}</h3><span class="small muted num" style="white-space:nowrap">${relDay(b.event_date)}</span></div>
-        <div class="meta">${h(b.event_name || PKG[b.package].alt)} · ${h(b.venue || "Venue TBC")}</div>
-        <div class="meta num">${b.guest_count || "?"} guests · ${fmt12(hm(b.start_time))}–${fmt12(hm(b.finish_time))}${b.travel_minutes ? " · " + b.travel_minutes + " min drive" : ""}</div>
+        <div class="meta">${h(b.event_name || PKG[b.package].alt)}</div>
+        <div class="meta num">${ic("pin")}${h(b.venue || "Venue TBC")} &nbsp; ${ic("users")}${b.guest_count || "?"} &nbsp; ${ic("clock")}${fmt12(hm(b.start_time))}–${fmt12(hm(b.finish_time))}</div>
         <div class="chips">${chips.join("")}</div></div></div>`;
   }
 
@@ -438,14 +482,14 @@
     else if (f === "past") list = state.bookings.filter((b) => b.event_date < today || b.status === "completed" || b.status === "cancelled").sort((a, b) => b.event_date.localeCompare(a.event_date));
     else list = [...state.bookings].sort((a, b) => a.event_date.localeCompare(b.event_date));
     v.innerHTML = `
-      <div class="page-title"><h1>Kia ora, ${h(state.user.name)}</h1><p>${confirmed.length} confirmed job${confirmed.length === 1 ? "" : "s"} coming up${upcoming.length - confirmed.length ? `, ${upcoming.length - confirmed.length} quoted` : ""}.</p></div>
-      <div class="tiles">
+      <div class="hero"><div class="kicker">${fmtDate(today)}</div><h1>Kia ora, ${h(state.user.name)}</h1><p class="where">${confirmed.length} confirmed job${confirmed.length === 1 ? "" : "s"} coming up${upcoming.length - confirmed.length ? `, ${upcoming.length - confirmed.length} quoted` : ""}.</p></div>
+      <div class="tiles hero-tiles">
         <div class="tile"><span class="label">Next job</span><div class="v num">${next ? (daysUntil(next.event_date) === 0 ? "Today" : daysUntil(next.event_date) + "d") : "—"}</div><div class="s">${next ? h(next.client_name) : "Nothing booked"}</div></div>
         <div class="tile"><span class="label">Next 30 days</span><div class="v num">${in30.length}</div><div class="s">job${in30.length === 1 ? "" : "s"}</div></div>
         <div class="tile"><span class="label">Crew to roster</span><div class="v num ${crewGap ? "warn" : ""}">${crewGap}</div><div class="s">bartender slot${crewGap === 1 ? "" : "s"}</div></div>
         <div class="tile"><span class="label">To collect</span><div class="v num ${owed ? "warn" : ""}">${money(owed)}</div><div class="s">deposits + balances due</div></div>
       </div>
-      ${issues.length ? `<div class="card attention section"><b>Needs a look</b><ul>${issues.join("")}</ul></div>` : ""}
+      ${issues.length ? `<div class="card attention section"><b>${ic("alert")} Needs a look</b><ul>${issues.join("")}</ul></div>` : ""}
       <div class="section">
         <div class="filters">${[["upcoming", "Upcoming"], ["quoted", "Quotes"], ["past", "Past"], ["all", "All"]].map(([k, l]) => `<button data-action="filter" data-f="${k}" class="${f === k ? "active" : ""}">${l}</button>`).join("")}</div>
         ${list.length ? list.map(jobCard).join("") : `<div class="empty">Nothing here yet. Tap <b>Book</b> to add a job.</div>`}
@@ -460,34 +504,34 @@
     const crewCls = rs.bartenders === 0 ? "" : crew.length >= rs.bartenders ? "good" : (daysUntil(b.event_date) <= 14 ? "bad" : "warn");
     const moneyTile = b.balance_paid ? ["Paid in full", money(rs.total), "good"] : !b.deposit_paid && rs.deposit ? ["Deposit due", money(rs.deposit), "warn"] : [`Balance due ${rs.balanceDue ? fmtShort(rs.balanceDue) : ""}`, money(rs.balance), rs.balanceDue && rs.balanceDue < todayISO() ? "bad" : ""];
     v.innerHTML = `
-      <button class="back" data-action="goto" data-view="jobs">‹ Jobs</button>
-      <div class="jobhead">
-        <div class="row"><div class="when grow">${fmtDate(b.event_date)} <span class="rel">· ${relDay(b.event_date)}</span></div>
+      <div class="hero">
+        <button class="back" data-action="goto" data-view="jobs">${ic("back")} Jobs</button>
+        <div class="row"><div class="kicker grow">${fmtDate(b.event_date)}<span class="rel">${relDay(b.event_date)}</span></div>
           <span class="status-select"><select data-action="status" class="st-${b.status}" aria-label="Status">${Object.entries(STATUS).map(([k, l]) => `<option value="${k}" ${b.status === k ? "selected" : ""}>${l}</option>`).join("")}</select></span></div>
         <h1>${h(b.client_name)}</h1>
         <div class="where">${h(b.event_name || PKG[b.package].alt)} · ${h([b.venue, b.address].filter(Boolean).join(", ") || "Venue TBC")}</div>
-        <div class="chips"><span class="chip pkg-${b.package}">${PKG[b.package].label}</span>${b.event_type ? `<span class="chip">${h(b.event_type)}</span>` : ""}${b.travel_minutes ? `<span class="chip">${b.travel_minutes} min drive</span>` : `<span class="chip">Local</span>`}</div>
-        <div class="actions"><button class="btn primary" data-action="edit">${pencil()} Edit details</button><button class="btn" data-action="update">${plus()} Add an update</button></div>
+        <div class="chips"><span class="chip pkg">${PKG[b.package].label}</span>${b.event_type ? `<span class="chip">${h(b.event_type)}</span>` : ""}<span class="chip">${b.travel_minutes ? b.travel_minutes + " min drive" : "Local"}</span></div>
+        <div class="actions"><button class="btn gold" data-action="edit">${ic("edit")} Edit details</button><button class="btn" data-action="update">${ic("sparkle")} Add an update</button></div>
       </div>
-      ${Array.isArray(b.review_flags) && b.review_flags.length ? `<div class="card flags" style="margin-top:10px"><div class="row"><b class="grow">Check these</b><button class="btn sm" data-action="clear-flags">All sorted</button></div><ul>${b.review_flags.map((x) => `<li>${h(x)}</li>`).join("")}</ul></div>` : ""}
-      <div class="tiles" style="margin-top:10px">
-        <button class="tile" data-action="edit" data-focus="f_guest_count"><span class="label">Guests</span><div class="v num">${b.guest_count || "?"}</div><div class="s">${rs.drinks ? "~" + rs.drinks + " drinks" : "add a number"}</div></button>
-        <button class="tile" data-action="edit" data-focus="f_start_time"><span class="label">Bar hours</span><div class="v sm num">${fmt12(hm(b.start_time))} – ${fmt12(hm(b.finish_time))}</div><div class="s">${rs.hours != null ? rs.hours + "h service" : "set the times"}</div></button>
+      <div class="tiles hero-tiles">
+        <button class="tile" data-action="edit" data-focus="f_guest_count">${ic("edit", "corner")}<span class="label">Guests</span><div class="v num">${b.guest_count || "?"}</div><div class="s">${rs.drinks ? "~" + rs.drinks + " drinks" : "add a number"}</div></button>
+        <button class="tile" data-action="edit" data-focus="f_start_time">${ic("edit", "corner")}<span class="label">Bar hours</span><div class="v sm num">${fmt12(hm(b.start_time))} – ${fmt12(hm(b.finish_time))}</div><div class="s">${rs.hours != null ? rs.hours + "h service" : "set the times"}</div></button>
         <div class="tile" data-action="jobtab" data-tab="crew" role="button" tabindex="0" style="cursor:pointer"><span class="label">Crew</span><div class="v num ${crewCls}">${rs.bartenders ? `${crew.length}/${rs.bartenders}` : "—"}</div><div class="s">${rs.bartenders ? (crew.length ? crew.map((c) => c.name.split(" ")[0]).join(", ") : "nobody rostered") : "no staff on dry hire"}</div></div>
         <div class="tile" data-action="jobtab" data-tab="money" role="button" tabindex="0" style="cursor:pointer"><span class="label">${moneyTile[0]}</span><div class="v num ${moneyTile[2]}">${moneyTile[1]}</div><div class="s">total ${money(rs.total)}</div></div>
       </div>
+      ${Array.isArray(b.review_flags) && b.review_flags.length ? `<div class="card flags section"><div class="row"><b class="grow">Check these</b><button class="btn sm" data-action="clear-flags">All sorted</button></div><ul>${b.review_flags.map((x) => `<li>${h(x)}</li>`).join("")}</ul></div>` : ""}
       <div class="seg">${[["overview", "Overview"], ["todo", `To-do${open ? "<b>" + open + "</b>" : ""}`], ["crew", "Crew"], ["money", "Money"]].map(([k, l]) => `<button data-action="jobtab" data-tab="${k}" class="${tab === k ? "active" : ""}">${l}</button>`).join("")}</div>
       ${tab === "overview" ? overviewTab(b, rs) : tab === "todo" ? todoTab(b, tasks, done) : tab === "crew" ? crewTab(b, rs, crew) : moneyTab(b, rs)}`;
   }
   function overviewTab(b, rs) {
     const tl = [["depart", `Leave ${BASE}`, `${rs.travel} min drive`, ""], ["arrive", "On site, set up", `${rs.setup}h set-up`, ""], ["open", "Bar opens", "", "open"], ["last", "Last drinks", "", "last"], ["packed", "Packed down", `${rs.pack}h pack-down`, ""], ["home", "Home", `${rs.travel} min drive`, ""]].filter(([k]) => rs.t[k]);
     return `
-      <div class="card tight"><div class="card-head"><h3>Run sheet</h3><span class="small muted">built from the booking</span></div>
+      <div class="card tight"><div class="card-head"><h3>${ic("clock")} Run sheet</h3><span class="meta">built from the booking</span></div>
         ${tl.length ? `<div class="timeline">${tl.map(([k, d, s, cls]) => `<div class="tl ${cls}"><span class="t">${fmt12(rs.t[k])}</span><div><div class="d">${d}</div>${s ? `<div class="s">${s}</div>` : ""}</div></div>`).join("")}</div>` : `<div class="card-body muted">Add bar hours to build the timeline. Tap the Bar hours tile above.</div>`}
       </div>
       <div class="two-col section">
-        <div class="card tight"><div class="card-head"><h3>We bring</h3></div><div class="card-body"><ul class="plain-list">${rs.weBring.map((x) => `<li>${h(x)}</li>`).join("")}</ul></div></div>
-        <div class="card tight"><div class="card-head"><h3>Client sorts</h3></div><div class="card-body"><ul class="plain-list client">${rs.clientSorts.map((x) => `<li>${h(x)}</li>`).join("")}</ul></div></div>
+        <div class="card tight"><div class="card-head"><h3>${ic("truck")} We bring</h3></div><div class="card-body"><ul class="plain-list">${rs.weBring.map((x) => `<li>${ic("check")}<span>${h(x)}</span></li>`).join("")}</ul></div></div>
+        <div class="card tight"><div class="card-head"><h3>${ic("user")} Client sorts</h3></div><div class="card-body"><ul class="plain-list client">${rs.clientSorts.map((x) => `<li>${ic("dot")}<span>${h(x)}</span></li>`).join("")}</ul></div></div>
       </div>
       <div class="section tiles">
         <div class="tile"><span class="label">Drinks</span><div class="v num">~${rs.drinks ?? "?"}</div><div class="s">${rs.hours ? `${(1 + 0.75 * Math.min(8, rs.hours)).toFixed(1)} per guest` : "guide"}</div></div>
@@ -495,10 +539,10 @@
         <div class="tile"><span class="label">Ice</span><div class="v num">${rs.iceBags ?? "?"}</div><div class="s">5 kg bags</div></div>
         <div class="tile"><span class="label">Cups</span><div class="v num">${rs.cups ?? "?"}</div><div class="s">2 per guest</div></div>
       </div>
-      ${b.kegs_on_tap || b.drinks_notes ? `<div class="card tight section"><div class="card-head"><h3>Drinks</h3><button class="btn ghost sm" data-action="edit" data-focus="f_kegs_on_tap">Edit</button></div><div class="card-body stack">${b.kegs_on_tap ? `<div><span class="label">On tap</span><div>${h(b.kegs_on_tap)}</div></div>` : ""}${b.drinks_notes ? `<div><span class="label">Notes</span><div>${h(b.drinks_notes)}</div></div>` : ""}</div></div>` : ""}
-      <div class="card tight section"><div class="card-head"><h3>Notes for the day</h3><button class="btn ghost sm" data-action="edit" data-focus="f_notes">Edit</button></div><div class="card-body">${b.notes ? h(b.notes).replace(/\n/g, "<br>") : '<span class="muted">Nothing yet. Access, parking, power, speeches, anything the crew needs.</span>'}</div></div>
-      <div class="card tight section"><div class="card-head"><h3>Contact</h3><button class="btn ghost sm" data-action="edit" data-focus="f_contact_name">Edit</button></div><div class="card-body"><b>${h(b.contact_name || b.client_name)}</b>${b.phone ? ` · <a href="tel:${h(b.phone)}">${h(b.phone)}</a>` : ""}${b.email ? ` · <a href="mailto:${h(b.email)}">${h(b.email)}</a>` : ""}</div></div>
-      <div class="btn-row section"><button class="btn" data-action="copy-runsheet">Copy run sheet</button><a class="btn" href="${gcalUrl(b)}" target="_blank" rel="noopener">Google Calendar</a><button class="btn" data-action="ics">Download .ics</button></div>
+      ${b.kegs_on_tap || b.drinks_notes ? `<div class="card tight section"><div class="card-head"><h3>${ic("beer")} Drinks</h3><button class="btn ghost sm" data-action="edit" data-focus="f_kegs_on_tap">Edit</button></div><div class="card-body stack">${b.kegs_on_tap ? `<div><span class="label">On tap</span><div>${h(b.kegs_on_tap)}</div></div>` : ""}${b.drinks_notes ? `<div><span class="label">Notes</span><div>${h(b.drinks_notes)}</div></div>` : ""}</div></div>` : ""}
+      <div class="card tight section"><div class="card-head"><h3>${ic("note")} Notes for the day</h3><button class="btn ghost sm" data-action="edit" data-focus="f_notes">Edit</button></div><div class="card-body">${b.notes ? h(b.notes).replace(/\n/g, "<br>") : '<span class="muted">Nothing yet. Access, parking, power, speeches, anything the crew needs.</span>'}</div></div>
+      <div class="card tight section"><div class="card-head"><h3>${ic("phone")} Contact</h3><button class="btn ghost sm" data-action="edit" data-focus="f_contact_name">Edit</button></div><div class="card-body"><b>${h(b.contact_name || b.client_name)}</b>${b.phone ? ` · <a href="tel:${h(b.phone)}">${h(b.phone)}</a>` : ""}${b.email ? ` · <a href="mailto:${h(b.email)}">${h(b.email)}</a>` : ""}</div></div>
+      <div class="btn-row section"><button class="btn" data-action="copy-runsheet">${ic("list")} Copy run sheet</button><a class="btn" href="${gcalUrl(b)}" target="_blank" rel="noopener">${ic("calendar")} Google Calendar</a><button class="btn" data-action="ics">${ic("upload")} Download .ics</button></div>
       ${b.source_text ? `<details class="section"><summary class="small muted">What was pasted in</summary><pre class="mono">${h(b.source_text)}</pre></details>` : ""}
       <div class="btn-row section"><button class="btn danger" data-action="delete">${state.confirmDelete ? "Yes, delete this job" : "Delete job"}</button>${state.confirmDelete ? `<button class="btn" data-action="cancel-delete">Keep it</button>` : ""}</div>`;
   }
@@ -513,7 +557,7 @@
   function crewTab(b, rs, crew) {
     return `
       <div class="tiles"><div class="tile"><span class="label">Needed</span><div class="v num">${rs.bartenders}</div><div class="s">${b.bartender_count != null && b.bartender_count !== "" ? "set on this job" : "1 per 50 guests"}</div></div><div class="tile"><span class="label">Rostered</span><div class="v num ${crew.length >= rs.bartenders ? "good" : "warn"}">${crew.length}</div><div class="s">${rs.staffHours != null ? rs.staffHours + "h each" : "hours TBC"}</div></div></div>
-      <div class="card tight section"><div class="card-head"><h3>Who's working it</h3><button class="btn ghost sm" data-action="edit" data-focus="f_bartender_count">Change number</button></div>
+      <div class="card tight section"><div class="card-head"><h3>${ic("users")} Who's working it</h3><button class="btn ghost sm" data-action="edit" data-focus="f_bartender_count">Change number</button></div>
         ${state.staff.filter((s) => s.active !== false).map((s) => `<label class="switch-row"><div><div class="name">${h(s.name)}</div><div class="sub">${s.role === "owner" ? "owner" : h(s.phone || "casual bartender")}</div></div><span class="switch"><input type="checkbox" data-action="crew" data-sid="${s.id}" ${crew.some((c) => c.id === s.id) ? "checked" : ""}><i></i></span></label>`).join("")}
       </div>
       <p class="small muted section">Add casual bartenders under More → Crew. ${rs.wages != null ? `Est. wages for this job: ${money(rs.wages)} (${rs.bartenders} × ${rs.staffHours}h × $${BARTENDER_RATE}).` : ""}</p>`;
@@ -560,7 +604,7 @@
     for (let d = 1; d <= daysIn; d++) { const iso = `${y}-${pad(m)}-${pad(d)}`, js = byDate[iso] || []; cells += `<div class="cal-day ${iso === today ? "today" : ""} ${iso === state.calSelected ? "selected" : ""}" data-action="cal-day" data-date="${iso}" role="button" tabindex="0"><span class="n num">${d}</span><div class="dots">${js.map((b) => `<span class="dot pkg-${b.package} st-${b.status}" title="${h(b.client_name)}"></span>`).join("")}</div></div>`; }
     const sel = state.calSelected ? (byDate[state.calSelected] || []) : [], monthJobs = Object.keys(byDate).filter((k) => k.startsWith(state.calMonth)).sort().flatMap((k) => byDate[k]);
     v.innerHTML = `
-      <div class="cal-head"><button class="btn sm" data-action="cal-nav" data-n="-1" aria-label="Previous month">‹</button><h2>${MONTH_LONG[m - 1]} ${y}</h2><button class="btn sm" data-action="cal-nav" data-n="1" aria-label="Next month">›</button></div>
+      <div class="cal-head" style="margin-top:14px"><button class="btn sm" data-action="cal-nav" data-n="-1" aria-label="Previous month">‹</button><h2>${MONTH_LONG[m - 1]} ${y}</h2><button class="btn sm" data-action="cal-nav" data-n="1" aria-label="Next month">›</button></div>
       <div class="card"><div class="cal-grid">${cells}</div><div class="cal-legend"><span><i></i> BYO / catered</span><span><i class="pkg-dry_hire"></i> Dry hire</span><span><i class="st-quoted"></i> Quoted</span></div></div>
       <div class="section"><div class="section-head"><h2>${state.calSelected ? fmtDate(state.calSelected) : `${monthJobs.length} job${monthJobs.length === 1 ? "" : "s"} this month`}</h2>${state.calSelected ? `<button class="btn ghost sm" data-action="cal-clear">Whole month</button>` : ""}</div>
         ${(state.calSelected ? sel : monthJobs).map(jobCard).join("") || `<div class="empty">${state.calSelected ? "Nothing on. Free day." : "Nothing booked this month."}</div>`}</div>`;
@@ -577,7 +621,7 @@
     }
     groups.sort();
     v.innerHTML = `
-      <div class="page-title"><h1>To-do</h1><p>${open.length} open across the live jobs.</p></div>
+      <div class="page-title" style="margin-top:14px"><h1>To-do</h1><p>${open.length} open across the live jobs.</p></div>
       <div class="filters">${[["all", "Everyone"], ...TEAM.map((n) => [n, n]), ["unassigned", "Both / unassigned"]].map(([k, l]) => `<button data-action="todo-who" data-w="${k}" class="${who === k ? "active" : ""}">${l}</button>`).join("")}</div>
       ${groups.map((k) => `<div class="day-head ${byKey[k].cls}"><h3>${byKey[k].label}</h3><span class="small muted num">${byKey[k].items.length}</span></div><div class="tasklist standalone">${byKey[k].items.map((t) => taskRow(t, true)).join("")}</div>`).join("") || `<div class="empty">All clear. Go pour yourself one.</div>`}`;
   }
@@ -585,9 +629,9 @@
   function renderNew(v) {
     if (state.editing) return renderForm(v);
     v.innerHTML = `
-      <div class="page-title"><h1>Book a job</h1><p>Attach the signed agreement or quote (PDF${DEMO ? "" : " or photo"}), or paste the email. It books the job, builds the checklist split between ${TEAM.join(" and ")}, rosters the crew, and puts it on the shared calendar.</p></div>
+      <div class="page-title" style="margin-top:14px"><h1>Book a job</h1><p>Attach the signed agreement or quote (PDF${DEMO ? "" : " or photo"}), or paste the email. It books the job, builds the checklist split between ${TEAM.join(" and ")}, rosters the crew, and puts it on the shared calendar.</p></div>
       <div class="card intake stack">
-        <div class="drop"><b>Upload the contract</b>PDF${DEMO ? "" : " or photo"} of the agreement or quote<input type="file" id="intakeFile" accept="application/pdf${DEMO ? "" : ",image/*"}"></div>
+        <div class="drop">${ic("upload")}<b>Upload the contract</b>PDF${DEMO ? "" : " or photo"} of the agreement or quote<input type="file" id="intakeFile" accept="application/pdf${DEMO ? "" : ",image/*"}"></div>
         <div class="field"><label for="intakeText">Or paste it</label><textarea id="intakeText" placeholder="Paste the contract, quote or email thread here…"></textarea></div>
         <div class="checks"><label><input type="checkbox" id="autoBook" ${AUTO_BOOK ? "checked" : ""}> Book it straight in (skip the check screen)</label></div>
         <button class="btn primary block" data-action="intake" ${state.intakeBusy ? "disabled" : ""}>${state.intakeBusy ? "Reading it…" : "Book it in"}</button>
@@ -626,7 +670,7 @@
   }
   function renderForm(v) {
     const b = state.editing, isNew = !b.id;
-    v.innerHTML = `<button class="back" data-action="form-cancel">‹ Back</button><div class="page-title"><h1>${isNew ? "Check the booking" : "Edit booking"}</h1></div>
+    v.innerHTML = `<button class="back" data-action="form-cancel" style="margin-top:12px">${ic("back")} Back</button><div class="page-title"><h1>${isNew ? "Check the booking" : "Edit booking"}</h1></div>
       ${b.summary ? `<p class="summary-quote">“${h(b.summary)}”</p>` : ""}
       ${b.flags && b.flags.length ? `<div class="card flags" style="margin-bottom:12px"><b>Before you save</b><ul>${b.flags.map((x) => `<li>${h(x)}</li>`).join("")}</ul></div>` : ""}
       <form id="bookingForm" class="stack">${formHtml(b)}<div class="btn-row"><button class="btn primary" type="submit">${isNew ? "Save and build the checklist" : "Save changes"}</button><button class="btn" type="button" data-action="form-cancel">Cancel</button></div></form>`;
@@ -674,18 +718,18 @@
   function renderMore(v) {
     const owners = state.staff.filter((s) => s.role === "owner"), casuals = state.staff.filter((s) => s.role !== "owner" && s.active !== false);
     v.innerHTML = `
-      <div class="page-title"><h1>More</h1></div>
+      <div class="page-title" style="margin-top:14px"><h1>More</h1></div>
       ${DEMO ? `<div class="notice"><b>Demo mode.</b> These jobs are examples stored only on this device.</div>` : ""}
-      <div class="card tight section"><div class="card-head"><h3>Crew</h3></div>
+      <div class="card tight section"><div class="card-head"><h3>${ic("users")} Crew</h3></div>
         ${owners.map((s) => `<div class="switch-row"><div><div class="name">${h(s.name)}</div><div class="sub">owner</div></div></div>`).join("")}
         ${casuals.map((s) => `<div class="switch-row"><div><div class="name">${h(s.name)}</div><div class="sub">${h(s.phone || "casual")} · $${s.hourly_rate}/h</div></div><button class="btn ghost sm" data-action="staff-off" data-sid="${s.id}">Remove</button></div>`).join("")}
         <form class="card-body grid3" data-action="add-staff" style="align-items:end;border-top:1px solid var(--line)"><div class="field"><label for="s_name">Name</label><input id="s_name" required placeholder="Tash"></div><div class="field"><label for="s_phone">Phone</label><input id="s_phone" placeholder="021…"></div><div class="field"><label for="s_rate">Pay $/h</label><input id="s_rate" type="number" value="30" min="0"></div><button class="btn sm primary" type="submit">Add bartender</button></form>
       </div>
-      <div class="card tight section"><div class="card-head"><h3>Shared calendar</h3></div><div class="card-body stack">
+      <div class="card tight section"><div class="card-head"><h3>${ic("calendar")} Shared calendar</h3></div><div class="card-body stack">
         <p class="small">Subscribe once on each phone and every job shows in Google or iPhone Calendar with the run sheet in the notes.</p>
         ${DEMO ? `<p class="small muted">Available once connected to Supabase.</p>` : `<div class="field"><label for="calToken">Calendar token</label><input id="calToken" value="${h(state.calendarToken)}" placeholder="the CALENDAR_TOKEN secret"></div><div class="copybox"><input id="calUrl" readonly value="${h(CFG.SUPABASE_URL)}/functions/v1/calendar?token=${h(state.calendarToken || "…")}"><button class="btn sm" data-action="copy-cal">Copy</button></div><p class="small muted">Google Calendar: Other calendars → + → From URL. iPhone: Settings → Calendar → Accounts → Add Subscribed Calendar.</p>`}
       </div></div>
-      <div class="card tight section"><div class="card-head"><h3>Install on your phone</h3></div><div class="card-body small"><p><b>iPhone:</b> Safari → Share → Add to Home Screen.</p><p style="margin-top:6px"><b>Android:</b> Chrome → menu → Add to Home screen.</p></div></div>
+      <div class="card tight section"><div class="card-head"><h3>${ic("sparkle")} Install on your phone</h3></div><div class="card-body small"><p><b>iPhone:</b> Safari → Share → Add to Home Screen.</p><p style="margin-top:6px"><b>Android:</b> Chrome → menu → Add to Home screen.</p></div></div>
       <div class="section btn-row">${DEMO ? `<button class="btn" data-action="reset-demo">Reset demo data</button>` : `<button class="btn" data-action="signout">Sign out (${h(state.user.name)})</button>`}</div>
       <p class="small muted section">The Tipsy Tui Limited · Christchurch</p>`;
   }
@@ -717,7 +761,7 @@
       used.add(match.id);
       if (!match.done && (match.due_date !== t.due_date || match.title !== t.title)) await DB.updateTask(match.id, { due_date: t.due_date, title: t.title });
     }
-    for (const e of existing) if (!used.has(e.id) && !e.done && TEMPLATE_TITLES.has(normTitle(e.title))) await DB.deleteTask(e.id);
+    for (const e of existing) if (!used.has(e.id) && !e.done && (TEMPLATE_TITLES.has(normTitle(e.title)) || OLD_TEMPLATE_TITLES.has(normTitle(e.title)))) await DB.deleteTask(e.id);
     return added;
   }
   async function pdfToText(file) {
@@ -749,8 +793,6 @@
     } catch (err) { state.intakeBusy = false; render(); toast("Couldn't read it: " + err.message); }
   }
 
-  const pencil = () => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>`;
-  const plus = () => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>`;
 
   el("tabbar").addEventListener("click", (e) => { const btn = e.target.closest("button[data-view]"); if (!btn) return; if (btn.dataset.view === "new") state.editing = null; setView(btn.dataset.view); });
 
