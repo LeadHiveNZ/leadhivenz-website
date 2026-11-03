@@ -52,7 +52,7 @@ changes stays on that device only, and **Settings > Reset demo data** puts it ba
 - [ ] GST-free lines (council contributions, stamp duty, LRS) show $0 GST in the BAS tab.
 - [ ] Settings shows Wellco's real details (ABN 81 096 401 400, Milton NSW). Project companies are fictional.
 - [ ] Closed project reads "Wandandian" everywhere (an early spec said Berry).
-- [ ] Reset demo data works. Dark mode looks right. No "lorem", no "TODO", no console errors.
+- [ ] Reset demo data works. Looks right on phone and laptop. No "lorem", no "TODO", no console errors.
 - [ ] Screenshots saved to `screens/` (home, project, quotes compare, money/GST, approval drawer).
 - [ ] Hosted link + `[DEMO LINK]` placeholder in `proposal.md` filled in. Pricing placeholders checked.
 
