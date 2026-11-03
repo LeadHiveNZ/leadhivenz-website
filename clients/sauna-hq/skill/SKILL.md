@@ -86,6 +86,9 @@ standards tab where every number can be edited and saved in the browser.
   mm, and rates per lineal metre for lining, planks, infill/backrest board and trims.
 - **New heater.** Add to `heaters` with family, kW, min and max m³ and the retail price. A price
   of 0 keeps a model off quotes.
+- **Job files.** The tool saves and opens jobs as `.json` files (project inputs plus a snapshot of
+  the rates used) and exports the costing as CSV. If Marko pastes or uploads one of these job
+  files, read `project` from it and quote from those inputs.
 - **Behaviour change** (a new line item, different bench rules, a new quote section). Change
   the `cost()` function or `renderQuote()` and re-run the Chandrajit figures in your head or in
   the page before handing it back.

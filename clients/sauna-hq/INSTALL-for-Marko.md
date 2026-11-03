@@ -35,6 +35,13 @@ File: `quote-builder.html`
 - **Every price lives in the Rates and standards tab.** Change a number there and every quote
   from then on uses it. Use **Copy rates** to move your numbers to another computer and
   **Import pasted rates** on the other end.
+- **Save job / Open job.** Once a job is filled in, click **Save job**. It downloads a small file
+  named after the client (for example `SaunaHQ Smith 2026-11-03.json`). Keep it in the client's
+  folder. When the client changes something, drag that file onto the page or click **Open job**,
+  change what moved, and save again. If your prices have changed since, it tells you and offers
+  to re-price at the old rates so the original quote still adds up.
+- **Download costing (Excel).** Saves a spreadsheet of every line, both timbers, plus the
+  materials list. Opens straight in Excel.
 - **Load the Chandrajit job** button shows a real job so you can see your numbers come back.
 
 ## What still needs your numbers

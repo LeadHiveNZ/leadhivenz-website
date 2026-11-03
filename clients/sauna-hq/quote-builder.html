@@ -113,16 +113,21 @@ ul.mat li{margin:2px 0}
 <header>
   <div>
     <h1>Sauna HQ Quote Builder</h1>
-    <p class="sub">Room size in, quote out. Bench heights, depths, ceiling, trims, door and heater sizing follow the Sauna HQ standards automatically. You pick the timbers and type the labour. The tool does the take-off, the order list and the client quote for every timber at once.</p>
+    <p class="sub">Room size in, quote out. Bench heights, depths, ceiling, trims, door and heater sizing follow the Sauna HQ standards automatically. You pick the timbers and type the labour. The tool does the take-off, the order list and the client quote for every timber at once. Save each job as a file, open it again when the client changes their mind.</p>
   </div>
   <div class="actions" style="margin:0">
     <button class="btn ghost" id="btnReset">Clear project</button>
     <button class="btn" id="btnSample">Load the Chandrajit job</button>
+    <button class="btn" id="btnOpen">Open job…</button>
+    <input type="file" id="openFile" accept=".json,application/json" hidden>
+    <button class="btn primary" id="btnSave">Save job</button>
+    <button class="btn" id="btnCsv">Download costing (Excel)</button>
   </div>
 </header>
 
 <div class="banner" id="banner">Loaded with Sauna HQ's November 2026 rates: cedar, Alder and Accoya per lineal metre, black skirting at $58.50 a length, and the full Narvi residential and commercial price lists. Board rules follow Marko's method: cover width per species, two extra boards per wall and one per ceiling, 7 and 6 planks for the standard benches, 4-slat infill, trims in all 8 corners. On the Chandrajit room that gives 85 wall boards and 27 ceiling boards, the same counts as his spreadsheet. Heater prices are the October 2023 lists and are due for a refresh.</div>
 
+<div class="banner" id="snapBar" hidden>This job was saved with different rates. It is now priced at today's rates. <button class="btn small" id="useSnap" style="margin-left:8px">Re-price at the saved rates instead</button></div>
 <div class="tabs" role="tablist">
   <button class="tab" role="tab" aria-selected="true" data-tab="build">Build the quote</button>
   <button class="tab" role="tab" aria-selected="false" data-tab="materials">Materials list</button>
@@ -779,6 +784,62 @@ function applyPlan(r){
   $("planStatus").textContent="Filled: "+got.join(", ")+"."+(r.notes?"\nNote: "+String(r.notes):"")+"\nCheck the room sizes against the drawing before quoting.";
 }
 
+// ---------- save, open, export ----------
+let downloadsCap=null;
+(async()=>{ try{ if(window.claude&&window.claude.use){ downloadsCap=await window.claude.use("downloads"); } }catch(e){} })();
+function safeName(x){ return String(x||"job").replace(/[^A-Za-z0-9 _-]+/g,"").trim().slice(0,60)||"job"; }
+async function saveFile(filename,text,mime){
+  if(downloadsCap){ try{ await downloadsCap.save({filename,data:text}); toast("Saved "+filename); return; }catch(e){ if(e&&e.code==="cancelled") return; } }
+  try{ const blob=new Blob([text],{type:mime||"text/plain"}); const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=filename; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href); a.remove();},500); toast("Saved "+filename); }
+  catch(e){ copyText(text,"Download blocked here; copied to clipboard instead"); }
+}
+function jobFile(){
+  const act=activeTimbers(); const results=act.map(i=>cost(i));
+  return {app:"Sauna HQ Quote Builder",version:1,savedAt:new Date().toISOString(),project:JSON.parse(JSON.stringify(project)),
+    ratesSnapshot:JSON.parse(JSON.stringify(rates)),
+    summary:results.map(r=>({timber:r.T.name,materials:Math.round(r.materials),markup:Math.round(r.markup),labour:r.labour,gst:Math.round(r.gst),heater:r.hi>=0?rates.heaters[r.hi].name:"",heaterPrice:r.heater,control:r.control,lighting:r.light,accessories:r.acc,demolition:r.rubbish,totalIncGst:Math.round(r.total),exGst:Math.round(r.exGst*100)/100,
+      lines:r.lines.map(l=>({item:l.item,takeoff:l.detail,cost:Math.round(l.amt*100)/100}))}))};
+}
+function csvEsc(v){ v=String(v==null?"":v); return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v; }
+function costingCsv(){
+  const act=activeTimbers(); const results=act.map(i=>cost(i)); const rows=[];
+  rows.push(["Sauna HQ costing",project.client||"",project.address||"",project.qdate||""]);
+  rows.push(["Room",num(project.roomL)+" x "+num(project.roomW)+" x "+num(project.roomH)+" mm","Volume m3",fm(roomVolume().vol)]);
+  rows.push([]);
+  results.forEach(r=>{
+    rows.push([r.T.name]); rows.push(["Item","Take-off","Cost $"]);
+    r.lines.forEach(l=>rows.push([l.item,l.detail,l.amt.toFixed(2)]));
+    rows.push(["Material subtotal","",r.materials.toFixed(2)]);
+    rows.push(["Mark up "+rates.markup+"%","",r.markup.toFixed(2)]);
+    rows.push(["Labour","",r.labour.toFixed(2)]);
+    rows.push(["GST "+rates.gst+"%","",r.gst.toFixed(2)]);
+    rows.push(["Sauna heater",r.hi>=0?rates.heaters[r.hi].name:"",r.heater.toFixed(2)]);
+    if(r.control) rows.push(["Control panel",rates.controls[project.control].name,r.control.toFixed(2)]);
+    rows.push(["Sauna light",rates.lights[project.lighting]?rates.lights[project.lighting].name:"",r.light.toFixed(2)]);
+    if(r.acc) rows.push(["Accessories","",r.acc.toFixed(2)]);
+    if(r.wifi) rows.push(["Wifi control panel","",r.wifi.toFixed(2)]);
+    if(r.rubbish) rows.push(["Demolition","",r.rubbish.toFixed(2)]);
+    rows.push(["Total inc GST","",r.total.toFixed(2)]); rows.push(["Ex GST","",r.exGst.toFixed(2)]); rows.push([]);
+    rows.push(["Materials list, "+r.T.name]); materialsText(r).split("\n").slice(1).forEach(l=>rows.push([l])); rows.push([]);
+  });
+  return "\ufeff"+rows.map(r=>r.map(csvEsc).join(",")).join("\r\n");
+}
+function openJob(file){
+  const rd=new FileReader();
+  rd.onload=()=>{ try{
+      const j=JSON.parse(rd.result); const pj=j.project||j; if(!pj||!pj.walls||!("roomL" in pj)) throw 0;
+      project=Object.assign(defaultProject(),pj);
+      let note="Job opened: "+(project.client||"unnamed")+".";
+      if(j.ratesSnapshot && JSON.stringify(j.ratesSnapshot)!==JSON.stringify(rates)){
+        pendingSnapshot=j.ratesSnapshot; note+=" Rates have changed since it was saved; current rates applied."; $("snapBar").hidden=false;
+      } else { pendingSnapshot=null; $("snapBar").hidden=true; }
+      fillProjectInputs(); refresh(); toast(note);
+    }catch(e){ toast("That file is not a Sauna HQ job"); } };
+  rd.readAsText(file);
+}
+let pendingSnapshot=null;
+function useSnapshot(){ if(!pendingSnapshot) return; rates=Object.assign(JSON.parse(JSON.stringify(DEFAULT_RATES)),pendingSnapshot); saveRates(); renderRates(); renderSelects(); renderCosting(); $("snapBar").hidden=true; toast("Rates from the saved job applied to this browser"); }
+
 // ---------- events ----------
 function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
 function toast(msg){ const t=$("toast"); t.textContent=msg; t.classList.add("show"); clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove("show"),2200); }
@@ -817,6 +878,13 @@ $("addBench").addEventListener("click",()=>{ project.benches.push({name:"Return 
 $("btnSample").addEventListener("click",()=>{ project=sampleProject(); fillProjectInputs(); refresh(); toast("Chandrajit job loaded"); });
 $("btnReset").addEventListener("click",()=>{ project=defaultProject(); fillProjectInputs(); refresh(); toast("Project cleared"); });
 $("readPlan").addEventListener("click",readPlan);
+$("btnSave").addEventListener("click",()=>{ const name="SaunaHQ "+safeName(project.client)+" "+(project.qdate||"")+".json"; saveFile(name,JSON.stringify(jobFile(),null,1),"application/json"); });
+$("btnCsv").addEventListener("click",()=>{ const name="SaunaHQ costing "+safeName(project.client)+" "+(project.qdate||"")+".csv"; saveFile(name,costingCsv(),"text/csv"); });
+$("btnOpen").addEventListener("click",()=>$("openFile").click());
+$("openFile").addEventListener("change",e=>{ const f=e.target.files&&e.target.files[0]; if(f) openJob(f); e.target.value=""; });
+$("useSnap").addEventListener("click",useSnapshot);
+document.addEventListener("dragover",e=>{ if(e.dataTransfer&&e.dataTransfer.types.includes("Files")) e.preventDefault(); });
+document.addEventListener("drop",e=>{ const f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0]; if(f&&/\.json$/i.test(f.name)){ e.preventDefault(); openJob(f); } });
 $("stopPlan").addEventListener("click",()=>{ if(planCtl) planCtl.abort(); });
 
 $("tab-rates").addEventListener("input",e=>{
