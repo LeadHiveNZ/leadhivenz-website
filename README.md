@@ -12,7 +12,12 @@ clients/
     northland-handyman-master.html
     README.md                   routes, data sources, pre-launch checks
     screens/                    rendered previews of each page
+  nuvia-health/                 Nuvia Health (Sumit), medical clinic, Notting Hill VIC (AU), premium demo
+    nuvia-health.html           full clinic home page, three hero styles via ?style=1|2|3
+    README.md                   placeholders to confirm, compliance notes, how to regenerate screens
+    screens/                    desktop + mobile shots of each style
 ```
 
-Preview any client file directly in a browser; add `?page=<key>` to view a service page.
+Preview any client file directly in a browser; add `?page=<key>` to view a service page
+(trade templates) or `?style=<n>` to switch hero styles (Nuvia Health demo).
 In Lovable each `CONFIG.services[key].path` becomes its own route.
