@@ -57,6 +57,8 @@ PAGES = [
      'Meet Aroha Seniors Charitable Trust, a registered charity (CC63126) in Flat Bush, Auckland. Our story, our values and the people behind our mahi.'),
     ('what-we-do', 'what-we-do', 'Support for Older People in South Auckland | Aroha Seniors',
      'Friendship gatherings, fortnightly Meals on Wheels, outings, companionship, advice and disability support for older people in Flat Bush and South Auckland.'),
+    ('news', 'news', f'News | {SITE_NAME}',
+     'News from Aroha Seniors Charitable Trust in Auckland, including our Tangihanga Workshop with Kai-Ora Tipene of Tipene Funerals for our kuia and kaumātua.'),
     ('get-involved', 'get-involved', f'Volunteer, Donate or Partner | {SITE_NAME}',
      'Volunteer, donate or partner with Aroha Seniors Charitable Trust in Auckland, and help make sure no older person in our community is left alone.'),
     ('contact', 'contact', 'Contact Aroha Seniors Charitable Trust | Flat Bush, Auckland',
@@ -66,13 +68,14 @@ PAGES = [
     ('404', '404', f'Page not found | {SITE_NAME}', 'Sorry, we can\'t find that page.'),
 ]
 NOINDEX = {'404'}                       # built for the live site only, kept out of search and the sitemap
-CRUMB = {'about': 'About us', 'what-we-do': 'What we do', 'get-involved': 'Get involved',
+CRUMB = {'about': 'About us', 'what-we-do': 'What we do', 'news': 'News', 'get-involved': 'Get involved',
          'contact': 'Contact', 'policies': 'Our policies'}
 
 ROOT = Path(__file__).resolve().parent
 SRC, SITE, PREVIEW = ROOT / 'src', ROOT / 'site', ROOT / 'preview'
 IMG = SITE / 'assets' / 'img'
 DOCS = SITE / 'assets' / 'docs'    # downloadable files (the trust's policies PDF)
+FULL_SIZE = set()                  # images linked as files, copied into preview/ too
 
 
 def data_uri(path):
@@ -188,6 +191,13 @@ def render(page, key, title, desc, inline):
             return f'{path.suffix[1:].upper()}, {max(1, round(path.stat().st_size / 1024))} KB'
         return f'assets/docs/{path.name}'
 
+    def full(m):                           # a link to the image itself (e.g. "see the poster full size")
+        if not (IMG / m.group(1)).exists():
+            raise SystemExit(f'missing image: {IMG / m.group(1)}')
+        FULL_SIZE.add(m.group(1))
+        return f'assets/img/{m.group(1)}'
+
+    out = re.sub(r'\{\{FULL:([\w.-]+)\}\}', full, out)
     out = re.sub(r'\{\{IMG:([\w.-]+)\}\}', img, out)
     out = re.sub(r'\{\{(DOC|DOC_SIZE):([\w.-]+)\}\}', doc, out)
     out = re.sub(r'\{\{PHOTO:([\w-]+)\}\}', photo, out)
@@ -217,6 +227,9 @@ def main():
         (SITE / f'{page}.html').write_text(out, encoding='utf-8')
         (PREVIEW / f'{page}.html').write_text(render(page, key, title, desc, inline=True), encoding='utf-8')
         print(f'built {page}.html  (preview {(PREVIEW / f"{page}.html").stat().st_size // 1024} KB)')
+    for name in sorted(FULL_SIZE):         # preview pages inline their images, but full-size links need the file
+        (PREVIEW / 'assets' / 'img').mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(IMG / name, PREVIEW / 'assets' / 'img' / name)
     # search engines: where the pages are, and that they may be crawled
     today = datetime.date.today().isoformat()
     urls = ''.join(f'  <url><loc>{page_url(p)}</loc><lastmod>{today}</lastmod></url>\n' for p, *_ in PAGES if p not in NOINDEX)

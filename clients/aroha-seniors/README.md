@@ -13,7 +13,7 @@ kotahitanga).
 build.py              run this after editing anything in src/ (standard-library Python only)
 src/                  the source: layout.html, pages/*.html, styles.css, site.js
 site/                 THE WEBSITE. Upload this folder to any host. One HTML file per page.
-  index.html  about.html  what-we-do.html  get-involved.html  contact.html  policies.html
+  index.html  about.html  what-we-do.html  news.html  get-involved.html  contact.html  policies.html
   assets/styles.css  assets/site.js  assets/img/  assets/docs/ (the policies PDF)
 preview/              the same pages, each self-contained (CSS, JS, images inlined),
                       for previewing or emailing a single page on its own
@@ -25,6 +25,7 @@ screens/              rendered screenshots, desktop and mobile
 | `index.html`      | Mission, real photo hero, programmes, how to join, get involved, FAQ |
 | `about.html`      | Logo, story, timeline, banner and values, who we support, people, accountability |
 | `what-we-do.html` | Seven programmes incl. Meals on Wheels, each with an anchor (`what-we-do.html#meals`) |
+| `news.html`       | News stories, newest first (first: Tangihanga Workshop with Kai-Ora Tipene). The home page's "Latest news" card links to the newest |
 | `get-involved.html` | Volunteer, donate, partner, interest form (`?i=Donate` preselects it) |
 | `contact.html`    | Call, email, Facebook, contact form, helplines                   |
 | `policies.html`   | The trust's Public Policies as a page, plus the PDF to download (footer "Our policies") |
@@ -78,6 +79,32 @@ email. Change `kai_role` in `build.py` (and the "our Kai Manager" wording in the
 Each one replaces the illustration in its slot. Shape is portrait 4:5; on phones they crop to
 landscape, so keep faces near the centre.
 Still open: `digital.jpg`, `advice.jpg` and `amelia.jpg` (square).
+
+## News (from 12/11/2026)
+
+`src/pages/news.html` holds the stories as `<article class="post">` blocks, newest first. Each has a
+poster or lead image (with a "see full size" link via `{{FULL:file}}`), a heading, Amelia's wording, and a
+row of four portrait photos (2 x 2 on phones). The header menu has six links, so it switches to the menu
+button at 1100px and below (it no longer fits on one line there at the largest text size).
+
+Adding a story:
+
+1. Photos: phone photos often arrive sideways with a rotation tag. Apply it (Pillow `ImageOps.exif_transpose`),
+   then save at 900 x 1200 as `news-<story>-1.jpg` ... in `site/assets/img/`. Posters: keep full width.
+2. Copy the newest `<article class="post">` to the top of `news.html`, give it a new `id`, and swap in
+   the heading, wording, images and alt text (describe what's in each photo; don't guess names).
+3. Point the home page's `news-teaser` card (in `src/pages/index.html`) at the new story.
+4. Update the `news` description in `build.py`, run `python3 build.py`, deploy, and send the IndexNow ping
+   for `news.html` and the home page (see Search).
+
+| Image | What | Used on |
+|---|---|---|
+| `news-tangihanga-poster.jpg` | The trust's thank-you poster for Kai-Ora Tipene | News |
+| `news-tangihanga-1.jpg` | Kai-Ora with four kaumātua | News; home "Latest news" card |
+| `news-tangihanga-2.jpg` | Members in green shirts sharing kai | News |
+| `news-tangihanga-3.jpg`, `-4.jpg` | Kai-Ora with members | News |
+
+Tipene Funerals isn't linked: no official website could be confirmed. Add one if Amelia sends it.
 
 ## Public policies (from Amelia, 23/10/2026)
 

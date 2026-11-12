@@ -28,7 +28,7 @@
     document.addEventListener('keydown', e => {
       if (e.key === 'Escape' && menu.open) { menu.open = false; $('summary', menu).focus(); }
     });
-    addEventListener('resize', () => { if (menu.open) { if (innerWidth > 980) menu.open = false; else place(); } });
+    addEventListener('resize', () => { if (menu.open) { if (innerWidth > 1100) menu.open = false; else place(); } });
   }
 
   /* ---- Header shadow once the page scrolls ---- */
