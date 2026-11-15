@@ -51,6 +51,21 @@ Do this first. It touches every side once.
    Anything you left unanswered for a day has been dealt with too: a guest report nobody approved is
    cancelled, and a job nobody reached in time has credited the owner's month.
 
+## What it looks like
+
+Taken from the demo on a phone-sized screen. The full-size pictures are in `docs/screens/`.
+
+| The owner | Reporting a problem | The tradie's text | The offer |
+| --- | --- | --- | --- |
+| <img src="screens/03-owner-home.png" width="200" alt="The owner's home screen"> | <img src="screens/04-owner-report.png" width="200" alt="Choosing a job, with its fixed price"> | <img src="screens/07-tradie-text.png" width="200" alt="The text a tradie receives"> | <img src="screens/08-tradie-offer.png" width="200" alt="The offer page: pay, deadline, Accept"> |
+
+| After accepting | The dispatcher's queue | A job nobody took | The numbers |
+| --- | --- | --- | --- |
+| <img src="screens/09-tradie-job.png" width="200" alt="The job page with the address and how to get in"> | <img src="screens/11-team-queue.png" width="200" alt="The dispatcher's queue"> | <img src="screens/12-team-job.png" width="200" alt="Giving a job to a tradie by hand"> | <img src="screens/13-team-numbers.png" width="200" alt="The admin's numbers for one market"> |
+
+Also in that folder: the two public pages, the QR card, an owner's monthly statement, a tradie's pay
+statement, the tradies page, the menu editor and the demo menu.
+
 ---
 
 The lists below start from the sample business as it first opens. If you have already answered
