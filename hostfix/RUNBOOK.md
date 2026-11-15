@@ -207,6 +207,10 @@ match it to a lead by hand.
 **An owner says they paid but it does not show.** Stripe > Webhooks > your endpoint. Look for failed
 deliveries and press **Resend**. If it keeps failing, check "Card payments" on the setup checklist.
 
+**Lots of junk leads arriving.** A robot has found a form. The forms already block the common kinds and
+allow each visitor six tries every ten minutes. Junk costs a few cents each in texts and nothing else.
+If it keeps happening, tell the developer: a "prove you are human" check can be added.
+
 **The site will not load.** Check vercel-status.com and status.supabase.com. In Vercel > Deployments,
 if the newest one failed the previous version is still live: nothing to do but tell the developer.
 

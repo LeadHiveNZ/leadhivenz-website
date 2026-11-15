@@ -2,6 +2,12 @@
 
 Built 15 November 2026. This note says what exists, how to try it, and what is deliberately not done.
 
+> **Since this was written, Phases 1 to 4 were built on top of it.** Everything below still works the
+> same way, with two differences. The leads list has moved: sign in at `/admin`, then **More > Leads**
+> and **More > Setup checklist** (where this note says `/admin`, read those). And while a market is on
+> its waiting list the public pages work exactly as described here. Once it is set to "Live" they let
+> owners join instead. For the full product see `docs/TRY-IT.md`.
+
 ## What was built
 
 1. **Owner landing page** (`/owners`) and **tradie landing page** (`/tradies`). The words come from

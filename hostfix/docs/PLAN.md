@@ -22,7 +22,8 @@
 > - **The app talks to the database directly** and brings the tables up to date on every deploy. No SQL is
 >   pasted anywhere by hand.
 > - **Push notifications were not built.** Texts carry everything.
-> - **Statements are pages, not PDFs:** Billing for owners and Pay for tradies, month by month.
+> - **Statements are pages with a Print or save button, not emailed PDFs:** Billing for owners and Pay for
+>   tradies, month by month.
 > - **Scorecards are worked out when the page is opened**, not overnight.
 > - **Referral rewards are tracked and put in the queue when due, then paid by bank transfer by hand.**
 > - **A membership's price is fixed once properties have joined it.** To change a price you add a new

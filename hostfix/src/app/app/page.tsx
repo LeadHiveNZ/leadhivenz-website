@@ -9,6 +9,8 @@ import { DAY, now } from "@/lib/clock";
 import { getDb } from "@/lib/db";
 import { listJobsForOwner } from "@/lib/jobs/store";
 import { listMarkets } from "@/lib/markets/store";
+import { formatMoney } from "@/lib/money";
+import { unpaidJobs } from "@/lib/owners/service";
 import { isCovered, membershipLabel } from "@/lib/properties/display";
 import { addressLine, listProperties } from "@/lib/properties/service";
 
@@ -56,6 +58,7 @@ export default async function OwnerHome() {
   const recent = jobs.filter((job) => job.status === "completed" && job.completedAt && at.getTime() - job.completedAt.getTime() < 14 * DAY).slice(0, 4);
   const notStarted = properties.filter((property) => property.status === "setup");
   const cardProblems = properties.filter((property) => property.status === "past_due");
+  const unpaid = await unpaidJobs(db, viewer.ownerId);
   const covered = properties.filter(isCovered);
 
   return (
@@ -67,6 +70,15 @@ export default async function OwnerHome() {
         </p>
       </div>
 
+      {unpaid.map((job) => (
+        <Notice key={job.jobId} tone="error" title={`We could not charge your card for job ${job.number}`}>
+          {formatMoney(job.amountCents, job.currency)} for &ldquo;{job.title}&rdquo;. We will try again, but please{" "}
+          <Link href="/app/billing" className="font-semibold underline underline-offset-2">
+            check or change your card
+          </Link>
+          . Your tradie is paid once it goes through.
+        </Notice>
+      ))}
       {cardProblems.map((property) => (
         <Notice key={property.id} tone="error" title={`Your card did not go through for ${property.name}`}>
           Tradies cannot be sent to this property until it is fixed.{" "}

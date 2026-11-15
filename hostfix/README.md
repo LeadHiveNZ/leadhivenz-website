@@ -1,87 +1,113 @@
 # HostFix
 
-A maintenance network for short-stay rentals. Owners pay a monthly membership per property.
-When something breaks, a local tradie fixes it at a fixed price.
+A maintenance network for short-stay rentals. An owner pays a monthly membership per property. When
+something breaks, the owner, their cleaner or a guest reports it from a fixed-price menu. The job is
+offered by text to a local tradie, who has 15 minutes to take it before it moves to the next one. When
+it is done the owner's card is charged, the tradie is paid, and the business keeps the difference.
+Nobody takes a call, writes a quote or sends an invoice.
 
-**This folder currently holds Phase 0: the demand test.** It is a small website that finds out
-whether owners and tradies in Queenstown want this, before the full product is built.
+Launch market: Queenstown, New Zealand. Built for many towns across New Zealand and Australia: nothing
+is tied to one town, one currency or one tax rate.
 
-- New here and want it live? Follow **[SETUP.md](SETUP.md)**. It lists every account and key, in order.
-- Something odd happened (a strange alert, a failed text)? See **[RUNBOOK.md](RUNBOOK.md)**.
-- What was built, what to click, and what is not done yet: **[docs/PHASE-0.md](docs/PHASE-0.md)**.
-- The plan and data model for the whole product: **[docs/PLAN.md](docs/PLAN.md)**.
-- The brief for your lawyer: **[docs/LEGAL-TODO.md](docs/LEGAL-TODO.md)**.
+**Phases 0 to 4 are built and tested. Phase 5 is planned, not built.**
 
-## What Phase 0 does
+## Start here
 
-| Page | What it is |
+| You want to | Read |
 | --- | --- |
-| `/owners` | Landing page for property owners, with a sign-up form |
-| `/tradies` | Landing page for tradies, with a sign-up form |
-| `/owners/thanks` | Thank-you page. Offers the founding member deposit by card |
-| `/admin` | Password-protected list of leads, with source and date, a spreadsheet download and a setup checklist |
+| Try it now, with nothing set up | **[docs/TRY-IT.md](docs/TRY-IT.md)**: what to click, phase by phase, and what is not done |
+| Put it online | **[SETUP.md](SETUP.md)**: every account and key, in order |
+| Run it day to day | **[RUNBOOK.md](RUNBOOK.md)**: for the dispatcher, what each alert means and what to do |
+| Prove the real payments work | **[docs/STRIPE-TEST-CHECKLIST.md](docs/STRIPE-TEST-CHECKLIST.md)** |
+| Brief your lawyer and accountant | **[docs/LEGAL-TODO.md](docs/LEGAL-TODO.md)** |
+| See what similar products do | **[docs/MARKET-RESEARCH.md](docs/MARKET-RESEARCH.md)** |
+| See the plan, what changed, and what is next | **[docs/PLAN.md](docs/PLAN.md)** |
 
-Every lead is saved to the database, and you get a text and an email the moment one arrives.
+## Who uses it, and where
+
+| Who | Where | Signs in? |
+| --- | --- | --- |
+| Visitors | `/`, `/owners`, `/tradies`, `/in/<town>`, `/refer` | No |
+| Owner | `/app`: properties, memberships, jobs, billing | Email or mobile, then a six-digit code |
+| Cleaner or co-host | `/r/<link>`: the property's team link | No |
+| Guest | `/r/<link>`: the QR card in the property | No |
+| Tradie taking a job | `/o/<link>`: the link in the offer text | No |
+| Tradie | `/tradie`: offers, jobs, pay, profile | Mobile or email, then a six-digit code |
+| Owner answering a text | `/j/<link>`: the link in their text | No |
+| Dispatcher | `/admin`: the queue, jobs, tradies, owners | Their own email, then a code |
+| Admin (you) | `/admin`: everything above, plus numbers, prices, markets, staff | The admin password, or as staff |
 
 ## Things you can change without a developer
 
-Each of these is one file. Edit it on GitHub (open the file, press the pencil, save). The site
-rebuilds itself and the change is live in about two minutes.
+**On the admin screens** (More > Markets, prices and the menu). These are live the moment you save:
+
+- Every price on the menu, what each tradie is paid, and the jobs on it
+- Memberships: price, promise hours, what is included
+- Surcharges, the call-out fee, the approval limits, the minutes a tradie has to accept
+- Working hours and days, the tax rate, whether the business is registered for tax
+- Opening a new town, and moving a town between hidden, waiting list, live and paused
+- Tradies, their licences, who gets first pick of each trade
+- Staff
+
+**In a file.** Edit it on GitHub (open the file, press the pencil, save). The site rebuilds itself and
+the change is live in about three minutes.
 
 | To change | Edit this file |
 | --- | --- |
 | The words on the owner page | `content/landing-owner.md` |
 | The words on the tradie page | `content/landing-tradie.md` |
 | Brand name, colours, logo, contact email | `config/brand.ts` |
-| Membership prices, deposit amount, deposit promises, currency, tax rate | `config/markets.ts` |
 | The list of trades and which need a licence | `config/trades.ts` |
-| The fixed-price job menu (used from Phase 2) | `seed/menu-queenstown.json` |
+| How long the pages say a tradie's money takes to reach their bank | `config/markets.ts` (`PAYOUT_ARRIVAL`) |
+| The wording of every text message | `src/lib/notify/messages.ts` |
 
-Anything written as `[EDIT: ...]` is a placeholder. It shows highlighted in yellow on the live
-page, and the setup checklist at `/admin` counts how many are left.
+Anything written as `[EDIT: ...]` is a placeholder. It shows highlighted on the live page, and the setup
+checklist counts how many are left. If an edit breaks the format, the rebuild stops with a message saying
+what is wrong, and the previous version of the site stays live.
 
-If an edit breaks the format (for example the headline line is deleted), the rebuild stops
-with a message saying what is wrong, and the previous version of the site stays live.
+`config/markets.ts` and `seed/menu-queenstown.json` are **starting values only**. They are copied into
+the database the first time the site is built. After that, change prices on the admin screens.
 
 ## How it is built
 
 Mainstream tools, chosen so a small team can maintain it:
 
-- **Next.js + TypeScript** on **Vercel** (the website and its server code)
-- **Supabase** (Postgres database)
-- **Stripe** (card payments)
+- **Next.js + TypeScript** on **Vercel** (the website, its server code, and the once-a-minute timer)
+- **Supabase** (the Postgres database and private photo storage)
+- **Stripe** (memberships, cards on file, paying tradies through Connect)
 - **ClickSend** or **Twilio** (texts), **Resend** (email)
-- **Meta Pixel + Conversions API** and **Vercel Web Analytics** (tracking)
+- **Meta Pixel + Conversions API** and **Vercel Web Analytics** (tracking, public pages only)
 
 Where things live:
 
 ```
-config/      brand, markets, trades: the settings a non-developer may edit
-content/     the landing page words, as Markdown
-seed/        the fixed-price job menu
-supabase/    the database tables, as one SQL file to paste into Supabase
-src/app/     the pages
-src/lib/     the logic: saving leads, alerts, payments, sign-in, tracking
-tests/       automated checks of the logic and of the database
-e2e/         automated checks that click through the real site in a browser
-docs/        plan, handover notes, legal brief
+config/      brand, starting markets, trades
+content/     the landing page words
+seed/        the starting fixed-price menu
+supabase/    the database tables. Applied automatically on every deploy
+src/app/     the pages and the buttons behind them
+src/lib/     the rules: jobs, the offer cascade, money, sign-in, texts, the queue
+tests/       automated checks of the rules, run against a real database engine
+e2e/         automated checks that click through the real site in a phone-sized browser
+docs/        the documents in the table above, and the full research reports
 ```
 
 ## For developers
 
 ```bash
 npm install
-npm run demo        # the site at http://localhost:3000 with no accounts needed
-npm test            # unit tests
-npm run build && npm run test:e2e   # browser tests (phone-sized) against a real build
-npm run test:db     # database checks. Needs DATABASE_URL pointing at a THROWAWAY Postgres
+npm run demo        # the whole product at http://localhost:3000/demo, no accounts needed
 npm run check       # lint + types + unit tests
+npm run build && npm run test:e2e   # browser tests against a real build
+npm run test:db     # the same unit tests on real Postgres. Needs DATABASE_URL for a THROWAWAY database
 ```
 
-- `npm run build` runs the unit tests first. A failing test stops the deploy, and the
-  previous version stays live.
-- Demo mode keeps leads in `.data/` and never sends real alerts. It cannot switch on once
-  the site is hosted on Vercel.
-- Money is always a whole number of cents, with its currency beside it. Never a decimal.
-- Every money movement is written to an audit log that cannot be edited.
+- `npm run build` runs the unit tests, then brings the database up to date, then builds. A failing test
+  or an unreachable database stops the deploy, and the previous version stays live. To build without a
+  database, use `npx next build`.
+- Demo mode keeps everything in `.data/`, sends no real texts and moves no real money. It cannot switch
+  on once the site is hosted on Vercel.
+- Money is always a whole number of cents with its currency beside it. Never a decimal.
+- Every job change and every money movement is written to an audit log that cannot be edited.
+- The app keeps its own clock (`src/lib/clock.ts`), so tests and the demo can move time.
 - This project uses Next.js 16 with Cache Components. Read `AGENTS.md` before changing pages.

@@ -2,17 +2,18 @@
 
 Nothing in this project is legal advice, and none of the legal wording has been written. The four
 pages below exist on the site as clearly marked placeholders. A lawyer who knows New Zealand consumer
-and privacy law (and later Australian law) needs to write them **before you run ads or take deposits**.
+and privacy law (and later Australian law) needs to write them **before the first owner pays, the first
+tradie is approved, or an ad is run**.
 
-This file is a brief to hand to that lawyer: what the business does, and the questions each document
-has to answer. It is a list of topics, not draft terms.
+This file is a brief to hand to that lawyer: what the business does, what the software actually does
+today, and the questions each document has to answer. It is a list of topics, not draft terms.
 
 ## The business in one paragraph
 
 HostFix is a maintenance network for short-stay rental properties. Owners pay a monthly membership per
 property. When something breaks, the owner, their cleaner or a guest logs a job from a fixed-price menu.
 The job is offered to a local tradie. When it is done, the owner's saved card is charged the menu price,
-the tradie is paid, and HostFix keeps a platform fee. Launch market: Queenstown, New Zealand. Australia is planned.
+the tradie is paid, and HostFix keeps the difference. Launch market: Queenstown, New Zealand. Australia is planned.
 
 ## Where each document appears
 
@@ -23,68 +24,168 @@ the tradie is paid, and HostFix keeps a platform fee. Launch market: Queenstown,
 | Tradie agreement | `/legal/tradie-agreement` | `src/app/(site)/legal/tradie-agreement/page.tsx` |
 | Insurance | `/legal/insurance` | `src/app/(site)/legal/insurance/page.tsx` |
 
-## 1. Privacy policy (needed first: the forms already collect personal details)
+## The two questions that shape everything else
 
-What the site collects today, so the policy can describe it accurately:
+Ask these first. The answers change the other documents, the statements and the tax.
 
-- **From owners:** name, mobile number, email, number of properties, who manages them, the town they live in.
-- **From tradies:** name, mobile number, trade, licence number, days available.
-- **From every visitor who submits a form:** which ad or website they came from, and the page they landed on.
-- **Cookies:** one to remember which form a visitor filled in (7 days), one for admin sign-in, and Meta's own
-  cookies if the Meta Pixel is switched on.
-- **Not stored:** card numbers (Stripe holds those) and visitors' internet addresses.
+1. **Is HostFix the supplier of the repair, or does it arrange the work between owner and tradie?**
+   The software works either way. Today the owner pays HostFix one fixed price, HostFix pays the tradie a
+   fixed amount, and HostFix chooses who is offered the job. That looks like supply. It decides who answers
+   for the quality of the work (Consumer Guarantees Act, Fair Trading Act), who the seller is for GST, and
+   in Australia whether HostFix itself needs a contractor's licence (see "Australia" below).
+2. **Are the tradies independent contractors?** HostFix sets the price, picks who gets first offer, scores
+   them on acceptance and punctuality, and can pause or remove them. They choose which jobs to take, use
+   their own tools, and work for others.
 
-Who the details are shared with: Supabase (database, hosted in Sydney), Vercel (website hosting and page
-view counts), Stripe (payments), Resend (alert emails), ClickSend or Twilio (alert texts), and Meta
-(a scrambled copy of the email and phone number, for ad measurement, when the Conversions API is switched on).
+## 1. Privacy policy
 
-Questions for the lawyer: New Zealand Privacy Act 2020 notice requirements, Australian Privacy Act once
-Australia launches, overseas storage of personal information, how people ask for access or deletion,
-how long details are kept, and whether the Meta sharing needs specific wording or consent.
+What the software holds today, so the policy can describe it accurately:
+
+- **Owners:** name, mobile, email, the town they live in, each property's address, and the access notes
+  they write for tradies (lockbox codes, alarm codes, where the water shuts off). Photos of the property.
+- **Cleaners, co-hosts and guests who report a problem:** their name and mobile number if they give them,
+  what they wrote, and their photos. They have no account. A guest reaches the form from a QR card in the property.
+- **Tradies:** name, business name, mobile, email, the work they do, licence numbers and their end dates,
+  the date their insurance runs out, their tax number, the days they work, and notes written about them by
+  staff that the tradie cannot see. Their reliability record (offers accepted, arrivals on time).
+- **Where a tradie was when they tapped "I have arrived"**, if their phone allowed it. Asked once, at that moment only.
+- **Photos of finished work**, kept with the job.
+- **Every text and email the system sends**, with its wording. Sign-in codes and one-tap links are blanked
+  out once sent.
+- **A permanent record of every job change and every money movement**, with who did it. By design nothing
+  in it can be edited or deleted. *This needs squaring with a person's right to have their details removed.*
+- **From visitors who fill in a public form:** which ad or website they came from, and the page they landed on.
+- **Cookies:** one for being signed in, one for the admin password, one remembering which public form a
+  visitor filled in (7 days), and Meta's own cookies on the public pages if the Meta Pixel is switched on.
+  Nothing inside the signed-in app is tracked for advertising.
+- **Not held:** card numbers, and tradies' bank details and identity documents (Stripe holds those). A
+  visitor's internet address is used in scrambled form for a few minutes to stop robots flooding the
+  forms, and is not kept.
+
+Who sees what, as enforced by the software:
+
+- A tradie sees a property's address and access notes **only after accepting** a job there, and the
+  property's photos only while that job is open. Before accepting they see the suburb.
+- After accepting, the tradie can see the owner's mobile number, and the owner can see the tradie's
+  business name and mobile. A guest's name and number are shown to the owner, the tradie and staff.
+- Staff (the dispatcher and the admin) can see everything, including lockbox codes.
+
+Who the details are shared with: Supabase (database and photos, hosted in Sydney), Vercel (website
+hosting), Stripe (payments, and identity checks on tradies), Resend (email), ClickSend or Twilio (texts),
+and Meta (a scrambled copy of the email and phone number from the public forms, for ad measurement, when
+the Conversions API is switched on).
+
+Questions for the lawyer:
+
+- New Zealand Privacy Act 2020 notices. In particular the rule in force since May 2026 about details that
+  come from someone else: an owner gives HostFix nothing about their cleaner, but **a guest's details reach
+  the owner and the tradie, and the owner's number reaches the tradie.**
+- Guests are members of the public, often from overseas, with no relationship with HostFix. What must the
+  report form tell them before they press send?
+- Holding lockbox and alarm codes: what standard of care, and what to do if they are exposed.
+- Recording a tradie's location at arrival: is the single request enough, and what must they be told?
+- How long each kind of record is kept, how someone asks for access or deletion, and what can lawfully be
+  refused because it is a financial record. **Deleting an owner or tradie today needs a developer.**
+- Storage in Australia and the United States (overseas disclosure).
+- The Australian Privacy Act, before the first Australian market.
 
 ## 2. Terms of service (owners)
 
-- What a membership includes at each tier and what it does not.
-- The **response promise**: the site says that if a tradie is not on site inside the response window, that
-  month's membership is credited automatically. The exact conditions, limits and exclusions need wording.
-- Fixed menu prices, surcharges (urgent, after-hours), parts and materials.
-- Off-menu jobs: the diagnosis fee, quotes, and the approval threshold (NZ$400).
-- Who may log a job for a property (owner, cleaner, co-host, guest) and the owner's responsibility for those jobs.
-- Charging the card on file when a job is completed. Disputes and refunds.
+What the software does, which the terms need to match:
+
+- **Membership** is per property, per month, charged to a card by Stripe. Cancelling takes effect at the
+  end of the month already paid for. A failed monthly payment marks the property as having a card problem.
+- **The response promise.** The clock starts when the job is sent out to tradies and runs through nights
+  and weekends. "On site" is the tradie's own tap of "I have arrived". If nobody is on site in time, the
+  month's membership for that property is credited automatically, **at most once per property per calendar
+  month**, as a credit against the next payment, not as cash. *The exact conditions, limits and exclusions
+  (no access, owner cancels, off-menu work, a guest report still waiting for the owner) need wording.*
+- **Fixed menu prices**, the urgent and after-hours surcharges, small parts included in the price, and
+  parts above a set amount needing the owner's yes.
+- **Off-menu jobs:** a fixed call-out fee, then a quote. A quote above NZ$400, or above the owner's own
+  limit for that property, needs the owner's yes before work starts. If they say no, the call-out is still charged.
+- **Who may commit the owner to a charge.** Anyone holding the property's team link (meant for cleaners
+  and co-hosts) can send a tradie at the owner's expense with no further check. A guest's report waits for
+  the owner's yes unless the owner has switched that off. Staff can log a job for an owner who phones.
+- **"I could not get in":** the tradie is paid the call-out and the owner is charged it.
+- **Charging the card when the job is done, with no approval step.** A declined card is tried four
+  times in all, a day apart, and then a person follows it up.
+- **Raising a problem.** The owner can do so from the job page. Inside the first day it holds the tradie's
+  payment. HostFix staff decide the outcome: the work stands, or a full or part refund.
+- **Price changes.** The software keeps a member on the price they joined at. Moving existing members to a
+  new price is not built. The terms should say how and with what notice it can be done.
 - **The founding member deposit:** refundable before launch, credited against the first month. What happens
   if HostFix does not launch, or launches late.
-- Whether HostFix supplies the repair work itself or arranges it between owner and tradie. This also decides
-  how GST is charged and who is responsible for the quality of the work (Consumer Guarantees Act, Fair Trading Act).
-- Cancellation, minimum term, price changes.
+- **The quarterly property check** promised with Priority is not automated yet. Do not promise more than
+  will be delivered by hand.
+- Cancellation, minimum term (none today), and the wording of the automatic-renewal notice.
 
 ## 3. Tradie agreement
 
-- Independent contractor status.
-- Licences: plumbing, gas and electrical work only goes to tradies with a current licence on file. The tradie's
-  duty to keep licence details up to date.
-- The 15-minute offer window, accepting and passing, and what happens after accepting.
-- Payout timing (within 48 hours of completion), the platform fee, surcharges paid to the tradie in full.
-- Proof of work (photos), workmanship standards, call-backs and who pays for them.
-- Disputes that pause a payout.
-- The scorecard (acceptance and on-time rates) and how first-choice status is given or removed.
-- Optional monthly fee to hold the first-choice slot (planned, not yet switched on).
-- Health and safety obligations when working at a property.
-- Referral payments to cleaners and co-hosts (NZ$100 after a property has been a paying member for three months).
+- Independent contractor status (see the second question at the top).
+- **Licences.** Plumbing, gas and electrical work is only offered to a tradie whose licence number and end
+  date are on file and in date. Staff check each one against the public register by hand and record that
+  they did. The tradie's duty to tell HostFix of any change.
+- The offer: 15 minutes for the first choice, then the backup, then everyone. Accepting, passing, and what
+  accepting commits them to.
+- **Pay.** The amount is fixed and shown in the offer. Surcharges and approved parts go to the tradie in
+  full. **Timing, as built:** the payment is sent 24 hours after the job (up to 48, set per market) once the
+  owner's card has been charged, and reaches the tradie's bank about 5 to 6 working days after the job in
+  New Zealand. **If the owner's card fails, the tradie is not paid until it succeeds.** Is that acceptable,
+  or must HostFix carry that risk?
+- **A problem raised by the owner** puts the payment on hold, and a refund reduces it in proportion. If
+  the tradie has already been paid, the software takes the amount back from their Stripe balance. The
+  agreement needs to permit that.
+- Proof of work (a photo is required to finish any job), workmanship standards, and coming back to put
+  things right at no charge.
+- The scorecard (acceptance and on-time rates over 30 days, 80% target) and how first-choice status is
+  given, swapped, paused or removed.
+- Confidentiality of access codes and owners' details, and not taking HostFix owners' work directly.
+- Health and safety at a property, and working alone in empty homes.
+- An optional monthly fee to hold the first-choice slot (planned, stored, switched off).
 
-## 4. Insurance
+## 4. Referral terms (cleaners and co-hosts)
 
-- What cover tradies must hold (public liability at least) and how it is evidenced.
-- What cover HostFix itself needs as the platform.
+A separate short document. A cleaner or co-host who sends an owner earns a one-off reward (NZ$100) once
+that property has paid for three months. It is paid by bank transfer by hand. Needs: who qualifies, when
+it is void, tax on the reward, and what the referrer may and may not say about HostFix.
+
+## 5. Insurance
+
+- What cover tradies must hold (public liability at least), how it is evidenced, and who checks it. The
+  software stores the date it runs out. Nothing checks or reminds yet.
+- What cover HostFix itself needs, which depends on the first question at the top.
 - What the owner's own insurance is expected to cover.
 - Any wording on the site about insurance must come from your broker or lawyer.
 
+## 6. For your accountant
+
+- **GST.** Who is the seller of the repair: HostFix or the tradie? Until the market is marked as
+  registered, statements show no GST at all. Once it is, the owner's statement shows GST inside the total
+  they paid. Tradies who are not registered are paid the same amount.
+- What a tax invoice must show, and whether the on-screen monthly statement is enough or a PDF is needed.
+- How the deposit, the membership, credits, refunds and the referral reward are treated.
+- Whether HostFix should issue buyer-created tax invoices to tradies.
+
+## Australia, before the first Australian market
+
+- In Queensland and New South Wales, licensing can apply to whoever contracts for or advertises building,
+  plumbing or electrical work. **Whether HostFix needs its own contractor's licence there depends on the
+  first question at the top.** Get this answered before any Australian menu is published.
+- A separate Australian company and Stripe account are needed to pay Australian tradies.
+- Australian Consumer Law, the Spam Act, and the sender-name register for texts.
+
 ## Other points to raise
 
-- **Marketing claims on the landing pages.** The copy in `content/` makes promises (response times, "approved"
-  tradies, the response credit). Have the lawyer read both files once the copy is final.
-- **Texts to customers and tradies.** New Zealand's Unsolicited Electronic Messages Act and Australia's Spam Act
-  apply to the job texts planned for Phase 2.
-- **Licensing rules.** `config/trades.ts` marks which trades need a licence. Confirm the list against the
-  rules of the Plumbers, Gasfitters and Drainlayers Board and the Electrical Workers Registration Board.
-- **GST.** Ask your accountant how the deposit, the membership and the split between owner price, tradie
-  payout and platform fee should be treated.
+- **Marketing claims.** The copy in `content/` and on the public pages makes promises: the response time,
+  the automatic credit, fixed prices, and when tradies are paid. Have the lawyer read both pages once the
+  copy is final.
+- **Texts.** Every text names HostFix. Job texts do not say "reply STOP", because New Zealand numbers
+  cannot receive replies until a short code is registered. A tradie can stop offers at any time with the
+  Pause switch in their profile, and where replies do work, STOP pauses them. Does that meet the
+  unsubscribe rule in the Unsolicited Electronic Messages Act and the Spam Act?
+- **Licensing rules.** `config/trades.ts` marks which trades need a licence, and each menu job can be
+  marked too. The research read the regulators' guidance pages, not the Acts (`docs/MARKET-RESEARCH.md`).
+  Confirm the line between handyman work and licensed work, job by job, on the real menu.
+- **Chargebacks.** When an owner's bank reverses a payment, the tradie's payment is put on hold if it has
+  not gone. Who bears the loss if it has?

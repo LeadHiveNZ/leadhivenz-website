@@ -39,7 +39,7 @@ No. But tradies who accept most jobs and turn up on time are offered the most wo
 
 ### How do I get paid?
 
-By bank transfer, automatically. You set up your bank details once. Your payment is sent within two days of each job and takes a few working days to reach your bank.
+By bank transfer, automatically. You set up your bank details once. Your payment is sent within two days of each job and takes a few working days to reach your bank. If an owner's card is declined, we chase it, not you, and you are paid as soon as it goes through.
 
 ### When do you start?
 

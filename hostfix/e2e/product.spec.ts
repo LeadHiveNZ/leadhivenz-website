@@ -234,8 +234,14 @@ test("people only see their own data", async ({ page, request }) => {
   await ready(page);
   const propertyPath = new URL(page.url()).pathname;
 
-  // Another owner cannot open any of them.
+  // Sam's card is fine, so his home screen has no payment warning.
+  await open(page, "/app");
+  await expect(shown(page, /We could not charge your card/)).toHaveCount(0);
+
+  // Another owner cannot open any of them. Her own home screen warns her about her own unpaid job, and only that.
   await be(page, "Priya Patel");
+  await expect(shown(page, "We could not charge your card for job 1004")).toHaveCount(1);
+  await expect(page.getByRole("link", { name: "check or change your card" })).toHaveAttribute("href", "/app/billing");
   for (const path of [jobPath, propertyPath, `${propertyPath}/card`]) {
     await open(page, path);
     await expect(page.getByRole("heading", { name: "We can't find that page." })).toBeVisible();

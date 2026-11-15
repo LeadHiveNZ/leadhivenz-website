@@ -10,45 +10,89 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## HostFix project notes
 
-Read `README.md` first. The owner of this project is a non-technical founder: explain choices in plain
+Read `README.md` first, then `docs/PLAN.md` (the status block at the top lists where the build differs
+from the original plan). The owner of this project is a non-technical founder: explain choices in plain
 words, and keep everything simple enough for one virtual assistant to run.
+
+### Where the rules live
+
+| Rule | File |
+| --- | --- |
+| Prices, surcharges, tax, what each side pays and gets | `src/lib/jobs/pricing.ts` |
+| Logging a job, guest reports, cancelling | `src/lib/jobs/create.ts` |
+| Arriving, quotes, finishing, "could not get in" | `src/lib/jobs/work.ts` |
+| The offer cascade: first choice, backup, everyone, dispatcher | `src/lib/dispatch/cascade.ts` |
+| Everything the clock drives | `src/lib/dispatch/tick.ts`, called by `/api/cron/tick` |
+| Charging, paying tradies, credits, disputes, refunds | `src/lib/billing/settle.ts` |
+| Memberships and referrals | `src/lib/properties/service.ts` |
+| The dispatcher's queue | `src/lib/ops/exceptions.ts` |
+| Who is signed in and what they may open | `src/lib/auth/current.ts` |
+| One-tap links in texts | `src/lib/links.ts`, `src/lib/access/links.ts` |
+| The words of every text | `src/lib/notify/messages.ts` |
+| Stripe | `src/lib/payments/stripe-gateway.ts`, `product-events.ts`, `deposit.ts` |
 
 ### Rules that must not be broken
 
 - **Never lose a lead.** Saving and alerting are separate. If saving fails, the alert still goes out with
   every detail (`src/lib/leads/service.ts`).
 - **Money is whole cents plus a currency.** Never a decimal. Format with `formatMoney` (`src/lib/money.ts`).
-- **Every money movement goes through a database function** that changes the record and writes the audit
-  entry together, and is safe to call twice (`supabase/migrations`, mirrored in `src/lib/store/demo.ts`).
+- **Every money movement changes its record and writes the audit entry in the same database step**
+  (`db.tx`), and is safe to call twice. A call to Stripe is claimed first, made with an idempotency key,
+  then recorded (`src/lib/billing/settle.ts`).
 - **The audit log is append-only.** Never add update or delete access to it.
-- **Nothing tied to one town, currency or tax rate.** Those live in `config/markets.ts`.
+- **All times come from the app's clock** (`now()` in `src/lib/clock.ts`), never `new Date()` or the
+  database's `now()`. The tests and the demo move that clock.
+- **Nothing tied to one town, currency or tax rate.** Those live on the market row in the database.
+  `config/markets.ts` only seeds a market that does not exist yet.
+- **Licensed work is only offered to a tradie with a licence on file that has not expired.** Checked when
+  offering and again when accepting or assigning.
+- **A link in a text never changes anything by being opened.** Phones and chat apps open links to preview
+  them. Accepting needs a button press.
 - **Plain language on every screen.** No jargon. Error messages say what to do next.
+- **Never promise tradies money in the bank faster than Stripe pays it** (`payoutArrival` in
+  `config/markets.ts`). A test fails if "48 hours" returns to the tradie page.
 - **No legal wording.** Terms, privacy, tradie agreement and insurance stay as placeholders until a lawyer
   writes them (`docs/LEGAL-TODO.md`).
-- **Secrets only in environment variables.** Add new ones to `.env.example`, `SETUP.md`, `tests/setup.ts`
-  and the setup checklist (`src/lib/status.ts`).
-- **People only see their own data.** Private pages call `requireAdmin()` themselves. The proxy is a
-  convenience, not the lock. Every table has Row Level Security on with no policies.
+- **Secrets only in environment variables.** Add new ones to `.env.example`, `SETUP.md`, `tests/setup.ts`,
+  `playwright.config.ts` and the setup checklist (`src/lib/status.ts`).
+- **People only see their own data.** Every query for an owner or tradie takes their id. Private pages
+  call `requireOwner()`, `requireTradie()`, `requireStaff()` or `requireAdminRole()` themselves. The proxy
+  is a convenience, not the lock. Every table has Row Level Security on with no policies. Extend
+  `tests/unit/access.test.ts` and the "people only see their own data" browser test with anything new.
 
 ### Next.js 16 with Cache Components: what bit us
 
 - A component that depends on the visitor must touch the request (`await connection()`, `cookies()`)
   **before any early return**. Otherwise the build can freeze it as fixed content.
-- `Date.now()` and random values in a component need `await connection()` first, inside `<Suspense>`.
+- `now()` and random values need `await connection()` first, inside `<Suspense>`. `currentViewer()` and
+  `currentStaff()` do this for signed-in pages. Public token pages (`/r`, `/j`, `/o`) do it themselves.
+- `usePathname()` in a layout above a dynamic route needs its own `<Suspense>` (`NavLink`, `MetaPixel`).
 - Page-level redirects for signed-out visitors arrive after the page has started streaming. `src/proxy.ts`
   does the proper redirect first.
-- Files read at run time (`content/*.md`) must be listed in `outputFileTracingIncludes` in `next.config.ts`.
-- After a failed form submit React resets the form. Selects and checkbox groups need a `key` tied to the
-  saved value to keep the visitor's choice (`src/components/forms/Fields.tsx`).
+- A server action that redirects to a **route handler** never lands. Redirect to a page.
+- `updateTag` works only inside a server action. Public pages for a market added after the build need
+  `revalidatePath` and an uncached fallback (`publicMarketNow`).
+- Files read at run time (`content/*.md`, `supabase/migrations/*.sql`) must be listed in
+  `outputFileTracingIncludes` in `next.config.ts`.
+- After a form action React resets the form. Use hidden inputs with button-style choices, or a `key` tied
+  to the saved value (`src/components/jobs/ReportForm.tsx`, `src/components/forms/Fields.tsx`).
+- Next keeps the page you came from in the DOM, hidden. Browser tests must look at visible text only
+  (`shown()` in `e2e/product.spec.ts`).
 
 ### Before saying something is done
 
 ```bash
-npm run check                       # lint, types, unit tests
-npm run build && npm run test:e2e   # real browser, phone size
-npm run test:db                     # needs DATABASE_URL for a throwaway Postgres
+npm run check                          # lint, types, unit tests
+npx next build && npm run test:e2e     # real browser, phone size, three copies of the site
+npm run test:db                        # needs DATABASE_URL for a throwaway Postgres
 ```
 
 - Tests run during every deploy with the real keys present. `tests/setup.ts` hides them from the tests.
-- Outside services are tested against stand-ins (`tests/unit/helpers.ts`, `e2e/fake-stripe.mjs`). Read the
-  provider's current documentation before changing any call to an outside service. Do not rely on memory.
+- Unit tests run on a real Postgres engine inside the test process (`tests/unit/db.ts`), with the real
+  migrations. `npm run test:db` repeats them on a real server, which is where the same-second races are proven.
+- Outside services are tested against stand-ins (`tests/unit/helpers.ts`, `e2e/fake-stripe.mjs`, the demo
+  payment gateway). **The Stripe calls for memberships, job charges and tradie payouts have never run
+  against a real Stripe account.** `docs/STRIPE-TEST-CHECKLIST.md` is the manual run.
+- Read the provider's current documentation before changing any call to an outside service. Do not rely
+  on memory.
+- To look at the product: `npm run demo`, then `/demo`. Delete `.data/` to reset the sample business.

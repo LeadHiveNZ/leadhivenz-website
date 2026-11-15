@@ -222,6 +222,11 @@ select pg_temp.check_true(public.rate_limit_hit('test:a', 3600, 3), 'hit 3 of 3 
 select pg_temp.check_true(not public.rate_limit_hit('test:a', 3600, 3), 'hit 4 of 3 is refused');
 select pg_temp.check_true(public.rate_limit_hit('test:b', 3600, 3), 'a different key has its own count');
 select pg_temp.check_fails('blocked', $q$select public.rate_limit_hit('test:c', 0, 3)$q$, 'a zero-length window is rejected');
+-- The window starts at the first hit, not on the clock: one row per key, and the count starts again once it has passed.
+select pg_temp.check_true((select count(*) = 1 from public.rate_limits where bucket = 'test:a'), 'one row per key, whatever the time on the clock');
+update public.rate_limits set expires_at = clock_timestamp() - interval '1 second' where bucket = 'test:a';
+select pg_temp.check_true(public.rate_limit_hit('test:a', 3600, 3), 'the count starts again once the window has passed');
+select pg_temp.check_true((select hits = 1 from public.rate_limits where bucket = 'test:a'), 'and it starts again at one');
 
 -- ---------------------------------------------------------------------------
 -- The audit log can never be edited, even by the database owner.

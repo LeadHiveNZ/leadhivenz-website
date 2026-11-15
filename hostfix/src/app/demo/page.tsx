@@ -83,7 +83,7 @@ export default async function DemoHub({ searchParams }: { searchParams: SearchPa
                   Open <Link href="/demo/phone?who=sam" className="font-semibold text-brand underline underline-offset-2">Sam the owner&apos;s phone</Link> and read the texts he got along the way.
                 </li>
                 <li>Be <strong>Sam</strong> below. Answer the quote and the guest&apos;s report that are waiting for him, then report a new problem.</li>
-                <li>Be <strong>Maria</strong>, the dispatcher. Three things in her queue need a person. Deal with each one.</li>
+                <li>Be <strong>Maria</strong>, the dispatcher. Her queue holds only what the system could not sort out by itself. Deal with each one.</li>
                 <li>Skip ahead a day (bottom of this page) and watch the tradies get paid.</li>
               </ol>
             </Card>

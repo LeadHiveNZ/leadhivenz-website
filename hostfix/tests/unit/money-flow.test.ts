@@ -6,7 +6,7 @@ import { runTick } from "@/lib/dispatch/tick";
 import { cancelJob } from "@/lib/jobs/create";
 import { getJobForStaff, listLines, listQuotes } from "@/lib/jobs/store";
 import { completeJob, decideQuote, markArrived, markEnRoute, reportNoAccess, submitQuote } from "@/lib/jobs/work";
-import { saveBilling } from "@/lib/owners/service";
+import { saveBilling, unpaidJobs } from "@/lib/owners/service";
 import { DEMO_CARD_OK } from "@/lib/payments/demo-gateway";
 import type { Property } from "@/lib/properties/service";
 import { testDb } from "./db";
@@ -308,11 +308,16 @@ describe("when the card is declined", () => {
     expect(await chargeJob(t.db, gatewayFor(t.db), job.id, { force: true })).toBe("failed");
     expect(await payment(job.id)).toMatchObject({ status: "failed", attempts: 5 });
 
+    // The owner is shown it on their home screen. Another owner is not.
+    expect(await unpaidJobs(t.db, s.owner.ownerId)).toEqual([{ jobId: job.id, number: job.number, title: job.title, amountCents: 22000, currency: "NZD" }]);
+    expect(await unpaidJobs(t.db, (await makeOwner(t.db)).ownerId)).toEqual([]);
+
     // The owner updates their card. The next manual try charges it, exactly once.
     await saveBilling(t.db, { ownerId: s.owner.ownerId, country: "NZ", provider: "demo", customerId: "demo_cus_fixed", card: DEMO_CARD_OK });
     expect(await chargeJob(t.db, gatewayFor(t.db), job.id, { force: true })).toBe("succeeded");
     expect(await chargeJob(t.db, gatewayFor(t.db), job.id, { force: true })).toBe("skipped");
     expect(await payment(job.id)).toMatchObject({ status: "succeeded", attempts: 6 });
+    expect(await unpaidJobs(t.db, s.owner.ownerId)).toEqual([]);
     expect(await payout(job.id)).toMatchObject({ status: "scheduled" });
     expect(await openExceptions(t.db, job.id)).toEqual([]);
     expect((await moneyLog(job.id)).filter((line) => line.startsWith("payment.succeeded"))).toHaveLength(1);

@@ -25,6 +25,30 @@ describe("leads store", () => {
     expect(entries[3]).toMatchObject({ amount: 4900, currency: "NZD", dedupeKey: "stripe:evt_1" });
   });
 
+  it("counts tries from a visitor's first one, not in blocks on the clock", async () => {
+    const store = freshStore();
+    for (let hit = 1; hit <= 3; hit += 1) expect(await store.rateLimitHit("test:w", 600, 3)).toBe(true);
+    expect(await store.rateLimitHit("test:w", 600, 3)).toBe(false);
+    // One row for the visitor, whatever the time on the clock, lasting the full ten minutes from the first try.
+    const rows = await t.db.query<{ bucket: string; hits: number; seconds_left: number }>(
+      "select bucket, hits, extract(epoch from (expires_at - clock_timestamp())) as seconds_left from public.rate_limits where bucket like 'test:w%'",
+    );
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ bucket: "test:w", hits: 4 });
+    expect(Number(rows[0]!.seconds_left)).toBeGreaterThan(590);
+    expect(Number(rows[0]!.seconds_left)).toBeLessThanOrEqual(600);
+
+    // Being refused does not push the end of the window back.
+    await store.rateLimitHit("test:w", 600, 3);
+    const after = await t.db.query<{ seconds_left: number }>("select extract(epoch from (expires_at - clock_timestamp())) as seconds_left from public.rate_limits where bucket = 'test:w'");
+    expect(Number(after[0]!.seconds_left)).toBeLessThanOrEqual(Number(rows[0]!.seconds_left));
+
+    // Once the ten minutes have passed the count starts again, with a fresh ten minutes.
+    await t.db.query("update public.rate_limits set expires_at = clock_timestamp() - interval '1 second' where bucket = 'test:w'");
+    for (let hit = 1; hit <= 3; hit += 1) expect(await store.rateLimitHit("test:w", 600, 3)).toBe(true);
+    expect(await store.rateLimitHit("test:w", 600, 3)).toBe(false);
+  });
+
   it("does not lose leads when many arrive at once", async () => {
     const store = freshStore();
     await Promise.all(

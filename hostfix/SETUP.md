@@ -213,6 +213,11 @@ Do all of this in Stripe's **sandbox** first (its test area, where no real money
 Things to know:
 
 - Stripe's pages take the card and the tradie's bank details. The site never sees either.
+- **When tradies get their money.** The site sends a tradie's payment 24 hours after the job. Stripe then
+  holds card money before it can be paid out: 4 working days in New Zealand, 2 in Australia. So the money
+  shows in a tradie's bank about 5 to 6 working days after a job in New Zealand. The site tells tradies
+  exactly that. `docs/PLAN.md` (section 9, item A) explains how to get it down to 2 or 3 days once you
+  have income sitting in Stripe.
 - **Refund from the job page in the team area, not in Stripe.** The job page refunds the owner and brings
   the tradie's payment down to match in one step. A refund made by hand in Stripe is noticed and put in
   the queue, but the tradie's payment is left alone for you to sort out.

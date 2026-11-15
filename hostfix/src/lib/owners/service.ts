@@ -212,3 +212,16 @@ export async function listCredits(db: Db, ownerId: string): Promise<CreditRow[]>
     note: row.note, propertyName: row.property_name,
   }));
 }
+
+/** Finished jobs whose card payment has not gone through yet. The tradie is waiting on these. */
+export async function unpaidJobs(db: Db, ownerId: string): Promise<{ jobId: string; number: number; title: string; amountCents: number; currency: string }[]> {
+  const rows = await db.query<{ job_id: string; number: number; title: string; amount_cents: number; currency: string }>(
+    `select p.job_id, j.number, j.title, p.amount_cents, p.currency
+       from public.payments p join public.jobs j on j.id = p.job_id
+      where p.owner_id = $1::uuid and p.status = 'failed'
+      order by p.created_at
+      limit 10`,
+    [ownerId],
+  );
+  return rows.map((row) => ({ jobId: row.job_id, number: Number(row.number), title: row.title, amountCents: Number(row.amount_cents), currency: row.currency }));
+}
