@@ -18,33 +18,38 @@ export const brand = {
     "Fixed-price repairs for holiday homes and short-stay rentals. Local tradies, fast response, photos when it's done.",
 
   /**
-   * Logo. Leave as null to use the built-in house-and-tick mark, which picks up
-   * the colours below. To use your own logo, put the file in the /public folder
+   * Logo. Leave as null to use the built-in mark: an open door, drawn in the
+   * colours below. To use your own logo, put the file in the /public folder
    * and set this to its path, for example "/my-logo.svg".
    */
   logoSrc: null as string | null,
 
+  /**
+   * COLOURS. Plum is the brand: text, the logo and the main buttons. Lime is
+   * the highlight: one per screen, and the buttons on dark sections. Lime is
+   * never used for words on a light background, because it cannot be read.
+   */
   colours: {
-    /** Main brand colour: links, icons, highlights. */
-    brand: "#0e7c66",
-    /** Darker brand colour for hover states. */
-    brandDark: "#0a5f4e",
-    /** Call-to-action buttons. */
-    accent: "#f5a524",
-    /** Button hover. */
-    accentDark: "#dd8a0c",
+    /** Main brand colour: the logo, main buttons, links. */
+    brand: "#3b1e3f",
+    /** Darker brand colour for hover states and dark sections. */
+    brandDark: "#2a132d",
+    /** The highlight. Buttons on dark sections, one accent per screen. */
+    accent: "#d4f23a",
+    /** Highlight hover. */
+    accentDark: "#bfdd1f",
     /** Main text. */
-    ink: "#0b1f33",
+    ink: "#24122a",
     /** Secondary text. */
-    muted: "#55657a",
-    /** Page background. */
+    muted: "#6a5b70",
+    /** Cards and form fields. */
     surface: "#ffffff",
-    /** Soft background behind some sections. */
-    tint: "#f1f8f6",
-    /** Warm background behind other sections. */
-    sand: "#fbf7ef",
+    /** Soft lilac behind selected things and some sections. */
+    tint: "#ebe3f0",
+    /** The page background: warm paper. */
+    sand: "#f7f2ea",
     /** Borders and dividing lines. */
-    line: "#dfe6ea",
+    line: "#e2d9e6",
   },
 
   /** Shown in the footer and in "something went wrong" messages. */

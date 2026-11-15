@@ -1,9 +1,19 @@
 import type { Metadata, Viewport } from "next";
+import localFont from "next/font/local";
 import type { CSSProperties, ReactNode } from "react";
 import { GeistSans } from "geist/font/sans";
 import { brand } from "@config/brand";
 import { baseUrl } from "@/lib/env";
 import "./globals.css";
+
+// The headline typeface: a heavy grotesque with some character. The file ships
+// with the site, so nothing is fetched from a font service.
+const display = localFont({
+  src: "../../node_modules/@fontsource-variable/bricolage-grotesque/files/bricolage-grotesque-latin-wght-normal.woff2",
+  variable: "--font-display-face",
+  weight: "200 800",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL(baseUrl()),
@@ -13,6 +23,7 @@ export const metadata: Metadata = {
   },
   description: brand.description,
   applicationName: brand.name,
+  appleWebApp: { capable: true, title: brand.name, statusBarStyle: "default" },
   openGraph: {
     siteName: brand.name,
     type: "website",
@@ -42,7 +53,7 @@ const brandColours = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en-NZ" className={`${GeistSans.variable} h-full antialiased`} style={brandColours}>
+    <html lang="en-NZ" className={`${GeistSans.variable} ${display.variable} h-full antialiased`} style={brandColours}>
       <body className="flex min-h-full flex-col font-sans">{children}</body>
     </html>
   );

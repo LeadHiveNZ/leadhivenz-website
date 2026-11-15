@@ -1,37 +1,20 @@
 import type { Metadata } from "next";
-import { brand } from "@config/brand";
-import { launchMarket } from "@config/markets";
-import { trades } from "@config/trades";
-import { TradieLeadForm } from "@/components/forms/TradieLeadForm";
-import { LandingPage } from "@/components/LandingPage";
+import { notFound } from "next/navigation";
+import { TradieLanding } from "@/components/landing/pages";
 import { loadLanding } from "@/lib/content";
+import { publicMarket } from "@/lib/markets/public";
 
 // The words on this page live in content/landing-tradie.md.
-const market = launchMarket;
-const CTA = "Put my name down";
-const tradeOptions = trades.map((trade) => ({ key: trade.key, label: trade.label }));
 
-export function generateMetadata(): Metadata {
-  const content = loadLanding("tradie", market);
-  return {
-    title: content.headlineText,
-    description: content.summaryText,
-    alternates: { canonical: "/tradies" },
-  };
+export async function generateMetadata(): Promise<Metadata> {
+  const data = await publicMarket();
+  if (!data) return {};
+  const content = loadLanding("tradie", data.market);
+  return { title: content.headlineText, description: content.summaryText, alternates: { canonical: "/tradies" } };
 }
 
-export default function TradiesPage() {
-  const content = loadLanding("tradie", market);
-  return (
-    <LandingPage
-      content={content}
-      eyebrow={`For tradies in ${market.name}`}
-      formTitle="Put your name down"
-      formNote="Takes about a minute. It costs nothing to join the list."
-      form={<TradieLeadForm brandName={brand.name} buttonLabel={CTA} trades={tradeOptions} />}
-      ctaLabel={CTA}
-      closingTitle={`Want the first jobs in ${market.name}?`}
-      closingNote="Leave your details and we'll be in touch before we launch."
-    />
-  );
+export default async function TradiesPage() {
+  const data = await publicMarket();
+  if (!data) notFound();
+  return <TradieLanding data={data} />;
 }

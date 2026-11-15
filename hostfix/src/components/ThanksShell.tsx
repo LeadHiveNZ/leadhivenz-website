@@ -6,7 +6,7 @@ export function ThanksShell({ title, children, tone = "success" }: { title: stri
     <main className="flex-1 bg-tint">
       <div className="mx-auto max-w-2xl px-4 py-12 sm:px-6 sm:py-16">
         <div
-          className={`flex h-14 w-14 items-center justify-center rounded-full ${tone === "success" ? "bg-brand" : "bg-accent"}`}
+          className={`flex h-14 w-14 items-center justify-center rounded-full ${tone === "success" ? "bg-brand" : "bg-tint"}`}
           aria-hidden="true"
         >
           {tone === "success" ? (

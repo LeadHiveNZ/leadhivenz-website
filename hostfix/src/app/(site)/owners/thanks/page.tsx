@@ -81,7 +81,7 @@ async function FoundingOffer({ searchParams }: { searchParams: SearchParams }) {
   return (
     <>
       {tracking}
-      <section aria-labelledby="founding-title" className="rounded-2xl border-2 border-accent bg-surface p-5 shadow-sm sm:p-6">
+      <section aria-labelledby="founding-title" className="rounded-2xl border-2 border-brand bg-surface p-5 shadow-sm sm:p-6">
         <p className="text-sm font-semibold uppercase tracking-wide text-brand-dark">Founding member offer</p>
         <h2 id="founding-title" className="mt-1 text-2xl font-semibold tracking-tight text-ink">
           Lock in your spot for {price}

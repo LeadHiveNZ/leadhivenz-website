@@ -26,7 +26,7 @@ async function SetupNotice() {
   if ("settings" in result) return null;
   const suggestion = randomBytes(32).toString("base64url");
   return (
-    <div className="mt-6 rounded-2xl border border-accent bg-surface p-5 text-sm text-ink">
+    <div className="mt-6 rounded-2xl border border-wait/40 bg-wait-soft p-5 text-sm text-ink">
       <p className="font-semibold">Sign-in is not set up yet</p>
       <ul className="mt-2 list-disc space-y-1 pl-5">
         {result.problems.map((problem) => (

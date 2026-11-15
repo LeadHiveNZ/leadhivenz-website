@@ -1,28 +1,39 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { ADMIN_COOKIE, readAdminSettings, verifyAdminToken } from "@/lib/auth/admin-session";
+import { SESSION_COOKIE } from "@/lib/auth/sessions";
 
 /**
- * Runs before the admin pages load. It only tidies up where people land:
- *  - not signed in and asking for the leads list: send to the sign-in page
- *  - already signed in and on the sign-in page: send to the leads list
+ * Runs before the private pages load. It only tidies up where people land:
+ * someone with no sign-in cookie at all is sent to the right sign-in page
+ * straight away, instead of seeing a page start to load and then bounce.
  *
- * This is a convenience, not the lock. Every admin page, action and download
- * checks the sign-in again for itself (see requireAdmin in src/lib/auth/admin.ts).
+ * This is a convenience, not the lock. Every private page, action and download
+ * checks the sign-in again for itself (src/lib/auth/current.ts).
  */
 export function proxy(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-  const result = readAdminSettings(process.env);
-  const signedIn = "settings" in result && verifyAdminToken(result.settings, request.cookies.get(ADMIN_COOKIE)?.value);
+  const { pathname, search } = request.nextUrl;
+  const hasSession = Boolean(request.cookies.get(SESSION_COOKIE)?.value);
 
-  if (pathname === "/admin" && signedIn && request.method === "GET") {
-    return NextResponse.redirect(new URL("/admin/leads", request.url));
+  if (pathname.startsWith("/app") || pathname.startsWith("/tradie/") || pathname === "/tradie") {
+    if (!hasSession) {
+      const target = new URL("/sign-in", request.url);
+      target.searchParams.set("next", `${pathname}${search}`);
+      return NextResponse.redirect(target);
+    }
+    return NextResponse.next();
   }
-  if (pathname.startsWith("/admin/leads") && !signedIn) {
+
+  const result = readAdminSettings(process.env);
+  const adminPassword = "settings" in result && verifyAdminToken(result.settings, request.cookies.get(ADMIN_COOKIE)?.value);
+  if (pathname === "/admin" && adminPassword && request.method === "GET") {
+    return NextResponse.redirect(new URL("/admin/queue", request.url));
+  }
+  if (pathname.startsWith("/admin/") && !adminPassword && !hasSession) {
     return NextResponse.redirect(new URL("/admin", request.url));
   }
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/admin", "/admin/:path*"],
+  matcher: ["/admin", "/admin/:path*", "/app", "/app/:path*", "/tradie", "/tradie/:path*"],
 };

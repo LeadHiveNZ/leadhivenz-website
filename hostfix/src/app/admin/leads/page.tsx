@@ -81,7 +81,7 @@ async function LeadsDashboard({ searchParams }: { searchParams: SearchParams }) 
       </div>
 
       {storeKind() === "demo" && (
-        <p className="rounded-xl border border-accent bg-surface px-4 py-3 text-sm font-medium text-ink">
+        <p className="rounded-xl border border-wait/40 bg-wait-soft px-4 py-3 text-sm font-medium text-ink">
           Demo mode. These leads are saved in a file on this computer only, and alerts are not really sent.
         </p>
       )}
@@ -305,7 +305,7 @@ function AlertText({ alerts }: { alerts: StoredNotification[] }) {
 
 const STATE_STYLE: Record<StatusItem["state"], { dot: string; word: string }> = {
   ok: { dot: "bg-brand", word: "Ready" },
-  todo: { dot: "bg-accent", word: "To do" },
+  todo: { dot: "bg-wait", word: "To do" },
   problem: { dot: "bg-red-600", word: "Needs fixing" },
 };
 

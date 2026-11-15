@@ -1,35 +1,37 @@
 import { brand } from "@config/brand";
 
 /**
- * The logo mark. Uses your own file if config/brand.ts names one, otherwise a
- * built-in house-and-tick drawn in the brand colours.
+ * THE LOGO MARK: an open door. A plum doorway with a lime door swung open
+ * beside it. Someone is being let in to fix something.
+ *
+ * It is drawn here rather than loaded from a file, so it stays sharp at any
+ * size and follows the colours in config/brand.ts. To use your own logo
+ * instead, set logoSrc in that file.
+ *
+ * tone="light" is for dark backgrounds: the doorway turns to paper.
  */
-export function LogoMark({ size = 32 }: { size?: number }) {
+export function LogoMark({ size = 32, tone = "dark" }: { size?: number; tone?: "dark" | "light" }) {
   if (brand.logoSrc) {
-    // A plain <img> on purpose: the logo can be any file type, including SVG.
-    // eslint-disable-next-line @next/next/no-img-element
+    // eslint-disable-next-line @next/next/no-img-element -- a plain image is right for a small logo of unknown size
     return <img src={brand.logoSrc} alt="" width={size} height={size} className="shrink-0" />;
   }
+  const doorway = tone === "light" ? "var(--hf-sand)" : "var(--hf-brand)";
+  const outline = tone === "light" ? "var(--hf-brand-dark)" : "var(--hf-brand)";
   return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 40 40"
-      width={size}
-      height={size}
-      fill="none"
-      aria-hidden="true"
-      className="shrink-0"
-    >
-      <rect width="40" height="40" rx="10" fill="var(--hf-brand)" />
-      <path d="M8.5 19.5 20 9.5l11.5 10" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-      <path
-        d="M11.5 18v11.5a1.5 1.5 0 0 0 1.5 1.5h14a1.5 1.5 0 0 0 1.5-1.5V18"
-        stroke="#fff"
-        strokeWidth="3"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-      <path d="m15.5 23.4 3.2 3.2 6-6.4" stroke="var(--hf-accent)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+    <svg width={size} height={size} viewBox="0 0 64 64" aria-hidden="true" className="shrink-0">
+      <rect x="11" y="6" width="26" height="52" rx="4" fill={doorway} />
+      <path d="M37 6 L53 13 V51 L37 58 Z" fill="var(--hf-accent)" stroke={outline} strokeWidth="3" strokeLinejoin="round" />
+      <circle cx="47" cy="33" r="2.6" fill={outline} />
     </svg>
+  );
+}
+
+/** The mark and the name together. */
+export function Logo({ size = 30, tone = "dark" }: { size?: number; tone?: "dark" | "light" }) {
+  return (
+    <span className={`inline-flex items-center gap-2 ${tone === "light" ? "text-white" : "text-ink"}`}>
+      <LogoMark size={size} tone={tone} />
+      <span className="display text-[1.35rem] leading-none tracking-[-0.04em]">{brand.name}</span>
+    </span>
   );
 }

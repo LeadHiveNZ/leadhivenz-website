@@ -16,7 +16,22 @@
   --color-tint: var(--hf-tint);
   --color-sand: var(--hf-sand);
   --color-line: var(--hf-line);
+
+  /* What a job's status looks like. Kept apart from the brand colours on
+     purpose, so the brand never reads as a status. */
+  --color-wait: #b26a00;
+  --color-wait-soft: #fdf1d7;
+  --color-go: #1f55c4;
+  --color-go-soft: #e4ecfd;
+  --color-done: #14775c;
+  --color-done-soft: #ddf3ea;
+  --color-quiet: #5f6672;
+  --color-quiet-soft: #eceef1;
+  --color-alert: #b3261e;
+  --color-alert-soft: #fbe4e2;
+
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: var(--font-display-face), var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
 }
 
 html {
@@ -32,11 +47,56 @@ html {
 }
 
 body {
-  background: var(--hf-surface);
+  background: var(--hf-sand);
   color: var(--hf-ink);
+}
+
+/* Headlines: the heavy display face, pulled tight. */
+.display {
+  font-family: var(--font-display);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.02;
+  font-variation-settings: "opsz" 48;
+}
+
+/* Prices, clocks and counts line up in columns. */
+.tabular {
+  font-variant-numeric: tabular-nums;
 }
 
 :focus-visible {
   outline: 3px solid var(--hf-brand);
   outline-offset: 2px;
+}
+
+/* On dark sections the focus ring is the highlight colour so it can be seen. */
+.on-dark :focus-visible {
+  outline-color: var(--hf-accent);
+}
+
+/* The arrow on a question in the FAQ. */
+details > summary {
+  list-style: none;
+  cursor: pointer;
+}
+details > summary::-webkit-details-marker {
+  display: none;
+}
+details[open] > summary .chevron {
+  transform: rotate(180deg);
+}
+
+/* Room for the phone's home bar under the bottom navigation. */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: #ffffff;
+  }
 }
