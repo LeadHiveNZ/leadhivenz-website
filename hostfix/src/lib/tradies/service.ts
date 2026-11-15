@@ -1,3 +1,4 @@
+import { isUuid } from "@/lib/uuid";
 import { findTrade, trades as tradeList } from "@config/trades";
 import { audit } from "@/lib/audit";
 import { createUser, type User } from "@/lib/auth/users";
@@ -127,6 +128,7 @@ export async function createTradie(db: Db, input: TradieApplication): Promise<{ 
 }
 
 export async function getTradie(db: Db, tradieId: string): Promise<Tradie | null> {
+  if (!isUuid(tradieId)) return null;
   const rows = await db.query<TradieRow>(`${TRADIE_SELECT} where t.id = $1::uuid`, [tradieId]);
   return rows[0] ? rowToTradie(rows[0]) : null;
 }

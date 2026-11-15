@@ -157,3 +157,29 @@ export function RadioCards({ name, legend, options, defaultValue, hint }: { name
     </fieldset>
   );
 }
+
+/** A list of tick boxes with longer labels, one per line. Keeps the choices after a problem. */
+export function CheckList({ name, legend, options, defaultValues = [], hint }: { name: string; legend: string; options: readonly { key: string; label: string; detail?: string }[]; defaultValues?: string[]; hint?: string }) {
+  const state = useContext(FormContext);
+  const value = state.values?.[name];
+  const chosen = Array.isArray(value) ? value : typeof value === "string" ? [value] : defaultValues;
+  const error = state.fieldErrors?.[name];
+  return (
+    <fieldset aria-invalid={error ? true : undefined} key={chosen.join(",")}>
+      <legend className={labelClass}>{legend}</legend>
+      {hint && <p className="-mt-1 mb-2 text-sm text-muted">{hint}</p>}
+      <div className="grid gap-2 sm:grid-cols-2">
+        {options.map((option) => (
+          <label key={option.key} className="flex cursor-pointer items-start gap-3 rounded-xl border border-line bg-white px-4 py-3 has-[:checked]:border-brand has-[:checked]:bg-tint">
+            <input type="checkbox" name={name} value={option.key} defaultChecked={chosen.includes(option.key)} className="mt-0.5 h-5 w-5 shrink-0 accent-[var(--hf-brand)]" />
+            <span>
+              <span className="block font-semibold text-ink">{option.label}</span>
+              {option.detail && <span className="block text-sm text-muted">{option.detail}</span>}
+            </span>
+          </label>
+        ))}
+      </div>
+      {error && <p className="mt-1.5 text-sm font-medium text-red-700">{error}</p>}
+    </fieldset>
+  );
+}

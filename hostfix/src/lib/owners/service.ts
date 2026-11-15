@@ -1,3 +1,4 @@
+import { isUuid } from "@/lib/uuid";
 import type { CountryCode } from "@config/markets";
 import { audit } from "@/lib/audit";
 import { createUser, type User } from "@/lib/auth/users";
@@ -50,6 +51,7 @@ function rowToOwner(row: OwnerRow): Owner {
 }
 
 export async function getOwner(db: Db, ownerId: string): Promise<Owner | null> {
+  if (!isUuid(ownerId)) return null;
   const rows = await db.query<OwnerRow>(`${OWNER_SELECT} where o.id = $1::uuid`, [ownerId]);
   return rows[0] ? rowToOwner(rows[0]) : null;
 }

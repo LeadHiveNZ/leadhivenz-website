@@ -1,3 +1,4 @@
+import { isUuid } from "@/lib/uuid";
 import { countryDefaults, type CountryCode, type CurrencyCode, type Market, type MarketStage, type MembershipTier } from "@config/markets";
 import type { Db } from "@/lib/db/types";
 
@@ -128,6 +129,7 @@ export async function listTiers(db: Db, market?: string): Promise<Tier[]> {
 }
 
 export async function getTier(db: Db, id: string): Promise<Tier | null> {
+  if (!isUuid(id)) return null;
   const rows = await db.query<TierRow>("select * from public.membership_tiers where id = $1::uuid", [id]);
   return rows[0] ? rowToTier(rows[0]) : null;
 }
@@ -162,6 +164,7 @@ export async function listMenu(db: Db, market: string, options: { includeInactiv
 }
 
 export async function getMenuItem(db: Db, id: string): Promise<MenuItem | null> {
+  if (!isUuid(id)) return null;
   const rows = await db.query<MenuRow>("select * from public.menu_items where id = $1::uuid", [id]);
   return rows[0] ? rowToMenuItem(rows[0]) : null;
 }

@@ -1,4 +1,3 @@
-import path from "node:path";
 import { migrationsDir, migrationStatus } from "@/lib/db/migrate-core";
 import type { Db } from "@/lib/db/types";
 import type {
@@ -268,7 +267,7 @@ export class SqlLeadStore implements LeadStore {
     try {
       const db = await this.open();
       await db.query("select 1 from public.leads limit 1");
-      const status = await migrationStatus(db, migrationsDir(path.resolve(process.cwd())));
+      const status = await migrationStatus(db, migrationsDir());
       if (!status.upToDate) {
         return {
           ok: false,

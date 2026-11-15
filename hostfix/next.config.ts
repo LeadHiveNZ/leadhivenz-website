@@ -17,8 +17,10 @@ const nextConfig: NextConfig = {
   poweredByHeader: false,
   // The landing page copy lives in /content as Markdown files. Make sure those
   // files travel with the app when it is deployed.
+  // The health check compares the database with the list of database changes,
+  // so that list travels too.
   outputFileTracingIncludes: {
-    "/*": ["./content/**/*"],
+    "/*": ["./content/**/*", "./supabase/migrations/*.sql"],
   },
   async headers() {
     return [

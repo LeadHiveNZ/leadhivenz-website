@@ -40,7 +40,7 @@ export function FieldMessages({ name, hint, error }: { name: string; hint?: stri
 }
 
 type TextFieldProps = BaseProps & {
-  type?: "text" | "tel" | "email" | "number";
+  type?: "text" | "tel" | "email" | "number" | "date";
   inputMode?: "text" | "tel" | "email" | "numeric" | "decimal";
   autoComplete?: string;
   placeholder?: string;

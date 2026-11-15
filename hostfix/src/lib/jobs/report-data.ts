@@ -9,6 +9,7 @@ import { urgentIsIncluded } from "./create";
 /** Everything the "report a problem" form needs to show the right jobs and the right prices for one property. */
 export type ReportFormData = {
   marketName: string;
+  country: "NZ" | "AU";
   items: { id: string; name: string; tradeLabel: string; ownerCents: number; tryFirst: string }[];
   offMenuTrades: { key: string; label: string }[];
   currency: string;
@@ -42,6 +43,7 @@ export async function reportFormData(db: Db, property: Property, audience: "owne
   const at = now();
   return {
     marketName: market.name,
+    country: market.country,
     items: menu.map((item) => ({
       id: item.id, name: item.name, tradeLabel: GROUP_LABELS[item.trade] ?? item.trade, ownerCents: item.ownerPriceCents, tryFirst: item.tryFirst,
     })),

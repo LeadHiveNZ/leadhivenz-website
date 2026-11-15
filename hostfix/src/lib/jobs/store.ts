@@ -1,3 +1,4 @@
+import { isUuid } from "@/lib/uuid";
 import type { Db } from "@/lib/db/types";
 import type { Line, LineKind } from "./pricing";
 import { taxPortion, totals } from "./pricing";
@@ -42,11 +43,13 @@ export function rowToJob(row: JobRow): Job {
 
 /** Locks the job for the rest of this database step, so two people cannot change it at once. */
 export async function lockJob(db: Db, jobId: string): Promise<Job | null> {
+  if (!isUuid(jobId)) return null;
   const rows = await db.query<JobRow>("select * from public.jobs where id = $1::uuid for update", [jobId]);
   return rows[0] ? rowToJob(rows[0]) : null;
 }
 
 export async function getJobForStaff(db: Db, jobId: string): Promise<Job | null> {
+  if (!isUuid(jobId)) return null;
   const rows = await db.query<JobRow>("select * from public.jobs where id = $1::uuid", [jobId]);
   return rows[0] ? rowToJob(rows[0]) : null;
 }
@@ -58,12 +61,14 @@ export async function getJobByNumber(db: Db, number: number): Promise<Job | null
 
 /** One of this owner's jobs, or null. Never another owner's. */
 export async function getJobForOwner(db: Db, ownerId: string, jobId: string): Promise<Job | null> {
+  if (!isUuid(jobId)) return null;
   const rows = await db.query<JobRow>("select * from public.jobs where id = $1::uuid and owner_id = $2::uuid", [jobId, ownerId]);
   return rows[0] ? rowToJob(rows[0]) : null;
 }
 
 /** A job this tradie has accepted, or null. A job they were only offered is not theirs to open. */
 export async function getJobForTradie(db: Db, tradieId: string, jobId: string): Promise<Job | null> {
+  if (!isUuid(jobId)) return null;
   const rows = await db.query<JobRow>("select * from public.jobs where id = $1::uuid and tradie_id = $2::uuid", [jobId, tradieId]);
   return rows[0] ? rowToJob(rows[0]) : null;
 }
@@ -175,6 +180,7 @@ export function rowToOffer(row: OfferRow): Offer {
 }
 
 export async function getOffer(db: Db, offerId: string): Promise<Offer | null> {
+  if (!isUuid(offerId)) return null;
   const rows = await db.query<OfferRow>("select * from public.offers where id = $1::uuid", [offerId]);
   return rows[0] ? rowToOffer(rows[0]) : null;
 }
@@ -233,6 +239,7 @@ export async function listQuotes(db: Db, jobId: string): Promise<Quote[]> {
 }
 
 export async function getQuote(db: Db, quoteId: string): Promise<Quote | null> {
+  if (!isUuid(quoteId)) return null;
   const rows = await db.query<QuoteRow>("select * from public.quotes where id = $1::uuid", [quoteId]);
   return rows[0] ? rowToQuote(rows[0]) : null;
 }

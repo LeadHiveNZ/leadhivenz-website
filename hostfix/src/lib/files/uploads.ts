@@ -143,7 +143,8 @@ export async function purgeUnattached(db: Db): Promise<string[]> {
  * Who may look at a file:
  *  - staff: any file
  *  - an owner: files on their own properties and jobs
- *  - a tradie: files on a job they have accepted, and their own documents
+ *  - a tradie: files on a job they have accepted, their own documents, and the owner's
+ *    property photos while they have a job under way there
  *  - whoever uploaded it, until it is attached (so they can see their own thumbnail)
  */
 export async function canView(
@@ -167,6 +168,14 @@ export async function canView(
     if (upload.tradieId === viewer.tradieId) return true;
     if (upload.jobId) {
       const rows = await db.query("select 1 from public.jobs where id = $1::uuid and tradie_id = $2::uuid", [upload.jobId, viewer.tradieId]);
+      if (rows.length > 0) return true;
+    }
+    // The owner's photos of the lockbox and so on: only while this tradie has a job under way at that property.
+    if (upload.propertyId && upload.kind === "property") {
+      const rows = await db.query(
+        "select 1 from public.jobs where property_id = $1::uuid and tradie_id = $2::uuid and status in ('accepted', 'on_site', 'awaiting_approval') limit 1",
+        [upload.propertyId, viewer.tradieId],
+      );
       if (rows.length > 0) return true;
     }
   }

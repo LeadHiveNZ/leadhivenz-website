@@ -1,3 +1,4 @@
+import { isUuid } from "@/lib/uuid";
 import type { Market } from "@config/markets";
 import { audit } from "@/lib/audit";
 import { now } from "@/lib/clock";
@@ -163,6 +164,7 @@ export async function updateProperty(db: Db, ownerId: string, propertyId: string
 
 /** One of this owner's properties, or null. Never another owner's. */
 export async function getProperty(db: Db, ownerId: string, propertyId: string): Promise<Property | null> {
+  if (!isUuid(propertyId)) return null;
   const rows = await db.query<PropertyRow>("select * from public.properties where id = $1::uuid and owner_id = $2::uuid", [propertyId, ownerId]);
   return rows[0] ? rowToProperty(rows[0]) : null;
 }
@@ -177,6 +179,7 @@ export async function listProperties(db: Db, ownerId: string): Promise<Property[
 
 /** For staff and for the system itself. Not scoped to an owner. */
 export async function getPropertyForStaff(db: Db, propertyId: string): Promise<Property | null> {
+  if (!isUuid(propertyId)) return null;
   const rows = await db.query<PropertyRow>("select * from public.properties where id = $1::uuid", [propertyId]);
   return rows[0] ? rowToProperty(rows[0]) : null;
 }
