@@ -304,7 +304,11 @@ export function createStripeGateway(account: StripeAccount): PaymentsGateway {
     },
 
     async refund(input) {
-      const refund = await stripe.refunds.create({ payment_intent: input.paymentIntentId, amount: input.amountCents }, { idempotencyKey: input.idempotencyKey });
+      const refund = await stripe.refunds.create(
+        // The label lets the webhook tell this refund apart from one made by hand in Stripe's dashboard.
+        { payment_intent: input.paymentIntentId, amount: input.amountCents, metadata: { hostfix_refund: "app" } },
+        { idempotencyKey: input.idempotencyKey },
+      );
       return { refundId: refund.id };
     },
 

@@ -1,13 +1,18 @@
 import { after } from "next/server";
+import { sendQueued } from "@/lib/after";
+import { getDb } from "@/lib/db";
 import { handleStripeMessage, verifyStripeWebhook } from "@/lib/payments/deposit";
+import { handleProductMessage } from "@/lib/payments/product-events";
 import { configuredStripeAccounts } from "@/lib/payments/stripe";
 import { getStore } from "@/lib/store";
 
 /**
  * STRIPE WEBHOOK
- * Stripe calls this address when a payment succeeds or is refunded. It is the
- * dependable way we learn about money: it works even if the owner closes their
- * browser straight after paying.
+ * Stripe calls this address when something happens to money: a founding
+ * deposit, a membership starting or renewing, a failed payment, a card
+ * change, a refund, a bank reversing a payment. It is the dependable way we
+ * learn about money: it works even if the owner closes their browser straight
+ * after paying.
  *
  * Every message is checked against the signing secret before anything is
  * done. A message that fails the check is refused.
@@ -32,6 +37,13 @@ export async function POST(request: Request) {
   const { message } = verified;
   const label = message.kind === "snapshot" ? `${message.event.type} (${message.event.id})` : `${message.type} (${message.id})`;
   try {
+    // Memberships and job payments first. Anything else falls through to the founding deposit.
+    const db = await getDb();
+    const product = await handleProductMessage(db, message, verified.account);
+    if (product) {
+      after(() => sendQueued(db));
+      return Response.json({ received: true, outcome: product.outcome });
+    }
     const result = await handleStripeMessage(message, verified.account, { store: getStore(), defer: after });
     return Response.json({ received: true, outcome: result.outcome });
   } catch (error) {

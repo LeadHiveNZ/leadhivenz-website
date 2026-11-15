@@ -1,6 +1,8 @@
 import { audit } from "@/lib/audit";
 import { now } from "@/lib/clock";
 import type { Db } from "@/lib/db/types";
+import { baseUrl } from "@/lib/env";
+import { alertEmailRecipients, alertSmsRecipients } from "@/lib/notify/alerts";
 import { emails } from "@/lib/notify/messages";
 import { enqueue } from "@/lib/notify/outbox";
 
@@ -22,7 +24,8 @@ export type ExceptionKind =
   | "message_failed"
   | "referral_due"
   | "chargeback"
-  | "credit_failed";
+  | "credit_failed"
+  | "needs_review";
 
 /** The ones worth a text to the founder as well as an email. */
 const URGENT: ExceptionKind[] = ["nobody_accepted", "missed_window", "dispute", "chargeback"];
@@ -45,10 +48,15 @@ export type StaffContacts = {
   queueUrl: string;
 };
 
-let contacts: (() => StaffContacts) | null = null;
-/** Set once by the app so this file does not need to read settings itself. */
-export function setStaffContacts(provider: () => StaffContacts): void {
-  contacts = provider;
+/** Where alerts go unless told otherwise: the founder's alert addresses from the settings. */
+function settingsContacts(): StaffContacts {
+  return { alertEmails: alertEmailRecipients(), alertPhones: alertSmsRecipients(), queueUrl: `${baseUrl()}/admin/queue` };
+}
+
+let contacts: () => StaffContacts = settingsContacts;
+/** For tests: choose who is alerted, or pass null to go back to the settings. */
+export function setStaffContacts(provider: (() => StaffContacts) | null): void {
+  contacts = provider ?? settingsContacts;
 }
 
 /**
@@ -72,7 +80,7 @@ export async function raiseException(db: Db, input: ExceptionInput): Promise<boo
 
   await audit(db, { actor: "system", action: "exception.raised", entity: input.jobId ? "job" : "exception", entityId: input.jobId ?? id, detail: { kind: input.kind, summary: input.summary } });
 
-  const target = contacts?.() ?? { alertEmails: [], alertPhones: [], queueUrl: "" };
+  const target = contacts();
   const staff = await db.query<{ email: string | null }>(
     `select u.email from public.staff s join public.users u on u.id = s.user_id
       where s.disabled_at is null and u.disabled_at is null and u.email is not null`,
@@ -180,6 +188,7 @@ export const EXCEPTION_LABELS: Record<ExceptionKind, string> = {
   referral_due: "Referral reward to pay",
   chargeback: "Bank dispute (chargeback)",
   credit_failed: "Credit could not be applied",
+  needs_review: "Needs a look",
 };
 
 /** One line on what to do about each kind. The runbook (RUNBOOK.md) has the longer version. */
@@ -196,4 +205,5 @@ export const EXCEPTION_ACTIONS: Record<ExceptionKind, string> = {
   referral_due: "Pay the reward by bank transfer, then mark it as paid under More, Referrals.",
   chargeback: "The owner's bank has reversed a payment. Tell the admin today: the bank sets a deadline to answer.",
   credit_failed: "A credit could not be passed to the payment company. Tell the admin.",
+  needs_review: "Something happened outside the app that the app cannot sort out by itself. Read the note and tell the admin.",
 };

@@ -623,7 +623,7 @@ create table if not exists public.exceptions (
   kind        text not null check (kind in (
                 'nobody_accepted', 'at_risk', 'missed_window', 'dispute', 'payment_failed',
                 'payout_failed', 'quote_waiting', 'licence_expiring', 'message_failed',
-                'referral_due', 'chargeback', 'credit_failed')),
+                'referral_due', 'chargeback', 'credit_failed', 'needs_review')),
   job_id      uuid references public.jobs (id) on delete cascade,
   tradie_id   uuid references public.tradies (id) on delete cascade,
   property_id uuid references public.properties (id) on delete cascade,
