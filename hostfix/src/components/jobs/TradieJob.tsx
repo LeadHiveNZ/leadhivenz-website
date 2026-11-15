@@ -12,6 +12,7 @@ import { formatMoney } from "@/lib/money";
 import { displayPhone } from "@/lib/phone";
 import { addressLine } from "@/lib/properties/service";
 import { formatDate, formatDateTime } from "@/lib/time";
+import { payTiming } from "@/lib/markets/display";
 import { CostLines, Deadline, History, JobStatus, Panel, PhotoGrid } from "./JobParts";
 import { ArrivedButton } from "./TradieClient";
 
@@ -34,11 +35,11 @@ function payoutLine(view: JobView): { text: string; tone: "good" | "info" | "war
   if (!payout) return { text: `You get ${amount}. It is being set up now.`, tone: "info" };
   switch (payout.status) {
     case "sent":
-      return { text: `${amount} was sent to your bank${payout.sentAt ? ` on ${formatDate(payout.sentAt, zone)}` : ""}.`, tone: "good" };
+      return { text: `${amount} was sent${payout.sentAt ? ` on ${formatDate(payout.sentAt, zone)}` : ""}. It reaches your bank ${payTiming(view.market).arrives}.`, tone: "good" };
     case "scheduled":
-      return { text: `${amount} will be sent to your bank on ${formatDateTime(payout.releaseAt, zone)}.`, tone: "good" };
+      return { text: `${amount} will be sent on ${formatDateTime(payout.releaseAt, zone)}. It reaches your bank ${payTiming(view.market).arrives}.`, tone: "good" };
     case "waiting":
-      return { text: `${amount} will be sent to your bank once the owner's card has been charged. If the card fails we chase it, not you.`, tone: "info" };
+      return { text: `${amount} will be sent once the owner's card has been charged. If the card fails we chase it, not you.`, tone: "info" };
     case "paused":
       return { text: `${amount} is on hold while we look into a problem the owner raised. We will be in touch.`, tone: "warn" };
     case "failed":
@@ -248,7 +249,7 @@ export function TradieJob({ view, now, code, flash = {}, propertyPhotos }: Props
       {job.status !== "cancelled" && view.lines.length > 0 && (
         <Panel title="What you get">
           <CostLines lines={view.lines} currency={job.currency} side="tradie" totalLabel="You get" />
-          <p className="mt-3 text-sm text-muted">Sent to your bank about {market.payoutHoldHours} hours after the job is done. Surcharges and parts are yours in full.</p>
+          <p className="mt-3 text-sm text-muted">{payTiming(market).line} Surcharges and parts are yours in full.</p>
         </Panel>
       )}
 

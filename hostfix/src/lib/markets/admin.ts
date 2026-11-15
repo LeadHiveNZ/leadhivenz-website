@@ -4,6 +4,7 @@ import { audit } from "@/lib/audit";
 import { now } from "@/lib/clock";
 import type { Db } from "@/lib/db/types";
 import { isValidTimeZone, WEEKDAYS } from "@/lib/time";
+import { isUuid } from "@/lib/uuid";
 import { getMarket, listMenu, listTiers } from "./store";
 
 /**
@@ -96,7 +97,7 @@ function checkMarket(patch: MarketPatch, current: { hoursStart: number; hoursEnd
     throw new AdminInputError("Choose at least one working day.");
   }
   if (patch.payoutHoldHours !== undefined && (!Number.isInteger(patch.payoutHoldHours) || patch.payoutHoldHours < 0 || patch.payoutHoldHours > 48)) {
-    throw new AdminInputError("The payout hold must be between 0 and 48 hours, so tradies are always paid within 48 hours.");
+    throw new AdminInputError("The payout hold must be between 0 and 48 hours.");
   }
   if (patch.referralPaidMonths !== undefined && (!Number.isInteger(patch.referralPaidMonths) || patch.referralPaidMonths < 1 || patch.referralPaidMonths > 24)) {
     throw new AdminInputError("Referral months must be between 1 and 24.");
@@ -144,6 +145,25 @@ export async function saveTier(db: Db, market: string, input: TierInput, actor: 
   ];
   let id = input.id ?? null;
   if (id) {
+    if (!isUuid(id)) throw new AdminInputError("That tier does not exist.");
+    // The price members see is this price, and the payment company charges
+    // what was agreed when they joined. Changing it under them would make the
+    // two disagree, so a membership with members on it keeps its price.
+    const before = await db.query<{ price_cents: number }>("select price_cents from public.membership_tiers where market = $1 and id = $2::uuid", [market, id]);
+    if (before.length === 0) throw new AdminInputError("That tier does not exist.");
+    if (Number(before[0]!.price_cents) !== input.priceCents) {
+      const members = await db.query<{ count: number }>(
+        "select count(*) as count from public.properties where tier_id = $1::uuid and status in ('active', 'past_due')",
+        [id],
+      );
+      const count = Number(members[0]?.count ?? 0);
+      if (count > 0) {
+        throw new AdminInputError(
+          `${count} ${count === 1 ? "property is a member" : "properties are members"} on this membership and ${count === 1 ? "is" : "are"} charged its current price each month. ` +
+            'To change the price, add a new membership at the new price and untick "Offered to new members" on this one. Members stay on the old price until they switch.',
+        );
+      }
+    }
     const rows = await db.query(
       `update public.membership_tiers set key = $2, name = $3, price_cents = $4, response_hours = $5, urgent_response_hours = $6,
               urgent_included = $7, urgent_included_per_month = $8, quarterly_check = $9, blurb = $10, active = $11
@@ -196,6 +216,7 @@ export async function saveMenuItem(db: Db, market: string, input: MenuItemInput,
   ];
   let id = input.id ?? null;
   const before = id ? (await listMenu(db, market, { includeInactive: true })).find((item) => item.id === id) : null;
+  if (id && !before) throw new AdminInputError("That menu item does not exist.");
   try {
     if (id) {
       const rows = await db.query(

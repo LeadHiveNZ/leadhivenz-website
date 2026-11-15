@@ -85,7 +85,7 @@ export function TradiePhone({ example }: { example: Example }) {
         </div>
       </div>
       <div className="rounded-2xl bg-done-soft px-3.5 py-3 text-[0.82rem] leading-snug font-semibold text-done">
-        Paid to your bank within 48 hours of the photo.
+        Paid automatically after the photo. No invoice.
       </div>
     </Phone>
   );

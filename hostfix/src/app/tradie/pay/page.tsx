@@ -17,6 +17,7 @@ import { formatMoney } from "@/lib/money";
 import { isMonthKey, shiftMonth } from "@/lib/months";
 import { getTradie } from "@/lib/tradies/service";
 import { formatDate, monthKey, monthLabel } from "@/lib/time";
+import { payTiming } from "@/lib/markets/display";
 
 export const metadata: Metadata = { title: "Pay" };
 
@@ -46,7 +47,7 @@ export default async function TradiePayPage({ searchParams }: { searchParams: Se
   return (
     <div className="space-y-6">
       <div className="no-print">
-        <PageTitle title="Pay" intro={`Each job is paid to your bank about ${market.payoutHoldHours} hours after you finish it.`} />
+        <PageTitle title="Pay" intro={payTiming(market).line} />
       </div>
 
       {!tradie.payoutsEnabled ? (

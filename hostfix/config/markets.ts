@@ -114,6 +114,24 @@ export function countryDefaults(country: CountryCode) {
   return COUNTRY_DEFAULTS[country];
 }
 
+/**
+ * HOW LONG A TRADIE'S MONEY TAKES TO REACH THEIR BANK, counted from the job
+ * being finished. This is not ours to choose. The payment company (Stripe)
+ * holds card money for a set number of working days before it can be paid out
+ * (4 in New Zealand, 2 in Australia, from Stripe's documentation in November
+ * 2026), and the bank transfer then takes a day or two. These words are shown
+ * to tradies, so keep them honest: time a real payout and correct them here if
+ * they are wrong. docs/PLAN.md explains how this could be made faster.
+ */
+const PAYOUT_ARRIVAL: Record<CountryCode, string> = {
+  NZ: "5 to 6 working days",
+  AU: "3 to 4 working days",
+};
+
+export function payoutArrival(country: CountryCode): string {
+  return PAYOUT_ARRIVAL[country];
+}
+
 type TierInput = Pick<MembershipTier, "key" | "name" | "monthlyPriceCents"> & Partial<MembershipTier>;
 type MarketInput = Pick<Market, "slug" | "name" | "country" | "timezone"> &
   Partial<Omit<Market, "tiers">> & { tiers: TierInput[] };

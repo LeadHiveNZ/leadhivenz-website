@@ -1,105 +1,222 @@
 # Runbook
 
-Plain-words instructions for the person watching the system. For each thing that can go wrong:
-what it means, and what to do.
+For the dispatcher: the person who watches the system. Plain words on what each thing in the queue
+means and what to do about it. The last section is for the admin.
 
-In Phase 0 there are no jobs yet, so the only things to watch are leads and deposits. The job
-exceptions (nobody accepted, late jobs, disputes) are added to this file when those features are built.
+## How it works, in one minute
 
-## Daily routine (two minutes)
+1. An owner logs a job from their app. Their cleaner can log one from a link, and a guest can report
+   one from the QR card in the property (the owner is asked before anyone is sent for a guest's report).
+2. The job is **offered by text** to the first-choice tradie for that trade. They have 15 minutes. If
+   they pass or do not answer, it goes to the backup for 15 minutes, then to every other approved tradie
+   in that trade at once. First to accept gets it.
+3. The tradie accepts from the text, taps **I have arrived** at the property, and finishes with a photo.
+4. The owner's card is charged the fixed price when the job is done. The tradie's payment is sent a
+   day later, and takes a few working days more to reach their bank. That day is the owner's chance to
+   say something is wrong.
+5. **You only see what the system could not sort out by itself.** That list is the **Queue**. An empty
+   queue is the goal.
 
-1. Open `/admin` and sign in.
-2. Look at the newest leads. Call or message each new one the same day.
-3. Glance at the **Setup checklist** at the bottom. Anything marked **Needs fixing** is urgent.
+## Your day
+
+1. Go to the site's address followed by `/admin`. Press **Sign in with my email**, enter your email,
+   then the six-digit code it sends you. You land on the Queue.
+2. Work from the top. The most pressing item is first. Each one has a **What to do** line and a button
+   to open the job or the tradie.
+3. Many items close by themselves when the thing they were waiting for happens (a tradie accepts, the
+   card goes through). For the rest, press **Mark as dealt with** and write one line on what you did.
+4. Once a day, open **Tradies**. Look for anyone **Waiting for approval**, and for any trade showing
+   **0 ready** (a job in that trade would have nobody to go to).
+5. Glance at **Timer last ran** at the top of the queue. It should say a minute or two. If a red box
+   says **The timer has stopped**, tell the admin straight away: nothing moves until it is fixed.
+
+### Five rules
+
+- **Anything with a promised time on it: phone, do not text.** Numbers on the job page are tap-to-call.
+- **Never refund in Stripe.** Refund on the job page. That brings the tradie's payment down to match.
+- **Only record an owner's yes if they said it to you.** The system keeps a record of who pressed what.
+- **Do not cancel a job a tradie has already driven to.** Let them finish, or have them press
+  "I could not get in" so they are paid the call-out.
+- **You see lockbox codes and phone numbers. Never share them** outside the job they belong to.
 
 ---
 
-## Alert says "NOT SAVED"
+## The queue, item by item
 
-**What it means.** Someone filled in a form, but the database did not save it. The text or email you
-received is the **only copy** of that lead.
+### Nobody accepted
+**Means.** Every tradie who could take the job was offered it, and none said yes. The owner has been
+told you are finding someone by hand. The promised time is still running.
 
-**What to do.**
-1. Copy the person's details somewhere safe straight away (the email has everything).
-2. Contact them as normal. They saw a normal thank-you page and do not know anything went wrong.
-3. Open `/admin` and read the **Database** line of the setup checklist. It says what is wrong:
-   - "Could not reach Supabase": the database may be paused (free plan) or down. Open supabase.com,
-     open the project, and press **Restore** if it is paused.
-   - "the tables are missing": run the SQL file again (SETUP.md step 1).
-   - "rejected the key": the key in Vercel is wrong. Paste it again and redeploy.
-4. When it is fixed, submit a test lead to confirm.
+**Do.**
+1. Open the job. Under "Nobody accepted. Find a tradie" is the list of tradies who do this trade.
+2. Ring them, best first. When one says yes, choose them and press **Assign this tradie**. They and the
+   owner are texted straight away, and the item closes.
+3. Nobody free? Press **Start the offers again from the top**, then ring the owner with an honest time.
+4. A tradie marked "no current licence" cannot be given licensed work. "No bank details yet" means
+   they can do the job but cannot be paid until they add them. Avoid if you can.
 
-## A lead shows "Text FAILED" or "Email FAILED"
+### Running late
+**Means.** Three-quarters of the promised time has gone and no tradie is on site yet.
 
-**What it means.** The lead was saved and is on the list, but one of the two alerts did not go out.
+**Do.** Ring the tradie and ask where they are. If they will not make it, tell the owner before the time
+passes. If no tradie is booked at all, treat it as "Nobody accepted". It closes when the tradie arrives.
 
-**What to do.**
-1. Nothing is lost. Follow up the lead from the list.
-2. Press **Send me a test alert** on `/admin`. It reports the exact reason. Common ones:
-   - "ClickSend rejected the username or API key": paste the key again in Vercel, redeploy.
-   - A status such as INSUFFICIENT_CREDIT: top up ClickSend.
-   - "Resend's test sender can only email the address that owns the Resend account": set `ALERT_EMAIL_TO`
-     to that address, or verify your domain in Resend.
-3. If texts to a New Zealand number fail, see SETUP.md step 5. New Zealand numbers need a registration first.
+### Missed the promise
+**Means.** Nobody was on site by the promised time. The owner's membership for that month has
+**already been credited automatically** and they have been texted. (One credit per property per month:
+a second miss in the same month is not credited again.)
 
-## Email says "Action needed: paid the deposit twice"
+**Do.**
+1. Ring the owner and say sorry. Do not make them chase you.
+2. Make sure a tradie is actually going. If not, assign one.
+3. Mark as dealt with, noting what went wrong. The admin reads these.
 
-**What it means.** One owner paid the deposit two separate times. Only the first is counted.
+### Owner raised a problem
+**Means.** After a job, the owner said something is wrong. If they said it inside the first day, the
+tradie's payment is on hold until you settle it.
 
-**What to do.**
-1. Open Stripe > Payments and find the two payments from that person.
-2. Refund the second one in full.
-3. Send them a short note to say the duplicate has been refunded.
+**Do.**
+1. Open the job. Read what the owner wrote. Look at the tradie's photos of the finished work.
+2. Ring the owner, then the tradie. Ask the tradie to go back and put it right if that is fair.
+3. Under "The owner raised a problem", choose **The work stands** (the tradie is paid in full) or
+   **Refund the owner** (all or part: the tradie's payment and our fee come down in proportion).
+4. Write what was decided and why. **The owner sees this note.** Press **Settle it**.
+5. Not sure what is fair, or the amount is large? Ask the admin before settling. It cannot be undone.
 
-## Email says "Action needed: deposit with no matching lead"
+### Card payment failed
+**Means.** The job is done but the owner's card was declined. They have been texted. It is tried again
+once a day, four times in all. **The tradie is not paid until the card goes through.**
 
-**What it means.** Stripe took a deposit but the site could not find who it belongs to. This is rare.
+**Do.** Ring the owner and ask them to update their card (in their app: **Billing**). Then open the job
+and press **Try the card again now**. If the fourth try fails, tell the admin.
 
-**What to do.**
-1. Open Stripe > Payments, find the payment, and read the customer's email address.
-2. Search for that email on `/admin` (use **Download spreadsheet** and search in it).
-3. If the person is on the list, note by hand that they have paid. If they are not, contact them from
-   the email address in Stripe.
-4. Tell the developer. The email names the Stripe checkout session to look up.
+### Could not pay the tradie
+**Means.** The payment to the tradie's bank did not go through, usually because their bank details
+are incomplete. Or: an owner was refunded after the tradie had been paid, and the tradie's share could
+not be taken back automatically.
 
-## An owner asks for their deposit back
+**Do.** For the first: ask the tradie to check their bank details (their app: **Profile**), then open
+the job and press **Try paying the tradie again**. For the second: tell the admin, who settles it with
+the tradie directly.
 
-1. Open Stripe > Payments, find their payment, press **Refund**, refund in full.
-2. Within a minute `/admin` shows **Refunded** next to their name. You do not need to change anything on the site.
+### Quote waiting on the owner
+**Means.** A tradie on site has quoted for work that needs the owner's yes, and four hours have passed
+with no answer. The owner was reminded after one hour.
 
-## An owner says they paid but the list says "Started, not paid"
+**Do.** Ring the owner. If they give you an answer, open the job and press **Owner said yes** or
+**Owner said no**. The tradie is texted. If the owner says no, the tradie is still paid the call-out.
 
-**What it means.** They opened the card page but the payment did not complete, or Stripe has not told the site yet.
+### Licence running out
+**Means.** A tradie's plumbing, gas or electrical licence runs out within 30 days, or already has.
+They have been texted. Once it has run out they are **not offered licensed jobs at all**.
 
-**What to do.**
-1. Look in Stripe > Payments for a successful payment from them.
-2. If there is none, they did not pay. Ask them to try again from the link in their browser, or fill in the form again.
-3. If there is a successful payment and the list still says "Started" after a few minutes, open
-   Stripe > Webhooks > your endpoint and look for failed deliveries. Press **Resend** on the failed one.
-   If it keeps failing, check the **Card payments** line of the setup checklist and tell the developer.
+**Do.** Ask them for the renewed licence. Check it on the public register (in New Zealand: the Plumbers,
+Gasfitters and Drainlayers Board, or the Electrical Workers Registration Board). On their page, enter
+the new date, press **Save licence**, then **I have checked this on the register**. Mark as dealt with.
 
-## Lots of junk leads arriving
+### A text or email did not send
+**Means.** A message did not reach someone. The item says who and why.
 
-**What it means.** A robot has found the form. The form already blocks the common kinds, and limits each
-visitor to six submissions every ten minutes.
+**Do.** Usually a wrong number or address. Reach the person another way and fix their details. If many
+fail at once, tell the admin: the text or email account may be out of credit. **More > Texts and
+emails** shows everything that was sent.
 
-**What to do.**
-1. Junk leads cost a few cents each in texts. Nothing is at risk.
-2. If it keeps happening, tell the developer. A "prove you are human" check can be added to the form.
+### Referral reward to pay
+**Means.** A cleaner or co-host sent an owner who has now paid for long enough to earn them the reward.
 
-## The site shows an error page, or will not load
+**Do.** This is the admin's. They pay it by bank transfer, then press **I have paid this** under
+**More > Referrals**. The item closes.
 
-1. Check vercel-status.com and status.supabase.com.
-2. In Vercel > Deployments, check the latest deployment is marked Ready. If the latest one failed, the
-   previous version is still live. Press **Redeploy** on the last one that worked.
-3. Tell the developer, with the time it happened.
+### Bank dispute (chargeback)
+**Means.** An owner went to their bank instead of to us, and the bank has taken the money back. The
+bank sets a short deadline to answer.
 
-## Someone asks you to delete their details
+**Do.** **Tell the admin the same day.** They answer it in Stripe using the photos and the job history.
 
-1. Find them on `/admin` to confirm what is held.
-2. Delete their row in Supabase > Table Editor > `leads`. (The site itself cannot delete leads, on purpose.)
-3. If they paid a deposit, refund it in Stripe first.
+### Credit could not be applied / Needs a look
+**Means.** Something happened that the app cannot finish by itself: a credit did not reach the payment
+company, or someone made a refund in Stripe instead of on the job page.
 
-## Changing the admin password
+**Do.** Read the note and tell the admin.
 
-Change `ADMIN_PASSWORD` in Vercel and redeploy. Everyone who was signed in is signed out at once.
+---
+
+## Other things you will be asked to do
+
+**An owner phones in a job.** More > Owners > their name > **Log a job here**. They are charged the
+fixed price when it is done, the same as if they had logged it.
+
+**A guest's report is waiting and the owner tells you to go ahead.** Open the job and press
+**Owner said yes: send a tradie**.
+
+**Say sorry with a credit.** On the job page or the owner's page: **Give the owner a credit**. It comes
+off their next membership payment. It is not money back to their card. Ask the admin above the amount
+they have told you is fine.
+
+**Cancel a job.** Job page > **Cancel this job**, with the reason. Nothing is charged. Both sides are texted.
+
+**A new tradie.** Tradies > **Add a tradie** (or More > Leads > **Make a tradie**, admin only). Enter
+each licence number and its end date, check it on the register, then press **Approve**. That texts them
+a link to sign in and add their bank details. Their page shows "Getting offers" once everything is in.
+
+**A tradie is letting people down.** The Tradies page shows each one's accepted and on-time figures
+for the last 30 days. Under 80% shows in red, and the page suggests swapping first choice and backup.
+Pausing or removing a tradie is on their page. Check with the admin first.
+
+**A tradie asks where their money is.** Their **Pay** tab lists each job and the day its payment was
+sent. In New Zealand it shows in their bank about 5 to 6 working days after the job, because the payment
+company holds card money for 4 working days first. Later than that? Open the job and read "Tradie's
+payment" under Money: it says whether it was sent, is on hold, or failed.
+
+**Find out what someone was sent.** The job page lists every text and email about that job.
+
+---
+
+## For the admin
+
+**Changing a job price.** More > Markets, prices and the menu > the market > open the job > change
+"Owner pays" and "Tradie gets" > **Save job**. It applies to jobs logged from then on. Jobs already
+logged keep the price they were logged at.
+
+**Changing a membership price.** Once properties have joined a membership its price is fixed, so that
+nobody is shown one price and charged another. To change it: **Add a membership** at the new price, and
+untick **Offered to new members** on the old one. Existing members stay on the old one, at the old
+price, until they switch in their app. Moving existing members to a new price needs written notice
+(ask your lawyer how much) and a developer. The promise hours and what is included can be changed at
+any time, and apply to members straight away.
+
+**Opening a new town.** More > Markets, prices and the menu > **Add a market**. See `SETUP.md`.
+
+**Paying referral rewards.** More > Referrals. Pay by bank transfer, then **I have paid this**.
+
+**Adding or removing a dispatcher.** More > Staff.
+
+**The timer has stopped.** In Vercel, open the project's Cron Jobs and its Logs. Check the plan is
+still Pro and `CRON_SECRET` is still set. More > Setup checklist > "The timer" says when it last ran.
+When it starts again it catches up by itself: nothing is lost, only late.
+
+**An alert says "NOT SAVED".** Someone filled in a public form but the database did not save it. That
+alert is the only copy: copy their details somewhere safe and contact them as normal. Then read the
+"Database" line on the setup checklist. A paused Supabase project (free plan) is the usual cause:
+open supabase.com and press **Restore**.
+
+**"Action needed: paid the deposit twice".** Refund the second payment in Stripe > Payments.
+**"Action needed: deposit with no matching lead".** Find the payer's email in Stripe > Payments and
+match it to a lead by hand.
+
+**An owner says they paid but it does not show.** Stripe > Webhooks > your endpoint. Look for failed
+deliveries and press **Resend**. If it keeps failing, check "Card payments" on the setup checklist.
+
+**The site will not load.** Check vercel-status.com and status.supabase.com. In Vercel > Deployments,
+if the newest one failed the previous version is still live: nothing to do but tell the developer.
+
+**Someone asks for their details to be deleted.** A lead with no account: delete their row in
+Supabase > Table Editor > `leads`, after refunding any deposit. An owner or tradie with an account:
+this needs a developer, because their jobs and payment history have to be kept for tax and are
+tied to them. Note the date they asked.
+
+**Changing the admin password.** Change `ADMIN_PASSWORD` in Vercel and redeploy. Anyone signed in with
+the password is signed out. Staff who sign in with their own email are not affected.
+
+**Every action is recorded.** More > Audit log shows every job change and every money movement, with
+who did it. Nothing in it can be edited or deleted.

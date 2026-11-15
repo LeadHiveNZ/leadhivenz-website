@@ -3,7 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { Lexer, type Token } from "marked";
 import { brand } from "@config/brand";
-import type { Market } from "@config/markets";
+import { payoutArrival, type Market } from "@config/markets";
 import { formatMoney } from "@/lib/money";
 
 /**
@@ -24,6 +24,9 @@ import { formatMoney } from "@/lib/money";
  *
  * These placeholders are filled in from the config files:
  *   {{brand}} {{market}} {{country}} {{deposit}} {{essential}} {{priority}}
+ *   {{payout_days}}                     (how long a tradie's money takes to
+ *                                        reach their bank, for example
+ *                                        "5 to 6 working days")
  *
  * Anything written as [EDIT: ...] is shown highlighted on the page and counted
  * on the admin screen, so unfinished copy is hard to miss.
@@ -60,9 +63,14 @@ export type LandingContent = {
 export class ContentError extends Error {}
 
 export function contentTokens(market: Market): Record<string, string> {
-  const tierPrice = (key: string): string => {
-    const tier = market.tiers.find((t) => t.key === key);
-    if (!tier) throw new ContentError(`The market "${market.name}" has no "${key}" membership tier in config/markets.ts.`);
+  // {{essential}} and {{priority}} are the prices of the memberships on offer.
+  // A market whose memberships have other short codes still works (for example
+  // after a price change, when "essential" was replaced by "essential_2027"):
+  // the cheapest one on offer stands in for essential, the dearest for priority.
+  const byPrice = [...market.tiers].sort((a, b) => a.monthlyPriceCents - b.monthlyPriceCents);
+  const tierPrice = (key: string, standIn: (typeof byPrice)[number] | undefined): string => {
+    const tier = market.tiers.find((t) => t.key === key) ?? byPrice.find((t) => t.key.startsWith(key)) ?? standIn;
+    if (!tier) throw new ContentError(`The market "${market.name}" has no membership on offer, so its page cannot show a price. Add one under More, Markets.`);
     return formatMoney(tier.monthlyPriceCents, market.currency);
   };
   return {
@@ -70,8 +78,9 @@ export function contentTokens(market: Market): Record<string, string> {
     market: market.name,
     country: market.countryName,
     deposit: formatMoney(market.foundingDeposit.amountCents, market.currency),
-    essential: tierPrice("essential"),
-    priority: tierPrice("priority"),
+    essential: tierPrice("essential", byPrice[0]),
+    priority: tierPrice("priority", byPrice[byPrice.length - 1]),
+    payout_days: payoutArrival(market.country),
   };
 }
 

@@ -1,8 +1,8 @@
 # More paid jobs in {{market}}. No quoting. No invoicing. No chasing money.
 
-We send you fixed-price maintenance jobs at holiday homes, straight to your phone. Tap to accept, do the job, upload a photo, and the money lands in your account within 48 hours.
+We send you fixed-price maintenance jobs at holiday homes, straight to your phone. Tap to accept, do the job, upload a photo, and you are paid automatically. No invoice to write, nobody to chase.
 
-- Paid within 48 hours of finishing the job
+- Paid automatically, in your bank about {{payout_days}} after the job
 - You see what you'll be paid before you accept
 - Urgent and after-hours surcharges go to you in full
 
@@ -18,7 +18,7 @@ We send you fixed-price maintenance jobs at holiday homes, straight to your phon
 1. **We text you a job.** You see what it is, where it is and what you'll be paid.
 2. **You have 15 minutes to take it.** One tap to accept or pass. If you pass, it goes to the next tradie.
 3. **Do the job and upload a photo.** That's your proof of work.
-4. **Get paid.** Straight into your bank account within 48 hours.
+4. **Get paid.** Your payment is sent within two days of the job and is in your bank about {{payout_days}} after the job. No invoice.
 
 ## Who we're looking for
 
@@ -39,7 +39,7 @@ No. But tradies who accept most jobs and turn up on time are offered the most wo
 
 ### How do I get paid?
 
-By bank transfer, automatically. You set up your bank details once.
+By bank transfer, automatically. You set up your bank details once. Your payment is sent within two days of each job and takes a few working days to reach your bank.
 
 ### When do you start?
 

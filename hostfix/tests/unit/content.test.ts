@@ -154,6 +154,7 @@ describe("placeholders", () => {
       deposit: "NZ$49",
       essential: "NZ$99",
       priority: "NZ$149",
+      payout_days: "5 to 6 working days",
     });
     const noosa = {
       ...launchMarket,
@@ -167,6 +168,22 @@ describe("placeholders", () => {
       foundingDeposit: { enabled: true, amountCents: 5900, terms: [] },
     };
     expect(contentTokens(noosa)).toMatchObject({ market: "Noosa", deposit: "A$59", essential: "A$109", priority: "A$169.50" });
+    // Australian card money clears faster than New Zealand's, so the page says so.
+    expect(contentTokens({ ...noosa, country: "AU" as const }).payout_days).toBe("3 to 4 working days");
+  });
+
+  it("still fill in the prices after a membership has been replaced by one with a new short code", () => {
+    const [essential, priority] = launchMarket.tiers;
+    // The admin put the price up: a new membership at the new price, the old one closed to new members.
+    const repriced = { ...launchMarket, tiers: [{ ...essential!, key: "essential_2027", monthlyPriceCents: 11900 }, priority!] };
+    expect(contentTokens(repriced)).toMatchObject({ essential: "NZ$119", priority: "NZ$149" });
+    // Short codes that match nothing: the cheapest stands in for essential and the dearest for priority.
+    const renamed = { ...launchMarket, tiers: [{ ...priority!, key: "gold" }, { ...essential!, key: "basic" }] };
+    expect(contentTokens(renamed)).toMatchObject({ essential: "NZ$99", priority: "NZ$149" });
+    // One membership only: both placeholders show it.
+    expect(contentTokens({ ...launchMarket, tiers: [{ ...essential!, key: "standard" }] })).toMatchObject({ essential: "NZ$99", priority: "NZ$99" });
+    // None at all cannot show a price, and says what to do.
+    expect(() => contentTokens({ ...launchMarket, tiers: [] })).toThrow('The market "Queenstown" has no membership on offer');
   });
 
   it("are filled in wherever they appear, with or without spaces", () => {
@@ -201,5 +218,12 @@ describe("the real landing page files", () => {
     expect(text).toContain("NZ$99");
     expect(text).toContain("NZ$149");
     expect(text).toContain("NZ$49");
+  });
+
+  it("the tradie page promises pay no faster than the payment company can deliver it", () => {
+    // Card money takes four working days to clear in New Zealand, so "in your bank within 48 hours" would be a promise we cannot keep.
+    const text = JSON.stringify(loadLanding("tradie", launchMarket));
+    expect(text).toContain("in your bank about 5 to 6 working days after the job");
+    expect(text).not.toMatch(/48 hours/);
   });
 });

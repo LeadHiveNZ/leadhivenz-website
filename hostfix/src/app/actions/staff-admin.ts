@@ -137,7 +137,7 @@ export async function saveTierAction(_previous: FormState, formData: FormData): 
     throw error;
   }
   refreshMarkets(slug);
-  return { done: id ? "Saved. Members already on this tier move to the new price from their next monthly payment only if you also change it with the payment company. See the runbook." : "Tier added." };
+  return { done: id ? "Saved." : "Membership added." };
 }
 
 export async function saveMenuItemAction(_previous: FormState, formData: FormData): Promise<FormState> {

@@ -147,7 +147,7 @@ export default async function DemoHub({ searchParams }: { searchParams: SearchPa
         <SectionTitle>4. Skip ahead in time</SectionTitle>
         <Card>
           <p className="text-muted">
-            An offer is held for 15 minutes before it moves to the next tradie, and a tradie is paid a day after a job. Rather than wait, move the demo&apos;s clock forward.{" "}
+            An offer is held for 15 minutes before it moves to the next tradie, and a tradie&apos;s payment is sent a day after a job. Rather than wait, move the demo&apos;s clock forward.{" "}
             <span className="text-ink">
               The demo thinks it is {formatDateTime(now(), "Pacific/Auckland")} in Queenstown{offset > 0 ? `, ${formatDuration(offset)} ahead of the real time` : ""}.
             </span>

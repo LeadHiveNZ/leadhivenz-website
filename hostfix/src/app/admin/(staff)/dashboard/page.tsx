@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { EmptyState, PageTitle, SectionTitle, Stat } from "@/components/ui/Bits";
 import { marketNumbers, PERIOD_DAYS } from "@/lib/admin/metrics";
-import { requireAdminRole } from "@/lib/auth/current";
+import { requireStaff } from "@/lib/auth/current";
 import { getDb } from "@/lib/db";
 import { listMarkets } from "@/lib/markets/store";
 import { formatMoney } from "@/lib/money";
@@ -14,7 +14,15 @@ type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 const pct = (rate: number | null) => (rate === null ? "No history" : `${Math.round(rate * 100)}%`);
 
 export default async function DashboardPage({ searchParams }: { searchParams: SearchParams }) {
-  await requireAdminRole();
+  const staff = await requireStaff();
+  // The tab is on everyone's bar, so say why it is empty rather than bounce a dispatcher away without a word.
+  if (staff.role !== "admin") {
+    return (
+      <EmptyState icon="chart" title="The numbers are for admins">
+        Income, fees and membership figures are only shown to an admin. Everything you need for the day is on the Queue, Jobs and Tradies tabs.
+      </EmptyState>
+    );
+  }
   const query = await searchParams;
   const db = await getDb();
   const markets = await listMarkets(db);

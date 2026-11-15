@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { setTestNow } from "@/lib/clock";
 import { runTick } from "@/lib/dispatch/tick";
+import { AdminInputError, saveTier } from "@/lib/markets/admin";
 import { listTiers } from "@/lib/markets/store";
 import { createOwnerAccount, getBilling, unusedDeposit } from "@/lib/owners/service";
 import { completeDemoCheckout, createDemoGateway } from "@/lib/payments/demo-gateway";
@@ -239,5 +240,55 @@ describe("referrals", () => {
 
     const other = await makeProperty(t.db, owner.ownerId, { referralCode: "NOSUCHCODE" });
     expect(await t.db.query("select 1 from public.referrals where property_id = $1::uuid", [other.id])).toEqual([]);
+  });
+});
+
+describe("changing a membership price", () => {
+  const input = (tier: Awaited<ReturnType<typeof listTiers>>[number], patch: Record<string, unknown> = {}) => ({
+    id: tier.id, key: tier.key, name: tier.name, priceCents: tier.monthlyPriceCents, responseHours: tier.responseHours,
+    urgentResponseHours: tier.urgentResponseHours, urgentIncluded: tier.urgentIncluded, urgentIncludedPerMonth: tier.urgentIncludedPerMonth,
+    quarterlyCheck: tier.quarterlyCheck, blurb: tier.blurb, active: tier.active, ...patch,
+  });
+  const tierNamed = async (key: string) => (await listTiers(t.db, "queenstown")).find((tier) => tier.key === key)!;
+
+  it("is refused while properties are members on it, so nobody is shown one price and charged another", async () => {
+    await liveMarket(t.db);
+    const owner = await makeOwner(t.db);
+    await makeProperty(t.db, owner.ownerId);
+    const essential = await tierNamed("essential");
+
+    await expect(saveTier(t.db, "queenstown", input(essential, { priceCents: 11900 }), "admin")).rejects.toThrow(AdminInputError);
+    await expect(saveTier(t.db, "queenstown", input(essential, { priceCents: 11900 }), "admin")).rejects.toThrow(/1 property is a member/);
+    expect((await tierNamed("essential")).monthlyPriceCents).toBe(9900);
+
+    // Everything else about it can still change, and it can be closed to new members.
+    await saveTier(t.db, "queenstown", input(essential, { responseHours: 12, active: false }), "admin");
+    expect(await tierNamed("essential")).toMatchObject({ monthlyPriceCents: 9900, responseHours: 12, active: false });
+
+    // The new price goes on a new membership, which is the one new members are offered.
+    await saveTier(t.db, "queenstown", { ...input(essential, { priceCents: 11900, active: true }), id: null, key: "essential_2027" }, "admin");
+    expect(await tierNamed("essential_2027")).toMatchObject({ monthlyPriceCents: 11900, active: true });
+  });
+
+  it("is allowed when nobody is a member on it, or everyone on it has left", async () => {
+    await liveMarket(t.db);
+    const owner = await makeOwner(t.db);
+    const property = await makeProperty(t.db, owner.ownerId, { tier: "priority" });
+
+    // Nobody is on Essential.
+    await saveTier(t.db, "queenstown", input(await tierNamed("essential"), { priceCents: 10900 }), "admin");
+    expect((await tierNamed("essential")).monthlyPriceCents).toBe(10900);
+
+    // The only Priority member leaves.
+    await endMembership(t.db, { provider: "demo", subscriptionId: property.subscriptionId! });
+    await saveTier(t.db, "queenstown", input(await tierNamed("priority"), { priceCents: 15900 }), "admin");
+    expect((await tierNamed("priority")).monthlyPriceCents).toBe(15900);
+  });
+
+  it("says so plainly when the membership does not exist", async () => {
+    await liveMarket(t.db);
+    const essential = await tierNamed("essential");
+    await expect(saveTier(t.db, "queenstown", input(essential, { id: "not-an-id" }), "admin")).rejects.toThrow("That tier does not exist.");
+    await expect(saveTier(t.db, "queenstown", input(essential, { id: "00000000-0000-4000-8000-000000000000" }), "admin")).rejects.toThrow("That tier does not exist.");
   });
 });

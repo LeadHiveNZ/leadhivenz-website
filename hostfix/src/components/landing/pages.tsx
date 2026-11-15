@@ -135,7 +135,7 @@ export function TradieLanding({ data }: { data: PublicMarket }) {
       closingTitle="Fixed-price jobs, straight to your phone"
       closingNote="No quoting, no invoicing, no chasing. Leave your details and we'll be in touch."
       proof={[
-        { value: `${Math.max(48, market.payoutHoldHours)}h`, label: "From your photo to the money in your bank account" },
+        { value: `${Math.max(24, market.payoutHoldHours)}h`, label: "From your photo to your payment being sent. No invoice to write" },
         { value: `${market.offerMinutes}min`, label: "To take a job. One tap from the text, no login" },
         { value: formatMoney(0, market.currency), label: "To join. No lead fees, no bidding, no subscription" },
       ]}

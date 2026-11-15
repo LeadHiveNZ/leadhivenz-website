@@ -1,34 +1,37 @@
 # HostFix — Plan and data model (v0, 15 Nov 2026)
 
-> **WORK IN PROGRESS (started 15 Nov 2026): the full product is being built on this branch.**
-> Until this note is removed the branch may not build or deploy. Phase 0 exactly as delivered is commit `374ccb7`.
+> **Status, 15 November 2026: Phases 0 to 4 are built and tested.** Phase 5 is planned in section 9 and not built.
+> To try it: `docs/TRY-IT.md`. To put it online: `SETUP.md`. For the dispatcher: `RUNBOOK.md`.
+> What similar products do and what was taken from them: `docs/MARKET-RESEARCH.md`.
 >
-> Build order and where things stand (updated at each save):
-> 1. Database foundations: one SQL layer (`src/lib/db`), live Postgres plus an in-app copy for demo and tests,
->    migrations applied at build time (`scripts/migrate.ts`), full schema in
->    `supabase/migrations/20261116000000_product.sql`, Phase 0 leads moved onto it, tests run on real SQL
->    (`tests/unit/db.ts`). **DONE.**
-> 2. Accounts and sign-in (codes by email or text, database sessions, staff roles). Rules and tests **DONE**
->    (`src/lib/auth`). Screens not started.
-> 3. Phase 1 owners, properties, membership billing, report links. Rules **DONE** (`src/lib/owners`,
->    `src/lib/properties`). Screens, QR code and tests not started.
-> 4. Phase 2 jobs, pricing lines, offer cascade, tradie steps, quotes, status texts, timer. Rules **DONE**
->    (`src/lib/jobs`, `src/lib/dispatch`, `src/lib/notify/outbox.ts`, `messages.ts`). Tests for the cascade and
->    screens not started. Reply-by-text webhook not started.
-> 5. Phase 3 charge on completion, payouts, guarantee credit, disputes, refunds. Rules **DONE**
->    (`src/lib/billing/settle.ts`, `src/lib/payments`). Tests, statements and the Stripe webhook handlers not started.
-> 6. Phase 4 dispatcher queue rules **DONE** (`src/lib/ops/exceptions.ts`). Admin dashboard numbers, scorecards,
->    menu editor, add-a-market and all screens not started.
-> 7. New logo, palette, landing layout, app shell. Not started (waiting on the design research).
-> 8. Clickable demo: sample data, demo phone, skip-ahead clock. Not started.
-> 9. Tests, browser checks, docs (`docs/MARKET-RESEARCH.md`, SETUP, RUNBOOK), final save. Not started.
+> The rest of this document is the plan as first written, before any code. It is kept because the reasoning
+> still holds. **Where the build ended up different, this list is right and the older text below is not:**
 >
-> Research in (all four studies): `docs/research/`. Still to write: the plain-words summary `docs/MARKET-RESEARCH.md`.
-> Design direction chosen from the benchmark: plum and lime palette, "door ajar" mark, heavy grotesque headlines.
-> Decisions taken for the deeper build: connect to Postgres directly (not through Supabase's web API) so the same
-> SQL runs live, in demo and in tests; the app sends its own sign-in codes instead of using Supabase login;
-> Vercel's every-minute timer drives the 15-minute offer clock; Stripe subscriptions per property, saved card
-> charged on completion, tradie paid by separate transfer after a 24-hour hold.
+> - **Paying tradies "within 48 hours" cannot be promised as money in the bank.** The payment is *sent* 24
+>   hours after the job (the hold is set per market, 48 hours at most). But Stripe holds card money before it
+>   can be paid out: 4 working days in New Zealand, 2 in Australia (Stripe's documentation, read 15 Nov
+>   2026). So a tradie sees the money about 5 to 6 working days after a job in New Zealand, 3 to 4 in
+>   Australia. Every screen and the tradie page now say that. Section 9 explains the one way to make it
+>   faster (pay tradies out of money already sitting in your Stripe balance) and why it is not switched on.
+> - **The timer is Vercel's**, once a minute (`/api/cron/tick`), not the database's own scheduler. It moves
+>   offers on, credits missed promises, retries cards and pays tradies. Each step is safe to run twice.
+> - **Sign-in is a six-digit code** sent by email or text, made by the app itself. Supabase is used for the
+>   database and for photo storage only, not for login.
+> - **A tradie does not need to sign in for a job they were offered.** The link in the text is the accept page
+>   and then the job page, photos included. They sign in only for their pay, profile and job list.
+> - **The app talks to the database directly** and brings the tables up to date on every deploy. No SQL is
+>   pasted anywhere by hand.
+> - **Push notifications were not built.** Texts carry everything.
+> - **Statements are pages, not PDFs:** Billing for owners and Pay for tradies, month by month.
+> - **Scorecards are worked out when the page is opened**, not overnight.
+> - **Referral rewards are tracked and put in the queue when due, then paid by bank transfer by hand.**
+> - **A membership's price is fixed once properties have joined it.** To change a price you add a new
+>   membership and close the old one to new members (`RUNBOOK.md`).
+> - **Urgent call-outs included in Priority cost the business the surcharge** (the tradie still gets it). The
+>   Numbers page shows the running total, and each membership can cap how many are included a month.
+>
+> The five questions in section 6 were never answered, so each default written there is what was built.
+> Question 1 (who is the seller for GST) still needs your accountant before the first real job.
 
 > **Status, 15 Nov 2026: Phase 0 is built.** See `docs/PHASE-0.md` for what to click and `SETUP.md` to put it online.
 >
@@ -119,8 +122,8 @@ minute. (Correction: Vercel Pro is needed regardless, see the status note at the
 3. **Money is stored in cents as whole numbers**, never decimals, with the currency next to it. All money
    maths lives in one tested module.
 4. **Charge type:** "separate charges and transfers". The owner's card is charged on completion into the
-   HostFix Stripe balance. The tradie's share is transferred 48 hours later unless a dispute is open. This
-   is the only Stripe pattern that lets a dispute pause the payout.
+   HostFix Stripe balance. The tradie's share is transferred after a hold (24 hours as built, set per
+   market) unless a dispute is open. This is the only Stripe pattern that lets a dispute pause the payout.
 5. **Tradies never log in to accept.** Signed single-use links. They do log in (phone number + one-time
    code) to upload photos and see their jobs, because that needs to be private.
 6. **Owners log in by email magic link or phone code.** No passwords to forget.
@@ -144,7 +147,7 @@ minute. (Correction: Vercel Pro is needed regardless, see the status note at the
   costs you a month of revenue on every property.
 - **Charging the owner's card the moment the tradie taps Complete** with no owner review is a chargeback
   risk. I will keep auto-charge (you asked for no admin work) but the owner gets a text with photos and a
-  "Something wrong?" link at that moment, and the 48-hour tradie payout hold is the dispute window.
+  "Something wrong?" link at that moment, and the tradie payout hold (24 hours as built) is the dispute window.
 - **Phase 0 deposit** should be refundable and credited against the first month. Taking non-refundable
   money before tradies exist is a trust problem in a small town.
 
@@ -271,7 +274,7 @@ How GST is split between the three parties depends on your answer to question 1.
 | 0 Demand test | Owner page with deposit, tradie page, both forms, you get a text + email per lead, password-protected leads list, Meta Pixel firing | 1 sitting |
 | 1 Owner & property | Owner signs up, adds property with photos, picks tier, pays by card, gets QR code PDF | 2–3 sittings |
 | 2 Jobs & dispatch | Report a job from the QR link, offer cascade by text + link, tradie job page, quotes and approvals, owner status texts | 4–5 sittings |
-| 3 Money | Tradie payout onboarding, charge on completion, 48h payout, GST per market, statements, auto credit, dispute button | 3–4 sittings |
+| 3 Money | Tradie payout onboarding, charge on completion, payout after the hold, GST per market, statements, auto credit, dispute button | 3–4 sittings |
 | 4 Running it | Dispatcher exceptions view, admin dashboard per market, scorecards, menu editor, add-a-market | 3 sittings |
 | 5 Growth | Planned only | — |
 
@@ -339,3 +342,88 @@ Phase 0 starts the moment you tell me which, plus your answers (or "defaults") t
 GitHub, Vercel, Supabase, Stripe NZ (and later Stripe AU), ClickSend (start NZ sender registration now),
 Resend, a domain, Meta Business Suite (Pixel + lead ads), and a lawyer for terms, privacy, tradie agreement
 and insurance wording.
+
+---
+
+## 9. Phase 5 and what comes next (planned, not built)
+
+Written 15 November 2026, after Phases 0 to 4 were built. Nothing here is built. Each item says what it
+is for, what is already in place, what would have to be built, and roughly how big it is ("a sitting" is
+one working session like the ones that built each phase).
+
+### First, three things that are not in your Phase 5 list but matter more
+
+**A. Faster pay for tradies (small, needs a decision from you).** Today a tradie's money is sent after 24
+hours and lands about 5 to 6 working days after the job in New Zealand, because Stripe holds card money
+for 4 working days. Stripe will pay a tradie straight away if the money comes out of funds that have
+already cleared in your Stripe balance. So the fix is a float: leave roughly one week of tradie payouts
+sitting in Stripe instead of sweeping everything to your bank, and the app pays tradies from that. Tradies
+would then be paid in about 2 to 3 working days. It costs you nothing but the use of that cash. I did not
+switch it on because it only works once membership income has built the float, it changes how you take
+money out of Stripe, and a mistake in this code pays a tradie twice. Half a sitting, plus a test run.
+*Do this before you recruit the second wave of tradies: "paid in two days, no invoice" is the pitch.*
+
+**B. The quarterly property check is promised to Priority members today and nothing delivers it.** Until
+it is built (item 2 below), someone has to book those checks by hand. If you are not ready to do that,
+untick "Includes a property check every three months" on the Priority membership before anyone joins.
+
+**C. Hold the money when the tradie accepts.** Today the owner's card is charged when the job is done. If
+it declines, you chase it and the tradie waits. Reserving the amount on the card when a tradie accepts
+(as Turno does for cleaning) finds a dead card before anyone drives anywhere. Half a sitting.
+
+### The five features you listed, in the order I would build them
+
+**1. Cleaner and co-host accounts (build first).**
+*Why.* A cleaner with twelve properties is twelve sales in one conversation, and they are the people on
+site when something breaks. A third of Queenstown listings are with hosts who run 2 to 9 properties.
+*In place.* Referral codes and the reward, a join page for referrers (`/refer`), and the no-login report
+link per property.
+*To build.* A sign-in for cleaners. One screen listing every property they look after (the owner grants
+this with one tap). Report a problem at any of them without hunting for the right link. Their referral
+earnings and when each is due. One to two sittings.
+
+**2. Quarterly property check with a photo checklist.**
+*Why.* It is the main reason to pay NZ$50 more for Priority, it catches problems before a guest does, and
+every check is a reason to book paid work. *In place.* The promise, as a tick on the membership.
+*To build.* A checklist per market (smoke alarms, taps, drains, heat pump filters, locks, bulbs), a job
+type that is booked for a date instead of a response time, the tradie's checklist screen with a photo per
+item, a report to the owner with "fix this for NZ$X" buttons from the menu, and the timer creating one
+every three months. Decide who pays the tradie for the visit: it comes out of the membership. Two sittings.
+
+**3. Seasonal packages (a pre-winter check, a pre-summer deck and barbecue check).**
+*Why.* One-off income per property at the times tradies are quiet, and a reason to email every member.
+*In place.* Fixed prices, card on file, the offer cascade, photos. *To build.* A package is a menu item
+with a booking window instead of a promise, so most of the work is shared with item 2. A page to buy it,
+and a way to offer a batch of them to one tradie as a run. One sitting after item 2.
+
+**4. Connections to property management software.**
+*Why.* Managers with ten or more listings (a third of the market) live in Guesty, Hostaway or Breezeway.
+They will not open a second app, but they will use HostFix if a task raised there becomes a job here.
+*To build, in this order.* First an email address and a web address per property that turn a message into
+a reported problem, which works with any of them through Zapier or Make and takes one sitting. Then one
+proper connection, to whichever product your first three managers actually use. Two to three sittings,
+and each of those companies has its own approval process. *Do not start until a manager asks for it.*
+
+**5. Tradie slot fees (build last, and maybe never).**
+*Why you want it.* Income from the supply side. *Why I would wait.* The research found that charging
+tradies for position or leads is the most complained-about model in this industry: hipages keeps only
+58% of that income year on year, and gave the regulator an undertaking over how it locked tradies in. And a first-choice slot
+that is bought, not earned, works against your own response promise: your credits are paid by your worst
+first-choice tradie. *In place.* The fee and an on/off switch are stored against each first-choice and
+backup slot. Nothing charges it.
+*If you do switch it on:* only where three or more tradies want the same slot, charge it as a monthly
+card payment, and keep the 80% rule above it, so a tradie who stops performing loses the slot whatever
+they pay. One sitting.
+
+### Smaller things found during the build
+
+| What | Why it matters | Size |
+| --- | --- | --- |
+| Move existing members to a new price, with notice | Today a price rise only reaches new members | Half a sitting, plus your lawyer's wording |
+| Delete or anonymise a person on request | Privacy law. Today it needs a developer | Half a sitting |
+| Reminders before a tradie's insurance runs out | The date is stored. Nothing warns anyone | Small |
+| Hide real phone numbers between owner and tradie | Stops jobs being taken off the platform | One sitting, and a monthly cost per number |
+| Tax invoices as PDFs | Depends on the accountant's answer about GST | One sitting |
+| Hear from Stripe the moment a tradie's bank details are approved | Today the app checks when they come back, and every hour | Small |
+| Push notifications for tradies who install the app | A second way to reach them if a text is slow | One sitting |
+| A "prove you are human" check on the public forms | Only if junk leads become a problem | Small |

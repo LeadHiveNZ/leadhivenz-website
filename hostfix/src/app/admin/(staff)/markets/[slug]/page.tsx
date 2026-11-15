@@ -233,7 +233,8 @@ export default async function MarketPage({ params, searchParams }: { params: Pro
           </Reveal>
         </div>
         <p className="mt-2 text-sm text-muted">
-          A new price applies to properties that join from now on. Properties that are already members keep paying their old price until it is changed with the payment company too. The runbook explains how.
+          Once properties have joined a membership, its price is fixed. To change a price, add a new membership at the new price and untick &ldquo;Offered to new members&rdquo; on the old one. Members on the old one keep it, at
+          the old price, until they switch. The promise hours and what is included can be changed at any time, and apply to members straight away.
         </p>
       </section>
 

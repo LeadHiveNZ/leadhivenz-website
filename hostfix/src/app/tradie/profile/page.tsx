@@ -13,6 +13,7 @@ import { displayPhone } from "@/lib/phone";
 import { getTradie, listLicences } from "@/lib/tradies/service";
 import { dateKey } from "@/lib/time";
 import { WEEKDAY_OPTIONS } from "@/lib/weekdays";
+import { payTiming } from "@/lib/markets/display";
 
 export const metadata: Metadata = { title: "Profile" };
 
@@ -50,7 +51,7 @@ export default async function TradieProfilePage({ searchParams }: { searchParams
         <SectionTitle action={<Chip tone={tradie.payoutsEnabled ? "done" : "alert"}>{tradie.payoutsEnabled ? "Ready" : "Needed"}</Chip>}>Getting paid</SectionTitle>
         <p className="text-muted">
           {tradie.payoutsEnabled
-            ? `Your bank details are set up. Each job is paid about ${market.payoutHoldHours} hours after you finish it.`
+            ? `Your bank details are set up. ${payTiming(market).line}`
             : "Your bank account and ID are entered on our payment company's secure page, not here. It takes about five minutes. You are only offered jobs once this is done."}
         </p>
         {!tradie.payoutsEnabled && (

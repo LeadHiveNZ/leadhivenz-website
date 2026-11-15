@@ -12,7 +12,7 @@ export const metadata: Metadata = {
 
 const choices: { href: string; title: string; text: string; icon: IconName; cta: string }[] = [
   { href: "/owners", title: "I own a holiday home", text: "Things fixed fast at a fixed price, without the phone calls.", icon: "door", cta: "See how it works" },
-  { href: "/tradies", title: "I'm a tradie", text: "Fixed-price jobs sent to your phone, paid within 48 hours.", icon: "tradie", cta: "Get jobs by text" },
+  { href: "/tradies", title: "I'm a tradie", text: "Fixed-price jobs sent to your phone, paid automatically.", icon: "tradie", cta: "Get jobs by text" },
 ];
 
 const points: { icon: IconName; title: string; text: string }[] = [

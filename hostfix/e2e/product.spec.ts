@@ -96,7 +96,7 @@ test("a tradie takes a job from the link in a text, without signing in, and fini
   await page.waitForURL(/done=1/);
   await ready(page);
   await expect(shown(page, "Job finished. Thank you.").first()).toBeVisible();
-  await expect(shown(page, /NZ\$161 will be sent to your bank on/).first()).toBeVisible();
+  await expect(shown(page, /NZ\$161 will be sent on .+\. It reaches your bank about 5 to 6 working days after the job\./).first()).toBeVisible();
 
   // The owner was texted at each step, and charged the fixed price.
   const owner = await phone(page, "sam");
@@ -262,10 +262,14 @@ test("people only see their own data", async ({ page, request }) => {
   await be(page, "Maria (dispatcher)");
   await open(page, `/admin/jobs/${jobId}`);
   await expect(shown(page, "Lakeview Apartment").first().first()).toBeVisible();
-  for (const path of ["/admin/dashboard", "/admin/markets", "/admin/markets/queenstown", "/admin/staff", "/admin/audit", "/admin/leads"]) {
+  for (const path of ["/admin/markets", "/admin/markets/queenstown", "/admin/staff", "/admin/audit", "/admin/leads"]) {
     await page.goto(`${BASE}${path}`);
     await expect(page).toHaveURL(`${BASE}/admin/queue`);
   }
+  // The Numbers tab is on everyone's bar. For a dispatcher it says why it is empty, and shows no figures.
+  await open(page, "/admin/dashboard");
+  await expect(shown(page, "The numbers are for admins")).toHaveCount(1);
+  await expect(shown(page, "Monthly membership income")).toHaveCount(0);
   expect((await page.request.get(`${BASE}/admin/leads/export`)).status()).toBe(401);
 
   // Someone who is not signed in sees nothing at all.
