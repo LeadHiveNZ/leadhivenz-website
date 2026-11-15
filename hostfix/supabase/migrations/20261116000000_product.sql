@@ -532,7 +532,13 @@ create table if not exists public.payments (
   provider    text not null check (provider in ('stripe', 'demo')),
   payment_intent_id text,
   charge_id   text,
+  -- How many tries have ended in a definite "no". A try that was cut off
+  -- half-way is not counted, so it is repeated with the same key and can
+  -- never become a second charge.
   attempts    integer not null default 0,
+  -- Set while one server is talking to the payment company about this charge,
+  -- so no other server starts the same charge at the same moment.
+  claimed_until timestamptz,
   last_error  text,
   next_retry_at timestamptz,
   paid_at     timestamptz,

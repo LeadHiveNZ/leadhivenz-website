@@ -40,14 +40,11 @@ export function listMigrationFiles(dir: string): MigrationFile[] {
  */
 const ENSURE_ROLES = `
 do $$
-declare
-  r text;
 begin
-  foreach r in array array['anon', 'authenticated', 'service_role'] loop
-    if not exists (select 1 from pg_roles where rolname = r) then
-      execute format('create role %I nologin', r);
-    end if;
-  end loop;
+  if not exists (select 1 from pg_roles where rolname = 'anon') then create role anon nologin; end if;
+  if not exists (select 1 from pg_roles where rolname = 'authenticated') then create role authenticated nologin; end if;
+  -- As on Supabase: the server's role is not held back by row level security.
+  if not exists (select 1 from pg_roles where rolname = 'service_role') then create role service_role nologin bypassrls; end if;
 end
 $$;`;
 

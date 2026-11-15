@@ -81,15 +81,21 @@ export type ChargeOutcome = "succeeded" | "failed" | "skipped";
 /** Charges the owner's saved card for a finished job. Safe to call again: a job is never charged twice. */
 export async function chargeJob(db: Db, gatewayFor: GatewayFor, jobId: string): Promise<ChargeOutcome> {
   const claim = await db.tx(async (tx) => {
-    const rows = await tx.query<PaymentRow>("select * from public.payments where job_id = $1::uuid for update", [jobId]);
+    const at = now();
+    const rows = await tx.query<PaymentRow & { claimed_until: Date | null }>("select * from public.payments where job_id = $1::uuid for update", [jobId]);
     const payment = rows[0];
     if (!payment || !["pending", "failed"].includes(payment.status)) return null;
     if (payment.attempts >= MAX_CHARGE_ATTEMPTS) return null;
+    // Another server is in the middle of this charge.
+    if (payment.claimed_until && new Date(payment.claimed_until).getTime() > at.getTime()) return null;
     const job = await getJobForStaff(tx, jobId);
     if (!job) return null;
     const context = await loadContext(tx, job);
     const billing = await getBilling(tx, job.ownerId, context.market.country);
-    await tx.query("update public.payments set attempts = attempts + 1, next_retry_at = null where id = $1::uuid", [payment.id]);
+    await tx.query("update public.payments set claimed_until = $2::timestamptz, next_retry_at = null where id = $1::uuid", [payment.id, addMinutes(at, 2).toISOString()]);
+    // The try number only goes up when a try ends in a definite "no". If this
+    // server dies half-way, the next try uses the same number and so the same
+    // key, and the payment company treats it as the same charge.
     return { payment: { ...payment, attempts: payment.attempts + 1 }, job, context, billing };
   });
   if (!claim) return "skipped";
@@ -117,9 +123,10 @@ export async function chargeJob(db: Db, gatewayFor: GatewayFor, jobId: string): 
     const at = now();
     if (result.status === "succeeded") {
       await tx.query(
-        `update public.payments set status = 'succeeded', paid_at = $2::timestamptz, payment_intent_id = $3, charge_id = $4, provider = $5, last_error = null
+        `update public.payments set status = 'succeeded', paid_at = $2::timestamptz, payment_intent_id = $3, charge_id = $4, provider = $5,
+                last_error = null, attempts = $6, claimed_until = null
           where id = $1::uuid`,
-        [payment.id, at.toISOString(), result.paymentIntentId, result.chargeId, gateway!.provider],
+        [payment.id, at.toISOString(), result.paymentIntentId, result.chargeId, gateway!.provider, payment.attempts],
       );
       const dispute = await tx.query("select 1 from public.disputes where job_id = $1::uuid and status = 'open'", [jobId]);
       await tx.query("update public.payouts set status = $2 where job_id = $1::uuid and status = 'waiting'", [jobId, dispute.length > 0 ? "paused" : "scheduled"]);
@@ -147,9 +154,9 @@ export async function chargeJob(db: Db, gatewayFor: GatewayFor, jobId: string): 
     const retry = payment.attempts < MAX_CHARGE_ATTEMPTS;
     await tx.query(
       `update public.payments set status = 'failed', last_error = $2, next_retry_at = $3::timestamptz,
-              payment_intent_id = coalesce($4, payment_intent_id)
+              payment_intent_id = coalesce($4, payment_intent_id), attempts = $5, claimed_until = null
         where id = $1::uuid`,
-      [payment.id, result.reason.slice(0, 500), retry ? addHours(at, RETRY_HOURS).toISOString() : null, result.paymentIntentId],
+      [payment.id, result.reason.slice(0, 500), retry ? addHours(at, RETRY_HOURS).toISOString() : null, result.paymentIntentId, payment.attempts],
     );
     await audit(tx, {
       actor: gateway?.provider ?? "system", action: "payment.failed", entity: "job", entityId: jobId, amount: payment.amount_cents, currency: payment.currency,

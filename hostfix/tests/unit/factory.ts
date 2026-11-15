@@ -1,0 +1,154 @@
+import { randomUUID } from "node:crypto";
+import type { Market } from "@config/markets";
+import type { GatewayFor } from "@/lib/billing/settle";
+import { now } from "@/lib/clock";
+import type { Db } from "@/lib/db/types";
+import { recordUpload } from "@/lib/files/uploads";
+import { createJob, type NewJob } from "@/lib/jobs/create";
+import type { Job } from "@/lib/jobs/types";
+import { getMarket, listMenu, listTiers, type MenuItem } from "@/lib/markets/store";
+import { listMessages, type LoggedMessage } from "@/lib/notify/outbox";
+import { createOwnerAccount, saveBilling } from "@/lib/owners/service";
+import { createDemoGateway, DEMO_CARD_DECLINES, DEMO_CARD_OK } from "@/lib/payments/demo-gateway";
+import { addMonths } from "@/lib/payments/gateway";
+import { activateMembership, createProperty, type Property } from "@/lib/properties/service";
+import { createTradie, saveLicence, savePayoutAccount, setSlot, setTradieStatus } from "@/lib/tradies/service";
+
+/**
+ * Quick ways to set up people, properties and jobs for tests. Everything is
+ * created through the same functions the app uses, so a test never works on
+ * data the real app could not have produced.
+ */
+
+let counter = 0;
+const next = () => {
+  counter += 1;
+  return counter;
+};
+
+/** 15 Nov 2026, 10am Monday... in fact a Sunday in New Zealand. Tests that care about the day set their own time. */
+export const MONDAY_10AM = new Date("2026-11-15T21:00:00.000Z"); // Mon 16 Nov 2026, 10:00am in Queenstown
+export const MONDAY_9PM = new Date("2026-11-16T08:00:00.000Z"); // Mon 16 Nov 2026, 9:00pm in Queenstown
+
+export async function liveMarket(db: Db, patch: Record<string, unknown> = {}): Promise<Market> {
+  await db.query("update public.markets set stage = 'live' where slug = 'queenstown'");
+  for (const [column, value] of Object.entries(patch)) {
+    await db.query(`update public.markets set ${column} = $1 where slug = 'queenstown'`, [value]);
+  }
+  return (await getMarket(db, "queenstown"))!;
+}
+
+export async function makeOwner(db: Db, options: { card?: "ok" | "declines" | "none"; phone?: string | null } = {}) {
+  const n = next();
+  const { user, ownerId } = await createOwnerAccount(db, {
+    name: `Olive Owner ${n}`,
+    email: `owner${n}@example.com`,
+    phone: options.phone === undefined ? `+642110${String(10000 + n)}` : options.phone,
+  });
+  if (options.card !== "none") {
+    await saveBilling(db, {
+      ownerId, country: "NZ", provider: "demo", customerId: `demo_cus_${n}`,
+      card: options.card === "declines" ? DEMO_CARD_DECLINES : DEMO_CARD_OK,
+    });
+  }
+  return { user, ownerId };
+}
+
+export async function makeProperty(
+  db: Db,
+  ownerId: string,
+  options: { tier?: "essential" | "priority"; member?: boolean; name?: string; referralCode?: string } = {},
+): Promise<Property> {
+  const n = next();
+  const tiers = await listTiers(db, "queenstown");
+  const tier = tiers.find((candidate) => candidate.key === (options.tier ?? "essential"))!;
+  const property = await createProperty(db, ownerId, {
+    market: "queenstown", name: options.name ?? `Lakeview ${n}`, addressLine1: `${n} Lake Esplanade`, suburb: "Frankton", postcode: "9300",
+    accessNotes: `Lockbox code ${1000 + n} by the front door.`, tierId: tier.id, referralCode: options.referralCode ?? null,
+  });
+  if (options.member === false) return property;
+  const at = now();
+  const activated = await activateMembership(db, {
+    propertyId: property.id, provider: "demo", subscriptionId: `demo_sub_${n}`, periodEnd: addMonths(at, 1), customerId: `demo_cus_p${n}`, card: null,
+    invoice: { invoiceId: `demo_in_${n}_first`, amountCents: tier.monthlyPriceCents, currency: "NZD", periodStart: at, periodEnd: addMonths(at, 1), paidAt: at },
+  });
+  return activated!;
+}
+
+export type TradieOptions = {
+  trades?: string[];
+  /** A licence for the first trade: "valid" (default for licensed trades), "expired" or "none". */
+  licence?: "valid" | "expired" | "none";
+  slot?: 1 | 2 | null;
+  afterHours?: boolean;
+  days?: string[];
+  approved?: boolean;
+  payouts?: boolean;
+  name?: string;
+};
+
+export async function makeTradie(db: Db, options: TradieOptions = {}) {
+  const n = next();
+  const trades = options.trades ?? ["plumber"];
+  const { user, tradieId } = await createTradie(db, {
+    name: options.name ?? `Tane Tradie ${n}`, phone: `+642210${String(10000 + n)}`, email: null, market: "queenstown",
+    businessName: options.name ?? `Tradie ${n} Ltd`, trades, daysAvailable: options.days ?? ["mon", "tue", "wed", "thu", "fri", "sat"],
+    afterHours: options.afterHours ?? false, gstRegistered: true, licences: [],
+  });
+  const licence = options.licence ?? "valid";
+  if (licence !== "none") {
+    await saveLicence(db, tradieId, { trade: trades[0]!, licenceNumber: `LIC-${n}`, expiresOn: licence === "valid" ? "2030-12-31" : "2020-01-31" }, "test");
+  }
+  if (options.payouts !== false) await savePayoutAccount(db, tradieId, { provider: "demo", accountId: `demo_acct_${n}`, payoutsEnabled: true });
+  if (options.approved !== false) await setTradieStatus(db, tradieId, "approved", "test");
+  if (options.slot) await setSlot(db, { market: "queenstown", trade: trades[0]!, rank: options.slot, tradieId }, "test");
+  return { user, tradieId, phone: user.phone! };
+}
+
+export async function menuItem(db: Db, code: string): Promise<MenuItem> {
+  const item = (await listMenu(db, "queenstown")).find((candidate) => candidate.code === code);
+  if (!item) throw new Error(`No menu item ${code}`);
+  return item;
+}
+
+export async function logJob(db: Db, property: Property, overrides: Partial<NewJob> & { code?: string } = {}): Promise<Job> {
+  const { code, ...rest } = overrides;
+  const item = rest.menuItemId === null ? null : await menuItem(db, code ?? "PL-01");
+  const result = await createJob(db, {
+    property, reportedBy: "owner", reporterName: null, reporterPhone: null, menuItemId: item?.id ?? null, description: "",
+    urgent: false, uploadIds: [], uploader: `owner:${property.ownerId}`, actor: `owner:${property.ownerId}`, ...rest,
+  });
+  if (!result.ok) throw new Error(`Job was not created: ${result.reason} ${result.message}`);
+  return result.job;
+}
+
+/** A photo the tradie has uploaded, ready to attach when they finish. */
+export async function photo(db: Db, uploadedBy: string, kind: "completion" | "report" | "quote" = "completion"): Promise<string> {
+  const upload = await recordUpload(db, { kind, storageKey: `${kind}/test/${randomUUID()}.jpg`, contentType: "image/jpeg", bytes: 1234, uploadedBy });
+  return upload.id;
+}
+
+export function gatewayFor(db: Db): GatewayFor {
+  return () => createDemoGateway(db, "NZ");
+}
+
+export async function textsTo(db: Db, phone: string, template?: string): Promise<LoggedMessage[]> {
+  return (await listMessages(db, { recipient: phone, limit: 200 })).filter((message) => !template || message.template === template);
+}
+
+export async function auditActions(db: Db, entityId: string): Promise<string[]> {
+  const rows = await db.query<{ action: string }>("select action from public.audit_log where entity_id = $1 order by id", [entityId]);
+  return rows.map((row) => row.action);
+}
+
+export async function openExceptions(db: Db, jobId: string): Promise<string[]> {
+  const rows = await db.query<{ kind: string }>("select kind from public.exceptions where job_id = $1::uuid and status = 'open' order by created_at", [jobId]);
+  return rows.map((row) => row.kind);
+}
+
+export async function offersFor(db: Db, jobId: string) {
+  return db.query<{ id: string; tradie_id: string; stage: number; round: number; status: string; expires_at: Date }>(
+    "select id, tradie_id, stage, round, status, expires_at from public.offers where job_id = $1::uuid order by sent_at, number",
+    [jobId],
+  );
+}

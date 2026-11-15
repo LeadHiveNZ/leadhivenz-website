@@ -33,3 +33,9 @@ for file in tests/db/*.checks.sql; do
   echo "Checking $file"
   psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -q -f "$file"
 done
+
+# Then run every automated test against this real Postgres instead of the copy
+# inside the app. This is what proves two tradies accepting in the same second
+# are handled one after the other.
+echo "Running the test suite against this Postgres"
+TEST_DATABASE_URL="$DATABASE_URL" npx vitest run
