@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { setTestNow } from "@/lib/clock";
 import { acceptOffer } from "@/lib/dispatch/cascade";
-import { attachUploads, canView, checkFile, getUpload } from "@/lib/files/uploads";
+import { attachUploads, canView, checkFile, getUpload, recordUpload } from "@/lib/files/uploads";
 import { getJobForOwner, getJobForTradie, listJobsForOwner, listJobsForTradie, listLiveOffersForTradie } from "@/lib/jobs/store";
 import { completeJob, markArrived, markEnRoute, reportNoAccess, submitQuote } from "@/lib/jobs/work";
 import { offerLinkCode, offerLinkMatches, ownerJobLinkCode, ownerJobLinkMatches, parseLinkCode } from "@/lib/links";
@@ -106,6 +106,27 @@ describe("photos", () => {
     expect(await canView(t.db, upload, { tradieId: dave.tradieId })).toBe(false);
     expect(await canView(t.db, upload, {})).toBe(false);
     expect(await canView(t.db, upload, { uploader: "report:someone-else" })).toBe(false);
+  });
+
+  it("of a property (the lockbox, the switchboard) are shown to a tradie only while they have a job under way there", async () => {
+    const { alice, bob, aliceHome, mike, dave, aliceJob } = await twoOfEverything();
+    const record = await recordUpload(t.db, { kind: "property", storageKey: "property/test/lockbox.jpg", contentType: "image/jpeg", bytes: 100, uploadedBy: `owner:${alice.ownerId}` });
+    await attachUploads(t.db, [record.id], { kind: "property", uploadedBy: `owner:${alice.ownerId}`, propertyId: aliceHome.id });
+    const upload = (await getUpload(t.db, record.id))!;
+    expect(upload).toMatchObject({ attached: true, propertyId: aliceHome.id, jobId: null });
+
+    // Mike has accepted a job at Alice's property. Dave was never on it.
+    expect(await canView(t.db, upload, { ownerId: alice.ownerId })).toBe(true);
+    expect(await canView(t.db, upload, { tradieId: mike.tradieId })).toBe(true);
+    expect(await canView(t.db, upload, { tradieId: dave.tradieId })).toBe(false);
+    expect(await canView(t.db, upload, { ownerId: bob.ownerId })).toBe(false);
+    expect(await canView(t.db, upload, {})).toBe(false);
+
+    // Once the job is finished, Mike can no longer see how to get into the property.
+    await markArrived(t.db, aliceJob.id, mike.tradieId);
+    await completeJob(t.db, aliceJob.id, mike.tradieId, { note: "", uploadIds: [await photo(t.db, `tradie:${mike.tradieId}`)] });
+    expect(await canView(t.db, upload, { tradieId: mike.tradieId })).toBe(false);
+    expect(await canView(t.db, upload, { ownerId: alice.ownerId })).toBe(true);
   });
 
   it("can only be attached by the person who uploaded them, once, to the right kind of thing", async () => {

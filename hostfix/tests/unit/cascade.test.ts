@@ -3,6 +3,7 @@ import { addMinutes, setTestNow } from "@/lib/clock";
 import { acceptOffer, advanceCascade, assignTradie, expireDueOffers, passOffer, reoffer } from "@/lib/dispatch/cascade";
 import { approveGuestReport, cancelJob, createJob } from "@/lib/jobs/create";
 import { getJobForStaff } from "@/lib/jobs/store";
+import { listExceptions, raiseException } from "@/lib/ops/exceptions";
 import { testDb } from "./db";
 import { auditActions, liveMarket, logJob, makeOwner, makeProperty, makeTradie, menuItem, MONDAY_10AM, MONDAY_9PM, offersFor, openExceptions, textsTo } from "./factory";
 
@@ -505,5 +506,29 @@ describe("reports from guests and cleaners", () => {
     const result = await createJob(t.db, { ...base, property: { ...lapsed, status: "past_due" } });
     expect(result).toMatchObject({ ok: false, reason: "not_member" });
     expect(!result.ok && result.message).toContain("did not go through");
+  });
+});
+
+describe("the dispatcher's queue", () => {
+  it("puts jobs with a promised time running first, soonest first, then everything else, oldest first", async () => {
+    await liveMarket(t.db);
+    const owner = await makeOwner(t.db);
+    const property = await makeProperty(t.db, owner.ownerId);
+    // Nobody can take either job, so both go straight to the queue with their promised times.
+    const later = await logJob(t.db, property, { code: "PL-01" });
+    setTestNow(addMinutes(MONDAY_10AM, 5));
+    const sooner = await logJob(t.db, property, { code: "EL-01", urgent: true });
+    setTestNow(addMinutes(MONDAY_10AM, 10));
+    await raiseException(t.db, { kind: "referral_due", summary: "Pay a reward", dedupeKey: "test:referral" });
+    setTestNow(addMinutes(MONDAY_10AM, 20));
+    await raiseException(t.db, { kind: "payment_failed", summary: "A card was declined", jobId: later.id, dedupeKey: "test:payment" });
+
+    const queue = await listExceptions(t.db, { status: "open" });
+    expect(queue.map((item) => `${item.kind}:${item.jobId === sooner.id ? "urgent job" : item.jobId === later.id ? "standard job" : "no job"}`)).toEqual([
+      "nobody_accepted:urgent job",
+      "nobody_accepted:standard job",
+      "referral_due:no job",
+      "payment_failed:standard job",
+    ]);
   });
 });

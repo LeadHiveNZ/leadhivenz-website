@@ -10,7 +10,7 @@ async function statusOf(key: string): Promise<StatusItem> {
 describe("the setup checklist", () => {
   it("lists every part of the system once", async () => {
     const keys = (await setupStatus()).map((item) => item.key);
-    expect(keys).toEqual(["database", "email", "sms", "payments", "pixel", "capi", "analytics", "copy", "legal"]);
+    expect(keys).toEqual(["database", "email", "sms", "payments", "timer", "photos", "pixel", "capi", "analytics", "copy", "legal"]);
   });
 
   it("marks nothing as ready on a fresh install", async () => {
@@ -100,7 +100,7 @@ describe("card payments line", () => {
     expect(await statusOf("payments")).toMatchObject({ state: "todo", detail: expect.stringContaining("TEST mode") });
 
     vi.stubEnv("STRIPE_NZ_SECRET_KEY", "sk_live_abc");
-    expect(await statusOf("payments")).toMatchObject({ state: "ok", detail: "Connected and taking real payments." });
+    expect(await statusOf("payments")).toMatchObject({ state: "ok", detail: expect.stringContaining("Connected and taking real payments.") });
   });
 
   it("flags a key that is the wrong kind", async () => {
@@ -128,5 +128,53 @@ describe("Meta lines", () => {
   it("rejects a Pixel ID that is not a number", async () => {
     vi.stubEnv("NEXT_PUBLIC_META_PIXEL_ID", "my-pixel");
     expect(await statusOf("pixel")).toMatchObject({ state: "todo", detail: "NEXT_PUBLIC_META_PIXEL_ID should be the Pixel ID: digits only." });
+  });
+});
+
+describe("the timer line", () => {
+  it("says the app runs its own timer in demo mode", async () => {
+    expect(await statusOf("timer")).toMatchObject({ state: "todo", detail: expect.stringContaining("Demo mode") });
+  });
+
+  it("is a problem on the live site without CRON_SECRET, and says what stops working", async () => {
+    vi.stubEnv("VERCEL", "1");
+    const line = await statusOf("timer");
+    expect(line.state).toBe("problem");
+    expect(line.detail).toContain("CRON_SECRET is not set");
+    expect(line.detail).toContain("tradies are not paid");
+  });
+
+  it("is a problem when the secret is set but the timer has never run", async () => {
+    vi.stubEnv("VERCEL", "1");
+    vi.stubEnv("CRON_SECRET", "a-long-enough-secret-value");
+    expect(await statusOf("timer")).toMatchObject({ state: "problem", detail: expect.stringContaining("It has never run.") });
+  });
+});
+
+describe("the photo storage line", () => {
+  it("keeps photos on this computer in demo mode", async () => {
+    expect(await statusOf("photos")).toMatchObject({ state: "todo", detail: expect.stringContaining("Demo mode") });
+  });
+
+  it("is a problem on the live site until storage is connected, because a job cannot be finished without a photo", async () => {
+    vi.stubEnv("VERCEL", "1");
+    const line = await statusOf("photos");
+    expect(line.state).toBe("problem");
+    expect(line.detail).toContain("SUPABASE_URL and SUPABASE_SECRET_KEY are not set.");
+    expect(line.detail).toContain("a tradie cannot finish a job without one");
+  });
+
+  it("is ready once the storage address and secret key are set", async () => {
+    vi.stubEnv("VERCEL", "1");
+    vi.stubEnv("SUPABASE_URL", "https://abcdefgh.supabase.co");
+    vi.stubEnv("SUPABASE_SECRET_KEY", "sb_secret_example");
+    expect(await statusOf("photos")).toMatchObject({ state: "ok", detail: expect.stringContaining('"hostfix" bucket') });
+  });
+
+  it("catches the publishable key being pasted in by mistake", async () => {
+    vi.stubEnv("VERCEL", "1");
+    vi.stubEnv("SUPABASE_URL", "https://abcdefgh.supabase.co");
+    vi.stubEnv("SUPABASE_SECRET_KEY", "sb_publishable_example");
+    expect(await statusOf("photos")).toMatchObject({ state: "problem", detail: expect.stringContaining("publishable key") });
   });
 });

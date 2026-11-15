@@ -293,6 +293,30 @@ describe("when the card is declined", () => {
     expect(await chargeJob(t.db, gatewayFor(t.db), job.id)).toBe("skipped");
     expect(await payout(job.id)).toMatchObject({ status: "waiting" });
   });
+
+  it("lets a person on the team try the card again after the automatic tries have stopped, and pays the tradie once it goes through", async () => {
+    const s = await setup({ card: "declines" });
+    const job = await onSite(s);
+    await finish(s, job.id);
+    for (let attempt = 0; attempt < MAX_CHARGE_ATTEMPTS; attempt += 1) {
+      setTestNow(addHours(MONDAY_10AM, 24 * attempt));
+      await chargeJob(t.db, gatewayFor(t.db), job.id);
+    }
+    setTestNow(addHours(MONDAY_10AM, 24 * 6));
+
+    // Still the declining card: the manual try fails too, and is counted.
+    expect(await chargeJob(t.db, gatewayFor(t.db), job.id, { force: true })).toBe("failed");
+    expect(await payment(job.id)).toMatchObject({ status: "failed", attempts: 5 });
+
+    // The owner updates their card. The next manual try charges it, exactly once.
+    await saveBilling(t.db, { ownerId: s.owner.ownerId, country: "NZ", provider: "demo", customerId: "demo_cus_fixed", card: DEMO_CARD_OK });
+    expect(await chargeJob(t.db, gatewayFor(t.db), job.id, { force: true })).toBe("succeeded");
+    expect(await chargeJob(t.db, gatewayFor(t.db), job.id, { force: true })).toBe("skipped");
+    expect(await payment(job.id)).toMatchObject({ status: "succeeded", attempts: 6 });
+    expect(await payout(job.id)).toMatchObject({ status: "scheduled" });
+    expect(await openExceptions(t.db, job.id)).toEqual([]);
+    expect((await moneyLog(job.id)).filter((line) => line.startsWith("payment.succeeded"))).toHaveLength(1);
+  });
 });
 
 describe("when the owner says something is wrong", () => {
