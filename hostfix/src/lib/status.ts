@@ -2,6 +2,7 @@ import "server-only";
 import fs from "node:fs";
 import { brand } from "@config/brand";
 import { launchMarket } from "@config/markets";
+import { now } from "@/lib/clock";
 import { countEditMarkers, landingFile } from "@/lib/content";
 import { env, isVercel } from "@/lib/env";
 import { metaPixelId, metaSettings } from "@/lib/meta/capi";
@@ -9,7 +10,9 @@ import { ALERT_SMS_FORMAT_HELP, alertEmailRecipients, alertSmsNumbers } from "@/
 import { emailSettings, usingResendTestSender } from "@/lib/notify/email";
 import { smsSettings } from "@/lib/notify/sms";
 import { depositAvailability } from "@/lib/payments/deposit";
-import { databaseSettings } from "@/lib/db";
+import { databaseSettings, getDb } from "@/lib/db";
+import { lastTick } from "@/lib/dispatch/tick";
+import { storageSettings } from "@/lib/files/store";
 import { getStore, storeKind } from "@/lib/store";
 
 /**
@@ -134,8 +137,48 @@ export async function setupStatus(): Promise<StatusItem[]> {
       detail: "Connected in TEST mode. No real money moves. Swap in your live Stripe key and webhook secret when you are ready.",
     });
   } else {
-    items.push({ key: "payments", label: "Card payments", state: "ok", detail: "Connected and taking real payments." });
+    items.push({
+      key: "payments", label: "Card payments", state: "ok",
+      detail: "Connected and taking real payments. Paying tradies also needs Connect switched on in Stripe, and the extra webhook events ticked (SETUP.md).",
+    });
   }
+
+  // The timer
+  const cronSecret = env("CRON_SECRET");
+  if (kind === "demo") {
+    items.push({ key: "timer", label: "The timer", state: "todo", detail: "Demo mode: the app runs its own timer every 20 seconds. On the live site Vercel runs it once a minute." });
+  } else if (!cronSecret || cronSecret.length < 16) {
+    items.push({
+      key: "timer", label: "The timer", state: "problem",
+      detail: "CRON_SECRET is not set (it needs at least 16 characters). Without it offers never move on to the next tradie, missed promises are not credited and tradies are not paid.",
+    });
+  } else {
+    let last: Date | null = null;
+    try {
+      last = (await lastTick(await getDb()))?.at ?? null;
+    } catch {
+      // Reported by the database line above.
+    }
+    const minutes = last ? Math.round((now().getTime() - last.getTime()) / 60_000) : null;
+    items.push(
+      minutes !== null && minutes <= 5
+        ? { key: "timer", label: "The timer", state: "ok", detail: `Running. It last ran ${minutes <= 1 ? "in the last minute" : `${minutes} minutes ago`}.` }
+        : {
+            key: "timer", label: "The timer", state: "problem",
+            detail: `${minutes === null ? "It has never run." : `It last ran ${minutes} minutes ago.`} It should run every minute. Check the site is on Vercel's Pro plan and that Cron Jobs shows /api/cron/tick (SETUP.md).`,
+          },
+    );
+  }
+
+  // Photos
+  const storage = storageSettings();
+  items.push(
+    "problem" in storage
+      ? kind === "demo"
+        ? { key: "photos", label: "Photo storage", state: "todo", detail: "Demo mode: photos are kept in a folder on this computer. Connect Supabase Storage before going live." }
+        : { key: "photos", label: "Photo storage", state: "problem", detail: `${storage.problem} Until it is set, nobody can add photos, and a tradie cannot finish a job without one.` }
+      : { key: "photos", label: "Photo storage", state: "ok", detail: `Photos are kept privately in the "${storage.bucket}" bucket.` },
+  );
 
   // Meta
   const pixel = metaPixelId();

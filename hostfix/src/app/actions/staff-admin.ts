@@ -26,10 +26,14 @@ import { createTradie, TradieError } from "@/lib/tradies/service";
  */
 
 function refreshMarkets(slug?: string) {
-  // The public pages keep a copy of prices for up to an hour. This throws the copy away at once.
+  // The public pages keep a copy of prices for up to an hour. This throws the
+  // copies away at once, including a "not found" kept for a market's page from
+  // before it was opened to the public.
   updateTag(MARKETS_TAG);
-  revalidatePath("/admin/markets");
-  if (slug) revalidatePath(`/admin/markets/${slug}`);
+  for (const path of ["/", "/owners", "/tradies", "/sign-up", "/refer", "/admin/markets"]) revalidatePath(path);
+  if (slug) {
+    for (const path of [`/admin/markets/${slug}`, `/in/${slug}`, `/in/${slug}/tradies`]) revalidatePath(path);
+  }
 }
 
 function amount(formData: FormData, name: string, errors: Record<string, string>): number | undefined {

@@ -170,7 +170,7 @@ test.describe("tradie landing page on a phone", () => {
     await expect(page.getByRole("heading", { name: "You're on the list." })).toBeVisible();
 
     await signIn(page);
-    await page.getByRole("link", { name: "Tradies", exact: true }).click();
+    await page.getByRole("navigation", { name: "Filter leads" }).getByRole("link", { name: "Tradies", exact: true }).click();
     await expect(page).toHaveURL(`${BASE}/admin/leads?type=tradie`);
     const card = leadCard(page, name);
     await expect(card).toContainText("Tradie");

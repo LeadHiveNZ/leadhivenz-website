@@ -41,6 +41,24 @@ function building(): boolean {
   return process.env.NEXT_PHASE === "phase-production-build";
 }
 
+/** Reads the public markets straight from the database. */
+async function fromDatabase(): Promise<PublicMarket[]> {
+  const db = await getDb();
+  const found = (await listMarkets(db)).filter((market) => market.stage === "waitlist" || market.stage === "live" || market.stage === "paused");
+  const result: PublicMarket[] = [];
+  for (const market of found) {
+    const menu = await listMenu(db, market.slug);
+    result.push({
+      market,
+      menu: menu.map((item) => ({
+        code: item.code, trade: item.trade, name: item.name, ownerPriceCents: item.ownerPriceCents, tradiePayoutCents: item.tradiePayoutCents,
+        licenceRequired: item.licenceRequired, tryFirst: item.tryFirst,
+      })),
+    });
+  }
+  return result;
+}
+
 /** Every market the public may see (waitlist or live), oldest first. */
 export async function publicMarkets(): Promise<PublicMarket[]> {
   "use cache";
@@ -56,23 +74,25 @@ export async function publicMarkets(): Promise<PublicMarket[]> {
     return configuredMarkets.map((market) => fromConfig(sample && market.slug === launchMarket.slug ? { ...market, stage: "live" } : market));
   }
   try {
-    const db = await getDb();
-    const found = (await listMarkets(db)).filter((market) => market.stage === "waitlist" || market.stage === "live" || market.stage === "paused");
-    if (found.length === 0) return configuredMarkets.map(fromConfig);
-    const result: PublicMarket[] = [];
-    for (const market of found) {
-      const menu = await listMenu(db, market.slug);
-      result.push({
-        market,
-        menu: menu.map((item) => ({
-          code: item.code, trade: item.trade, name: item.name, ownerPriceCents: item.ownerPriceCents, tradiePayoutCents: item.tradiePayoutCents,
-          licenceRequired: item.licenceRequired, tryFirst: item.tryFirst,
-        })),
-      });
-    }
-    return result;
+    const found = await fromDatabase();
+    return found.length === 0 ? configuredMarkets.map(fromConfig) : found;
   } catch {
     return configuredMarkets.map(fromConfig);
+  }
+}
+
+/**
+ * One market, read from the database this instant rather than from the kept
+ * copy. Used only when the kept copy does not have the market, which is the
+ * case for a few moments after a new market is opened to the public. Call it
+ * only after `await connection()`.
+ */
+export async function publicMarketNow(slug: string): Promise<PublicMarket | null> {
+  if (databaseKind() === "none") return null;
+  try {
+    return (await fromDatabase()).find((entry) => entry.market.slug === slug) ?? null;
+  } catch {
+    return null;
   }
 }
 

@@ -57,8 +57,10 @@ export async function submitOwnerLead(page: Page, base: string, details: OwnerDe
 export async function signIn(page: Page, base: string = E2E.plainUrl) {
   await page.goto(`${base}/admin`);
   await page.getByLabel("Password").fill(E2E.adminPassword);
-  await page.getByRole("button", { name: "Sign in" }).click();
-  await expect(page).toHaveURL(`${base}/admin/leads`);
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  // The team lands on the queue. The leads are one tap away.
+  await expect(page).toHaveURL(`${base}/admin/queue`);
+  await page.goto(`${base}/admin/leads`);
   await expect(page.getByRole("heading", { name: "Leads", exact: true })).toBeVisible();
 }
 

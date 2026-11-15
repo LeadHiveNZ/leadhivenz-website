@@ -12,7 +12,7 @@ test.describe("the leads are private", () => {
   test("the leads list sends a signed-out visitor to the sign-in page", async ({ page }) => {
     await page.goto("/admin/leads");
     await expect(page).toHaveURL(`${BASE}/admin`);
-    await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Team sign-in" })).toBeVisible();
     await expect(page.locator("li[data-lead-id]")).toHaveCount(0);
   });
 
@@ -41,7 +41,7 @@ test.describe("the leads are private", () => {
   test("the wrong password is refused", async ({ page }) => {
     await page.goto("/admin");
     await page.getByLabel("Password").fill("definitely-not-it");
-    await page.getByRole("button", { name: "Sign in" }).click();
+    await page.getByRole("button", { name: "Sign in", exact: true }).click();
     await expect(formAlert(page)).toContainText("That password isn't right.");
     await expect(page).toHaveURL(`${BASE}/admin`);
   });
@@ -51,14 +51,14 @@ test.describe("the leads are private", () => {
     await page.goto("/admin");
     for (let attempt = 0; attempt < 8; attempt += 1) {
       await page.getByLabel("Password").fill(`wrong-${attempt}`);
-      await page.getByRole("button", { name: "Sign in" }).click();
+      await page.getByRole("button", { name: "Sign in", exact: true }).click();
       await expect(formAlert(page)).toContainText("That password isn't right.");
       // The box is emptied once the answer has come back. Wait for that before the next try.
       await expect(page.getByLabel("Password")).toHaveValue("");
-      await expect(page.getByRole("button", { name: "Sign in" })).toBeEnabled();
+      await expect(page.getByRole("button", { name: "Sign in", exact: true })).toBeEnabled();
     }
     await page.getByLabel("Password").fill(E2E.adminPassword);
-    await page.getByRole("button", { name: "Sign in" }).click();
+    await page.getByRole("button", { name: "Sign in", exact: true }).click();
     await expect(formAlert(page)).toContainText("Too many tries. Please wait 15 minutes and try again.");
     await expect(page).toHaveURL(`${BASE}/admin`);
   });
@@ -87,12 +87,12 @@ test.describe("signed in", () => {
     await expect(checklist.locator('[data-status-key="copy"]')).toContainText("[EDIT] placeholder");
     await expect(checklist.locator('[data-status-key="legal"]')).toContainText("A lawyer needs to write them");
 
-    // Visiting the sign-in page while signed in goes straight to the leads.
+    // Visiting the sign-in page while signed in goes straight to the team's queue.
     await page.goto("/admin");
-    await expect(page).toHaveURL(`${BASE}/admin/leads`);
+    await expect(page).toHaveURL(`${BASE}/admin/queue`);
 
     await page.getByRole("button", { name: "Sign out" }).click();
-    await expect(page).toHaveURL(`${BASE}/admin`);
+    await expect(page).toHaveURL(`${BASE}/`);
     await page.goto("/admin/leads");
     await expect(page).toHaveURL(`${BASE}/admin`);
   });

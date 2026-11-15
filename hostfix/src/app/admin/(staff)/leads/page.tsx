@@ -86,7 +86,7 @@ async function LeadsDashboard({ searchParams }: { searchParams: SearchParams }) 
 
       {storeKind() === "demo" && (
         <p className="rounded-xl border border-wait/40 bg-wait-soft px-4 py-3 text-sm font-medium text-ink">
-          Demo mode. These leads are saved in a file on this computer only, and alerts are not really sent.
+          Demo mode. Everything is kept on this computer only, and alerts are not really sent.
         </p>
       )}
       {loadProblem && (
