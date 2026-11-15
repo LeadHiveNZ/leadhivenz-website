@@ -9,7 +9,8 @@ import { ALERT_SMS_FORMAT_HELP, alertEmailRecipients, alertSmsNumbers } from "@/
 import { emailSettings, usingResendTestSender } from "@/lib/notify/email";
 import { smsSettings } from "@/lib/notify/sms";
 import { depositAvailability } from "@/lib/payments/deposit";
-import { getStore, storeKind, supabaseSettings } from "@/lib/store";
+import { databaseSettings } from "@/lib/db";
+import { getStore, storeKind } from "@/lib/store";
 
 /**
  * THE SETUP CHECKLIST shown on the admin page. Each line says, in plain words,
@@ -46,23 +47,31 @@ export async function setupStatus(): Promise<StatusItem[]> {
 
   // Database
   const kind = storeKind();
-  if (kind === "supabase") {
-    const health = await getStore().health();
-    items.push({ key: "database", label: "Database", state: health.ok ? "ok" : "problem", detail: health.detail });
+  if (kind === "postgres") {
+    const settings = databaseSettings();
+    if ("problem" in settings) {
+      items.push({ key: "database", label: "Database", state: "problem", detail: `${settings.problem} Nothing can be saved until this is fixed.` });
+    } else {
+      const health = await getStore().health();
+      const detail =
+        health.ok && settings.settings.ssl !== false && !settings.settings.ssl.rejectUnauthorized
+          ? `${health.detail} The connection is encrypted. Optional extra: add DATABASE_CA_CERT so the server's identity is checked too (SETUP.md).`
+          : health.detail;
+      items.push({ key: "database", label: "Database", state: health.ok ? "ok" : "problem", detail });
+    }
   } else if (kind === "demo") {
     items.push({
       key: "database",
       label: "Database",
       state: "todo",
-      detail: "Demo mode: leads are saved in a file on this computer only. Connect Supabase before going live.",
+      detail: "Demo mode: everything is kept in a folder on this computer only. Connect Supabase before going live.",
     });
   } else {
-    const settings = supabaseSettings();
     items.push({
       key: "database",
       label: "Database",
       state: "problem",
-      detail: `${"problem" in settings ? settings.problem : "Not connected."} Leads cannot be saved until this is fixed.`,
+      detail: "DATABASE_URL is not set. Nothing can be saved until this is fixed.",
     });
   }
 

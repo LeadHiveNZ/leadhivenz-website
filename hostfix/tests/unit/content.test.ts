@@ -160,10 +160,10 @@ describe("placeholders", () => {
       name: "Noosa",
       countryName: "Australia",
       currency: "AUD" as const,
-      tiers: [
-        { key: "essential" as const, name: "Essential", monthlyPriceCents: 10900 },
-        { key: "priority" as const, name: "Priority", monthlyPriceCents: 16950 },
-      ],
+      tiers: launchMarket.tiers.map((tier) => ({
+        ...tier,
+        monthlyPriceCents: tier.key === "essential" ? 10900 : 16950,
+      })),
       foundingDeposit: { enabled: true, amountCents: 5900, terms: [] },
     };
     expect(contentTokens(noosa)).toMatchObject({ market: "Noosa", deposit: "A$59", essential: "A$109", priority: "A$169.50" });

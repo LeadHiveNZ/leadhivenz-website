@@ -102,6 +102,7 @@ function clean(params: unknown[] | undefined): unknown[] | undefined {
 }
 
 function bound(client: Queryable): Db {
+  let savepoints = 0;
   const db: Db = {
     kind: "postgres",
     async query<T>(sql: string, params?: unknown[]) {
@@ -111,8 +112,20 @@ function bound(client: Queryable): Db {
     async exec(sql: string) {
       await client.query(sql);
     },
-    // Already inside a step: join it.
-    tx: (fn) => fn(db),
+    // Already inside a step. A savepoint lets this inner part be undone on
+    // its own if it fails, without undoing what came before it.
+    async tx<T>(fn: (inner: Db) => Promise<T>): Promise<T> {
+      const name = `sp_${++savepoints}`;
+      await client.query(`savepoint ${name}`);
+      try {
+        const result = await fn(db);
+        await client.query(`release savepoint ${name}`);
+        return result;
+      } catch (error) {
+        await client.query(`rollback to savepoint ${name}`).catch(() => {});
+        throw error;
+      }
+    },
   };
   return db;
 }

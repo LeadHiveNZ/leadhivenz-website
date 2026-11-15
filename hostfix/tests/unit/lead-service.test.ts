@@ -1,21 +1,13 @@
-import { mkdtemp, rm } from "node:fs/promises";
-import os from "node:os";
-import path from "node:path";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { launchMarket } from "@config/markets";
 import { MIN_FILL_MS, RATE_LIMIT_MAX, submitLead, type RawLeadForm, type SubmitDeps } from "@/lib/leads/service";
-import { DemoStore } from "@/lib/store/demo";
+import { SqlLeadStore } from "@/lib/store/sql";
 import type { Lead, LeadStore } from "@/lib/store/types";
+import { testDb } from "./db";
 
-const folders: string[] = [];
-afterEach(async () => {
-  await Promise.all(folders.splice(0).map((folder) => rm(folder, { recursive: true, force: true })));
-});
-
-async function freshStore(): Promise<DemoStore> {
-  const folder = await mkdtemp(path.join(os.tmpdir(), "hostfix-svc-"));
-  folders.push(folder);
-  return new DemoStore(path.join(folder, "demo-db.json"));
+const t = testDb();
+async function freshStore(): Promise<SqlLeadStore> {
+  return new SqlLeadStore(async () => t.db, "demo");
 }
 
 const NOW = new Date("2026-11-15T02:00:00.000Z");

@@ -35,23 +35,28 @@ describe("database line", () => {
     expect(await statusOf("database")).toMatchObject({ state: "todo", detail: expect.stringContaining("Demo mode") });
   });
 
-  it("is a problem on the live site until Supabase is connected", async () => {
+  it("is a problem on the live site until the database is connected", async () => {
     vi.stubEnv("VERCEL", "1");
     expect(await statusOf("database")).toEqual({
       key: "database",
       label: "Database",
       state: "problem",
-      detail: "SUPABASE_URL and SUPABASE_SECRET_KEY are not set. Leads cannot be saved until this is fixed.",
+      detail: "DATABASE_URL is not set. Nothing can be saved until this is fixed.",
     });
   });
 
-  it("catches the publishable key being pasted where the secret key belongs", async () => {
+  it("catches the wrong kind of database address being pasted in", async () => {
     vi.stubEnv("VERCEL", "1");
-    vi.stubEnv("SUPABASE_URL", "https://abc.supabase.co");
-    vi.stubEnv("SUPABASE_SECRET_KEY", "sb_publishable_abc");
+    vi.stubEnv("DATABASE_URL", "postgresql://postgres:secret@db.abcdefgh.supabase.co:5432/postgres");
     const database = await statusOf("database");
     expect(database.state).toBe("problem");
-    expect(database.detail).toContain("holds the publishable key");
+    expect(database.detail).toContain("Transaction pooler");
+  });
+
+  it("catches the password placeholder being left in", async () => {
+    vi.stubEnv("VERCEL", "1");
+    vi.stubEnv("DATABASE_URL", "postgresql://postgres.abc:[YOUR-PASSWORD]@aws-0-ap-southeast-2.pooler.supabase.com:6543/postgres");
+    expect((await statusOf("database")).detail).toContain("[YOUR-PASSWORD]");
   });
 });
 

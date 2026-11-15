@@ -244,6 +244,8 @@ export async function submitLead(
     stripeCustomerId: null,
     depositPaidAt: null,
     depositRefundedAt: null,
+    convertedAt: null,
+    invitedAt: null,
   };
   try {
     const outcome = await deps.sendLeadAlert(unsaved, { saved: false }, null);

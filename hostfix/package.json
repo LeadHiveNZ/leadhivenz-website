@@ -6,7 +6,7 @@
     "dev": "next dev",
     "demo": "HOSTFIX_DEMO=1 next dev",
     "prebuild": "vitest run",
-    "build": "next build",
+    "build": "npm run db:migrate && next build",
     "start": "next start",
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
@@ -14,7 +14,8 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test --trace off",
     "test:db": "scripts/db-test.sh",
-    "check": "npm run lint && npm run typecheck && npm run test"
+    "check": "npm run lint && npm run typecheck && npm run test",
+    "db:migrate": "node --no-warnings scripts/migrate.ts"
   },
   "dependencies": {
     "@electric-sql/pglite": "^0.5.16",

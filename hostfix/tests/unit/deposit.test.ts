@@ -1,8 +1,5 @@
-import { mkdtemp, rm } from "node:fs/promises";
-import os from "node:os";
-import path from "node:path";
 import type Stripe from "stripe";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { launchMarket, type Market } from "@config/markets";
 import {
   buildDepositSessionParams,
@@ -16,18 +13,14 @@ import {
   type DepositDeps,
 } from "@/lib/payments/deposit";
 import { stripeAccount, stripeClient, type StripeAccount } from "@/lib/payments/stripe";
-import { DemoStore } from "@/lib/store/demo";
+import { SqlLeadStore } from "@/lib/store/sql";
 import type { Lead } from "@/lib/store/types";
+import { testDb } from "./db";
 import { ownerLead, tradieLead } from "./store-contract";
 
-const folders: string[] = [];
-afterEach(async () => {
-  await Promise.all(folders.splice(0).map((folder) => rm(folder, { recursive: true, force: true })));
-});
-async function freshStore(): Promise<DemoStore> {
-  const folder = await mkdtemp(path.join(os.tmpdir(), "hostfix-deposit-"));
-  folders.push(folder);
-  return new DemoStore(path.join(folder, "demo-db.json"));
+const t = testDb();
+async function freshStore(): Promise<SqlLeadStore> {
+  return new SqlLeadStore(async () => t.db, "demo");
 }
 
 const account: StripeAccount = { country: "NZ", secretKey: "sk_test_abc123", webhookSecret: "whsec_test_secret", mode: "test" };
@@ -37,7 +30,7 @@ const quiet = { error: vi.fn(), warn: vi.fn(), info: vi.fn() };
 
 type Sent = { template: string; leadId: string | null; sms: string };
 
-function harness(store: DemoStore) {
+function harness(store: SqlLeadStore) {
   const sent: Sent[] = [];
   const deferred: (() => Promise<void>)[] = [];
   const deps: DepositDeps = {

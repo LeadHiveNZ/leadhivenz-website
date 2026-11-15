@@ -22,7 +22,8 @@ export interface Db {
 
   /**
    * Runs everything inside `fn` as one step: either all of it happens or none
-   * of it does. Calling tx() again inside simply joins the step already open.
+   * of it does. Calling tx() again inside opens a part that can fail and be
+   * undone on its own without undoing the rest.
    */
   tx<T>(fn: (db: Db) => Promise<T>): Promise<T>;
 }

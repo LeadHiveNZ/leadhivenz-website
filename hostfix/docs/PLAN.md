@@ -6,9 +6,8 @@
 > Build order and where things stand (updated at each save):
 > 1. Database foundations: one SQL layer (`src/lib/db`), live Postgres plus an in-app copy for demo and tests,
 >    migrations applied at build time (`scripts/migrate.ts`), full schema in
->    `supabase/migrations/20261116000000_product.sql`. **IN PROGRESS** (driver files and schema written; still to do:
->    `src/lib/db/index.ts`, `scripts/migrate.ts`, move the Phase 0 leads store onto it, delete `store/demo.ts` and
->    `store/supabase.ts`, test helpers).
+>    `supabase/migrations/20261116000000_product.sql`, Phase 0 leads moved onto it, tests run on real SQL
+>    (`tests/unit/db.ts`). **DONE.**
 > 2. Accounts and sign-in (codes by email or text, database sessions, staff roles). Not started.
 > 3. Phase 1 owners, properties, membership billing, report links and QR. Not started.
 > 4. Phase 2 jobs, pricing lines, offer cascade, tradie job page, quotes, status texts, timer tick. Not started.
@@ -18,7 +17,8 @@
 > 8. Clickable demo: sample data, demo phone, skip-ahead clock. Not started.
 > 9. Tests, browser checks, docs (`docs/MARKET-RESEARCH.md`, SETUP, RUNBOOK), final save. Not started.
 >
-> Research already in: `docs/research/maintenance-networks.md`, `docs/research/short-stay-software.md`.
+> Research in (all four studies): `docs/research/`. Still to write: the plain-words summary `docs/MARKET-RESEARCH.md`.
+> Design direction chosen from the benchmark: plum and lime palette, "door ajar" mark, heavy grotesque headlines.
 > Decisions taken for the deeper build: connect to Postgres directly (not through Supabase's web API) so the same
 > SQL runs live, in demo and in tests; the app sends its own sign-in codes instead of using Supabase login;
 > Vercel's every-minute timer drives the 15-minute offer clock; Stripe subscriptions per property, saved card

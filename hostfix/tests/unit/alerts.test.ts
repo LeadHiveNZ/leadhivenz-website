@@ -1,7 +1,4 @@
-import { mkdtemp, rm } from "node:fs/promises";
-import os from "node:os";
-import path from "node:path";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   alertEmailRecipients,
   alertSmsNumbers,
@@ -16,18 +13,14 @@ import {
   testAlertContent,
 } from "@/lib/notify/alerts";
 import { isGsm7, smsParts } from "@/lib/notify/gsm";
-import { DemoStore } from "@/lib/store/demo";
+import { SqlLeadStore } from "@/lib/store/sql";
 import type { Lead } from "@/lib/store/types";
+import { testDb } from "./db";
 import { fakeFetch, jsonReply } from "./helpers";
 
-const folders: string[] = [];
-afterEach(async () => {
-  await Promise.all(folders.splice(0).map((folder) => rm(folder, { recursive: true, force: true })));
-});
-async function freshStore(): Promise<DemoStore> {
-  const folder = await mkdtemp(path.join(os.tmpdir(), "hostfix-alerts-"));
-  folders.push(folder);
-  return new DemoStore(path.join(folder, "demo-db.json"));
+const t = testDb();
+async function freshStore(): Promise<SqlLeadStore> {
+  return new SqlLeadStore(async () => t.db, "demo");
 }
 
 function lead(overrides: Partial<Lead> = {}): Lead {
@@ -65,6 +58,8 @@ function lead(overrides: Partial<Lead> = {}): Lead {
     stripeCustomerId: null,
     depositPaidAt: null,
     depositRefundedAt: null,
+    convertedAt: null,
+    invitedAt: null,
     ...overrides,
   };
 }

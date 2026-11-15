@@ -32,6 +32,7 @@ function clean(params: unknown[] | undefined): unknown[] | undefined {
 }
 
 function bound(tx: PGliteTransaction): Db {
+  let savepoints = 0;
   const db: Db = {
     kind: "embedded",
     async query<T>(sql: string, params?: unknown[]) {
@@ -40,7 +41,20 @@ function bound(tx: PGliteTransaction): Db {
     async exec(sql: string) {
       await tx.exec(sql);
     },
-    tx: (fn) => fn(db),
+    // Already inside a step. A savepoint lets this inner part be undone on
+    // its own if it fails, without undoing what came before it.
+    async tx<T>(fn: (inner: Db) => Promise<T>): Promise<T> {
+      const name = `sp_${++savepoints}`;
+      await tx.exec(`savepoint ${name}`);
+      try {
+        const result = await fn(db);
+        await tx.exec(`release savepoint ${name}`);
+        return result;
+      } catch (error) {
+        await tx.exec(`rollback to savepoint ${name}`).catch(() => {});
+        throw error;
+      }
+    },
   };
   return db;
 }

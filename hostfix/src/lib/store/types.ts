@@ -1,12 +1,10 @@
 /**
- * The shapes of the data we keep, and the list of things the app can ask the
- * database to do. There are two implementations of LeadStore:
- *   - supabase.ts  the real database
- *   - demo.ts      a file on this computer, for trying things with no accounts
+ * The shapes of the lead data we keep, and the list of things the app can ask
+ * the database to do with leads. The one implementation is sql.ts.
  */
 
 export type LeadType = "owner" | "tradie";
-export type DepositStatus = "none" | "started" | "paid" | "refunded";
+export type DepositStatus = "none" | "started" | "paid" | "refunded" | "credited";
 
 export type Lead = {
   id: string;
@@ -48,6 +46,10 @@ export type Lead = {
   stripeCustomerId: string | null;
   depositPaidAt: string | null;
   depositRefundedAt: string | null;
+  /** When this lead became a signed-up owner or an approved tradie. */
+  convertedAt: string | null;
+  /** When they were last invited to sign up. */
+  invitedAt: string | null;
 };
 
 /** What is needed to create a lead. The database fills in the rest. */
@@ -78,7 +80,7 @@ export type NewLead = Pick<
 >;
 
 export type NotificationChannel = "sms" | "email";
-export type NotificationStatus = "sent" | "failed" | "skipped";
+export type NotificationStatus = "queued" | "sent" | "failed" | "skipped" | "demo";
 
 export type NotificationRecord = {
   channel: NotificationChannel;
@@ -140,7 +142,7 @@ export type DepositRefundedArgs = {
 };
 
 export interface LeadStore {
-  readonly kind: "supabase" | "demo";
+  readonly kind: "postgres" | "demo";
 
   insertLead(lead: NewLead): Promise<Lead>;
   /** The newest lead of this type and phone number created at or after `sinceIso`. */
@@ -169,7 +171,7 @@ export interface LeadStore {
 
 export class StoreNotConfiguredError extends Error {
   constructor() {
-    super("The database is not connected yet. Add the Supabase settings (see SETUP.md).");
+    super("The database is not connected yet. Add DATABASE_URL (see SETUP.md).");
     this.name = "StoreNotConfiguredError";
   }
 }
