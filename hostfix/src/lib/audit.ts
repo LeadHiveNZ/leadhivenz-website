@@ -57,7 +57,7 @@ export async function auditTrail(db: Db, filter: { entity?: string; entityId?: s
     `select id, at, actor, action, entity, entity_id, amount, currency, detail
        from public.audit_log
       where ($1::text is null or entity = $1) and ($2::text is null or entity_id = $2)
-      order by id ${filter.newestFirst ? "desc" : "asc"} limit $3`,
+      order by at ${filter.newestFirst ? "desc" : "asc"}, id ${filter.newestFirst ? "desc" : "asc"} limit $3`,
     [filter.entity ?? null, filter.entityId ?? null, filter.limit ?? 500],
   );
   return rows.map((row) => ({

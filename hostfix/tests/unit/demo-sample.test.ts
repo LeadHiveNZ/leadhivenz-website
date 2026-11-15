@@ -1,0 +1,70 @@
+import { afterEach, describe, expect, it } from "vitest";
+import { setTestNow } from "@/lib/clock";
+import { buildSampleData } from "@/lib/demo/sample";
+import { listExceptions } from "@/lib/ops/exceptions";
+import { testDb } from "./db";
+
+/**
+ * The demo's sample business is made by running the real rules in order with
+ * the clock wound back. This test builds it and checks that every job ended
+ * up where the demo menu says it will. If a rule changes in a way that breaks
+ * the story, this fails rather than the demo quietly starting empty.
+ */
+
+const t = testDb();
+afterEach(() => setTestNow(null));
+
+describe("the demo's sample data", () => {
+  it("builds through the real rules and leaves each job at the right point", async () => {
+    const people = await buildSampleData(t.db, null, new Date("2026-11-18T01:30:00.000Z")); // a Wednesday afternoon in Queenstown
+    expect(people.map((person) => person.key)).toEqual(expect.arrayContaining(["sam", "dave", "maria", "admin", "emma"]));
+    expect(people.filter((person) => person.role === "owner")).toHaveLength(3);
+
+    const jobs = await t.db.query<{ number: number; title: string; status: string; outcome: string | null; window_missed_at: Date | null }>(
+      "select number, title, status, outcome, window_missed_at from public.jobs order by number",
+    );
+    expect(jobs.map((job) => job.status)).toEqual([
+      "completed", // 1 done and paid
+      "completed", // 2 promise missed, credited, then done
+      "completed", // 3 done, then a problem raised
+      "completed", // 4 done, card declined
+      "awaiting_approval", // 5 quote waiting for the owner
+      "accepted", // 6 urgent, tradie on the way
+      "unfilled", // 7 nobody accepted
+      "awaiting_owner", // 8 guest report
+      "offering", // 9 on offer now
+    ]);
+    expect(jobs[1]!.window_missed_at).not.toBeNull();
+
+    // Money: three charged, one declined; one payout sent, one on hold, one waiting on the card.
+    const payments = await t.db.query<{ status: string }>("select p.status from public.payments p join public.jobs j on j.id = p.job_id order by j.number");
+    expect(payments.map((row) => row.status)).toEqual(["succeeded", "succeeded", "succeeded", "failed"]);
+    const payouts = await t.db.query<{ status: string }>("select p.status from public.payouts p join public.jobs j on j.id = p.job_id order by j.number");
+    expect(payouts.map((row) => row.status)).toEqual(["sent", "sent", "paused", "waiting"]);
+
+    // The guarantee: one credit for the missed promise, passed on to the payment company.
+    const credits = await t.db.query<{ reason: string; status: string }>("select reason, status from public.credits");
+    expect(credits).toEqual([{ reason: "missed_window", status: "applied" }]);
+
+    // The dispatcher's queue holds exactly the three things that need a person.
+    const open = await listExceptions(t.db, { status: "open" });
+    expect(open.map((item) => item.kind).sort()).toEqual(["dispute", "nobody_accepted", "payment_failed"]);
+
+    // The live offer is with the first-choice plumber and has not run out.
+    const offers = await t.db.query<{ business_name: string; status: string }>(
+      `select t.business_name, o.status from public.offers o join public.tradies t on t.id = o.tradie_id join public.jobs j on j.id = o.job_id where j.number = $1`,
+      [jobs[8]!.number],
+    );
+    expect(offers).toEqual([{ business_name: "Dave's Plumbing & Gas", status: "pending" }]);
+
+    // Every text was kept for the demo phone, and none is still waiting to go.
+    const waiting = await t.db.query("select 1 from public.notifications where status = 'queued'");
+    expect(waiting).toHaveLength(0);
+    const texts = await t.db.query<{ count: number }>("select count(*) as count from public.notifications where channel = 'sms'");
+    expect(Number(texts[0]!.count)).toBeGreaterThan(25);
+
+    // A referral is under way, and a tradie is waiting for approval.
+    expect(await t.db.query("select 1 from public.referrals where status = 'pending'")).toHaveLength(1);
+    expect(await t.db.query("select 1 from public.tradies where status = 'applied'")).toHaveLength(1);
+  });
+});

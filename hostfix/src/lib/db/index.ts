@@ -37,18 +37,14 @@ type Holder = { key: string; db: Promise<Db> };
 // same database twice.
 const holder = globalThis as typeof globalThis & { __hostfixDb?: Holder };
 
-/** Extra work to do the first time the in-app database is created (sample data). */
-type EmbeddedReady = (db: Db) => Promise<void>;
-let onEmbeddedReady: EmbeddedReady | null = null;
-export function setEmbeddedReadyHook(hook: EmbeddedReady): void {
-  onEmbeddedReady = hook;
-}
-
 async function openEmbedded(): Promise<Db> {
   const db = await createEmbeddedDb({ dataDir: path.join(dataDir(), "pg") });
   await applyMigrations(db, migrationsDir());
   await seedMarkets(db, path.join(process.cwd(), "seed"));
-  if (onEmbeddedReady) await onEmbeddedReady(db);
+  // Demo mode only: sample data (unless HOSTFIX_SAMPLE_DATA=0), the skip-ahead
+  // clock and the timer. Loaded here, on demand, so the live site never carries it.
+  const { prepareDemo } = await import("@/lib/demo/state");
+  await prepareDemo(db, { sampleData: env("HOSTFIX_SAMPLE_DATA") !== "0" });
   return db;
 }
 

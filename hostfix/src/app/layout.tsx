@@ -3,7 +3,7 @@ import localFont from "next/font/local";
 import type { CSSProperties, ReactNode } from "react";
 import { GeistSans } from "geist/font/sans";
 import { brand } from "@config/brand";
-import { baseUrl } from "@/lib/env";
+import { baseUrl, demoModeAllowed } from "@/lib/env";
 import "./globals.css";
 
 // The headline typeface: a heavy grotesque with some character. The file ships
@@ -54,7 +54,18 @@ const brandColours = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en-NZ" className={`${GeistSans.variable} ${display.variable} h-full antialiased`} style={brandColours}>
-      <body className="flex min-h-full flex-col font-sans">{children}</body>
+      <body className="flex min-h-full flex-col font-sans">
+        {children}
+        {/* Demo mode only (never on the live site): a way back to the demo menu from any screen. */}
+        {demoModeAllowed() && (
+          <a
+            href="/demo"
+            className="no-print fixed bottom-24 left-3 z-40 rounded-full bg-brand-dark px-3 py-1.5 text-xs font-bold text-accent shadow-lg ring-2 ring-white/70 md:bottom-4"
+          >
+            Demo menu
+          </a>
+        )}
+      </body>
     </html>
   );
 }
