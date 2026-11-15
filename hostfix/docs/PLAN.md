@@ -1,5 +1,29 @@
 # HostFix — Plan and data model (v0, 15 Nov 2026)
 
+> **WORK IN PROGRESS (started 15 Nov 2026): the full product is being built on this branch.**
+> Until this note is removed the branch may not build or deploy. Phase 0 exactly as delivered is commit `374ccb7`.
+>
+> Build order and where things stand (updated at each save):
+> 1. Database foundations: one SQL layer (`src/lib/db`), live Postgres plus an in-app copy for demo and tests,
+>    migrations applied at build time (`scripts/migrate.ts`), full schema in
+>    `supabase/migrations/20261116000000_product.sql`. **IN PROGRESS** (driver files and schema written; still to do:
+>    `src/lib/db/index.ts`, `scripts/migrate.ts`, move the Phase 0 leads store onto it, delete `store/demo.ts` and
+>    `store/supabase.ts`, test helpers).
+> 2. Accounts and sign-in (codes by email or text, database sessions, staff roles). Not started.
+> 3. Phase 1 owners, properties, membership billing, report links and QR. Not started.
+> 4. Phase 2 jobs, pricing lines, offer cascade, tradie job page, quotes, status texts, timer tick. Not started.
+> 5. Phase 3 charge on completion, payouts, statements, guarantee credit, disputes. Not started.
+> 6. Phase 4 dispatcher queue, admin dashboard, scorecards, menu editor, add-a-market. Not started.
+> 7. New logo, palette, landing layout, app shell. Not started (waiting on the design research).
+> 8. Clickable demo: sample data, demo phone, skip-ahead clock. Not started.
+> 9. Tests, browser checks, docs (`docs/MARKET-RESEARCH.md`, SETUP, RUNBOOK), final save. Not started.
+>
+> Research already in: `docs/research/maintenance-networks.md`, `docs/research/short-stay-software.md`.
+> Decisions taken for the deeper build: connect to Postgres directly (not through Supabase's web API) so the same
+> SQL runs live, in demo and in tests; the app sends its own sign-in codes instead of using Supabase login;
+> Vercel's every-minute timer drives the 15-minute offer clock; Stripe subscriptions per property, saved card
+> charged on completion, tradie paid by separate transfer after a 24-hour hold.
+
 > **Status, 15 Nov 2026: Phase 0 is built.** See `docs/PHASE-0.md` for what to click and `SETUP.md` to put it online.
 >
 > **Decisions taken when you said "Build it":**
