@@ -48,8 +48,7 @@ type Props = {
  *   anything else            plain paragraphs
  */
 export function LandingPage({ content, eyebrow, formTitle, formNote, form, ctaLabel, closingTitle, closingNote, proof, phone, menu }: Props) {
-  let stepsShown = false;
-  let pricingShown = false;
+  const sections = plan(content.sections);
   return (
     <main className="pb-20 lg:pb-0">
       <section className="relative overflow-hidden">
@@ -90,18 +89,11 @@ export function LandingPage({ content, eyebrow, formTitle, formNote, form, ctaLa
         </div>
       </section>
 
-      {content.sections.map((section) => {
-        const kind = kindOf(section);
-        if (kind === "steps" && !stepsShown) {
-          stepsShown = true;
-          return <Steps key={section.id} section={section} phone={phone} />;
-        }
-        if (kind === "promise") return <Promise key={section.id} section={section} />;
+      {sections.map(({ section, kind }) => {
+        if (kind === "steps") return <Steps key={section.id} section={section} phone={phone} />;
+        if (kind === "promise") return <PromiseBand key={section.id} section={section} />;
         if (kind === "faq") return <Faq key={section.id} section={section} />;
-        if (kind === "pricing" && !pricingShown) {
-          pricingShown = true;
-          return <Pricing key={section.id} section={section} menu={menu ?? null} />;
-        }
+        if (kind === "pricing") return <Pricing key={section.id} section={section} menu={menu ?? null} />;
         if (kind === "features") return <Features key={section.id} section={section} />;
         return <Prose key={section.id} section={section} />;
       })}
@@ -132,6 +124,17 @@ function kindOf(section: Section): Kind {
   if (cards) return "pricing";
   if (blocks.some((block) => block.type === "list")) return "features";
   return "prose";
+}
+
+/** Works out how each section is shown. The phone picture and the menu appear once, with the first section of their kind. */
+function plan(sections: Section[]): { section: Section; kind: Kind }[] {
+  const used = new Set<Kind>();
+  return sections.map((section) => {
+    const wanted = kindOf(section);
+    const kind = (wanted === "steps" || wanted === "pricing") && used.has(wanted) ? "prose" : wanted;
+    used.add(wanted);
+    return { section, kind };
+  });
 }
 
 function Heading({ section, light = false }: { section: Section; light?: boolean }) {
@@ -284,7 +287,7 @@ function Pricing({ section, menu }: { section: Section; menu: MenuPreview | null
   );
 }
 
-function Promise({ section }: { section: Section }) {
+function PromiseBand({ section }: { section: Section }) {
   const quote = section.blocks.find((block): block is Extract<Block, { type: "quote" }> => block.type === "quote");
   const others = section.blocks.filter((block) => block !== quote);
   return (

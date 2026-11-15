@@ -25,7 +25,7 @@ export function sealPending(secret: string, pending: Pending): string {
   return `${body}.${sign(secret, `pending|${body}`)}`;
 }
 
-export function openPending(secret: string, value: string | undefined, nowMs: number): Pending | null {
+export function openPending(secret: string, value: string | undefined, nowMs: number = Date.now()): Pending | null {
   if (!value || value.length > 4000) return null;
   const [body, signature] = value.split(".");
   if (!body || !signature || !safeEqual(signature, sign(secret, `pending|${body}`))) return null;

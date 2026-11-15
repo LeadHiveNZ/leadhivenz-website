@@ -1,0 +1,284 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { jobFromOwnerLink } from "@/lib/access/links";
+import { sendQueued } from "@/lib/after";
+import { raiseDispute } from "@/lib/billing/settle";
+import { currentViewer, requireOwner } from "@/lib/auth/current";
+import { getDb } from "@/lib/db";
+import type { Db } from "@/lib/db/types";
+import { baseUrl } from "@/lib/env";
+import { dollarsToCents, list, problem, text, ticked, type FormState } from "@/lib/forms";
+import { approveGuestReport, cancelJob, createJob } from "@/lib/jobs/create";
+import { getJobForOwner, getQuote } from "@/lib/jobs/store";
+import type { Job } from "@/lib/jobs/types";
+import { decideQuote } from "@/lib/jobs/work";
+import { getMarket } from "@/lib/markets/store";
+import { getBilling, updateOwnerContact } from "@/lib/owners/service";
+import { paymentsFor } from "@/lib/payments";
+import { normalisePhone } from "@/lib/phone";
+import { changeTier, createProperty, getProperty, PropertyError, requestCancel, rotateReportLink, startMembership, updateProperty } from "@/lib/properties/service";
+
+/**
+ * EVERYTHING AN OWNER CAN DO. Each action starts by working out who is
+ * asking, and every lookup after that carries their id, so nobody can act on
+ * a property or job that is not theirs.
+ */
+
+const OFF_MENU = "off-menu";
+
+function propertyFields(formData: FormData) {
+  const fields = {
+    name: text(formData, "name"),
+    addressLine1: text(formData, "addressLine1"),
+    addressLine2: text(formData, "addressLine2") || null,
+    suburb: text(formData, "suburb"),
+    postcode: text(formData, "postcode"),
+    accessNotes: text(formData, "accessNotes"),
+  };
+  const errors: Record<string, string> = {};
+  if (fields.name.length < 1) errors.name = "Give the property a name you will recognise, like Lakeview Apartment.";
+  if (fields.addressLine1.length < 3) errors.addressLine1 = "Enter the street address.";
+  if (fields.suburb.length < 2) errors.suburb = "Enter the suburb or town.";
+  return { fields, errors };
+}
+
+export async function addProperty(_previous: FormState, formData: FormData): Promise<FormState> {
+  const viewer = await requireOwner("/app/properties/new");
+  const { fields, errors } = propertyFields(formData);
+  const market = text(formData, "market");
+  const tierId = text(formData, "tierId");
+  if (!tierId) errors.tierId = "Choose a membership.";
+  if (Object.keys(errors).length > 0) return problem(formData, "Please check the highlighted fields.", errors);
+
+  const db = await getDb();
+  let propertyId: string;
+  try {
+    const property = await createProperty(db, viewer.ownerId, { ...fields, market, tierId, referralCode: text(formData, "ref") || null });
+    propertyId = property.id;
+  } catch (error) {
+    if (error instanceof PropertyError) return problem(formData, error.message);
+    throw error;
+  }
+  redirect(`/app/properties/${propertyId}?added=1`);
+}
+
+export async function saveProperty(_previous: FormState, formData: FormData): Promise<FormState> {
+  const viewer = await requireOwner();
+  const propertyId = text(formData, "propertyId");
+  const { fields, errors } = propertyFields(formData);
+  let spendLimitCents: number | null | undefined;
+  const limit = text(formData, "spendLimit");
+  if (limit !== "") {
+    const cents = dollarsToCents(limit);
+    if (cents === null) errors.spendLimit = "Enter an amount, for example 400.";
+    else spendLimitCents = cents;
+  } else spendLimitCents = null;
+  if (Object.keys(errors).length > 0) return problem(formData, "Please check the highlighted fields.", errors);
+
+  const saved = await updateProperty(await getDb(), viewer.ownerId, propertyId, { ...fields, guestAutoDispatch: ticked(formData, "guestAutoDispatch"), spendLimitCents });
+  if (!saved) return problem(formData, "We could not find that property.");
+  revalidatePath(`/app/properties/${propertyId}`);
+  return { done: "Saved." };
+}
+
+/** Starts the monthly membership. Sends the owner to the card page the first time. */
+export async function beginMembership(_previous: FormState, formData: FormData): Promise<FormState> {
+  const viewer = await requireOwner();
+  const propertyId = text(formData, "propertyId");
+  const db = await getDb();
+  const property = await getProperty(db, viewer.ownerId, propertyId);
+  if (!property) return { message: "We could not find that property." };
+  const tierId = text(formData, "tierId");
+  if (tierId && tierId !== property.tierId) {
+    try {
+      await changeTier(db, null, viewer.ownerId, propertyId, tierId);
+    } catch (error) {
+      if (error instanceof PropertyError) return { message: error.message };
+      throw error;
+    }
+  }
+  const market = await getMarket(db, property.market);
+  const gateway = market ? paymentsFor(db, market.country) : null;
+  if (!gateway) return { message: "Card payments are not switched on yet, so memberships cannot start. Please try again soon." };
+
+  let result;
+  try {
+    result = await startMembership(db, gateway, {
+      ownerId: viewer.ownerId, propertyId,
+      successUrl: `${baseUrl()}/app/membership/return?property=${propertyId}`,
+      cancelUrl: `${baseUrl()}/app/properties/${propertyId}`,
+    });
+  } catch (error) {
+    console.error("[membership] starting a membership failed:", error instanceof Error ? error.message : error);
+    return { message: "The membership could not be started just now. Nothing has been charged. Please try again." };
+  }
+  if (result.kind === "error") return { message: result.message };
+  if (result.kind === "redirect") redirect(result.url);
+  redirect(`/app/properties/${propertyId}?member=1`);
+}
+
+export async function endMembership(_previous: FormState, formData: FormData): Promise<FormState> {
+  const viewer = await requireOwner();
+  const propertyId = text(formData, "propertyId");
+  const db = await getDb();
+  const property = await getProperty(db, viewer.ownerId, propertyId);
+  if (!property) return { message: "We could not find that property." };
+  const market = await getMarket(db, property.market);
+  try {
+    await requestCancel(db, market ? paymentsFor(db, market.country) : null, viewer.ownerId, propertyId);
+  } catch (error) {
+    console.error("[membership] cancelling failed:", error instanceof Error ? error.message : error);
+    return { message: "The membership could not be cancelled just now. Please try again, or contact us." };
+  }
+  revalidatePath(`/app/properties/${propertyId}`);
+  return { done: "Cancelled. The property stays covered until the end of the month already paid for." };
+}
+
+export async function switchTier(_previous: FormState, formData: FormData): Promise<FormState> {
+  const viewer = await requireOwner();
+  const propertyId = text(formData, "propertyId");
+  const db = await getDb();
+  const property = await getProperty(db, viewer.ownerId, propertyId);
+  if (!property) return { message: "We could not find that property." };
+  const market = await getMarket(db, property.market);
+  try {
+    await changeTier(db, market ? paymentsFor(db, market.country) : null, viewer.ownerId, propertyId, text(formData, "tierId"));
+  } catch (error) {
+    if (error instanceof PropertyError) return { message: error.message };
+    console.error("[membership] changing tier failed:", error instanceof Error ? error.message : error);
+    return { message: "The membership could not be changed just now. Please try again." };
+  }
+  revalidatePath(`/app/properties/${propertyId}`);
+  return { done: "Changed. The new price starts with your next monthly payment." };
+}
+
+export async function replaceLink(_previous: FormState, formData: FormData): Promise<FormState> {
+  const viewer = await requireOwner();
+  const propertyId = text(formData, "propertyId");
+  const which = text(formData, "which") === "team" ? "team" : "guest";
+  const saved = await rotateReportLink(await getDb(), viewer.ownerId, propertyId, which);
+  if (!saved) return { message: "We could not find that property." };
+  revalidatePath(`/app/properties/${propertyId}`);
+  return { done: which === "guest" ? "New guest link made. Print the QR card again: the old one no longer works." : "New team link made. Send it to your cleaner again: the old one no longer works." };
+}
+
+/** The owner logs a job themselves. */
+export async function logOwnerJob(_previous: FormState, formData: FormData): Promise<FormState> {
+  const viewer = await requireOwner("/app/jobs/new");
+  const db = await getDb();
+  const property = await getProperty(db, viewer.ownerId, text(formData, "propertyId"));
+  if (!property) return problem(formData, "Choose which property this is for.");
+  const choice = text(formData, "menuItemId");
+  if (!choice) return problem(formData, "Choose what needs fixing.");
+
+  const result = await createJob(db, {
+    property, reportedBy: "owner", reporterName: null, reporterPhone: null,
+    menuItemId: choice === OFF_MENU ? null : choice, offMenuTrade: text(formData, "offMenuTrade"), offMenuTitle: text(formData, "offMenuTitle"),
+    description: text(formData, "description"), urgent: ticked(formData, "urgent"), uploadIds: list(formData, "uploadIds"),
+    uploader: `owner:${viewer.ownerId}`, actor: `owner:${viewer.ownerId}`,
+  });
+  await sendQueued(db);
+  if (!result.ok) {
+    if (result.reason === "duplicate" && result.existingJobId) redirect(`/app/jobs/${result.existingJobId}?already=1`);
+    return problem(formData, result.message);
+  }
+  redirect(`/app/jobs/${result.job.id}?sent=1`);
+}
+
+/**
+ * Finds the job an owner is acting on, either because they are signed in and
+ * it is theirs, or because they opened the one-tap link we texted them.
+ */
+async function ownersJob(db: Db, formData: FormData): Promise<{ job: Job; actor: string; back: string } | null> {
+  const code = text(formData, "code");
+  if (code) {
+    const job = await jobFromOwnerLink(db, code);
+    return job ? { job, actor: `owner:${job.ownerId}`, back: `/j/${code}` } : null;
+  }
+  const viewer = await currentViewer();
+  if (!viewer?.ownerId) return null;
+  const job = await getJobForOwner(db, viewer.ownerId, text(formData, "jobId"));
+  return job ? { job, actor: `owner:${viewer.ownerId}`, back: `/app/jobs/${job.id}` } : null;
+}
+
+const NOT_FOUND = "We could not find that job. If you opened this from a text, the link may have been cut short. Sign in to see your jobs.";
+
+/** The owner says yes to a guest's report: standard or urgent. */
+export async function goAhead(_previous: FormState, formData: FormData): Promise<FormState> {
+  const db = await getDb();
+  const found = await ownersJob(db, formData);
+  if (!found) return { message: NOT_FOUND };
+  const approved = await approveGuestReport(db, found.job.id, { urgent: text(formData, "how") === "urgent" }, found.actor);
+  await sendQueued(db);
+  if (!approved) return { message: "This job has already been dealt with." };
+  redirect(`${found.back}?sent=1`);
+}
+
+export async function cancelOwnerJob(_previous: FormState, formData: FormData): Promise<FormState> {
+  const db = await getDb();
+  const found = await ownersJob(db, formData);
+  if (!found) return { message: NOT_FOUND };
+  const result = await cancelJob(db, found.job.id, { actor: found.actor }, text(formData, "reason") || "Cancelled by the owner");
+  await sendQueued(db);
+  if (!result.ok) return { message: result.message };
+  redirect(`${found.back}?cancelled=1`);
+}
+
+export async function answerQuote(_previous: FormState, formData: FormData): Promise<FormState> {
+  const db = await getDb();
+  const found = await ownersJob(db, formData);
+  if (!found) return { message: NOT_FOUND };
+  const quote = await getQuote(db, text(formData, "quoteId"));
+  if (!quote || quote.jobId !== found.job.id) return { message: "We could not find that quote." };
+  const result = await decideQuote(db, quote.id, text(formData, "answer") === "yes", found.actor);
+  await sendQueued(db);
+  if (!result.ok) return { message: result.message };
+  redirect(`${found.back}?answered=1`);
+}
+
+export async function reportProblem(_previous: FormState, formData: FormData): Promise<FormState> {
+  const db = await getDb();
+  const found = await ownersJob(db, formData);
+  if (!found) return { message: NOT_FOUND };
+  const result = await raiseDispute(db, found.job.id, found.actor, text(formData, "reason"));
+  await sendQueued(db);
+  if (!result.ok) return problem(formData, result.message, { reason: result.message });
+  redirect(`${found.back}?told=1`);
+}
+
+export async function saveAccount(_previous: FormState, formData: FormData): Promise<FormState> {
+  const viewer = await requireOwner("/app/account");
+  const name = text(formData, "name");
+  const phone = normalisePhone(text(formData, "phone"), "NZ");
+  const errors: Record<string, string> = {};
+  if (name.length < 2) errors.name = "Enter your name.";
+  if (!phone) errors.phone = "Enter your mobile number.";
+  if (Object.keys(errors).length > 0) return problem(formData, "Please check the highlighted fields.", errors);
+  try {
+    await updateOwnerContact(await getDb(), viewer.ownerId, { name, phone: phone!.e164 });
+  } catch {
+    return problem(formData, "That mobile number is already used by another account.", { phone: "Already in use." });
+  }
+  revalidatePath("/app/account");
+  return { done: "Saved." };
+}
+
+/** Sends the owner to the payment company's page to change their card. */
+export async function changeCard(_previous: FormState, formData: FormData): Promise<FormState> {
+  const viewer = await requireOwner("/app/billing");
+  const db = await getDb();
+  const country = text(formData, "country") === "AU" ? "AU" : "NZ";
+  const gateway = paymentsFor(db, country);
+  const billing = await getBilling(db, viewer.ownerId, country);
+  if (!gateway || !billing || billing.provider !== gateway.provider) return { message: "There is no card on file yet. It is added when you start a membership." };
+  let url: string;
+  try {
+    url = await gateway.billingPortalUrl({ customerId: billing.customerId, ownerId: viewer.ownerId, returnUrl: `${baseUrl()}/app/billing` });
+  } catch (error) {
+    console.error("[billing] opening the card page failed:", error instanceof Error ? error.message : error);
+    return { message: "The card page could not be opened just now. Please try again." };
+  }
+  redirect(url);
+}
