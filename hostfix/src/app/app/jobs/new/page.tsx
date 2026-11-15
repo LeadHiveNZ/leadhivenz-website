@@ -1,0 +1,99 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { logOwnerJob } from "@/app/actions/owner";
+import { buttonClass } from "@/components/forms/styles";
+import { ReportForm } from "@/components/jobs/ReportForm";
+import { EmptyState, Notice, PageTitle, RowLink } from "@/components/ui/Bits";
+import { Icon } from "@/components/ui/Icon";
+import { requireOwner } from "@/lib/auth/current";
+import { getDb } from "@/lib/db";
+import { reportFormData } from "@/lib/jobs/report-data";
+import { addressLine, listProperties } from "@/lib/properties/service";
+
+export const metadata: Metadata = { title: "Report a problem" };
+
+type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+export default async function NewJobPage({ searchParams }: { searchParams: SearchParams }) {
+  const viewer = await requireOwner("/app/jobs/new");
+  const query = await searchParams;
+  const db = await getDb();
+  const properties = await listProperties(db, viewer.ownerId);
+  const covered = properties.filter((property) => property.status === "active");
+
+  if (covered.length === 0) {
+    const waiting = properties.find((property) => property.status === "setup" || property.status === "past_due");
+    return (
+      <div className="mx-auto max-w-xl">
+        <PageTitle title="Report a problem" back={{ href: "/app", label: "Home" }} />
+        <EmptyState
+          icon="shield"
+          title={properties.length === 0 ? "Add a property first" : waiting?.status === "past_due" ? "Your card needs fixing first" : "Start a membership first"}
+          action={
+            <Link href={properties.length === 0 ? "/app/properties/new" : waiting?.status === "past_due" ? "/app/billing" : `/app/properties/${waiting?.id ?? properties[0]!.id}`} className={buttonClass}>
+              {properties.length === 0 ? "Add a property" : waiting?.status === "past_due" ? "Update my card" : "Finish setting up"}
+            </Link>
+          }
+        >
+          Tradies are sent to properties with a membership.
+        </EmptyState>
+      </div>
+    );
+  }
+
+  const property = covered.find((candidate) => candidate.id === query.property) ?? (covered.length === 1 ? covered[0]! : null);
+  if (!property) {
+    return (
+      <div className="mx-auto max-w-xl">
+        <PageTitle title="Which property?" back={{ href: "/app", label: "Home" }} />
+        <div className="space-y-2.5">
+          {covered.map((candidate) => (
+            <RowLink
+              key={candidate.id}
+              href={`/app/jobs/new?property=${candidate.id}`}
+              title={candidate.name}
+              subtitle={addressLine(candidate)}
+              leading={
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-tint text-brand">
+                  <Icon name="property" />
+                </span>
+              }
+            />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  const data = await reportFormData(db, property, "owner");
+  return (
+    <div className="mx-auto max-w-xl">
+      <PageTitle
+        title="Report a problem"
+        back={covered.length > 1 ? { href: "/app/jobs/new", label: "Choose another property" } : { href: "/app", label: "Home" }}
+        intro={`At ${property.name}, ${addressLine(property)}`}
+      />
+      {!data || data.items.length === 0 ? (
+        <Notice tone="warn" title="Jobs cannot be logged for this property right now">
+          Please contact us and we will sort it out.
+        </Notice>
+      ) : (
+        <ReportForm
+          action={logOwnerJob}
+          hidden={{ propertyId: property.id }}
+          audience="owner"
+          items={data.items}
+          offMenuTrades={data.offMenuTrades}
+          currency={data.currency}
+          diagnosisCents={data.diagnosisCents}
+          standardHours={data.standardHours}
+          urgentHours={data.urgentHours}
+          urgentCents={data.urgentCents}
+          urgentIncluded={data.urgentIncluded}
+          afterHoursNow={data.afterHoursNow}
+          afterHoursCents={data.afterHoursCents}
+        />
+      )}
+    </div>
+  );
+}

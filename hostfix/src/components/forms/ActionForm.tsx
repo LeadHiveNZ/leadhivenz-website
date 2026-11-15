@@ -123,3 +123,37 @@ export function Tick({ name, label, hint, defaultChecked }: { name: string; labe
     </label>
   );
 }
+
+export type RadioOption = { value: string; title: string; detail?: string; right?: string; badge?: string };
+
+/** A choice between a few options, each shown as a tappable card. Keeps the choice after a problem. */
+export function RadioCards({ name, legend, options, defaultValue, hint }: { name: string; legend: string; options: RadioOption[]; defaultValue?: string; hint?: string }) {
+  const state = useContext(FormContext);
+  const chosen = saved(state, name) ?? defaultValue ?? "";
+  const error = state.fieldErrors?.[name];
+  return (
+    <fieldset aria-invalid={error ? true : undefined} key={chosen}>
+      <legend className={labelClass}>{legend}</legend>
+      {hint && <p className="-mt-1 mb-2 text-sm text-muted">{hint}</p>}
+      <div className="space-y-2">
+        {options.map((option) => (
+          <label
+            key={option.value}
+            className="flex cursor-pointer items-start gap-3 rounded-2xl border border-line bg-white px-4 py-3.5 transition has-[:checked]:border-brand has-[:checked]:bg-tint has-[:checked]:ring-2 has-[:checked]:ring-brand/20"
+          >
+            <input type="radio" name={name} value={option.value} defaultChecked={chosen === option.value} required className="mt-1 h-5 w-5 shrink-0 accent-[var(--hf-brand)]" />
+            <span className="min-w-0 flex-1">
+              <span className="flex flex-wrap items-center gap-2">
+                <span className="font-bold text-ink">{option.title}</span>
+                {option.badge && <span className="rounded-full bg-accent px-2 py-0.5 text-[0.7rem] font-bold tracking-wide text-brand-dark uppercase">{option.badge}</span>}
+              </span>
+              {option.detail && <span className="mt-0.5 block text-sm text-muted">{option.detail}</span>}
+            </span>
+            {option.right && <span className="tabular shrink-0 text-right font-bold text-ink">{option.right}</span>}
+          </label>
+        ))}
+      </div>
+      {error && <p className="mt-1.5 text-sm font-medium text-red-700">{error}</p>}
+    </fieldset>
+  );
+}

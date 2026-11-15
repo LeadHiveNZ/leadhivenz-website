@@ -41,7 +41,7 @@ export function FieldMessages({ name, hint, error }: { name: string; hint?: stri
 
 type TextFieldProps = BaseProps & {
   type?: "text" | "tel" | "email" | "number";
-  inputMode?: "text" | "tel" | "email" | "numeric";
+  inputMode?: "text" | "tel" | "email" | "numeric" | "decimal";
   autoComplete?: string;
   placeholder?: string;
   required?: boolean;

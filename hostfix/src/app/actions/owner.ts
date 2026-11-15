@@ -9,6 +9,7 @@ import { currentViewer, requireOwner } from "@/lib/auth/current";
 import { getDb } from "@/lib/db";
 import type { Db } from "@/lib/db/types";
 import { baseUrl } from "@/lib/env";
+import { attachUploads } from "@/lib/files/uploads";
 import { dollarsToCents, list, problem, text, ticked, type FormState } from "@/lib/forms";
 import { approveGuestReport, cancelJob, createJob } from "@/lib/jobs/create";
 import { getJobForOwner, getQuote } from "@/lib/jobs/store";
@@ -281,4 +282,32 @@ export async function changeCard(_previous: FormState, formData: FormData): Prom
     return { message: "The card page could not be opened just now. Please try again." };
   }
   redirect(url);
+}
+
+/** Photos that help a tradie find their way around: the lockbox, the switchboard, the water shut-off. */
+export async function addPropertyPhotos(_previous: FormState, formData: FormData): Promise<FormState> {
+  const viewer = await requireOwner();
+  const propertyId = text(formData, "propertyId");
+  const db = await getDb();
+  const property = await getProperty(db, viewer.ownerId, propertyId);
+  if (!property) return { message: "We could not find that property." };
+  const added = await attachUploads(db, list(formData, "uploadIds"), { kind: "property", uploadedBy: `owner:${viewer.ownerId}`, propertyId });
+  if (added === 0) return { message: "Choose a photo first, then save." };
+  revalidatePath(`/app/properties/${propertyId}`);
+  return { done: added === 1 ? "Photo saved." : `${added} photos saved.` };
+}
+
+export async function removePropertyPhoto(_previous: FormState, formData: FormData): Promise<FormState> {
+  const viewer = await requireOwner();
+  const propertyId = text(formData, "propertyId");
+  const db = await getDb();
+  const property = await getProperty(db, viewer.ownerId, propertyId);
+  if (!property) return { message: "We could not find that property." };
+  // Detached photos are cleared away by the nightly tidy-up.
+  await db.query("update public.uploads set attached = false, property_id = null where id = $1::uuid and property_id = $2::uuid and kind = 'property'", [
+    text(formData, "uploadId"),
+    propertyId,
+  ]);
+  revalidatePath(`/app/properties/${propertyId}`);
+  return { done: "Photo removed." };
 }
