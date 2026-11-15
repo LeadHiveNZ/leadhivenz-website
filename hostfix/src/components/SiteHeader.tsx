@@ -10,13 +10,13 @@ export function SiteHeader() {
           <Logo />
         </Link>
         <nav aria-label="Main" className="flex items-center gap-0.5 text-sm font-semibold sm:gap-1">
-          <Link href="/owners" className="rounded-full px-3 py-2 text-muted hover:bg-tint hover:text-ink">
+          <Link href="/owners" className="rounded-full px-2.5 py-2 text-muted hover:bg-tint hover:text-ink sm:px-3">
             Owners
           </Link>
-          <Link href="/tradies" className="rounded-full px-3 py-2 text-muted hover:bg-tint hover:text-ink">
+          <Link href="/tradies" className="rounded-full px-2.5 py-2 text-muted hover:bg-tint hover:text-ink sm:px-3">
             Tradies
           </Link>
-          <Link href="/sign-in" className="ml-1 rounded-full border border-brand/25 bg-surface px-4 py-2 text-brand hover:bg-tint">
+          <Link href="/sign-in" className="ml-1 rounded-full border border-brand/25 bg-surface px-3.5 py-2 whitespace-nowrap text-brand hover:bg-tint sm:px-4">
             Sign in
           </Link>
         </nav>

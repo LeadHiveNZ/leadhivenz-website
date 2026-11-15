@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import Link from "next/link";
 import { secondaryButtonClass } from "@/components/forms/styles";
 import { Icon } from "@/components/ui/Icon";
@@ -9,6 +10,7 @@ type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 /** The thank-you screen after a report is sent from a link or QR code. */
 export default async function ReportSentPage({ params, searchParams }: { params: Promise<{ token: string }>; searchParams: SearchParams }) {
   const { token } = await params;
+  await connection();
   const query = await searchParams;
   const found = await findPropertyByReportToken(await getDb(), token);
   const what = query.w === "owner" || query.w === "dup" ? query.w : "go";

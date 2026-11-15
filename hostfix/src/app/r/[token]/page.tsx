@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import { sendReport } from "@/app/actions/report";
 import { ReportForm } from "@/components/jobs/ReportForm";
 import { Chip, Notice } from "@/components/ui/Bits";
@@ -19,6 +20,7 @@ async function openJobs(propertyId: string) {
 
 export default async function ReportPage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
+  await connection();
   const db = await getDb();
   const found = await findPropertyByReportToken(db, token);
 

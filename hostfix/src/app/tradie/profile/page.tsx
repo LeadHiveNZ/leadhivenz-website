@@ -74,7 +74,7 @@ export default async function TradieProfilePage({ searchParams }: { searchParams
           <Tick name="afterHours" label="I take after-hours call-outs" hint={`Outside ${market.hoursStart}:00 to ${market.hoursEnd}:00. You get the full after-hours surcharge.`} defaultChecked={tradie.afterHours} />
           <Tick name="gstRegistered" label={`I am registered for ${market.taxName}`} defaultChecked={tradie.gstRegistered} />
           <Field label={`${market.taxName} number (if registered)`} name="gstNumber" maxLength={20} defaultValue={tradie.gstNumber ?? ""} />
-          <Field label="Public liability insurance runs out on" name="insuranceExpiresOn" type="date" defaultValue={tradie.insuranceExpiresOn ?? ""} hint="We remind you before it does." />
+          <Field label="Public liability insurance runs out on" name="insuranceExpiresOn" type="date" defaultValue={tradie.insuranceExpiresOn ?? ""} hint="Owners are told every tradie on the network is insured, so we check this date." />
           <SubmitButton variant="secondary" pendingLabel="Saving...">
             Save
           </SubmitButton>
@@ -141,7 +141,7 @@ export default async function TradieProfilePage({ searchParams }: { searchParams
       )}
 
       <div className="md:hidden">
-        <SignOut />
+        <SignOut full />
       </div>
     </div>
   );

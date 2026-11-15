@@ -1,6 +1,7 @@
 import "server-only";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { connection } from "next/server";
 import { getDb } from "@/lib/db";
 import { baseUrl } from "@/lib/env";
 import { isAdminSignedIn } from "./admin";
@@ -19,6 +20,8 @@ import type { StaffRole, Viewer } from "./users";
  */
 
 export async function currentViewer(): Promise<Viewer | null> {
+  // Wait for a real visit. A private page is never prepared ahead of time, not even partly.
+  await connection();
   const cookieStore = await cookies();
   const token = cookieStore.get(SESSION_COOKIE)?.value;
   if (!token) return null;
@@ -61,6 +64,7 @@ export type StaffViewer = {
 
 /** Staff, by their own sign-in or by the founder's admin password. Null if neither. */
 export async function currentStaff(): Promise<StaffViewer | null> {
+  await connection();
   // The admin password check reads its cookie first, which also marks the page as per-visitor.
   if (await isAdminSignedIn()) return { role: "admin", actor: "admin", name: "Admin", viewer: null };
   const viewer = await currentViewer();

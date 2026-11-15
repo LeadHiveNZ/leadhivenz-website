@@ -72,7 +72,7 @@ export default async function AccountPage() {
           <p className="text-muted">Reply to any text we send you and a person will answer.</p>
         )}
         <div className="mt-4 md:hidden">
-          <SignOut />
+          <SignOut full />
         </div>
       </Card>
     </div>

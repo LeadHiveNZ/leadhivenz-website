@@ -64,7 +64,7 @@ export async function payDemoCheckout(_previous: FormState, formData: FormData):
   const id = text(formData, "checkoutId");
   const checkout = await getDemoCheckout(db, id);
   if (!checkout || !viewer?.ownerId || viewer.ownerId !== checkout.ownerId) return { message: "That payment page is not yours, or has run out. Go back and start again." };
-  if (checkout.completed) redirect(checkout.successUrl);
+  if (checkout.completed) redirect(`/app/properties/${checkout.propertyId}?member=1`);
   const paid = await completeDemoCheckout(db, id);
   if (!paid) return { message: "That payment page has already been used." };
   await activateMembership(db, {
@@ -72,7 +72,8 @@ export async function payDemoCheckout(_previous: FormState, formData: FormData):
     card: paid.card, customerId: checkout.customerId,
   });
   await sendQueued(db);
-  redirect(checkout.successUrl);
+  // The real card page sends the owner's browser back to the site. Here we are already on it, so go straight to the property.
+  redirect(`/app/properties/${checkout.propertyId}?member=1`);
 }
 
 /** Swaps the owner's pretend card for one that works, or one that is always declined. */
@@ -98,7 +99,8 @@ export async function finishDemoPayoutSetup(_previous: FormState, _formData: For
   const tradie = await getTradie(db, viewer.tradieId);
   if (!tradie?.payoutAccountId) return { message: "Start from your profile: tap Add bank details." };
   await savePayoutAccount(db, tradie.id, { provider: "demo", accountId: tradie.payoutAccountId, payoutsEnabled: true });
-  redirect("/tradie/payouts/return");
+  // The real page sends the tradie's browser back to the site. Here we are already on it.
+  redirect("/tradie/profile?payouts=done");
 }
 
 /** Pretends a tradie replied to a text. */

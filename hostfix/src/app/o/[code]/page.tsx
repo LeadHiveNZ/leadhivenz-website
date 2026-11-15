@@ -1,3 +1,4 @@
+import { connection } from "next/server";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
@@ -61,6 +62,7 @@ function Closed({ title, children }: { title: string; children: string }) {
 
 async function Opened({ params, searchParams }: { params: Params; searchParams: SearchParams }) {
   const { code } = await params;
+  await connection();
   const query = await searchParams;
   const db = await getDb();
   const offer = await offerFromLink(db, code);

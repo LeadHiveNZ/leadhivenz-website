@@ -6,7 +6,7 @@ import { TradieLeadForm } from "@/components/forms/TradieLeadForm";
 import { buttonClass } from "@/components/forms/styles";
 import { LandingPage, type MenuPreview } from "@/components/LandingPage";
 import { Icon } from "@/components/ui/Icon";
-import { loadLanding } from "@/lib/content";
+import { loadLanding, plainText, type LandingContent } from "@/lib/content";
 import type { PublicMarket } from "@/lib/markets/public";
 import { formatMoney } from "@/lib/money";
 import { OwnerPhone, TradiePhone } from "./PhoneMock";
@@ -61,10 +61,26 @@ function JoinPanel({ marketSlug, marketName }: { marketSlug: string; marketName:
   );
 }
 
+/**
+ * Once a market is open, the parts of the copy that only make sense before
+ * launch are left out: the founding member offer, and the questions about
+ * the launch date and the deposit. The copy file itself is not changed.
+ */
+const BEFORE_LAUNCH_ONLY = /founding member|when do (you|jobs) (launch|start)|deposit/i;
+
+function forOpenMarket(content: LandingContent): LandingContent {
+  return {
+    ...content,
+    sections: content.sections
+      .filter((section) => !BEFORE_LAUNCH_ONLY.test(plainText(section.title)))
+      .map((section) => ({ ...section, blocks: section.blocks.filter((block) => block.type !== "card" || !BEFORE_LAUNCH_ONLY.test(plainText(block.title))) })),
+  };
+}
+
 export function OwnerLanding({ data }: { data: PublicMarket }) {
   const { market } = data;
-  const content = loadLanding("owner", market);
   const live = market.stage === "live";
+  const content = live ? forOpenMarket(loadLanding("owner", market)) : loadLanding("owner", market);
   const tier = market.tiers[0];
   const items = spread(data, 10);
   const menu: MenuPreview | null =
@@ -104,8 +120,8 @@ export function OwnerLanding({ data }: { data: PublicMarket }) {
 
 export function TradieLanding({ data }: { data: PublicMarket }) {
   const { market } = data;
-  const content = loadLanding("tradie", market);
   const live = market.stage === "live";
+  const content = live ? forOpenMarket(loadLanding("tradie", market)) : loadLanding("tradie", market);
   const items = spread(data, 10);
   const cta = "Put my name down";
   return (

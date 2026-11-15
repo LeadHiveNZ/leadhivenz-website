@@ -41,7 +41,7 @@ export default async function MorePage() {
         ))}
       </div>
       <div className="mt-6 md:hidden">
-        <SignOut />
+        <SignOut full />
       </div>
     </div>
   );

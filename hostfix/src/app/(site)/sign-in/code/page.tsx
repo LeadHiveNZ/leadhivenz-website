@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
+import { connection } from "next/server";
 import Link from "next/link";
 import { Suspense } from "react";
 import { finishSignIn, resendCode } from "@/app/actions/auth";
@@ -30,6 +31,7 @@ function masked(kind: "email" | "phone", value: string): string {
 }
 
 async function CodeForm() {
+  await connection();
   const cookieStore = await cookies();
   const secret = appSecret();
   const pending = secret ? openPending(secret, cookieStore.get(PENDING_COOKIE)?.value) : null;

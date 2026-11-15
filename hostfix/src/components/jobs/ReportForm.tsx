@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import type { FormState } from "@/lib/forms";
 import { formatMoney } from "@/lib/money";
 import { ActionForm, Area, Field } from "../forms/ActionForm";
 import { PhotoUploader } from "../forms/PhotoUploader";
 import { SubmitButton } from "../forms/SubmitButton";
-import { inputClass, labelClass } from "../forms/styles";
+import { labelClass } from "../forms/styles";
 import { Icon } from "../ui/Icon";
 
 export type ReportItem = { id: string; name: string; tradeLabel: string; ownerCents: number; tryFirst: string };
@@ -35,6 +35,31 @@ type Props = {
 
 const OFF_MENU = "off-menu";
 
+const rowClass = (on: boolean) =>
+  `flex w-full cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 text-left transition ${on ? "border-brand bg-tint ring-2 ring-brand/20" : "border-line bg-white hover:border-brand/40"}`;
+const tileClass = (on: boolean) =>
+  `rounded-2xl border px-4 py-3 text-left transition ${on ? "border-brand bg-tint ring-2 ring-brand/20" : "border-line bg-white hover:border-brand/40"}`;
+
+/**
+ * One choice in a list. These are drawn here rather than being the browser's
+ * own radio buttons and tick boxes, because the browser clears those when a
+ * form comes back with something to fix, and the person would have to choose
+ * again. What is chosen is sent with the form by the hidden fields below.
+ */
+function Choice({ kind = "radio", on, onPick, children }: { kind?: "radio" | "checkbox"; on: boolean; onPick: () => void; children: ReactNode }) {
+  return (
+    <button type="button" role={kind} aria-checked={on} onClick={onPick} className={rowClass(on)}>
+      <span
+        aria-hidden="true"
+        className={`flex h-5 w-5 shrink-0 items-center justify-center border-2 ${kind === "radio" ? "rounded-full" : "rounded-md"} ${on ? "border-brand bg-brand text-white" : "border-muted/50 bg-white"}`}
+      >
+        {on && (kind === "radio" ? <span className="h-2 w-2 rounded-full bg-white" /> : <Icon name="check" size={14} />)}
+      </span>
+      {children}
+    </button>
+  );
+}
+
 /**
  * Report a problem. One screen, top to bottom: what is wrong, how urgent,
  * anything worth knowing, photos, send. The price is worked out here so the
@@ -47,25 +72,25 @@ export function ReportForm(props: Props) {
   /** Which kind of problem is opened up: a trade's label, or "off-menu". */
   const [open, setOpen] = useState<string>("");
   const [urgent, setUrgent] = useState(false);
+  const [offTrade, setOffTrade] = useState<string>(props.offMenuTrades[0]?.key ?? "handyman");
   const showPrices = audience !== "guest";
   const selected = items.find((item) => item.id === choice) ?? null;
   const base = choice === OFF_MENU ? props.diagnosisCents : (selected?.ownerCents ?? 0);
-  const urgentExtra = urgent ? (props.urgentIncluded ? 0 : props.urgentCents) + (props.afterHoursNow ? props.afterHoursCents : 0) : 0;
-  const total = base + urgentExtra;
+  const urgentExtra = (props.urgentIncluded ? 0 : props.urgentCents) + (props.afterHoursNow ? props.afterHoursCents : 0);
+  const total = base + (urgent ? urgentExtra : 0);
 
   const groups = new Map<string, ReportItem[]>();
   for (const item of items) groups.set(item.tradeLabel, [...(groups.get(item.tradeLabel) ?? []), item]);
-
-  const tileClass = (on: boolean) =>
-    `rounded-2xl border px-4 py-3 text-left transition ${on ? "border-brand bg-tint ring-2 ring-brand/20" : "border-line bg-white hover:border-brand/40"}`;
-  const optionClass = (on: boolean) =>
-    `flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 transition ${on ? "border-brand bg-tint ring-2 ring-brand/20" : "border-line bg-white hover:border-brand/40"}`;
 
   return (
     <ActionForm action={props.action} className="space-y-6">
       {Object.entries(props.hidden).map(([name, value]) => (
         <input key={name} type="hidden" name={name} value={value} />
       ))}
+      {/* What has been chosen, sent with the form. */}
+      <input type="hidden" name="menuItemId" value={choice} />
+      <input type="hidden" name="urgent" value={urgent ? "on" : ""} />
+      <input type="hidden" name="offMenuTrade" value={offTrade} />
 
       <fieldset>
         <legend className="display text-2xl text-ink">What needs fixing?</legend>
@@ -102,18 +127,18 @@ export function ReportForm(props: Props) {
         </div>
 
         {open && open !== OFF_MENU && (
-          <div className="mt-4 space-y-2">
-            <p className="text-sm font-bold tracking-wide text-muted uppercase">{open}</p>
-            {(groups.get(open) ?? []).map((item) => (
-              <label key={item.id} className={optionClass(choice === item.id)}>
-                <input type="radio" name="menuItemId" value={item.id} checked={choice === item.id} onChange={() => setChoice(item.id)} className="h-5 w-5 shrink-0 accent-[var(--hf-brand)]" required />
-                <span className="flex-1 font-semibold text-ink">{item.name}</span>
-                {showPrices && <span className="tabular shrink-0 font-bold text-ink">{formatMoney(item.ownerCents, currency)}</span>}
-              </label>
-            ))}
+          <div className="mt-4" role="radiogroup" aria-label={open}>
+            <p className="mb-2 text-sm font-bold tracking-wide text-muted uppercase">{open}</p>
+            <div className="space-y-2">
+              {(groups.get(open) ?? []).map((item) => (
+                <Choice key={item.id} on={choice === item.id} onPick={() => setChoice(item.id)}>
+                  <span className="flex-1 font-semibold text-ink">{item.name}</span>
+                  {showPrices && <span className="tabular shrink-0 font-bold text-ink">{formatMoney(item.ownerCents, currency)}</span>}
+                </Choice>
+              ))}
+            </div>
           </div>
         )}
-        {choice === OFF_MENU && <input type="hidden" name="menuItemId" value={OFF_MENU} />}
         {open === OFF_MENU && showPrices && (
           <p className="mt-3 text-sm text-muted">A tradie comes to look, then prices the work before doing it. You only pay the call-out unless you say yes to their price.</p>
         )}
@@ -132,43 +157,45 @@ export function ReportForm(props: Props) {
       {choice === OFF_MENU && (
         <div className="space-y-4 rounded-2xl border border-line bg-white p-4">
           <Field label="In a few words, what is wrong?" name="offMenuTitle" required maxLength={100} placeholder="Water coming through the ceiling" />
-          <div>
-            <label htmlFor="offMenuTrade" className={labelClass}>
-              What kind of problem is it?
-            </label>
-            <select id="offMenuTrade" name="offMenuTrade" className={`${inputClass} border-line`} defaultValue="handyman">
+          <div role="radiogroup" aria-label="What kind of problem is it?">
+            <p className={labelClass}>What kind of problem is it?</p>
+            <div className="flex flex-wrap gap-2">
               {props.offMenuTrades.map((trade) => (
-                <option key={trade.key} value={trade.key}>
+                <button
+                  key={trade.key}
+                  type="button"
+                  role="radio"
+                  aria-checked={offTrade === trade.key}
+                  onClick={() => setOffTrade(trade.key)}
+                  className={`rounded-full border px-3.5 py-2 text-sm font-semibold ${offTrade === trade.key ? "border-brand bg-brand text-white" : "border-line bg-white text-ink hover:border-brand/40"}`}
+                >
                   {trade.label}
-                </option>
+                </button>
               ))}
-            </select>
+            </div>
           </div>
         </div>
       )}
 
       {audience === "guest" ? (
-        <label className={optionClass(urgent)}>
-          <input type="checkbox" name="urgent" checked={urgent} onChange={(event) => setUrgent(event.target.checked)} className="h-5 w-5 shrink-0 accent-[var(--hf-brand)]" />
+        <Choice kind="checkbox" on={urgent} onPick={() => setUrgent(!urgent)}>
           <span>
             <span className="block font-semibold text-ink">This is urgent</span>
             <span className="block text-sm text-muted">No water, no power, flooding, or you cannot lock the door.</span>
           </span>
-        </label>
+        </Choice>
       ) : (
         <fieldset>
           <legend className="display text-2xl text-ink">How soon?</legend>
-          <div className="mt-3 space-y-2">
-            <label className={optionClass(!urgent)}>
-              <input type="radio" name="urgent" value="" checked={!urgent} onChange={() => setUrgent(false)} className="h-5 w-5 shrink-0 accent-[var(--hf-brand)]" />
+          <div className="mt-3 space-y-2" role="radiogroup" aria-label="How soon?">
+            <Choice on={!urgent} onPick={() => setUrgent(false)}>
               <span className="flex-1">
                 <span className="block font-semibold text-ink">Standard</span>
                 <span className="block text-sm text-muted">A tradie on site within {props.standardHours} hours.</span>
               </span>
               <span className="shrink-0 text-sm font-semibold text-muted">No extra</span>
-            </label>
-            <label className={optionClass(urgent)}>
-              <input type="radio" name="urgent" value="on" checked={urgent} onChange={() => setUrgent(true)} className="h-5 w-5 shrink-0 accent-[var(--hf-brand)]" />
+            </Choice>
+            <Choice on={urgent} onPick={() => setUrgent(true)}>
               <span className="flex-1">
                 <span className="block font-semibold text-ink">Urgent</span>
                 <span className="block text-sm text-muted">
@@ -176,10 +203,8 @@ export function ReportForm(props: Props) {
                   {props.afterHoursNow ? " It is outside working hours now, so the after-hours call-out applies too." : ""}
                 </span>
               </span>
-              <span className="tabular shrink-0 text-right text-sm font-bold text-ink">
-                {props.urgentIncluded && !props.afterHoursNow ? "Included" : `+${formatMoney((props.urgentIncluded ? 0 : props.urgentCents) + (props.afterHoursNow ? props.afterHoursCents : 0), currency)}`}
-              </span>
-            </label>
+              <span className="tabular shrink-0 text-right text-sm font-bold text-ink">{urgentExtra === 0 ? "Included" : `+${formatMoney(urgentExtra, currency)}`}</span>
+            </Choice>
           </div>
         </fieldset>
       )}
@@ -196,7 +221,7 @@ export function ReportForm(props: Props) {
       )}
 
       {showPrices && choice !== "" && (
-        <div className="flex items-center justify-between gap-4 rounded-2xl bg-brand px-5 py-4 text-white">
+        <div className="on-dark flex items-center justify-between gap-4 rounded-2xl bg-brand px-5 py-4 text-white">
           <span>
             <span className="block text-sm text-white/75">{choice === OFF_MENU ? "To come and look" : "Fixed price"}</span>
             <span className="block text-sm text-white/75">Charged to the card on file when the job is done.</span>
@@ -205,6 +230,7 @@ export function ReportForm(props: Props) {
         </div>
       )}
 
+      {choice === "" && <p className="text-center text-sm text-muted">Choose what needs fixing above, then send.</p>}
       <SubmitButton pendingLabel="Sending..." className="w-full">
         {audience === "guest" ? "Report it" : "Send a tradie"}
       </SubmitButton>
