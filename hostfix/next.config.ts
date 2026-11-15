@@ -15,6 +15,9 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
   poweredByHeader: false,
+  // The copy of Postgres used in demo mode and tests loads its own data files
+  // from its folder, so it must be left as it is rather than repackaged.
+  serverExternalPackages: ["@electric-sql/pglite"],
   // The landing page copy lives in /content as Markdown files. Make sure those
   // files travel with the app when it is deployed.
   // The health check compares the database with the list of database changes,

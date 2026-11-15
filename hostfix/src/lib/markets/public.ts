@@ -48,7 +48,13 @@ export async function publicMarkets(): Promise<PublicMarket[]> {
   cacheTag(MARKETS_TAG);
 
   const kind = databaseKind();
-  if (kind === "none" || (kind === "embedded" && building())) return configuredMarkets.map(fromConfig);
+  if (kind === "none") return configuredMarkets.map(fromConfig);
+  if (kind === "embedded" && building()) {
+    // Building the demo. Its sample data opens the first market for business,
+    // so the public pages are built to match (unless sample data is switched off).
+    const sample = process.env.HOSTFIX_SAMPLE_DATA !== "0";
+    return configuredMarkets.map((market) => fromConfig(sample && market.slug === launchMarket.slug ? { ...market, stage: "live" } : market));
+  }
   try {
     const db = await getDb();
     const found = (await listMarkets(db)).filter((market) => market.stage === "waitlist" || market.stage === "live" || market.stage === "paused");

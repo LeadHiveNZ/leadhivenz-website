@@ -25,6 +25,13 @@ type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 const pct = (rate: number | null) => (rate === null ? "No history" : `${Math.round(rate * 100)}%`);
 
+const DID: Record<string, string> = {
+  approved: "Approved. They have been texted a link to sign in and add their bank details.",
+  back_on: "Back on. They can be offered jobs again.",
+  paused: "Paused. They will not be offered jobs.",
+  removed: "Removed from the network. Any first-choice or backup slots they held are now empty.",
+};
+
 export default async function StaffTradiePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: SearchParams }) {
   const { id } = await params;
   await requireStaff();
@@ -64,6 +71,7 @@ export default async function StaffTradiePage({ params, searchParams }: { params
         action={<Chip tone={tradie.status === "approved" ? "done" : tradie.status === "applied" ? "alert" : tradie.status === "paused" ? "waiting" : "quiet"}>{tradie.status === "applied" ? "Waiting for approval" : tradie.status}</Chip>}
       />
 
+      {typeof query.did === "string" && DID[query.did] && <Notice tone="good" title={DID[query.did]} />}
       {query.added && (
         <Notice tone="good" title="Added">
           Next: add and check their licences, then approve them.

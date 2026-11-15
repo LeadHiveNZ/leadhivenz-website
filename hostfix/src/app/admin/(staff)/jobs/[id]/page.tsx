@@ -54,9 +54,24 @@ function Tel({ phone }: { phone: string | null }) {
   );
 }
 
-export default async function StaffJobPage({ params }: { params: Promise<{ id: string }> }) {
+const DID: Record<string, string> = {
+  assigned: "Assigned. The tradie and the owner have both been texted.",
+  sent_out: "Sent out to tradies.",
+  cancelled: "Cancelled. Nothing is charged. The owner and the tradie have been texted.",
+  quote_answered: "Recorded. The tradie has been texted the owner's answer.",
+  refunded: "Refunded. The tradie's payment and our fee have come down to match.",
+  work_stands: "Settled. The tradie will be paid in full.",
+  tradie_paid: "Paid. The tradie has been texted.",
+  charged: "The card was charged. The tradie's payment is now on its way.",
+};
+
+type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+export default async function StaffJobPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: SearchParams }) {
   const { id } = await params;
   await requireStaff();
+  const did = (await searchParams).did;
+  const confirmation = typeof did === "string" ? DID[did] : undefined;
   const db = await getDb();
   const job = await getJobForStaff(db, id);
   if (!job) notFound();
@@ -88,6 +103,7 @@ export default async function StaffJobPage({ params }: { params: Promise<{ id: s
   return (
     <div className="mx-auto max-w-3xl space-y-5">
       <PageTitle title={job.title} back={{ href: "/admin/jobs", label: "Jobs" }} />
+      {confirmation && <Notice tone="good" title={confirmation} />}
 
       <Card className="sm:p-6">
         <div className="flex flex-wrap items-center gap-2">

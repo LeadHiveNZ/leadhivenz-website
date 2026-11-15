@@ -83,7 +83,7 @@ export default async function TradiesPage({ searchParams }: { searchParams: Sear
           A new job is offered to the first choice for {market.offerMinutes} minutes, then the backup, then every other approved tradie in that trade at once. &ldquo;Ready&rdquo; counts tradies who could be offered a job today: approved,
           with bank details and, where needed, a current licence.
         </p>
-        <div className="space-y-2.5">
+        <div className="grid gap-3 lg:grid-cols-2">
           {cover.map((row) => {
             const options = [{ key: "none", label: "Nobody" }, ...approved.filter((tradie) => tradie.trades.includes(row.trade)).map((tradie) => ({ key: tradie.id, label: tradie.businessName }))];
             const first = slots.find((slot) => slot.trade === row.trade && slot.rank === 1);

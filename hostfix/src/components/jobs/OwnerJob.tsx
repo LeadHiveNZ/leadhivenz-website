@@ -60,6 +60,7 @@ export function OwnerJob({ view, now, code, flash = {}, prices }: Props) {
   const canCancel = ["awaiting_owner", "offering", "unfilled", "accepted"].includes(job.status);
   const billingHref = code ? `/sign-in?next=${encodeURIComponent("/app/billing")}` : "/app/billing";
   const activeTotal = view.lines.filter((line) => line.status === "active").reduce((sum, line) => sum + line.ownerCents, 0);
+  const quotePhotos = view.workPhotos.filter((photo) => photo.kind === "quote");
 
   return (
     <div className="space-y-5">
@@ -141,6 +142,12 @@ export function OwnerJob({ view, now, code, flash = {}, prices }: Props) {
               ]}
             />
           </div>
+          {quotePhotos.length > 0 && (
+            <div className="mt-3">
+              <p className="mb-2 text-sm font-semibold text-muted">What the tradie found</p>
+              <PhotoGrid photos={quotePhotos} query={photoQuery} />
+            </div>
+          )}
           <ActionForm action={answerQuote} className="mt-4 space-y-2.5">
             {which}
             <input type="hidden" name="quoteId" value={pendingQuote.id} />

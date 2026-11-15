@@ -44,6 +44,8 @@ const OFF_MENU = "off-menu";
 export function ReportForm(props: Props) {
   const { audience, items, currency } = props;
   const [choice, setChoice] = useState<string>("");
+  /** Which kind of problem is opened up: a trade's label, or "off-menu". */
+  const [open, setOpen] = useState<string>("");
   const [urgent, setUrgent] = useState(false);
   const showPrices = audience !== "guest";
   const selected = items.find((item) => item.id === choice) ?? null;
@@ -54,6 +56,8 @@ export function ReportForm(props: Props) {
   const groups = new Map<string, ReportItem[]>();
   for (const item of items) groups.set(item.tradeLabel, [...(groups.get(item.tradeLabel) ?? []), item]);
 
+  const tileClass = (on: boolean) =>
+    `rounded-2xl border px-4 py-3 text-left transition ${on ? "border-brand bg-tint ring-2 ring-brand/20" : "border-line bg-white hover:border-brand/40"}`;
   const optionClass = (on: boolean) =>
     `flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-3 transition ${on ? "border-brand bg-tint ring-2 ring-brand/20" : "border-line bg-white hover:border-brand/40"}`;
 
@@ -65,33 +69,54 @@ export function ReportForm(props: Props) {
 
       <fieldset>
         <legend className="display text-2xl text-ink">What needs fixing?</legend>
-        <div className="mt-3 space-y-5">
+        <div className="mt-3 grid grid-cols-2 gap-2">
           {[...groups.entries()].map(([label, group]) => (
-            <div key={label}>
-              <p className="mb-2 text-sm font-bold tracking-wide text-muted uppercase">{label}</p>
-              <div className="space-y-2">
-                {group.map((item) => (
-                  <label key={item.id} className={optionClass(choice === item.id)}>
-                    <input type="radio" name="menuItemId" value={item.id} checked={choice === item.id} onChange={() => setChoice(item.id)} className="h-5 w-5 shrink-0 accent-[var(--hf-brand)]" required />
-                    <span className="flex-1 font-semibold text-ink">{item.name}</span>
-                    {showPrices && <span className="tabular shrink-0 font-bold text-ink">{formatMoney(item.ownerCents, currency)}</span>}
-                  </label>
-                ))}
-              </div>
-            </div>
-          ))}
-          <div>
-            <p className="mb-2 text-sm font-bold tracking-wide text-muted uppercase">Not on the list</p>
-            <label className={optionClass(choice === OFF_MENU)}>
-              <input type="radio" name="menuItemId" value={OFF_MENU} checked={choice === OFF_MENU} onChange={() => setChoice(OFF_MENU)} className="h-5 w-5 shrink-0 accent-[var(--hf-brand)]" required />
-              <span className="flex-1">
-                <span className="block font-semibold text-ink">Something else</span>
-                {showPrices && <span className="block text-sm text-muted">A tradie comes to look, then prices the work before doing it.</span>}
+            <button
+              key={label}
+              type="button"
+              aria-pressed={open === label}
+              onClick={() => {
+                setOpen(label);
+                if (selected?.tradeLabel !== label) setChoice("");
+              }}
+              className={tileClass(open === label)}
+            >
+              <span className="block font-bold text-ink">{label}</span>
+              <span className="block text-sm text-muted">
+                {group.length} {group.length === 1 ? "job" : "jobs"}
               </span>
-              {showPrices && <span className="tabular shrink-0 font-bold text-ink">{formatMoney(props.diagnosisCents, currency)}</span>}
-            </label>
-          </div>
+            </button>
+          ))}
+          <button
+            type="button"
+            aria-pressed={open === OFF_MENU}
+            onClick={() => {
+              setOpen(OFF_MENU);
+              setChoice(OFF_MENU);
+            }}
+            className={tileClass(open === OFF_MENU)}
+          >
+            <span className="block font-bold text-ink">Something else</span>
+            <span className="block text-sm text-muted">{showPrices ? `Not on the list. ${formatMoney(props.diagnosisCents, currency)} to come and look` : "Not on the list"}</span>
+          </button>
         </div>
+
+        {open && open !== OFF_MENU && (
+          <div className="mt-4 space-y-2">
+            <p className="text-sm font-bold tracking-wide text-muted uppercase">{open}</p>
+            {(groups.get(open) ?? []).map((item) => (
+              <label key={item.id} className={optionClass(choice === item.id)}>
+                <input type="radio" name="menuItemId" value={item.id} checked={choice === item.id} onChange={() => setChoice(item.id)} className="h-5 w-5 shrink-0 accent-[var(--hf-brand)]" required />
+                <span className="flex-1 font-semibold text-ink">{item.name}</span>
+                {showPrices && <span className="tabular shrink-0 font-bold text-ink">{formatMoney(item.ownerCents, currency)}</span>}
+              </label>
+            ))}
+          </div>
+        )}
+        {choice === OFF_MENU && <input type="hidden" name="menuItemId" value={OFF_MENU} />}
+        {open === OFF_MENU && showPrices && (
+          <p className="mt-3 text-sm text-muted">A tradie comes to look, then prices the work before doing it. You only pay the call-out unless you say yes to their price.</p>
+        )}
       </fieldset>
 
       {selected?.tryFirst && (

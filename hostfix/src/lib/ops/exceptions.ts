@@ -139,6 +139,9 @@ export type QueueItem = {
   resolutionNote: string | null;
 };
 
+/** The kinds where a promised time is running, so the deadline is what matters. */
+export const TIME_BOUND: ExceptionKind[] = ["nobody_accepted", "at_risk", "missed_window", "quote_waiting"];
+
 /** The queue. Open items first, the ones closest to their deadline at the top. */
 export async function listExceptions(db: Db, filter: { status?: "open" | "resolved"; market?: string | null; limit?: number } = {}): Promise<QueueItem[]> {
   const rows = await db.query<{
@@ -156,9 +159,13 @@ export async function listExceptions(db: Db, filter: { status?: "open" | "resolv
        left join public.properties p on p.id = e.property_id
        left join public.tradies t on t.id = e.tradie_id
       where ($1::text is null or e.status = $1) and ($2::text is null or e.market = $2 or e.market is null)
-      order by (e.status = 'open') desc, coalesce(j.respond_by, e.created_at) asc, e.created_at desc
+      order by (e.status = 'open') desc,
+               -- Jobs with a promised time running come first, soonest first. Everything else follows, oldest first.
+               (e.kind = any($4::text[]) and j.respond_by is not null) desc,
+               case when e.kind = any($4::text[]) then coalesce(j.respond_by, e.created_at) else e.created_at end asc,
+               e.created_at desc
       limit $3`,
-    [filter.status ?? null, filter.market ?? null, filter.limit ?? 200],
+    [filter.status ?? null, filter.market ?? null, filter.limit ?? 200, TIME_BOUND],
   );
   return rows.map((row) => ({
     id: row.id, createdAt: new Date(row.created_at), kind: row.kind, market: row.market, summary: row.summary, status: row.status,

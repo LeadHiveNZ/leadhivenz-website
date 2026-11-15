@@ -75,14 +75,21 @@ export default async function PropertyPage({ params, searchParams }: { params: P
           Next: print the QR card for the property, and send the team link to your cleaner. Both are just below.
         </Notice>
       )}
+      {query.cancelled && (
+        <Notice tone="good" title="Membership cancelled">
+          {property.currentPeriodEnd && property.status === "active"
+            ? `The property stays covered until ${formatDate(property.currentPeriodEnd, market.timezone)}. No further payments will be taken.`
+            : "No further payments will be taken."}
+        </Notice>
+      )}
       {query.pending && !member && (
         <Notice tone="info" title="We are confirming your payment">
           This usually takes under a minute. Refresh this page shortly.
         </Notice>
       )}
 
-      {/* MEMBERSHIP */}
-      {!member ? (
+      {/* NOT A MEMBER YET: starting the membership comes first */}
+      {!member && (
         <Card className="border-brand/30 sm:p-6">
           <SectionTitle>{property.status === "cancelled" ? "Start the membership again" : "Start the membership"}</SectionTitle>
           {notReady ? (
@@ -117,69 +124,6 @@ export default async function PropertyPage({ params, searchParams }: { params: P
                 {cardLine ? "Start membership" : "Continue to payment"}
               </SubmitButton>
             </ActionForm>
-          )}
-        </Card>
-      ) : (
-        <Card>
-          <SectionTitle>Membership</SectionTitle>
-          {property.status === "past_due" && (
-            <div className="mb-4 space-y-3">
-              <Notice tone="error" title="Your last payment did not go through">
-                Tradies cannot be sent here until the card is fixed.
-              </Notice>
-              <ActionForm action={changeCard}>
-                <input type="hidden" name="country" value={market.country} />
-                <SubmitButton pendingLabel="Opening...">Update my card</SubmitButton>
-              </ActionForm>
-            </div>
-          )}
-          <Facts
-            rows={[
-              { label: "Plan", value: tier ? `${tier.name}, ${money(tier.monthlyPriceCents)} a month` : "None" },
-              ...(tier ? [{ label: "What you get", value: <span className="block max-w-[16rem] text-sm font-normal text-muted">{tierLine(tier, market)}</span> }] : []),
-              {
-                label: property.cancelAtPeriodEnd ? "Covered until" : "Next payment",
-                value: property.currentPeriodEnd ? formatDate(property.currentPeriodEnd, market.timezone) : "Soon",
-              },
-              ...(cardLine ? [{ label: "Card", value: cardLine }] : []),
-            ]}
-          />
-          {!property.cancelAtPeriodEnd && (
-            <div className="mt-4 space-y-2.5">
-              {tiers.filter((candidate) => candidate.active && candidate.id !== property.tierId).length > 0 && (
-                <Reveal label="Change plan">
-                  <ActionForm action={switchTier} className="space-y-4">
-                    <input type="hidden" name="propertyId" value={property.id} />
-                    <RadioCards
-                      name="tierId"
-                      legend="Move to"
-                      options={tiers.filter((candidate) => candidate.active && candidate.id !== property.tierId).map((candidate) => ({
-                        value: candidate.id,
-                        title: candidate.name,
-                        detail: tierLine(candidate, market),
-                        right: `${money(candidate.monthlyPriceCents)} a month`,
-                      }))}
-                    />
-                    <p className="text-sm text-muted">The new price starts with your next monthly payment.</p>
-                    <SubmitButton variant="secondary" pendingLabel="Changing...">
-                      Change plan
-                    </SubmitButton>
-                  </ActionForm>
-                </Reveal>
-              )}
-              <Reveal label="Cancel membership" tone="alert">
-                <ActionForm action={endMembership} className="space-y-3">
-                  <input type="hidden" name="propertyId" value={property.id} />
-                  <p className="text-muted">
-                    The property stays covered until {property.currentPeriodEnd ? formatDate(property.currentPeriodEnd, market.timezone) : "the end of the month you paid for"}. After that no tradies can be sent here and the report links
-                    stop working. No further payments are taken.
-                  </p>
-                  <SubmitButton variant="danger" pendingLabel="Cancelling...">
-                    Yes, cancel the membership
-                  </SubmitButton>
-                </ActionForm>
-              </Reveal>
-            </div>
           )}
         </Card>
       )}
@@ -267,6 +211,72 @@ export default async function PropertyPage({ params, searchParams }: { params: P
             )}
           </div>
         </section>
+      )}
+
+      {/* MEMBERSHIP */}
+      {member && (
+        <Card>
+          <SectionTitle>Membership</SectionTitle>
+          {property.status === "past_due" && (
+            <div className="mb-4 space-y-3">
+              <Notice tone="error" title="Your last payment did not go through">
+                Tradies cannot be sent here until the card is fixed.
+              </Notice>
+              <ActionForm action={changeCard}>
+                <input type="hidden" name="country" value={market.country} />
+                <SubmitButton pendingLabel="Opening...">Update my card</SubmitButton>
+              </ActionForm>
+            </div>
+          )}
+          <Facts
+            rows={[
+              { label: "Plan", value: tier ? `${tier.name}, ${money(tier.monthlyPriceCents)} a month` : "None" },
+              {
+                label: property.cancelAtPeriodEnd ? "Covered until" : "Next payment",
+                value: property.currentPeriodEnd ? formatDate(property.currentPeriodEnd, market.timezone) : "Soon",
+              },
+              ...(cardLine ? [{ label: "Card", value: cardLine }] : []),
+            ]}
+          />
+          {tier && <p className="mt-2 text-sm text-muted">{tierLine(tier, market)}</p>}
+          {!property.cancelAtPeriodEnd && (
+            <div className="mt-4 space-y-2.5">
+              {tiers.filter((candidate) => candidate.active && candidate.id !== property.tierId).length > 0 && (
+                <Reveal label="Change plan">
+                  <ActionForm action={switchTier} className="space-y-4">
+                    <input type="hidden" name="propertyId" value={property.id} />
+                    <RadioCards
+                      name="tierId"
+                      legend="Move to"
+                      options={tiers.filter((candidate) => candidate.active && candidate.id !== property.tierId).map((candidate) => ({
+                        value: candidate.id,
+                        title: candidate.name,
+                        detail: tierLine(candidate, market),
+                        right: `${money(candidate.monthlyPriceCents)} a month`,
+                      }))}
+                    />
+                    <p className="text-sm text-muted">The new price starts with your next monthly payment.</p>
+                    <SubmitButton variant="secondary" pendingLabel="Changing...">
+                      Change plan
+                    </SubmitButton>
+                  </ActionForm>
+                </Reveal>
+              )}
+              <Reveal label="Cancel membership" tone="alert">
+                <ActionForm action={endMembership} className="space-y-3">
+                  <input type="hidden" name="propertyId" value={property.id} />
+                  <p className="text-muted">
+                    The property stays covered until {property.currentPeriodEnd ? formatDate(property.currentPeriodEnd, market.timezone) : "the end of the month you paid for"}. After that no tradies can be sent here and the report links
+                    stop working. No further payments are taken.
+                  </p>
+                  <SubmitButton variant="danger" pendingLabel="Cancelling...">
+                    Yes, cancel the membership
+                  </SubmitButton>
+                </ActionForm>
+              </Reveal>
+            </div>
+          )}
+        </Card>
       )}
 
       {/* DETAILS */}

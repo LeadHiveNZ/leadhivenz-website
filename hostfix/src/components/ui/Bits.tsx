@@ -139,7 +139,7 @@ export function RowLink({ href, title, subtitle, right, leading }: { href: strin
     <Link href={href} className={`${cardClass} flex items-center gap-3 p-4 transition hover:border-brand/40 hover:shadow-sm`}>
       {leading}
       <span className="min-w-0 flex-1">
-        <span className="block truncate font-bold text-ink">{title}</span>
+        <span className="block font-bold text-ink">{title}</span>
         {subtitle && <span className="block truncate text-sm text-muted">{subtitle}</span>}
       </span>
       {right}

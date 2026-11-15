@@ -13,7 +13,7 @@ import { getDb } from "@/lib/db";
 import { lastTick } from "@/lib/dispatch/tick";
 import { demoModeAllowed } from "@/lib/env";
 import { listMarkets } from "@/lib/markets/store";
-import { EXCEPTION_ACTIONS, EXCEPTION_LABELS, listExceptions, type ExceptionKind } from "@/lib/ops/exceptions";
+import { EXCEPTION_ACTIONS, EXCEPTION_LABELS, listExceptions, TIME_BOUND, type ExceptionKind } from "@/lib/ops/exceptions";
 import { formatDateTime, formatDeadline, formatDuration } from "@/lib/time";
 
 export const metadata: Metadata = { title: "Queue" };
@@ -78,7 +78,7 @@ export default async function QueuePage({ searchParams }: { searchParams: Search
                 <span className="tabular ml-auto text-sm text-muted">{formatDateTime(item.createdAt, zone(item.market))}</span>
               </div>
               <p className="mt-2.5 text-ink">{item.summary}</p>
-              {item.status === "open" && item.respondBy && item.jobId && (
+              {item.status === "open" && item.respondBy && item.jobId && TIME_BOUND.includes(item.kind) && (
                 <p className={`mt-1.5 flex items-center gap-1.5 text-sm font-semibold ${item.respondBy.getTime() <= at.getTime() ? "text-alert" : "text-wait"}`}>
                   <Icon name="clock" size={16} />
                   {item.respondBy.getTime() <= at.getTime() ? "Was promised by" : "Promised on site by"} {formatDeadline(item.respondBy, at, zone(item.market))}

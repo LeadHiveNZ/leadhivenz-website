@@ -55,16 +55,14 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en-NZ" className={`${GeistSans.variable} ${display.variable} h-full antialiased`} style={brandColours}>
       <body className="flex min-h-full flex-col font-sans">
-        {children}
-        {/* Demo mode only (never on the live site): a way back to the demo menu from any screen. */}
+        {/* Demo mode only (never on the live site): a strip saying so, with a way back to the demo menu. */}
         {demoModeAllowed() && (
-          <a
-            href="/demo"
-            className="no-print fixed bottom-24 left-3 z-40 rounded-full bg-brand-dark px-3 py-1.5 text-xs font-bold text-accent shadow-lg ring-2 ring-white/70 md:bottom-4"
-          >
-            Demo menu
+          <a href="/demo" className="no-print flex items-center justify-center gap-2 bg-brand-dark px-4 py-1.5 text-xs font-bold text-white">
+            <span className="rounded-full bg-accent px-2 py-0.5 text-brand-dark">DEMO</span>
+            <span>Nothing here is real. Tap for the demo menu.</span>
           </a>
         )}
+        {children}
       </body>
     </html>
   );

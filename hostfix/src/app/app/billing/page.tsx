@@ -67,7 +67,9 @@ export default async function BillingPage({ searchParams }: { searchParams: Sear
               <>
                 <p className="flex items-center gap-3 text-lg font-semibold text-ink">
                   <Icon name="card" className="text-brand" />
-                  <span className="capitalize">{billing.cardBrand ?? "Card"}</span> ending {billing.cardLast4}
+                  <span>
+                    <span className="capitalize">{billing.cardBrand ?? "Card"}</span> ending {billing.cardLast4}
+                  </span>
                 </p>
                 {billing.cardExpMonth && billing.cardExpYear && (
                   <p className="mt-1 text-sm text-muted">
@@ -95,15 +97,15 @@ export default async function BillingPage({ searchParams }: { searchParams: Sear
               const zone = allMarkets.find((candidate) => candidate.slug === property.market)?.timezone ?? market.timezone;
               const label = membershipLabel(property, zone);
               return (
-                <li key={property.id} className="flex items-baseline justify-between gap-3 py-2.5">
-                  <Link href={`/app/properties/${property.id}`} className="min-w-0 truncate font-semibold text-brand underline underline-offset-2">
+                <li key={property.id} className="py-2.5">
+                  <Link href={`/app/properties/${property.id}`} className="font-semibold text-brand underline underline-offset-2">
                     {property.name}
                   </Link>
-                  <span className="shrink-0 text-right text-sm text-muted">
+                  <span className="block text-sm text-muted">
                     {property.status === "active" && tier
                       ? `${tier.name}, ${formatMoney(tier.monthlyPriceCents, allMarkets.find((candidate) => candidate.slug === property.market)?.currency ?? market.currency)} a month`
                       : label.label}
-                    {property.status === "active" && property.currentPeriodEnd && !property.cancelAtPeriodEnd ? `. Next ${formatDate(property.currentPeriodEnd, zone)}` : ""}
+                    {property.status === "active" && property.currentPeriodEnd ? `. ${property.cancelAtPeriodEnd ? "Ends" : "Next payment"} ${formatDate(property.currentPeriodEnd, zone)}` : ""}
                   </span>
                 </li>
               );

@@ -60,8 +60,7 @@ export async function staffAssign(_previous: FormState, formData: FormData): Pro
   switch (result.result) {
     case "accepted":
     case "already_yours":
-      revalidatePath(jobPath(jobId));
-      return { done: "Assigned. The tradie and the owner have both been texted." };
+      redirect(`${jobPath(jobId)}?did=assigned`);
     case "not_eligible":
       return { message: "That tradie cannot be given this job. Check they are approved, do this trade, and have a current licence if the job needs one." };
     case "taken":
@@ -78,8 +77,8 @@ export async function staffGoAhead(_previous: FormState, formData: FormData): Pr
   const db = await getDb();
   const approved = await approveGuestReport(db, jobId, { urgent: text(formData, "how") === "urgent" }, `${staff.actor} for the owner`);
   await sendQueued(db);
-  revalidatePath(jobPath(jobId));
-  return approved ? { done: "Sent out to tradies." } : { message: "This job is not waiting for the owner any more." };
+  if (!approved) return { message: "This job is not waiting for the owner any more." };
+  redirect(`${jobPath(jobId)}?did=sent_out`);
 }
 
 export async function staffReoffer(_previous: FormState, formData: FormData): Promise<FormState> {
@@ -102,8 +101,7 @@ export async function staffCancel(_previous: FormState, formData: FormData): Pro
   const result = await cancelJob(db, jobId, { actor: staff.actor, staff: true }, reason);
   await sendQueued(db);
   if (!result.ok) return { message: result.message };
-  revalidatePath(jobPath(jobId));
-  return { done: "Cancelled. Nothing is charged. The owner and the tradie have been texted." };
+  redirect(`${jobPath(jobId)}?did=cancelled`);
 }
 
 /** Answers a quote for an owner who said yes or no by phone. */
@@ -115,8 +113,7 @@ export async function staffQuote(_previous: FormState, formData: FormData): Prom
   const result = await decideQuote(db, quote.id, text(formData, "answer") === "yes", `${staff.actor} for the owner`);
   await sendQueued(db);
   if (!result.ok) return { message: result.message };
-  revalidatePath(jobPath(quote.jobId));
-  return { done: "Recorded. The tradie has been texted." };
+  redirect(`${jobPath(quote.jobId)}?did=quote_answered`);
 }
 
 export async function staffResolveDispute(_previous: FormState, formData: FormData): Promise<FormState> {
@@ -138,8 +135,7 @@ export async function staffResolveDispute(_previous: FormState, formData: FormDa
   }
   await sendQueued(db);
   if (!result.ok) return problem(formData, result.message);
-  revalidatePath(jobPath(jobId));
-  return { done: outcome === "refund" ? "Refunded. The tradie's payment has been adjusted to match." : "Settled. The tradie will be paid in full." };
+  redirect(`${jobPath(jobId)}?did=${outcome === "refund" ? "refunded" : "work_stands"}`);
 }
 
 export async function staffRetryPayout(_previous: FormState, formData: FormData): Promise<FormState> {
@@ -148,8 +144,8 @@ export async function staffRetryPayout(_previous: FormState, formData: FormData)
   const db = await getDb();
   const outcome = await retryPayout(db, gatewayFor(db), jobId, staff.actor);
   await sendQueued(db);
+  if (outcome === "sent") redirect(`${jobPath(jobId)}?did=tradie_paid`);
   revalidatePath(jobPath(jobId));
-  if (outcome === "sent") return { done: "Paid. The tradie has been texted." };
   if (outcome === "skipped") return { message: "There is no failed payment to try again on this job." };
   return { message: "It still could not be sent. Check the tradie's bank details are set up, then try again." };
 }
@@ -160,8 +156,8 @@ export async function staffRetryCharge(_previous: FormState, formData: FormData)
   const db = await getDb();
   const outcome = await chargeJob(db, gatewayFor(db), jobId, { force: true });
   await sendQueued(db);
+  if (outcome === "succeeded") redirect(`${jobPath(jobId)}?did=charged`);
   revalidatePath(jobPath(jobId));
-  if (outcome === "succeeded") return { done: "The card was charged. The tradie's payment is now on its way." };
   if (outcome === "skipped") return { message: "There is nothing to charge on this job right now." };
   return { message: "The card was declined again. Ask the owner to update their card (Billing in their app), then try again." };
 }
@@ -255,13 +251,8 @@ export async function staffSetTradieStatus(_previous: FormState, formData: FormD
     });
     await sendQueued(db);
   }
-  revalidatePath(`/admin/tradies/${tradieId}`);
   revalidatePath("/admin/tradies");
-  return {
-    done: status === "approved"
-      ? before.status === "applied" ? "Approved. They have been texted a link to sign in and add their bank details." : "Back on. They can be offered jobs again."
-      : status === "paused" ? "Paused. They will not be offered jobs." : status === "removed" ? "Removed from the network. Any first-choice or backup slots they held are now empty." : "Saved.",
-  };
+  redirect(`/admin/tradies/${tradieId}?did=${status === "approved" ? (before.status === "applied" ? "approved" : "back_on") : status}`);
 }
 
 /** Texts a tradie the link to sign in and finish their profile. */

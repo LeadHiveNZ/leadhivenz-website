@@ -133,8 +133,7 @@ export async function endMembership(_previous: FormState, formData: FormData): P
     console.error("[membership] cancelling failed:", error instanceof Error ? error.message : error);
     return { message: "The membership could not be cancelled just now. Please try again, or contact us." };
   }
-  revalidatePath(`/app/properties/${propertyId}`);
-  return { done: "Cancelled. The property stays covered until the end of the month already paid for." };
+  redirect(`/app/properties/${propertyId}?cancelled=1`);
 }
 
 export async function switchTier(_previous: FormState, formData: FormData): Promise<FormState> {
