@@ -122,6 +122,13 @@ export const emails = {
     body: `Hi ${first(o.name)},\n\nYour ${B} account is ready. Add your first property and choose a membership here:\n${o.link}\n\nOnce a property is a member you get a link and a QR code to put in the property, so your cleaner or a guest can report a problem in under a minute.`,
   }),
 
+  ownerInvite: (o: { name: string; link: string }) => ({
+    subject: `${B} is open in your area`,
+    body: `Hi ${first(o.name)},\n\nYou asked us to tell you when ${B} opened near you. We are open. Add your property and choose a membership here:\n${o.link}\n\nIt takes about two minutes.`,
+    /** The same message short enough for a text. */
+    text: `${B}: hi ${first(o.name)}, we are now open in your area. Join here: ${o.link}`,
+  }),
+
   staffInvite: (o: { name: string; role: string; link: string }) => ({
     subject: `You have been added to ${B}`,
     body: `Hi ${first(o.name)},\n\nYou have been added to ${B} as ${o.role === "admin" ? "an admin" : "a dispatcher"}. Sign in with this email address here:\n${o.link}\n\nYou will be sent a six-digit code each time. There is no password.`,

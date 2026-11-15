@@ -2,18 +2,20 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
-import { signOut } from "@/app/actions/admin";
-import { SubmitButton } from "@/components/forms/SubmitButton";
+import { LeadActions } from "./LeadActions";
+import { Icon } from "@/components/ui/Icon";
 import { secondaryButtonClass } from "@/components/forms/styles";
 import { sourceLabel } from "@/lib/attribution";
-import { requireAdmin } from "@/lib/auth/admin";
+import { requireAdminRole } from "@/lib/auth/current";
 import { depositLabel, formatWhen, leadSummary, leadTimezone } from "@/lib/leads/display";
 import { formatMoney } from "@/lib/money";
 import { displayPhone } from "@/lib/phone";
-import { setupStatus, type StatusItem } from "@/lib/status";
+import { setupStatus } from "@/lib/status";
+import { getDb } from "@/lib/db";
+import { listMarkets } from "@/lib/markets/store";
 import { getStore, storeKind } from "@/lib/store";
 import type { Lead, LeadCounts, LeadType, StoredNotification } from "@/lib/store/types";
-import { TestAlertButton } from "./TestAlertButton";
+import { SetupChecklist } from "@/components/admin/SetupChecklist";
 
 export const metadata: Metadata = { title: "Leads" };
 
@@ -24,18 +26,16 @@ const MAX_SHOWN = 2000;
 
 export default function LeadsPage({ searchParams }: { searchParams: SearchParams }) {
   return (
-    <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6">
-      <Suspense fallback={<p className="py-10 text-center text-muted">Loading leads...</p>}>
-        <LeadsDashboard searchParams={searchParams} />
-      </Suspense>
-    </main>
+    <Suspense fallback={<p className="py-10 text-center text-muted">Loading leads...</p>}>
+      <LeadsDashboard searchParams={searchParams} />
+    </Suspense>
   );
 }
 
 async function LeadsDashboard({ searchParams }: { searchParams: SearchParams }) {
   // Wait for a real visit, then the lock. Nothing below runs for someone who is not signed in.
   await connection();
-  await requireAdmin();
+  await requireAdminRole();
 
   const params = await searchParams;
   const filter: LeadType | undefined = params.type === "owner" || params.type === "tradie" ? params.type : undefined;
@@ -54,6 +54,12 @@ async function LeadsDashboard({ searchParams }: { searchParams: SearchParams }) 
     loadProblem = error instanceof Error ? error.message : "The leads could not be loaded.";
   }
   const status = await setupStatus();
+  let liveMarkets = new Set<string>();
+  try {
+    liveMarkets = new Set((await listMarkets(await getDb())).filter((market) => market.stage === "live").map((market) => market.slug));
+  } catch {
+    // The page still shows the leads if the markets cannot be read.
+  }
 
   const alertsByLead = new Map<string, StoredNotification[]>();
   for (const notification of notifications) {
@@ -66,18 +72,16 @@ async function LeadsDashboard({ searchParams }: { searchParams: SearchParams }) 
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight text-ink">Leads</h1>
-        <div className="flex flex-wrap items-center gap-2">
-          <a href="/admin/leads/export" className={secondaryButtonClass} download>
-            Download spreadsheet
-          </a>
-          <form action={signOut}>
-            <SubmitButton variant="secondary" pendingLabel="Signing out...">
-              Sign out
-            </SubmitButton>
-          </form>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <Link href="/admin/more" className="mb-2 inline-flex items-center gap-1 text-sm font-semibold text-muted hover:text-ink">
+            <Icon name="back" size={16} /> More
+          </Link>
+          <h1 className="display text-[1.75rem] text-ink sm:text-4xl">Leads</h1>
         </div>
+        <a href="/admin/leads/export" className={secondaryButtonClass} download>
+          Download spreadsheet
+        </a>
       </div>
 
       {storeKind() === "demo" && (
@@ -148,6 +152,7 @@ async function LeadsDashboard({ searchParams }: { searchParams: SearchParams }) 
                   <DepositBadge lead={lead} />
                   <AlertText alerts={alertsByLead.get(lead.id) ?? []} />
                 </div>
+                <LeadActions leadId={lead.id} leadType={lead.leadType} converted={Boolean(lead.convertedAt)} invited={Boolean(lead.invitedAt)} live={liveMarkets.has(lead.market)} />
               </li>
             ))}
           </ul>
@@ -204,8 +209,9 @@ async function LeadsDashboard({ searchParams }: { searchParams: SearchParams }) 
                         <AlertText alerts={alertsByLead.get(lead.id) ?? []} />
                       </div>
                     </td>
-                    <td className="whitespace-nowrap px-4 py-3">
+                    <td className="px-4 py-3">
                       <DepositBadge lead={lead} />
+                      <LeadActions leadId={lead.id} leadType={lead.leadType} converted={Boolean(lead.convertedAt)} invited={Boolean(lead.invitedAt)} live={liveMarkets.has(lead.market)} />
                     </td>
                   </tr>
                 ))}
@@ -301,42 +307,4 @@ function AlertText({ alerts }: { alerts: StoredNotification[] }) {
   if (parts.length === 0) return null;
   const failed = parts.some((part) => part?.includes("FAILED"));
   return <span className={`text-xs ${failed ? "font-semibold text-red-700" : "text-muted"}`}>{parts.join(" · ")}</span>;
-}
-
-const STATE_STYLE: Record<StatusItem["state"], { dot: string; word: string }> = {
-  ok: { dot: "bg-brand", word: "Ready" },
-  todo: { dot: "bg-wait", word: "To do" },
-  problem: { dot: "bg-red-600", word: "Needs fixing" },
-};
-
-function SetupChecklist({ items }: { items: StatusItem[] }) {
-  const done = items.filter((item) => item.state === "ok").length;
-  return (
-    <section aria-labelledby="setup-title" className="rounded-2xl border border-line bg-surface p-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 id="setup-title" className="text-lg font-semibold text-ink">
-            Setup checklist
-          </h2>
-          <p className="text-sm text-muted">
-            {done} of {items.length} ready. SETUP.md has the steps for each one.
-          </p>
-        </div>
-        <TestAlertButton />
-      </div>
-      <ul className="mt-4 divide-y divide-line">
-        {items.map((item) => (
-          <li key={item.key} className="flex gap-3 py-3" data-status={item.state} data-status-key={item.key}>
-            <span className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${STATE_STYLE[item.state].dot}`} aria-hidden="true" />
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-ink">
-                {item.label} <span className="font-normal text-muted">· {STATE_STYLE[item.state].word}</span>
-              </p>
-              <p className="text-sm text-muted">{item.detail}</p>
-            </div>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
 }

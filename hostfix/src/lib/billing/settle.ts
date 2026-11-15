@@ -79,13 +79,14 @@ export async function openSettlement(db: Db, job: Job, market: Market): Promise<
 export type ChargeOutcome = "succeeded" | "failed" | "skipped";
 
 /** Charges the owner's saved card for a finished job. Safe to call again: a job is never charged twice. */
-export async function chargeJob(db: Db, gatewayFor: GatewayFor, jobId: string): Promise<ChargeOutcome> {
+export async function chargeJob(db: Db, gatewayFor: GatewayFor, jobId: string, options: { force?: boolean } = {}): Promise<ChargeOutcome> {
   const claim = await db.tx(async (tx) => {
     const at = now();
     const rows = await tx.query<PaymentRow & { claimed_until: Date | null }>("select * from public.payments where job_id = $1::uuid for update", [jobId]);
     const payment = rows[0];
     if (!payment || !["pending", "failed"].includes(payment.status)) return null;
-    if (payment.attempts >= MAX_CHARGE_ATTEMPTS) return null;
+    // The automatic tries stop after four. A person on the team can still try again, for example once the owner has changed their card.
+    if (payment.attempts >= MAX_CHARGE_ATTEMPTS && !options.force) return null;
     // Another server is in the middle of this charge.
     if (payment.claimed_until && new Date(payment.claimed_until).getTime() > at.getTime()) return null;
     const job = await getJobForStaff(tx, jobId);

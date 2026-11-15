@@ -4,7 +4,15 @@ import { Logo } from "../Logo";
 import { Icon, type IconName } from "./Icon";
 import { NavLink } from "./NavLink";
 
-export type NavItem = { href: string; label: string; icon: IconName; /** Match this path exactly rather than everything under it. */ exact?: boolean; badge?: number };
+export type NavItem = {
+  href: string;
+  label: string;
+  icon: IconName;
+  /** Match this path exactly rather than everything under it. */
+  exact?: boolean;
+  /** A small live count shown on the item, for example open items in the queue. */
+  badge?: ReactNode;
+};
 
 type Props = {
   /** Where the logo goes. */
@@ -42,7 +50,7 @@ export function AppShell({ home, area, nav, primary, right, children, wide }: Pr
             {nav.map((item) => (
               <NavLink key={item.href} href={item.href} exact={item.exact} variant="top">
                 {item.label}
-                {item.badge ? <span className="tabular ml-1.5 rounded-full bg-alert px-1.5 py-0.5 text-[0.7rem] font-bold text-white">{item.badge}</span> : null}
+                {item.badge ? <span className="ml-1.5">{item.badge}</span> : null}
               </NavLink>
             ))}
           </nav>
@@ -65,7 +73,7 @@ export function AppShell({ home, area, nav, primary, right, children, wide }: Pr
             <NavLink key={item.href} href={item.href} exact={item.exact} variant="bottom">
               <span className="relative">
                 <Icon name={item.icon} size={22} />
-                {item.badge ? <span className="tabular absolute -top-1.5 -right-2.5 rounded-full bg-alert px-1 text-[0.65rem] font-bold text-white">{item.badge}</span> : null}
+                {item.badge ? <span className="absolute -top-2 -right-3">{item.badge}</span> : null}
               </span>
               {item.label}
             </NavLink>
@@ -82,7 +90,7 @@ export function AppShell({ home, area, nav, primary, right, children, wide }: Pr
             <NavLink key={item.href} href={item.href} exact={item.exact} variant="bottom">
               <span className="relative">
                 <Icon name={item.icon} size={22} />
-                {item.badge ? <span className="tabular absolute -top-1.5 -right-2.5 rounded-full bg-alert px-1 text-[0.65rem] font-bold text-white">{item.badge}</span> : null}
+                {item.badge ? <span className="absolute -top-2 -right-3">{item.badge}</span> : null}
               </span>
               {item.label}
             </NavLink>

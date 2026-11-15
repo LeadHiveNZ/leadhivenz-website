@@ -1,5 +1,5 @@
 import { sourceLabel } from "@/lib/attribution";
-import { isAdminSignedIn } from "@/lib/auth/admin";
+import { currentStaff } from "@/lib/auth/current";
 import { toCsv } from "@/lib/csv";
 import { formatWhenSortable, leadTimezone, tradeLabel } from "@/lib/leads/display";
 import { daysLabel, managedByLabel } from "@/lib/leads/options";
@@ -7,7 +7,8 @@ import { getStore } from "@/lib/store";
 
 /** Downloads every lead as a spreadsheet. Signed-in admins only. */
 export async function GET() {
-  if (!(await isAdminSignedIn())) {
+  const staff = await currentStaff();
+  if (staff?.role !== "admin") {
     return new Response("Please sign in first.", { status: 401, headers: { "Cache-Control": "no-store" } });
   }
 

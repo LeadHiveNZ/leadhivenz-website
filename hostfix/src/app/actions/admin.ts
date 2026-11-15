@@ -42,7 +42,7 @@ export async function signIn(_previous: SignInState, formData: FormData): Promis
     path: "/",
     maxAge: ADMIN_SESSION_SECONDS,
   });
-  redirect("/admin/leads");
+  redirect("/admin/queue");
 }
 
 export async function signOut(): Promise<void> {

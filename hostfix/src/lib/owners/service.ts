@@ -154,3 +154,61 @@ export async function unusedDeposit(db: Db, ownerId: string, currency: string): 
   );
   return rows[0] ? { leadId: rows[0].id, amountCents: rows[0].deposit_amount } : null;
 }
+
+export type OwnerSummary = {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  createdAt: Date;
+  properties: number;
+  members: number;
+  /** What their member properties pay each month, per currency, in cents. */
+  monthlyCents: number;
+  currency: string | null;
+  openJobs: number;
+};
+
+/** For staff: every owner, with how many properties they have and what they pay each month. Newest first. */
+export async function listOwnersForStaff(db: Db, filter: { market?: string | null; limit?: number } = {}): Promise<OwnerSummary[]> {
+  const rows = await db.query<{
+    id: string; name: string; email: string | null; phone: string | null; created_at: Date;
+    properties: number; members: number; monthly: number; currency: string | null; open_jobs: number;
+  }>(
+    `select o.id, u.name, u.email, u.phone, o.created_at,
+            count(p.id) as properties,
+            count(p.id) filter (where p.status in ('active', 'past_due')) as members,
+            coalesce(sum(t.price_cents) filter (where p.status in ('active', 'past_due')), 0) as monthly,
+            max(m.currency) as currency,
+            (select count(*) from public.jobs j where j.owner_id = o.id and j.status not in ('completed', 'cancelled')) as open_jobs
+       from public.owners o
+       join public.users u on u.id = o.user_id
+       left join public.properties p on p.owner_id = o.id and ($1::text is null or p.market = $1)
+       left join public.membership_tiers t on t.id = p.tier_id
+       left join public.markets m on m.slug = p.market
+      group by o.id, u.name, u.email, u.phone, o.created_at
+     having $1::text is null or count(p.id) > 0
+      order by o.created_at desc limit $2`,
+    [filter.market ?? null, filter.limit ?? 300],
+  );
+  return rows.map((row) => ({
+    id: row.id, name: row.name, email: row.email, phone: row.phone, createdAt: new Date(row.created_at), properties: Number(row.properties),
+    members: Number(row.members), monthlyCents: Number(row.monthly), currency: row.currency, openJobs: Number(row.open_jobs),
+  }));
+}
+
+export type CreditRow = { id: string; createdAt: Date; reason: string; amountCents: number; currency: string; status: string; note: string | null; propertyName: string | null };
+
+/** Every credit an owner has been given, newest first. */
+export async function listCredits(db: Db, ownerId: string): Promise<CreditRow[]> {
+  const rows = await db.query<{ id: string; created_at: Date; reason: string; amount_cents: number; currency: string; status: string; note: string | null; property_name: string | null }>(
+    `select c.id, c.created_at, c.reason, c.amount_cents, c.currency, c.status, c.note, p.name as property_name
+       from public.credits c left join public.properties p on p.id = c.property_id
+      where c.owner_id = $1::uuid order by c.created_at desc limit 100`,
+    [ownerId],
+  );
+  return rows.map((row) => ({
+    id: row.id, createdAt: new Date(row.created_at), reason: row.reason, amountCents: row.amount_cents, currency: row.currency, status: row.status,
+    note: row.note, propertyName: row.property_name,
+  }));
+}

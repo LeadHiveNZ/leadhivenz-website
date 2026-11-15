@@ -11,6 +11,8 @@ type BaseProps = {
   name: string;
   hint?: string;
   error?: string;
+  /** The field's id on the page. Defaults to its name. Set it when the same field name appears more than once on a page. */
+  id?: string;
 };
 
 function describedBy(name: string, hint?: string, error?: string): string | undefined {
@@ -51,22 +53,23 @@ type TextFieldProps = BaseProps & {
   maxLength?: number;
 };
 
-export function TextField({ label, name, hint, error, type = "text", ...rest }: TextFieldProps) {
+export function TextField({ label, name, hint, error, type = "text", id, ...rest }: TextFieldProps) {
+  const fieldId = id ?? name;
   return (
     <div>
-      <label htmlFor={name} className={labelClass}>
+      <label htmlFor={fieldId} className={labelClass}>
         {label}
       </label>
       <input
-        id={name}
+        id={fieldId}
         name={name}
         type={type}
         aria-invalid={error ? true : undefined}
-        aria-describedby={describedBy(name, hint, error)}
+        aria-describedby={describedBy(fieldId, hint, error)}
         className={`${inputClass} ${borderClass(error)}`}
         {...rest}
       />
-      <FieldMessages name={name} hint={hint} error={error} />
+      <FieldMessages name={fieldId} hint={hint} error={error} />
     </div>
   );
 }
@@ -78,22 +81,23 @@ type SelectFieldProps = BaseProps & {
   defaultValue?: string;
 };
 
-export function SelectField({ label, name, hint, error, options, placeholder, required, defaultValue }: SelectFieldProps) {
+export function SelectField({ label, name, hint, error, options, placeholder, required, defaultValue, id }: SelectFieldProps) {
+  const fieldId = id ?? name;
   return (
     <div>
-      <label htmlFor={name} className={labelClass}>
+      <label htmlFor={fieldId} className={labelClass}>
         {label}
       </label>
       <select
         // Rebuild the list when the saved choice changes. Without this the
         // choice is lost when the form comes back with a message to fix.
         key={defaultValue ?? ""}
-        id={name}
+        id={fieldId}
         name={name}
         required={required}
         defaultValue={defaultValue ?? ""}
         aria-invalid={error ? true : undefined}
-        aria-describedby={describedBy(name, hint, error)}
+        aria-describedby={describedBy(fieldId, hint, error)}
         className={`${inputClass} ${borderClass(error)} appearance-none bg-[length:1.25rem] bg-[right_0.9rem_center] bg-no-repeat pr-11`}
         style={{
           backgroundImage:
@@ -109,7 +113,7 @@ export function SelectField({ label, name, hint, error, options, placeholder, re
           </option>
         ))}
       </select>
-      <FieldMessages name={name} hint={hint} error={error} />
+      <FieldMessages name={fieldId} hint={hint} error={error} />
     </div>
   );
 }

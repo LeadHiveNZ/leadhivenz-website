@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useActionState, useContext, useEffect, useRef, type ReactNode } from "react";
+import { createContext, useActionState, useContext, useEffect, useId, useRef, type ReactNode } from "react";
 import type { FormState } from "@/lib/forms";
 import { CheckboxGroup, FormMessage, SelectField, TextField } from "./Fields";
 import { inputClass, labelClass } from "./styles";
@@ -53,14 +53,16 @@ type TextProps = Omit<Parameters<typeof TextField>[0], "error">;
 /** A text box that remembers what was typed and shows its own error. */
 export function Field(props: TextProps) {
   const state = useContext(FormContext);
-  return <TextField {...props} defaultValue={saved(state, props.name) ?? props.defaultValue} error={state.fieldErrors?.[props.name]} />;
+  const id = useId();
+  return <TextField id={id} {...props} defaultValue={saved(state, props.name) ?? props.defaultValue} error={state.fieldErrors?.[props.name]} />;
 }
 
 type SelectProps = Omit<Parameters<typeof SelectField>[0], "error">;
 
 export function Select(props: SelectProps) {
   const state = useContext(FormContext);
-  return <SelectField {...props} defaultValue={saved(state, props.name) ?? props.defaultValue} error={state.fieldErrors?.[props.name]} />;
+  const id = useId();
+  return <SelectField id={id} {...props} defaultValue={saved(state, props.name) ?? props.defaultValue} error={state.fieldErrors?.[props.name]} />;
 }
 
 type ChecksProps = Omit<Parameters<typeof CheckboxGroup>[0], "error">;
@@ -77,14 +79,15 @@ type AreaProps = { label: string; name: string; hint?: string; rows?: number; pl
 /** A bigger text box for notes and descriptions. */
 export function Area({ label, name, hint, rows = 4, placeholder, required, defaultValue, maxLength = 2000 }: AreaProps) {
   const state = useContext(FormContext);
+  const id = useId();
   const error = state.fieldErrors?.[name];
   return (
     <div>
-      <label htmlFor={name} className={labelClass}>
+      <label htmlFor={id} className={labelClass}>
         {label}
       </label>
       <textarea
-        id={name}
+        id={id}
         name={name}
         rows={rows}
         required={required}
@@ -92,16 +95,16 @@ export function Area({ label, name, hint, rows = 4, placeholder, required, defau
         placeholder={placeholder}
         defaultValue={saved(state, name) ?? defaultValue}
         aria-invalid={error ? true : undefined}
-        aria-describedby={[hint ? `${name}-hint` : null, error ? `${name}-error` : null].filter(Boolean).join(" ") || undefined}
+        aria-describedby={[hint && !error ? `${id}-hint` : null, error ? `${id}-error` : null].filter(Boolean).join(" ") || undefined}
         className={`${inputClass} ${error ? "border-red-600" : "border-line"}`}
       />
       {hint && !error && (
-        <p id={`${name}-hint`} className="mt-1.5 text-sm text-muted">
+        <p id={`${id}-hint`} className="mt-1.5 text-sm text-muted">
           {hint}
         </p>
       )}
       {error && (
-        <p id={`${name}-error`} className="mt-1.5 text-sm font-medium text-red-700">
+        <p id={`${id}-error`} className="mt-1.5 text-sm font-medium text-red-700">
           {error}
         </p>
       )}
