@@ -1,0 +1,205 @@
+import { describe, expect, it } from "vitest";
+import { launchMarket } from "@config/markets";
+import {
+  ContentError,
+  contentTokens,
+  countEditMarkers,
+  fillTokens,
+  loadLanding,
+  parseLanding,
+  plainText,
+  type Block,
+} from "@/lib/content";
+
+const sample = `# Fixed *fast* in Queenstown
+
+Intro paragraph with **bold** and a [link](/tradies).
+
+- Point one
+- **Lead.** Point two
+
+## How it works
+
+1. Step one
+2. Step two
+
+> A promise worth a box.
+
+## What it costs
+
+### Essential: NZ$99
+
+One paragraph.
+
+### Priority: NZ$149
+
+- Included thing
+
+Loose text after cards [EDIT: finish this].
+`;
+
+describe("parseLanding", () => {
+  const content = parseLanding(sample, "sample.md");
+
+  it("takes the first heading as the headline", () => {
+    expect(content.headlineText).toBe("Fixed fast in Queenstown");
+    expect(content.headline).toEqual([
+      { type: "text", text: "Fixed " },
+      { type: "em", children: [{ type: "text", text: "fast" }] },
+      { type: "text", text: " in Queenstown" },
+    ]);
+  });
+
+  it("keeps what sits under the headline as the introduction", () => {
+    expect(content.intro.map((b) => b.type)).toEqual(["paragraph", "list"]);
+    expect(content.summaryText).toBe("Intro paragraph with bold and a link.");
+    const list = content.intro[1] as Extract<Block, { type: "list" }>;
+    expect(list.ordered).toBe(false);
+    expect(list.items.map(plainText)).toEqual(["Point one", "Lead. Point two"]);
+    expect(list.items[1]?.[0]).toEqual({ type: "strong", children: [{ type: "text", text: "Lead." }] });
+  });
+
+  it("splits the rest into sections with link-friendly ids", () => {
+    expect(content.sections.map((s) => s.id)).toEqual(["how-it-works", "what-it-costs"]);
+    expect(content.sections.map((s) => plainText(s.title))).toEqual(["How it works", "What it costs"]);
+  });
+
+  it("recognises numbered steps and highlighted boxes", () => {
+    const [steps, quote] = content.sections[0]!.blocks;
+    expect(steps).toMatchObject({ type: "list", ordered: true });
+    expect(quote).toEqual({ type: "quote", paragraphs: [[{ type: "text", text: "A promise worth a box." }]] });
+  });
+
+  it("turns small headings into cards that hold what follows them", () => {
+    const blocks = content.sections[1]!.blocks;
+    expect(blocks.map((b) => b.type)).toEqual(["card", "card"]);
+    const [essential, priority] = blocks as Extract<Block, { type: "card" }>[];
+    expect(plainText(essential!.title)).toBe("Essential: NZ$99");
+    expect(essential!.blocks.map((b) => b.type)).toEqual(["paragraph"]);
+    expect(priority!.blocks.map((b) => b.type)).toEqual(["list", "paragraph"]);
+  });
+
+  it("marks unfinished copy so it can be highlighted and counted", () => {
+    expect(content.editMarkers).toBe(1);
+    const priority = content.sections[1]!.blocks[1] as Extract<Block, { type: "card" }>;
+    const last = priority.blocks[1] as Extract<Block, { type: "paragraph" }>;
+    expect(last.children).toEqual([
+      { type: "text", text: "Loose text after cards " },
+      { type: "edit", text: "[EDIT: finish this]" },
+      { type: "text", text: "." },
+    ]);
+  });
+
+  it("ends a card at a line of three dashes, so a note can sit below the cards", () => {
+    const parsed = parseLanding("# H\n\n## Prices\n\n### Basic\n\nIn the card.\n\n---\n\nBelow the cards.\n", "x.md");
+    const blocks = parsed.sections[0]!.blocks;
+    expect(blocks.map((b) => b.type)).toEqual(["card", "paragraph"]);
+    expect((blocks[0] as Extract<Block, { type: "card" }>).blocks).toHaveLength(1);
+  });
+
+  it("gives two sections with the same title different ids", () => {
+    const twice = parseLanding("# H\n\n## Questions\n\nA\n\n## Questions\n\nB\n", "x.md");
+    expect(twice.sections.map((s) => s.id)).toEqual(["questions", "questions-2"]);
+  });
+
+  it("never lets a section id clash with the sign-up form's own id", () => {
+    expect(parseLanding("# H\n\n## Signup\n\nA\n", "x.md").sections[0]?.id).toBe("signup-2");
+  });
+});
+
+describe("safety of the copy", () => {
+  it("shows raw HTML as plain text instead of running it", () => {
+    const content = parseLanding('# H\n\nHello <script>alert(1)</script> there\n\n<div onclick="x()">block</div>\n', "x.md");
+    const text = JSON.stringify(content);
+    expect(text).not.toContain('"type":"html"');
+    expect(plainText((content.intro[0] as Extract<Block, { type: "paragraph" }>).children)).toBe("Hello <script>alert(1)</script> there");
+  });
+
+  it("drops links that could run code", () => {
+    const content = parseLanding("# H\n\n[click](javascript:alert(1)) and [ok](https://example.com) and [mail](mailto:a@b.co)\n", "x.md");
+    const paragraph = content.intro[0] as Extract<Block, { type: "paragraph" }>;
+    const links = paragraph.children.filter((n) => n.type === "link");
+    expect(links.map((l) => (l.type === "link" ? l.href : ""))).toEqual(["https://example.com", "mailto:a@b.co"]);
+    expect(plainText(paragraph.children)).toBe("click and ok and mail");
+  });
+});
+
+describe("mistakes in the copy are caught with a clear message", () => {
+  it("needs a headline", () => {
+    expect(() => parseLanding("Just a paragraph.\n", "content/landing-owner.md")).toThrow(
+      'content/landing-owner.md must start with a headline: a line beginning with "# ".',
+    );
+    expect(() => parseLanding("", "x.md")).toThrow(ContentError);
+    expect(() => parseLanding("## Section first\n\nText\n", "x.md")).toThrow(/must start with a headline/);
+  });
+
+  it("allows only one headline, at the top", () => {
+    expect(() => parseLanding("# One\n\n# Two\n", "x.md")).toThrow(/more than one/);
+    expect(() => parseLanding("# One\n\n## S\n\n# Two\n", "x.md")).toThrow(/more than one|must come before/);
+  });
+
+  it("names a placeholder that does not exist and lists the ones that do", () => {
+    expect(() => fillTokens("Hello {{markt}}", { market: "Queenstown", brand: "HostFix" }, "content/landing-owner.md")).toThrow(
+      "content/landing-owner.md uses the placeholder {{markt}}, which does not exist. You can use: {{market}}, {{brand}}.",
+    );
+  });
+});
+
+describe("placeholders", () => {
+  it("come from the market and brand settings, so nothing is tied to one town or currency", () => {
+    expect(contentTokens(launchMarket)).toEqual({
+      brand: "HostFix",
+      market: "Queenstown",
+      country: "New Zealand",
+      deposit: "NZ$49",
+      essential: "NZ$99",
+      priority: "NZ$149",
+    });
+    const noosa = {
+      ...launchMarket,
+      name: "Noosa",
+      countryName: "Australia",
+      currency: "AUD" as const,
+      tiers: [
+        { key: "essential" as const, name: "Essential", monthlyPriceCents: 10900 },
+        { key: "priority" as const, name: "Priority", monthlyPriceCents: 16950 },
+      ],
+      foundingDeposit: { enabled: true, amountCents: 5900, terms: [] },
+    };
+    expect(contentTokens(noosa)).toMatchObject({ market: "Noosa", deposit: "A$59", essential: "A$109", priority: "A$169.50" });
+  });
+
+  it("are filled in wherever they appear, with or without spaces", () => {
+    expect(fillTokens("{{brand}} in {{ market }} from {{essential}}", contentTokens(launchMarket), "x.md")).toBe(
+      "HostFix in Queenstown from NZ$99",
+    );
+  });
+
+  it("counts [EDIT] markers", () => {
+    expect(countEditMarkers("a [EDIT: one] b [EDIT] c [edited] d")).toBe(2);
+  });
+});
+
+describe("the real landing page files", () => {
+  it.each(["owner", "tradie"] as const)("content/landing-%s.md loads and has the expected shape", (kind) => {
+    const content = loadLanding(kind, launchMarket);
+    expect(content.headlineText.length).toBeGreaterThan(10);
+    expect(content.headlineText).toContain("Queenstown");
+    expect(content.summaryText.length).toBeGreaterThan(20);
+    expect(content.sections.length).toBeGreaterThanOrEqual(3);
+    expect(JSON.stringify(content)).not.toContain("{{");
+    for (const section of content.sections) expect(section.blocks.length).toBeGreaterThan(0);
+  });
+
+  it("the owner page keeps its note about job charges below the two price cards", () => {
+    const pricing = loadLanding("owner", launchMarket).sections.find((s) => s.id === "what-it-costs");
+    expect(pricing?.blocks.map((b) => b.type)).toEqual(["card", "card", "paragraph"]);
+  });
+
+  it("the owner page states the real prices from the market settings", () => {
+    const text = JSON.stringify(loadLanding("owner", launchMarket));
+    expect(text).toContain("NZ$99");
+    expect(text).toContain("NZ$149");
+    expect(text).toContain("NZ$49");
+  });
+});

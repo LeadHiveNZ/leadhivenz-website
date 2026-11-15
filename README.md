@@ -16,3 +16,9 @@ clients/
 
 Preview any client file directly in a browser; add `?page=<key>` to view a service page.
 In Lovable each `CONFIG.services[key].path` becomes its own route.
+
+## Also in this repository: `hostfix/`
+
+`hostfix/` is a separate product: HostFix, a maintenance network for short-stay rentals. It is a
+Next.js app with its own README, setup checklist and tests, and it does not share code with the
+landing pages above. Start at `hostfix/README.md`.

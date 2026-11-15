@@ -1,0 +1,49 @@
+import type { Metadata, Viewport } from "next";
+import type { CSSProperties, ReactNode } from "react";
+import { GeistSans } from "geist/font/sans";
+import { brand } from "@config/brand";
+import { baseUrl } from "@/lib/env";
+import "./globals.css";
+
+export const metadata: Metadata = {
+  metadataBase: new URL(baseUrl()),
+  title: {
+    default: `${brand.name} | ${brand.tagline}`,
+    template: `%s | ${brand.name}`,
+  },
+  description: brand.description,
+  applicationName: brand.name,
+  openGraph: {
+    siteName: brand.name,
+    type: "website",
+    locale: "en_NZ",
+  },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: brand.colours.brand,
+};
+
+/** The brand colours from config/brand.ts, handed to the stylesheet. */
+const brandColours = {
+  "--hf-brand": brand.colours.brand,
+  "--hf-brand-dark": brand.colours.brandDark,
+  "--hf-accent": brand.colours.accent,
+  "--hf-accent-dark": brand.colours.accentDark,
+  "--hf-ink": brand.colours.ink,
+  "--hf-muted": brand.colours.muted,
+  "--hf-surface": brand.colours.surface,
+  "--hf-tint": brand.colours.tint,
+  "--hf-sand": brand.colours.sand,
+  "--hf-line": brand.colours.line,
+} as CSSProperties;
+
+export default function RootLayout({ children }: { children: ReactNode }) {
+  return (
+    <html lang="en-NZ" className={`${GeistSans.variable} h-full antialiased`} style={brandColours}>
+      <body className="flex min-h-full flex-col font-sans">{children}</body>
+    </html>
+  );
+}

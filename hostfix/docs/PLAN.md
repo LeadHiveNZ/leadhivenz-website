@@ -1,5 +1,25 @@
 # HostFix — Plan and data model (v0, 15 Nov 2026)
 
+> **Status, 15 Nov 2026: Phase 0 is built.** See `docs/PHASE-0.md` for what to click and `SETUP.md` to put it online.
+>
+> **Decisions taken when you said "Build it":**
+> - The code lives in the `hostfix/` folder of the LeadHive repository for now (the faster option in section 7).
+>   Vercel deploys from a subfolder without trouble. Moving it to its own repository later is still easy.
+> - The five questions in section 6 were not answered, so each **default** stated there is assumed. None of
+>   them affects Phase 0. Question 1 (GST) must be settled with your accountant before Phase 3.
+> - Phase 0 serves one launch market at a time, set in `config/markets.ts`. Per-market web addresses arrive
+>   with the add-a-market screen in Phase 4.
+>
+> **Corrections to this plan, found while building:**
+> - **Vercel Pro is required** (US$20 a month). The free plan does not allow business use and cannot deploy
+>   from an organisation's private repository. The plan below said the timer design would avoid paying for
+>   Pro. The timer design stands, but Pro is needed anyway.
+> - **Supabase's free plan pauses a project after one week with no activity.** Budget US$25 a month before running ads.
+> - **New ClickSend accounts have texts containing web links held back.** Phase 2's one-tap accept link is a
+>   web link, so this must be cleared with ClickSend support (or Twilio used) before Phase 2. See SETUP.md step 5.
+> - **Stripe now offers two webhook message formats.** The site accepts both.
+> - **Vercel runs server code in the United States by default.** `vercel.json` moves it to Sydney, next to the database.
+
 Working name HostFix. Two-sided maintenance network for short-stay rentals. Launch market Queenstown,
 built to run in many markets across NZ and AU. This document is the plan you asked for before any code
 is written. It has four parts: what I checked with outside providers, the decisions I have made, the data
@@ -56,7 +76,7 @@ different country. A New Zealand Stripe account cannot pay an Australian tradie,
 Next.js on Vercel, Supabase (database, login, photo storage), Resend for email, Meta Pixel plus Conversions
 API for lead-ad tracking, Vercel Analytics for page stats. None of these have country restrictions that
 affect us. For the 15-minute offer timer I will use Supabase's built-in scheduler (pg_cron) ticking every
-minute, which avoids paying for Vercel Pro just for a timer.
+minute. (Correction: Vercel Pro is needed regardless, see the status note at the top.)
 
 ---
 

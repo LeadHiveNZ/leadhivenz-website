@@ -1,0 +1,51 @@
+{
+  "_readme": [
+    "QUEENSTOWN FIXED-PRICE MENU. EVERY PRICE HERE IS A PLACEHOLDER.",
+    "Replace each price with your real number, then change placeholderPrices to false.",
+    "Prices are in whole dollars and include GST.",
+    "ownerPriceDollars is what the owner's card is charged. tradiePayoutDollars is what the tradie receives.",
+    "The gap between the two is what the platform keeps. The placeholders use a 15% platform fee.",
+    "licenceRequired must be true for any plumbing, gas or electrical work.",
+    "This file is loaded into the database in Phase 2. Nothing uses it before then."
+  ],
+  "market": "queenstown",
+  "currency": "NZD",
+  "pricesIncludeGst": true,
+  "placeholderPrices": true,
+  "surcharges": {
+    "urgentDollars": 80,
+    "afterHoursDollars": 120
+  },
+  "offMenu": {
+    "diagnosisFeeDollars": 120,
+    "diagnosisTradiePayoutDollars": 102,
+    "ownerApprovalAboveDollars": 400
+  },
+  "items": [
+    { "code": "HM-01", "trade": "handyman", "name": "Door or cupboard: adjust, re-hang or fix a latch or handle", "ownerPriceDollars": 130, "tradiePayoutDollars": 110, "licenceRequired": false },
+    { "code": "HM-02", "trade": "handyman", "name": "Curtain rail or blind: re-fix or replace (owner supplies the blind)", "ownerPriceDollars": 130, "tradiePayoutDollars": 110, "licenceRequired": false },
+    { "code": "HM-03", "trade": "handyman", "name": "Patch and paint small wall holes or scuffs (up to 3)", "ownerPriceDollars": 180, "tradiePayoutDollars": 153, "licenceRequired": false },
+    { "code": "HM-04", "trade": "handyman", "name": "Re-seal a shower, bath or basin with silicone", "ownerPriceDollars": 190, "tradiePayoutDollars": 161, "licenceRequired": false },
+    { "code": "HM-05", "trade": "handyman", "name": "Replace a toilet seat (seat included)", "ownerPriceDollars": 120, "tradiePayoutDollars": 102, "licenceRequired": false },
+    { "code": "HM-06", "trade": "handyman", "name": "Replace a battery smoke alarm (alarm included)", "ownerPriceDollars": 110, "tradiePayoutDollars": 93, "licenceRequired": false },
+    { "code": "HM-07", "trade": "handyman", "name": "Hang a TV bracket, mirror or shelf", "ownerPriceDollars": 150, "tradiePayoutDollars": 127, "licenceRequired": false },
+    { "code": "HM-08", "trade": "handyman", "name": "Replace light bulbs or tubes (up to 6, bulbs included)", "ownerPriceDollars": 90, "tradiePayoutDollars": 76, "licenceRequired": false },
+    { "code": "PL-01", "trade": "plumber", "name": "Unblock a toilet", "ownerPriceDollars": 220, "tradiePayoutDollars": 187, "licenceRequired": true },
+    { "code": "PL-02", "trade": "plumber", "name": "Unblock a sink, basin, shower or bath drain", "ownerPriceDollars": 210, "tradiePayoutDollars": 178, "licenceRequired": true },
+    { "code": "PL-03", "trade": "plumber", "name": "Fix a dripping tap or mixer", "ownerPriceDollars": 190, "tradiePayoutDollars": 161, "licenceRequired": true },
+    { "code": "PL-04", "trade": "plumber", "name": "Replace a tap or mixer (owner supplies the tap)", "ownerPriceDollars": 240, "tradiePayoutDollars": 204, "licenceRequired": true },
+    { "code": "PL-05", "trade": "plumber", "name": "Fix a running or leaking toilet cistern", "ownerPriceDollars": 210, "tradiePayoutDollars": 178, "licenceRequired": true },
+    { "code": "PL-06", "trade": "plumber", "name": "Leaking pipe or fitting: find it and make it safe", "ownerPriceDollars": 260, "tradiePayoutDollars": 221, "licenceRequired": true },
+    { "code": "PL-07", "trade": "plumber", "name": "Replace a shower head, slide or hose", "ownerPriceDollars": 160, "tradiePayoutDollars": 136, "licenceRequired": true },
+    { "code": "EL-01", "trade": "electrician", "name": "Replace a power point or light switch", "ownerPriceDollars": 170, "tradiePayoutDollars": 144, "licenceRequired": true },
+    { "code": "EL-02", "trade": "electrician", "name": "Replace a light fitting (owner supplies the fitting)", "ownerPriceDollars": 190, "tradiePayoutDollars": 161, "licenceRequired": true },
+    { "code": "EL-03", "trade": "electrician", "name": "Power out or switch keeps tripping: find the fault (first hour)", "ownerPriceDollars": 210, "tradiePayoutDollars": 178, "licenceRequired": true },
+    { "code": "EL-04", "trade": "electrician", "name": "Replace a wired-in smoke alarm (alarm included)", "ownerPriceDollars": 230, "tradiePayoutDollars": 195, "licenceRequired": true },
+    { "code": "GA-01", "trade": "gasfitter", "name": "Gas hot water not working: check, relight and test", "ownerPriceDollars": 230, "tradiePayoutDollars": 195, "licenceRequired": true },
+    { "code": "GA-02", "trade": "gasfitter", "name": "Gas heater or fire: safety check and service", "ownerPriceDollars": 260, "tradiePayoutDollars": 221, "licenceRequired": true },
+    { "code": "LK-01", "trade": "locksmith", "name": "Guest locked out: get them back in", "ownerPriceDollars": 220, "tradiePayoutDollars": 187, "licenceRequired": false },
+    { "code": "LK-02", "trade": "locksmith", "name": "Replace or re-code a door lock or key safe", "ownerPriceDollars": 240, "tradiePayoutDollars": 204, "licenceRequired": false },
+    { "code": "AP-01", "trade": "appliance_tech", "name": "Appliance not working: find the fault and report back (first hour)", "ownerPriceDollars": 180, "tradiePayoutDollars": 153, "licenceRequired": true },
+    { "code": "HP-01", "trade": "heat_pump_tech", "name": "Heat pump not heating: clean filters, check and test", "ownerPriceDollars": 190, "tradiePayoutDollars": 161, "licenceRequired": true }
+  ]
+}
