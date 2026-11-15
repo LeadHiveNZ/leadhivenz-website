@@ -8,11 +8,17 @@
 >    migrations applied at build time (`scripts/migrate.ts`), full schema in
 >    `supabase/migrations/20261116000000_product.sql`, Phase 0 leads moved onto it, tests run on real SQL
 >    (`tests/unit/db.ts`). **DONE.**
-> 2. Accounts and sign-in (codes by email or text, database sessions, staff roles). Not started.
-> 3. Phase 1 owners, properties, membership billing, report links and QR. Not started.
-> 4. Phase 2 jobs, pricing lines, offer cascade, tradie job page, quotes, status texts, timer tick. Not started.
-> 5. Phase 3 charge on completion, payouts, statements, guarantee credit, disputes. Not started.
-> 6. Phase 4 dispatcher queue, admin dashboard, scorecards, menu editor, add-a-market. Not started.
+> 2. Accounts and sign-in (codes by email or text, database sessions, staff roles). Rules and tests **DONE**
+>    (`src/lib/auth`). Screens not started.
+> 3. Phase 1 owners, properties, membership billing, report links. Rules **DONE** (`src/lib/owners`,
+>    `src/lib/properties`). Screens, QR code and tests not started.
+> 4. Phase 2 jobs, pricing lines, offer cascade, tradie steps, quotes, status texts, timer. Rules **DONE**
+>    (`src/lib/jobs`, `src/lib/dispatch`, `src/lib/notify/outbox.ts`, `messages.ts`). Tests for the cascade and
+>    screens not started. Reply-by-text webhook not started.
+> 5. Phase 3 charge on completion, payouts, guarantee credit, disputes, refunds. Rules **DONE**
+>    (`src/lib/billing/settle.ts`, `src/lib/payments`). Tests, statements and the Stripe webhook handlers not started.
+> 6. Phase 4 dispatcher queue rules **DONE** (`src/lib/ops/exceptions.ts`). Admin dashboard numbers, scorecards,
+>    menu editor, add-a-market and all screens not started.
 > 7. New logo, palette, landing layout, app shell. Not started (waiting on the design research).
 > 8. Clickable demo: sample data, demo phone, skip-ahead clock. Not started.
 > 9. Tests, browser checks, docs (`docs/MARKET-RESEARCH.md`, SETUP, RUNBOOK), final save. Not started.

@@ -405,6 +405,8 @@ create table if not exists public.jobs (
                 'awaiting_approval', 'completed', 'cancelled')),
   -- How far the offer cascade has got: 1 first choice, 2 backup, 3 everyone, 4 dispatcher.
   stage       smallint not null default 0 check (stage between 0 and 4),
+  -- Goes up by one each time the dispatcher starts the offers again.
+  offer_round smallint not null default 1,
   tradie_id   uuid references public.tradies (id),
 
   tier_key       text,
@@ -434,9 +436,6 @@ create table if not exists public.jobs (
   owner_total_cents  integer not null default 0 check (owner_total_cents >= 0),
   tradie_total_cents integer not null default 0 check (tradie_total_cents >= 0),
   tax_cents   integer not null default 0 check (tax_cents >= 0),
-
-  -- A single-use link that lets the owner act on this job from a text.
-  owner_token_hash text unique,
 
   constraint jobs_cancelled_has_time check (status <> 'cancelled' or cancelled_at is not null),
   constraint jobs_completed_has_time check (status <> 'completed' or completed_at is not null)
@@ -469,15 +468,19 @@ create table if not exists public.job_lines (
 create index if not exists job_lines_job_idx on public.job_lines (job_id, created_at);
 
 -- Each time a job is offered to one tradie.
+create sequence if not exists public.offer_number_seq start with 1001;
+
 create table if not exists public.offers (
   id          uuid primary key default gen_random_uuid(),
+  -- A short number used in the one-tap link in the text. The link also carries
+  -- a signature made with the app's secret, so it cannot be guessed or forged.
+  number      bigint not null unique default nextval('public.offer_number_seq'),
   job_id      uuid not null references public.jobs (id) on delete cascade,
   tradie_id   uuid not null references public.tradies (id),
   stage       smallint not null check (stage between 1 and 4),
+  round       smallint not null default 1,
   -- superseded: someone else took the job, or it was cancelled, before they answered.
   status      text not null default 'pending' check (status in ('pending', 'accepted', 'passed', 'expired', 'superseded')),
-  -- Fingerprint of the one-tap link sent in the text.
-  token_hash  text not null unique,
   sent_at     timestamptz not null,
   expires_at  timestamptz not null,
   responded_at timestamptz,

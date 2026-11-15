@@ -143,10 +143,22 @@ async function sendWithTwilio(s: TwilioSettings, to: string, body: string, fetch
   return { provider: "twilio", messageId: typeof sid === "string" ? sid : null };
 }
 
-/** Sends one text. Throws with a plain-words reason if it could not be sent. */
-export async function sendSms(settings: SmsSettings, to: string, body: string, fetchImpl: FetchLike = fetch): Promise<SmsResult> {
-  if (/https?:\/\/|www\./i.test(body)) {
-    // See the note at the top: links get new ClickSend accounts' texts held back.
+/**
+ * Sends one text. Throws with a plain-words reason if it could not be sent.
+ *
+ * Alert texts to you never contain a link (see the note at the top). Texts
+ * that are part of the product (job offers, status updates) must carry one,
+ * so they pass allowLinks. ClickSend has to approve link texts on a new
+ * account first: SETUP.md step 5.
+ */
+export async function sendSms(
+  settings: SmsSettings,
+  to: string,
+  body: string,
+  fetchImpl: FetchLike = fetch,
+  options: { allowLinks?: boolean } = {},
+): Promise<SmsResult> {
+  if (!options.allowLinks && /https?:\/\/|www\./i.test(body)) {
     throw new Error("Alert texts must not contain web links.");
   }
   return settings.provider === "twilio"
