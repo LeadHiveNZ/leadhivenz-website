@@ -40,7 +40,10 @@ The knowledge here comes from YouTube videos watched in full by Gemini and summa
 ## Adding a new video to the playbook
 
 When Joe shares a YouTube link to learn from:
-1. Run the `watch` skill with the Gemini engine and the extraction prompt in `references/extraction-prompt.md`.
+1. Run the `watch` skill with the Gemini engine and the extraction prompt in `references/extraction-prompt.md` passed as `--question`. YouTube blocks direct downloads from cloud servers, so use the Gemini engine, not local.
+   - If the watch skill fails (model overloaded, quota, "agentic video processing not enabled"), use the fallback: `python3 <this skill dir>/scripts/watch_direct.py "<url>" > brief.md`. It rotates through Gemini models.
+   - If the answer says "please provide the link", Gemini couldn't see the video. Don't use that output.
+   - The free tier allows about 20 requests per model per day. Batch large lists across days.
 2. Save the brief as `references/sources/<next NN>-<topic>-<videoId>.md`.
 3. Merge the actionable parts into the relevant topic file under a LeadHive application section.
 4. Add a row to `references/video-library.md`.
