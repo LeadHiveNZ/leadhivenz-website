@@ -1,67 +1,80 @@
-# Your {{market}} holiday home, fixed fast. Without the phone calls.
+# The shower's leaking in {{market}}. Your guest checks in at three.
 
-Something breaks. Your cleaner or guest reports it from their phone. An approved local tradie fixes it at a fixed price, and you get photos when it's done. You never chase a quote or an invoice.
+One place for every trade your holiday home needs. A checked local tradie on site within 24 hours, or 4 hours when it's urgent, at a fixed price you see before you book.
 
-- From {{essential}} a month per property
-- Fixed prices for the common jobs
-- A tradie on site within 24 hours, or that month is on us
+- {{essential}} a month per property. Jobs at fixed prices, charged only when something needs fixing
+- A tradie on site within 24 hours, or that month's membership is credited
+- Your cleaner and your guests can report a problem from their phone
 
 ## Sound familiar?
 
-- **The 9pm text.** "The shower's leaking." You're hours away and your usual guy isn't picking up.
-- **The quote lottery.** Every job starts with a call-out fee and a price you can't check.
-- **The bad review.** A guest waited two days for a fix. Now it's on your listing for good.
+- **The 9pm text.** "The shower's leaking." You're hours away, and your usual guy isn't picking up.
+- **The quote lottery.** Every small job starts with a call-out fee and a price you can't check.
+- **The review.** A guest found it before anyone fixed it, and now it's on your listing.
 
 ## How it works
 
-1. **Someone reports it.** You, your cleaner or your guest scans a QR code inside the property and picks the job from a fixed-price menu. It takes about a minute.
-2. **A local tradie takes the job.** We offer it straight to an approved tradie for that trade. If they can't do it, it goes to the next one. You get a text at every step.
-3. **It's fixed and you see the proof.** Photos when the job is done. Your card is charged the menu price. No quotes, no invoices, no chasing.
+1. **Anyone can report it.** You, your cleaner from a link on their phone, or your guest from the QR card in the house. A photo and a minute.
+2. **We find the tradie, not you.** It goes straight to our first-choice tradie for that trade. If they can't take it, it goes to the next one. You get a text at each step.
+3. **They get in without you.** Your lockbox code and access notes are shown only to the tradie who accepts the job.
+4. **You get photos and a fixed price.** Your card is charged the menu price when the job is done. One statement a month.
 
 ## What it costs
 
-### Essential: {{essential}} per property, per month
+### Membership: {{essential}} per property, per month
 
-A tradie on site within 24 hours. Need someone inside 4 hours? Add the urgent surcharge on the day.
-
-### Priority: {{priority}} per property, per month
-
-Urgent 4-hour response is included, plus a property check every three months.
+A tradie on site within 24 hours, at the fixed menu price. Need someone within 4 hours? Add {{urgent}} on the day, plus {{after_hours}} outside working hours. Both go to the tradie in full.
 
 ---
 
-Jobs are charged separately at the fixed menu price, and only when something needs fixing. [EDIT: add two or three example menu prices once your {{market}} menu is final, for example "Unblock a toilet: NZ$X".]
+Jobs are charged at the fixed price when the job is done, GST included. Small parts are in the price, and bigger parts are charged at cost. Not on the menu? {{callout}} for a tradie to come and look, then a quote. Nothing over {{approval_limit}} starts without your yes.
 
-## Our response promise
+## If we miss, the month is free
 
-> If a tradie isn't on site inside your response window, we credit that month's membership. Automatically. You don't have to ask.
+> A tradie on site within 24 hours, or 4 hours when it's urgent. Miss it and that month's membership is credited to you automatically. You don't have to ask.
 
-## Founding member offer
+## Who this is not for
 
-We're opening {{market}} to a small group of founding owners first.
+If you pay a full-service manager, maintenance is already in their fee and you're covered.
 
-- **Lock in your spot** with a {{deposit}} deposit. It comes off your first month.
-- **Fully refundable** any time before we launch. One email and it's back on your card.
-- [EDIT: add your founding member perk here, for example "Founding members keep the launch price for 12 months."]
+If you only want emergency cover for your own home, a home emergency plan from your insurer is the cheaper buy.
+
+This is for owners who look after their own holiday home, often from another city, and want one place to send every job.
 
 ## Questions
 
-### Is the work done by licensed tradies?
+### I already have a guy.
 
-Plumbing, gas and electrical jobs only ever go to tradies with a current licence on file. Handyman jobs go to local handymen we've checked and approved.
+Keep him. We're who you call when he doesn't pick up on a Saturday in July.
 
-### What if the job isn't on the menu?
+### {{essential}} a month, and nothing breaks?
 
-You pay a fixed diagnosis fee and the tradie sends a quote through the app. Nothing over NZ$400 starts without your OK.
+It buys a tradie on the hook within 24 hours, at prices you know in advance, with the month free if we miss. For most holiday homes it's less than one night's booking.
 
-### I already have a property manager or cleaner. Is this for me?
+### Are jobs dearer through you?
 
-Yes. They report the job, we get it fixed, and you see the photos. [EDIT: confirm this is how you want to position it.]
+No. The menu is priced from what {{market}} tradies charge for a call-out and the first hour, and the price already includes the call-out. The membership pays for the guarantee and for never ringing round, not for a markup on the work.
 
-### When do you launch?
+### Who are your tradies?
 
-[EDIT: add your target launch date for {{market}}.] Founding members hear first.
+Local tradies we've checked and approved. Plumbing, gas and electrical work only ever goes to a tradie whose licence is on file and in date.
 
-### What happens to my deposit if you don't launch?
+### What about my door code?
 
-You get it back in full.
+It's shown only to the tradie who accepts a job at your place, and to our small team. We suggest a lockbox or smart lock you can re-code.
+
+### What if the job turns out to be big?
+
+Anything over {{approval_limit}} stops and comes back to you as a quote before any work starts. You say yes or no.
+
+### What does the founding deposit do?
+
+It holds one of the founding spots. It comes off your first bills, and if you change your mind before your first job, we refund it in full.
+
+### When do you start?
+
+We open {{market}} once our founding tradies are signed up. Founding members are set up first, and we'll call you before then.
+
+### I'm in Wānaka or Arrowtown.
+
+Leave your details anyway. We'll let you know when we open there.

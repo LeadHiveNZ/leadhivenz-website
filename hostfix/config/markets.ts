@@ -97,6 +97,8 @@ export type Market = {
     enabled: boolean;
     /** Deposit in cents. */
     amountCents: number;
+    /** How many founding spots there are. The deposit is no longer offered once this many are paid. null: no limit. */
+    spots: number | null;
     /**
      * The promises shown beside the pay button and on the card page. They are
      * commitments to your customers, so only list what you will honour.
@@ -144,22 +146,25 @@ export function defineMarket(input: MarketInput): Market {
     taxRegistered: false,
     taxNumber: null,
     platformFeeBps: 1500,
-    urgentSurchargeCents: 8000,
-    afterHoursSurchargeCents: 12000,
-    diagnosisFeeCents: 12000,
-    diagnosisPayoutCents: 10200,
-    approvalThresholdCents: 40000,
+    // The same figures as seed/menu-queenstown.json, so a market added later
+    // starts from them too. Why each one: DECISIONS.md.
+    urgentSurchargeCents: 9000,
+    afterHoursSurchargeCents: 14000,
+    diagnosisFeeCents: 22500,
+    diagnosisPayoutCents: 19000,
+    approvalThresholdCents: 60000,
     partsIncludedCents: 3000,
     partsApprovalCents: 15000,
     offerMinutes: 15,
+    // The after-hours rate applies after 4:30pm and on Saturdays (DECISIONS.md). 16.5 is 4:30pm.
     hoursStart: 7,
-    hoursEnd: 18,
-    workDays: ["mon", "tue", "wed", "thu", "fri", "sat"],
+    hoursEnd: 16.5,
+    workDays: ["mon", "tue", "wed", "thu", "fri"],
     payoutHoldHours: 24,
     referralRewardCents: 10000,
     referralPaidMonths: 3,
     replyByText: false,
-    foundingDeposit: { enabled: false, amountCents: 0, terms: [] },
+    foundingDeposit: { enabled: false, amountCents: 0, spots: null, terms: [] },
     ...input,
     tiers: input.tiers.map((tier) => ({
       responseHours: 24,
@@ -180,25 +185,30 @@ export const markets: Market[] = [
     country: "NZ",
     timezone: "Pacific/Auckland",
     tiers: [
+      // One membership. Urgent response is an add-on the owner pays for on the
+      // day, never an inclusion. A second tier was dropped because delivering
+      // it cost more than it charged (DECISIONS.md). The app still supports
+      // more than one: add it on the admin screen if that ever changes.
       {
         key: "essential",
         name: "Essential",
         monthlyPriceCents: 9900,
-        blurb: "A tradie on site within 24 hours.",
-      },
-      {
-        key: "priority",
-        name: "Priority",
-        monthlyPriceCents: 14900,
-        urgentIncluded: true,
-        quarterlyCheck: true,
-        blurb: "Urgent 4-hour response included, plus a quarterly property check.",
+        blurb: "A tradie on site within 24 hours. Urgent 4-hour response when you need it, for a surcharge.",
       },
     ],
+    // The demand test (DECISIONS.md): 25 founding properties, a $99 deposit
+    // that is refundable and comes off the first bills, and half price for
+    // the first three months. The words are promises: change them on the
+    // admin screen (More > Markets) if the offer changes.
     foundingDeposit: {
       enabled: true,
-      amountCents: 4900,
-      terms: ["Comes off your first month", "Fully refundable any time before we launch"],
+      amountCents: 9900,
+      spots: 25,
+      terms: [
+        "Half price for your first three months: $49.50 a month, then $99",
+        "Your $99 deposit comes off your first bills",
+        "Refundable any time before your first job. One email and it is back on your card",
+      ],
     },
   }),
 ];

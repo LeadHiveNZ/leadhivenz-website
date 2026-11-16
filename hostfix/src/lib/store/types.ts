@@ -4,6 +4,8 @@
  */
 
 export type LeadType = "owner" | "tradie";
+/** Which button an owner pressed: take a founding spot (the deposit), or just send the price list. */
+export type LeadIntent = "deposit" | "pricelist";
 export type DepositStatus = "none" | "started" | "paid" | "refunded" | "credited";
 
 export type Lead = {
@@ -19,6 +21,8 @@ export type Lead = {
   propertyCount: number | null;
   managedBy: string | null;
   ownerLocation: string | null;
+  /** Owners only. Null for tradies, and for owners who used the older single-button form. */
+  intent: LeadIntent | null;
 
   trade: string | null;
   licenceNumber: string | null;
@@ -63,6 +67,7 @@ export type NewLead = Pick<
   | "propertyCount"
   | "managedBy"
   | "ownerLocation"
+  | "intent"
   | "trade"
   | "licenceNumber"
   | "daysAvailable"
@@ -151,6 +156,13 @@ export interface LeadStore {
   /** Newest first. */
   listLeads(options: { leadType?: LeadType; limit: number }): Promise<Lead[]>;
   countLeads(): Promise<LeadCounts>;
+
+  /**
+   * Records which button an owner pressed. Taking a founding spot always wins:
+   * someone who asked for the price list and comes back for the deposit is
+   * recorded as wanting the spot, never the other way round.
+   */
+  recordIntent(leadId: string, intent: LeadIntent): Promise<Lead | null>;
 
   /** Each returns the lead when something changed, or null when nothing did. */
   markDepositStarted(args: DepositStartedArgs): Promise<Lead | null>;

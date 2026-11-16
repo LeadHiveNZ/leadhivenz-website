@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import type { Market } from "@config/markets";
 import { deriveSource, parseAttribution } from "@/lib/attribution";
 import { normalisePhone } from "@/lib/phone";
-import type { Lead, LeadStore, LeadType, NewLead } from "@/lib/store/types";
+import type { Lead, LeadIntent, LeadStore, LeadType, NewLead } from "@/lib/store/types";
 import { firstFieldErrors, ownerLeadSchema, tradieLeadSchema } from "./schema";
 
 /**
@@ -89,6 +89,11 @@ function emptyAttributionFields() {
   };
 }
 
+/** Which button an owner pressed. Anything else (an older form, a robot) is treated as not knowing. */
+export function readIntent(value: unknown): LeadIntent | null {
+  return value === "deposit" || value === "pricelist" ? value : null;
+}
+
 /** Checks the form and turns it into a lead ready to save, or says what is wrong. */
 export function buildLead(
   leadType: LeadType,
@@ -130,6 +135,7 @@ export function buildLead(
         propertyCount: parsed.data.propertyCount,
         managedBy: parsed.data.managedBy,
         ownerLocation: parsed.data.ownerLocation,
+        intent: readIntent(form.fields.intent),
         trade: null,
         licenceNumber: null,
         daysAvailable: null,
@@ -154,6 +160,7 @@ export function buildLead(
       propertyCount: null,
       managedBy: null,
       ownerLocation: null,
+      intent: null,
       trade: parsed.data.trade,
       licenceNumber: parsed.data.licenceNumber,
       daysAvailable: parsed.data.daysAvailable,
@@ -208,7 +215,18 @@ export async function submitLead(
       try {
         const since = new Date(now.getTime() - DUPLICATE_WINDOW_MS).toISOString();
         const existing = await store.findRecentLead(leadType, newLead.phone, since);
-        if (existing) return { status: "ok", lead: existing, saved: true, duplicate: true };
+        if (existing) {
+          // The same person again. If they now want a founding spot, remember that.
+          let lead = existing;
+          if (newLead.intent && newLead.intent !== existing.intent) {
+            try {
+              lead = (await store.recordIntent(existing.id, newLead.intent)) ?? existing;
+            } catch (error) {
+              log.warn("[leads] could not update which button was pressed:", reason(error));
+            }
+          }
+          return { status: "ok", lead, saved: true, duplicate: true };
+        }
       } catch (error) {
         log.warn("[leads] repeat check failed, continuing:", reason(error));
       }

@@ -3,35 +3,49 @@ import { launchMarket } from "@config/markets";
 import { initialLines, noAccessLines, platformFee, quoteAmounts, refundSplit, suggestedPayout, taxPortion, totals } from "@/lib/jobs/pricing";
 
 const market = launchMarket;
-const mixer = { name: "Replace shower mixer", ownerPriceCents: 18000, tradiePayoutCents: 13000 };
+
+/**
+ * THE NUMBERS THESE TESTS ARE BUILT ON, worked out by hand from
+ * seed/menu-queenstown.json and config/markets.ts:
+ *   PL-05 Shower head or mixer replace: owner 23500, tradie 20000, so we keep 3500
+ *   urgent surcharge 9000, after-hours surcharge 14000 (the tradie gets all of both)
+ *   call-out for off-menu work, or when the tradie cannot get in: owner 22500, tradie 19000
+ *   quotes above 60000 need the owner's yes, and so do parts above 15000
+ * If any of those change, work the expected totals out again. Do not copy the code's answers.
+ */
+const mixer = { name: "Shower head or mixer replace", ownerPriceCents: 23500, tradiePayoutCents: 20000 };
 
 describe("a menu job", () => {
   it("charges the menu price and pays the menu payout", () => {
     const lines = initialLines(market, { item: mixer, urgent: false, afterHours: false, urgentIncluded: false });
-    expect(lines).toEqual([{ kind: "menu", label: "Replace shower mixer", ownerCents: 18000, tradieCents: 13000 }]);
-    expect(totals(lines)).toEqual({ ownerCents: 18000, tradieCents: 13000, platformCents: 5000 });
+    expect(lines).toEqual([{ kind: "menu", label: "Shower head or mixer replace", ownerCents: 23500, tradieCents: 20000 }]);
+    expect(totals(lines)).toEqual({ ownerCents: 23500, tradieCents: 20000, platformCents: 3500 });
   });
 
-  it("pays the urgent surcharge to the tradie in full (the worked example in the plan)", () => {
+  it("pays the urgent surcharge to the tradie in full", () => {
     const lines = initialLines(market, { item: mixer, urgent: true, afterHours: false, urgentIncluded: false });
-    expect(totals(lines)).toEqual({ ownerCents: 26000, tradieCents: 21000, platformCents: 5000 });
+    // 235 + 90 to the owner, 200 + 90 to the tradie. What we keep does not move.
+    expect(totals(lines)).toEqual({ ownerCents: 32500, tradieCents: 29000, platformCents: 3500 });
   });
 
   it("pays the after-hours surcharge to the tradie in full, on top of urgent", () => {
     const lines = initialLines(market, { item: mixer, urgent: true, afterHours: true, urgentIncluded: false });
     expect(lines.map((l) => l.kind)).toEqual(["menu", "urgent", "after_hours"]);
-    expect(totals(lines)).toEqual({ ownerCents: 38000, tradieCents: 33000, platformCents: 5000 });
+    // 235 + 90 + 140 to the owner, 200 + 90 + 140 to the tradie.
+    expect(totals(lines)).toEqual({ ownerCents: 46500, tradieCents: 43000, platformCents: 3500 });
   });
 
   it("does not charge the owner for urgent when the tier includes it, but still pays the tradie", () => {
     const lines = initialLines(market, { item: mixer, urgent: true, afterHours: false, urgentIncluded: true });
-    expect(lines[1]).toMatchObject({ kind: "urgent", ownerCents: 0, tradieCents: 8000 });
-    expect(totals(lines)).toEqual({ ownerCents: 18000, tradieCents: 21000, platformCents: -3000 });
+    expect(lines[1]).toMatchObject({ kind: "urgent", ownerCents: 0, tradieCents: 9000 });
+    // The owner pays 235, the tradie is still due 290. We are NZ$55 out of pocket: the 90 we cover, less the 35 we kept.
+    // This is why no membership includes urgent call-outs today (DECISIONS.md).
+    expect(totals(lines)).toEqual({ ownerCents: 23500, tradieCents: 29000, platformCents: -5500 });
   });
 
   it("still charges after-hours when urgent is included", () => {
     const lines = initialLines(market, { item: mixer, urgent: true, afterHours: true, urgentIncluded: true });
-    expect(totals(lines).ownerCents).toBe(18000 + 12000);
+    expect(totals(lines).ownerCents).toBe(23500 + 14000);
   });
 
   it("refuses a menu item that pays out more than it charges", () => {
@@ -44,7 +58,7 @@ describe("a menu job", () => {
 describe("an off-menu job", () => {
   it("starts with the fixed diagnosis fee", () => {
     const lines = initialLines(market, { item: null, urgent: false, afterHours: false, urgentIncluded: false });
-    expect(lines).toEqual([{ kind: "diagnosis", label: "Call-out and diagnosis", ownerCents: 12000, tradieCents: 10200 }]);
+    expect(lines).toEqual([{ kind: "diagnosis", label: "Call-out and diagnosis", ownerCents: 22500, tradieCents: 19000 }]);
   });
 });
 
@@ -100,25 +114,28 @@ describe("a quote", () => {
     expect(quote.lines.map((l) => l.kind)).toEqual(["quote", "parts"]);
   });
 
-  it("goes ahead without asking at or under NZ$400", () => {
-    expect(quoteAmounts(market, { description: "x", labourCents: 40000, partsCents: 0 }).needsApproval).toBe(false);
-    expect(quoteAmounts(market, { description: "x", labourCents: 30000, partsCents: 10000 }).needsApproval).toBe(false);
+  it("goes ahead without asking at or under NZ$600", () => {
+    expect(quoteAmounts(market, { description: "x", labourCents: 60000, partsCents: 0 }).needsApproval).toBe(false);
+    expect(quoteAmounts(market, { description: "x", labourCents: 50000, partsCents: 10000 }).needsApproval).toBe(false);
   });
 
-  it("needs the owner's approval over NZ$400", () => {
-    const quote = quoteAmounts(market, { description: "x", labourCents: 40001, partsCents: 0 });
+  it("needs the owner's approval over NZ$600", () => {
+    const quote = quoteAmounts(market, { description: "x", labourCents: 60001, partsCents: 0 });
     expect(quote.needsApproval).toBe(true);
     expect(quote.approvalReason).toContain("limit");
   });
 
   it("counts earlier approved quotes on the same job towards the limit", () => {
-    const quote = quoteAmounts(market, { description: "x", labourCents: 15000, partsCents: 0, alreadyApprovedCents: 30000 });
+    // NZ$400 already approved. Another NZ$200 lands exactly on the limit and goes ahead. NZ$250 goes over it.
+    expect(quoteAmounts(market, { description: "x", labourCents: 20000, partsCents: 0, alreadyApprovedCents: 40000 }).needsApproval).toBe(false);
+    const quote = quoteAmounts(market, { description: "x", labourCents: 25000, partsCents: 0, alreadyApprovedCents: 40000 });
     expect(quote.needsApproval).toBe(true);
   });
 
   it("uses the owner's own limit when they have set one", () => {
     expect(quoteAmounts(market, { description: "x", labourCents: 20000, partsCents: 0, limitCents: 15000 }).needsApproval).toBe(true);
-    expect(quoteAmounts(market, { description: "x", labourCents: 60000, partsCents: 0, limitCents: 100000 }).needsApproval).toBe(false);
+    // An owner who has set NZ$1,000 lets through a quote the market's own NZ$600 would have stopped.
+    expect(quoteAmounts(market, { description: "x", labourCents: 70000, partsCents: 0, limitCents: 100000 }).needsApproval).toBe(false);
   });
 
   it("needs approval for expensive parts even when the total is under the limit", () => {
@@ -140,10 +157,14 @@ describe("when the tradie could not get in", () => {
     const lines = initialLines(market, { item: mixer, urgent: true, afterHours: true, urgentIncluded: false });
     const result = noAccessLines(market, lines);
     expect(result.map((l) => l.kind)).toEqual(["no_access", "urgent", "after_hours"]);
-    expect(totals(result)).toEqual({ ownerCents: 12000 + 8000 + 12000, tradieCents: 10200 + 8000 + 12000, platformCents: 1800 });
+    // The NZ$235 job becomes the NZ$225 call-out (NZ$190 to the tradie). Both surcharges stay.
+    expect(totals(result)).toEqual({ ownerCents: 22500 + 9000 + 14000, tradieCents: 19000 + 9000 + 14000, platformCents: 3500 });
   });
 
   it("never charges more than the job itself would have cost", () => {
+    // HM-01, shelf hanging, is NZ$155 to the owner and NZ$130 to the tradie: less than the call-out, so it stays as it is.
+    const shelf = initialLines(market, { item: { name: "Shelf, hook or mirror hanging", ownerPriceCents: 15500, tradiePayoutCents: 13000 }, urgent: false, afterHours: false, urgentIncluded: false });
+    expect(totals(noAccessLines(market, shelf))).toEqual({ ownerCents: 15500, tradieCents: 13000, platformCents: 2500 });
     const cheap = initialLines(market, { item: { name: "Bulbs", ownerPriceCents: 9000, tradiePayoutCents: 7600 }, urgent: false, afterHours: false, urgentIncluded: false });
     expect(totals(noAccessLines(market, cheap))).toEqual({ ownerCents: 9000, tradieCents: 7600, platformCents: 1400 });
   });

@@ -65,9 +65,10 @@ async function owner(ctx: Ctx, input: { name: string; email: string; phone: stri
 
 async function property(
   ctx: Ctx, ownerId: string,
-  input: { name: string; address: string; suburb: string; postcode: string; access: string; tier: "essential" | "priority"; referralCode?: string },
+  input: { name: string; address: string; suburb: string; postcode: string; access: string; referralCode?: string },
 ): Promise<Property> {
-  const tier = ctx.tiers.get(input.tier)!;
+  // There is one membership (DECISIONS.md).
+  const tier = ctx.tiers.get("essential")!;
   const created = await createProperty(ctx.db, ownerId, {
     market: MARKET, name: input.name, addressLine1: input.address, suburb: input.suburb, postcode: input.postcode, accessNotes: input.access,
     tierId: tier.id, referralCode: input.referralCode ?? null,
@@ -196,25 +197,28 @@ export async function buildSampleData(db: Db, files: FileStore | null, real: Dat
   const tane = await owner(ctx, { name: "Tane Rangi", email: "tane@example.com", phone: "+64211234513", home: "Queenstown", card: "ok" });
 
   const lakeview = await property(ctx, sam.ownerId, {
-    name: "Lakeview Apartment", address: "14B Lake Esplanade", suburb: "Queenstown", postcode: "9300", tier: "priority",
+    name: "Lakeview Apartment", address: "14B Lake Esplanade", suburb: "Queenstown", postcode: "9300",
     access: "Lockbox on the left of the front door, code 4821. Park in space 14B. Water shut-off is under the kitchen sink. Switchboard is in the hall cupboard.",
   });
   const cabin = await property(ctx, sam.ownerId, {
-    name: "Arthurs Point Cabin", address: "27 Atley Road", suburb: "Arthurs Point", postcode: "9371", tier: "essential",
+    name: "Arthurs Point Cabin", address: "27 Atley Road", suburb: "Arthurs Point", postcode: "9371",
     access: "Key safe by the back door, code 0915. Steep drive: park at the top in winter.",
   });
   const studio = await property(ctx, priya.ownerId, {
-    name: "Fernhill Studio", address: "3/88 Fernhill Road", suburb: "Fernhill", postcode: "9300", tier: "essential", access: "Smart lock. Ring the owner for a one-day code.",
+    name: "Fernhill Studio", address: "3/88 Fernhill Road", suburb: "Fernhill", postcode: "9300", access: "Smart lock. Ring the owner for a one-day code.",
   });
   const house = await property(ctx, tane.ownerId, {
-    name: "Kelvin Heights House", address: "5 Peninsula Road", suburb: "Kelvin Heights", postcode: "9300", tier: "priority",
+    name: "Kelvin Heights House", address: "5 Peninsula Road", suburb: "Kelvin Heights", postcode: "9300",
     access: "Lockbox on the gate post, code 7730. Gas bottles are down the right-hand side of the house.", referralCode: cleaner.code,
   });
+
+  // The codes below are jobs on seed/menu-queenstown.json: PL-08 blocked drain, HP-03 heat pump fault, HM-14 reseal a
+  // shower, EL-01 power point, PL-06 no hot water, LS-02 lock replace, HM-03 light bulbs, PL-03 dripping tap.
 
   // ---- 1. Done and paid, six days ago (reported by the cleaner) ------------
   ago(ctx, 6 * DAY);
   const one = await log(ctx, lakeview, {
-    code: "PL-02", reportedBy: "team", reporterName: "Mele", reporterPhone: "+64211234521", description: "Kitchen sink is draining very slowly and smells. Tried boiling water, no change.", photos: 1,
+    code: "PL-08", reportedBy: "team", reporterName: "Mele", reporterPhone: "+64211234521", description: "Kitchen sink is draining very slowly and smells. Tried boiling water, no change.", photos: 1,
   });
   ago(ctx, 6 * DAY - 4 * MINUTE);
   await accept(ctx, one.id, dave.tradieId);
@@ -229,7 +233,7 @@ export async function buildSampleData(db: Db, files: FileStore | null, real: Dat
 
   // ---- 2. The promise was missed, the owner was credited, then it was done -
   ago(ctx, 3 * DAY);
-  const two = await log(ctx, cabin, { code: "HP-01", description: "Heat pump in the lounge runs but only blows cold. Guests arrive Friday." });
+  const two = await log(ctx, cabin, { code: "HP-03", description: "Heat pump in the lounge runs but only blows cold. Guests arrive Friday." });
   ago(ctx, 3 * DAY - 9 * MINUTE);
   await accept(ctx, two.id, tom.tradieId);
   ago(ctx, 3 * DAY - 24 * HOUR - 5 * MINUTE);
@@ -247,7 +251,7 @@ export async function buildSampleData(db: Db, files: FileStore | null, real: Dat
 
   // ---- 3. Done, then the owner said something was wrong --------------------
   ago(ctx, 2 * DAY);
-  const three = await log(ctx, lakeview, { code: "HM-04", description: "Black mould along the bottom of the shower screen. Please re-seal." });
+  const three = await log(ctx, lakeview, { code: "HM-14", description: "Black mould along the bottom of the shower screen. Please re-seal." });
   ago(ctx, 2 * DAY - 6 * MINUTE);
   await accept(ctx, three.id, andy.tradieId);
   ago(ctx, 2 * DAY - 2 * HOUR);
@@ -267,7 +271,7 @@ export async function buildSampleData(db: Db, files: FileStore | null, real: Dat
   ago(ctx, 24.25 * HOUR);
   await finish(ctx, four.id, tom.tradieId, "Replaced the power point. The old one had a burnt terminal. Tested and safe.", 1);
 
-  // ---- 5. Off-menu: the tradie has quoted and is waiting for the owner -----
+  // ---- 5. Off-menu: the tradie has quoted NZ$685, over the NZ$600 limit, and is waiting for the owner -----
   ago(ctx, 3 * HOUR);
   const five = await log(ctx, cabin, {
     menuItemId: null, offMenuTrade: "plumber", offMenuTitle: "Water stain spreading on the lounge ceiling", description: "Brown stain about the size of a dinner plate, under the bathroom. It was not there last week.", photos: 2,
@@ -281,11 +285,11 @@ export async function buildSampleData(db: Db, files: FileStore | null, real: Dat
   await markArrived(db, five.id, mere.tradieId, QUEENSTOWN);
   ago(ctx, 40 * MINUTE);
   const found = await picture(ctx, `tradie:${mere.tradieId}`, "quote", "found");
-  await submitQuote(db, five.id, mere.tradieId, { description: "Replace the leaking shower mixer and the section of pipe behind it", labourCents: 52000, partsCents: 8500, uploadIds: [found] });
+  await submitQuote(db, five.id, mere.tradieId, { description: "Replace the leaking shower mixer and the section of pipe behind it", labourCents: 60000, partsCents: 8500, uploadIds: [found] });
 
   // ---- 6. Urgent: accepted, the tradie is on the way -----------------------
   ago(ctx, 50 * MINUTE);
-  const six = await log(ctx, house, { code: "GA-01", urgent: true, description: "No hot water. Guests are in the house tonight." });
+  const six = await log(ctx, house, { code: "PL-06", urgent: true, description: "No hot water. Guests are in the house tonight." });
   ago(ctx, 47 * MINUTE);
   await accept(ctx, six.id, dave.tradieId);
   ago(ctx, 12 * MINUTE);
@@ -293,13 +297,13 @@ export async function buildSampleData(db: Db, files: FileStore | null, real: Dat
 
   // ---- 7. Nobody accepted: it is in the dispatcher's queue -----------------
   ago(ctx, 45 * MINUTE);
-  await log(ctx, lakeview, { code: "LK-02", description: "The key safe is jammed and will not take the code. Cleaner is using the spare key for now." });
+  await log(ctx, lakeview, { code: "LS-02", description: "The key safe is jammed and will not take the code. Cleaner is using the spare key for now." });
   ago(ctx, 28 * MINUTE);
   await expireDueOffers(db);
 
   // ---- 8. A guest scanned the QR code: waiting for the owner's go-ahead ----
   ago(ctx, 25 * MINUTE);
-  await log(ctx, lakeview, { code: "HM-08", reportedBy: "guest", reporterName: "Emma", reporterPhone: "+64211234531", description: "Two of the lights over the kitchen bench are out.", photos: 1 });
+  await log(ctx, lakeview, { code: "HM-03", reportedBy: "guest", reporterName: "Emma", reporterPhone: "+64211234531", description: "Two of the lights over the kitchen bench are out.", photos: 1 });
 
   // ---- 9. Just logged: on offer to the first-choice plumber right now ------
   ago(ctx, 3 * MINUTE);

@@ -20,8 +20,9 @@ type Props = {
   content: LandingContent;
   /** The small line above the headline, for example "Queenstown, New Zealand". */
   eyebrow: string;
-  formTitle: string;
-  formNote: string;
+  /** Leave both out when the form draws its own heading (it depends on the visit). */
+  formTitle?: string;
+  formNote?: string;
   form: ReactNode;
   /** The words on the buttons that jump to the form. */
   ctaLabel: string;
@@ -70,9 +71,14 @@ export function LandingPage({ content, eyebrow, formTitle, formNote, form, ctaLa
 
           <div id="signup" className="scroll-mt-20 lg:pt-1">
             <div className="rounded-3xl border border-line bg-surface p-5 shadow-2xl shadow-brand/10 sm:p-7">
-              <h2 className="display text-2xl text-ink">{formTitle}</h2>
-              <p className="mt-1.5 text-sm text-muted">{formNote}</p>
-              <div className="mt-5">{form}</div>
+              {formTitle ? (
+                <>
+                  <FormHeader title={formTitle} note={formNote ?? ""} />
+                  <div className="mt-5">{form}</div>
+                </>
+              ) : (
+                form
+              )}
             </div>
           </div>
         </div>
@@ -110,6 +116,16 @@ export function LandingPage({ content, eyebrow, formTitle, formNote, form, ctaLa
 
       <StickyCta label={ctaLabel} />
     </main>
+  );
+}
+
+/** The heading over the sign-up form. */
+export function FormHeader({ title, note }: { title: string; note: string }) {
+  return (
+    <>
+      <h2 className="display text-2xl text-ink">{title}</h2>
+      <p className="mt-1.5 text-sm text-muted">{note}</p>
+    </>
   );
 }
 
@@ -266,9 +282,11 @@ function Pricing({ section, menu }: { section: Section; menu: MenuPreview | null
         )}
 
         {menu && menu.items.length > 0 && (
-          <div className="mt-12 rounded-3xl border border-line bg-sand/70 p-5 sm:p-8">
+          <div role="region" aria-labelledby="menu-preview-title" className="mt-12 rounded-3xl border border-line bg-sand/70 p-5 sm:p-8">
             <div className="flex flex-wrap items-end justify-between gap-3">
-              <h3 className="display text-2xl text-ink sm:text-3xl">{menu.title}</h3>
+              <h3 id="menu-preview-title" className="display text-2xl text-ink sm:text-3xl">
+                {menu.title}
+              </h3>
               {menu.showPrices && <p className="text-sm font-semibold text-muted">{menu.priceLabel}</p>}
             </div>
             <p className="mt-2 max-w-2xl text-muted">{menu.note}</p>

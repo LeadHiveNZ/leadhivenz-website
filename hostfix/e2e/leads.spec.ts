@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 import { E2E } from "../playwright.config";
-import { fillOwnerForm, formAlert, leadCard, ownerDetails, signIn, submitOwnerLead, uniqueIp, uniquePhone, waitLikeAPerson } from "./helpers";
+import { fillOwnerForm, formAlert, leadCard, ownerDetails, priceListButton, signIn, submitOwnerLead, uniqueIp, uniquePhone, waitLikeAPerson } from "./helpers";
 
 const BASE = E2E.plainUrl;
 
@@ -13,8 +13,10 @@ test.describe("owner landing page on a phone", () => {
   test("shows the headline, the price and the form without sideways scrolling", async ({ page }) => {
     await page.goto("/owners");
     await expect(page.getByRole("heading", { level: 1 })).toContainText("Queenstown");
-    await expect(page.getByText("From NZ$99 a month per property")).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Get early access" })).toBeVisible();
+    await expect(page.getByText("NZ$99 a month per property").first()).toBeVisible();
+    // Card payments are not connected on this copy of the site, so the form offers the price list only.
+    await expect(page.getByRole("heading", { name: "Get the full price list" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Take a founding spot" })).toHaveCount(0);
     await expect(page.getByLabel("Your name")).toBeVisible();
     await expect(page).toHaveTitle(/Queenstown.*\| HostFix/);
 
@@ -22,11 +24,18 @@ test.describe("owner landing page on a phone", () => {
     expect(overflow).toBeLessThanOrEqual(0);
   });
 
-  test("highlights unfinished copy so it cannot be missed", async ({ page }) => {
+  test("shows real prices and no unfinished copy", async ({ page }) => {
+    for (const path of ["/owners", "/tradies"]) {
+      await page.goto(path);
+      await expect(page.locator("mark[data-edit-marker]")).toHaveCount(0);
+      await expect(page.getByText("[EDIT")).toHaveCount(0);
+    }
     await page.goto("/owners");
-    const markers = page.locator("mark[data-edit-marker]");
-    expect(await markers.count()).toBeGreaterThan(0);
-    await expect(markers.first()).toContainText("[EDIT");
+    // A few of the researched Queenstown prices (seed/menu-queenstown.json), GST included.
+    const menu = page.getByRole("region", { name: "Fixed prices for the common jobs" });
+    await expect(menu).toContainText("Blocked toilet, sink or shower drain");
+    await expect(menu).toContainText("NZ$245");
+    await expect(page.getByText(/priority/i)).toHaveCount(0);
   });
 
   test("saves a lead with where it came from, and shows it on the leads list", async ({ page }) => {
@@ -54,7 +63,7 @@ test.describe("owner landing page on a phone", () => {
     await expect(page).toHaveURL(`${BASE}/owners`);
     await fillOwnerForm(page, owner);
     await waitLikeAPerson(page);
-    await page.getByRole("button", { name: "Get early access" }).click();
+    await priceListButton(page).click();
     await expect(page).toHaveURL(`${BASE}/owners/thanks`);
 
     await signIn(page);
@@ -68,7 +77,7 @@ test.describe("owner landing page on a phone", () => {
     await waitLikeAPerson(page);
     // Skip the browser's own pop-up checks so the server's messages are what is tested.
     await page.locator("form").first().evaluate((form) => form.setAttribute("novalidate", ""));
-    await page.getByRole("button", { name: "Get early access" }).click();
+    await priceListButton(page).click();
 
     await expect(formAlert(page)).toContainText("Please check the highlighted fields below.");
     await expect(page.getByText("That email address doesn't look right. Please check it.")).toBeVisible();
@@ -84,14 +93,27 @@ test.describe("owner landing page on a phone", () => {
     const fixedPhone = uniquePhone();
     await page.getByLabel("Mobile number").fill(fixedPhone);
     await page.getByLabel("Email").fill("fixed@example.com");
-    await page.getByRole("button", { name: "Get early access" }).click();
+    await priceListButton(page).click();
     await expect(page).toHaveURL(`${BASE}/owners/thanks`);
   });
 
-  test("does not offer the deposit when card payments are not connected", async ({ page }) => {
+  test("shows the full price list straight after the form, and no deposit when card payments are not connected", async ({ page }) => {
+    await page.goto("/owners");
+    await expect(page.getByRole("button", { name: /founding spot/i })).toHaveCount(0);
     await submitOwnerLead(page, BASE, ownerDetails());
-    await expect(page.getByRole("button", { name: /Reserve my founding spot/ })).toHaveCount(0);
-    await expect(page.getByRole("heading", { name: /Lock in your spot/ })).toHaveCount(0);
+
+    const prices = page.getByRole("region", { name: "The Queenstown price list" });
+    await expect(prices).toContainText("Blocked toilet, sink or shower drain");
+    await expect(prices).toContainText("NZ$245");
+    await expect(prices).toContainText("Membership NZ$99 a month per property.");
+    // Every other charge, from the market's own settings.
+    await expect(prices).toContainText("Add NZ$90, plus NZ$140 outside working hours (7am to 4:30pm, Monday to Friday)");
+    await expect(prices).toContainText("NZ$225 for a tradie to come and look");
+    await expect(prices).toContainText("Nothing over NZ$600 starts without your yes.");
+    // Prices still waiting on a local quote are not shown (DECISIONS.md).
+    await expect(prices).not.toContainText("Log burner or chimney sweep");
+
+    await expect(page.getByRole("button", { name: /founding spot/i })).toHaveCount(0);
     await expect(page.getByRole("heading", { name: "What happens next" })).toBeVisible();
   });
 
@@ -113,7 +135,7 @@ test.describe("robots", () => {
       input.value = "http://spam.example";
     });
     await waitLikeAPerson(page);
-    await page.getByRole("button", { name: "Get early access" }).click();
+    await priceListButton(page).click();
     await expect(page).toHaveURL(`${BASE}/owners/thanks`);
 
     await signIn(page);
@@ -129,7 +151,7 @@ test.describe("robots", () => {
       input.value = String(Date.now());
     });
     await fillOwnerForm(page, owner);
-    await page.getByRole("button", { name: "Get early access" }).click();
+    await priceListButton(page).click();
     await expect(page).toHaveURL(`${BASE}/owners/thanks`);
 
     await signIn(page);
@@ -144,7 +166,7 @@ test.describe("robots", () => {
     await page.goto("/owners");
     await fillOwnerForm(page, ownerDetails({ name: "One Too Many" }));
     await waitLikeAPerson(page);
-    await page.getByRole("button", { name: "Get early access" }).click();
+    await priceListButton(page).click();
     await expect(formAlert(page)).toContainText("You've sent this form a few times in a row.");
     await expect(page).toHaveURL(`${BASE}/owners`);
   });

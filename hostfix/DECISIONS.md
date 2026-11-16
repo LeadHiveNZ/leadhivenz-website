@@ -9,12 +9,64 @@ price, a fee or a promise, add a line here saying what and why.
 
 ---
 
-## 2026-11-16 — Real prices researched, staged, not yet loaded
+## 2026-11-16 — The demand test is built; real prices loaded; Priority removed
 
-`seed/menu-queenstown.proposed.json` holds 59 researched jobs and is meant to
-replace `seed/menu-queenstown.json`. **Nothing loads it yet.** The live menu is
-still placeholders, so no price may be shown to a real owner until the swap is
-done.
+Done in the code (branch `claude/hopeful-hamilton-yd41nf`):
+
+- **The researched menu is live.** `seed/menu-queenstown.json` is the 59 researched jobs and the
+  `.proposed` file is gone. The 27 money tests were re-derived by hand from the new prices, not pasted
+  from output (`tests/unit/money-flow.test.ts` header shows the working). Surcharges, off-menu fee,
+  payout and approval limit are the new numbers, in the seed and in the `config/markets.ts` defaults.
+- **The five `needsLocalQuote` jobs and the two add-ons start switched off** (`startsOnTheMenu` in
+  `src/lib/db/seed-core.ts`), so 52 jobs can be booked and are on the price list. Switch one on from
+  More > Markets once a local has confirmed its price.
+- **25 jobs are owner-only** (`guestVisible: false`): upkeep, compliance checks, outdoor and seasonal
+  work that a guest has no reason to report.
+- **Priority is gone.** One membership, Essential, NZ$99. The code can still hold a membership that
+  includes urgent call-outs (tested), but none is offered.
+- **After-hours is before 7am, from 4:30pm, and all of Saturday and Sunday** (the row above: "after
+  4:30pm and Saturdays"). Working hours can now be set to the half hour (migration
+  `20261118000100_half_hour_working_day.sql`). Queenstown: 7am to 4:30pm, Monday to Friday. The old
+  default was 7am to 6pm, Monday to Saturday. Public holidays are still treated as normal days: open spec 1.
+- **The owner page is the demand-test page**: real prices, a NZ$99 refundable founding deposit as the
+  first button and "Not yet: just send me the price list" as the second, 25 founding spots that stop
+  taking cards when gone, the full price list on the thank-you page and by email (with a link back to the
+  founding spot), and a 14-day scorecard on the leads page. `docs/DEMAND-TEST.md` is how to run it.
+- **The pass mark is three owners with a card down** (`TARGETS` in `src/lib/leads/demand-test.ts`).
+  Ten owner leads and two handymen, a plumber and an electrician are shown alongside it as signs, not
+  as the pass mark.
+
+Choices made while building it, for you to overrule:
+
+- **Nothing on the page that is not built or not sourced.** Left out from the earlier drafts: "one
+  number" to ring, calendar and guest-message links, one-off door codes, an app, the "three in four
+  problems" statistic, what a Queenstown property earns, and any price comparison with the AA. "Who
+  this is not for" says an owner who only wants emergency cover at their own home is better off with a
+  home emergency plan, without naming a price.
+- **The founding promises are the admin's own words** (More > Markets), shown word for word on the page,
+  the card page and the email, so they can never drift apart.
+- **Price list emails need your own domain in Resend.** With Resend's test sender the email is skipped
+  and the leads page says so. The owner still sees the list on the thank-you page.
+
+### Owed before Queenstown goes live
+
+- **Founding billing.** The page promises founding members half price for three months (NZ$49.50 a
+  month, then NZ$99) and that the NZ$99 deposit comes off their first bills. Billing today takes the
+  deposit off the first month, up to one month's price, and charges full price after. Build a
+  three-month 50% discount on the Stripe subscription for owners with a founding deposit, and carry any
+  deposit left over into the next bills, or change the promise before anyone else pays. The go-live
+  checklist shows this line until then (`foundingBillingLine` in `src/lib/leads/founding.ts`).
+- **The weekly payout cycle** in "Facts that must not drift" below (everything closed Monday to Sunday
+  lands the following Tuesday) is not built. The code pays each job after a 24-hour hold, and the
+  tradie page says "about 5 to 6 working days after the job", which is what the code does.
+
+---
+
+## 2026-11-16 — Real prices researched (now loaded: see above)
+
+*Done: the swap is made and the tests re-derived (entry above). Kept for the
+reasoning.* `seed/menu-queenstown.proposed.json` held 59 researched jobs meant to
+replace the placeholder menu.
 
 Where the prices came from: Queenstown call-out plus first-hour rates as
 advertised in November 2026. A local plumber or electrician charges a $90-130
@@ -94,7 +146,8 @@ quarterly checks. Delivering that costs about $68 a month against a $50
 premium. It lost money on every customer who used what they paid for, and the
 customers most likely to buy it are the ones most likely to use it.
 
-**Code still to change.** The tier is live in:
+*Done: removed from the config, the copy, the demo and the tests (entry above).*
+**What had to change.** The tier was live in:
 
 - `config/markets.ts` — the `priority` tier in `launchMarket.tiers`
 - `src/lib/content.ts:26,66,69` — the `tier: "essential" | "priority"` union and the copy

@@ -15,9 +15,12 @@ export function isUuid(value: string): boolean {
   return UUID.test(value);
 }
 
-export function createLeadToken(secret: string, leadId: string, nowMs: number = Date.now()): string {
+/** How long the "take a founding spot" link in the price list email works. */
+export const LEAD_LINK_SECONDS = 30 * 24 * 60 * 60;
+
+export function createLeadToken(secret: string, leadId: string, nowMs: number = Date.now(), ttlSeconds: number = LEAD_COOKIE_SECONDS): string {
   if (!isUuid(leadId)) throw new Error("createLeadToken: not a lead id");
-  const expiresAtMs = nowMs + LEAD_COOKIE_SECONDS * 1000;
+  const expiresAtMs = nowMs + ttlSeconds * 1000;
   return `v1.${leadId}.${expiresAtMs}.${sign(secret, `lead|v1|${leadId}|${expiresAtMs}`)}`;
 }
 

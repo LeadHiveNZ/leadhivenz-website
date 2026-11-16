@@ -10,7 +10,7 @@ async function statusOf(key: string): Promise<StatusItem> {
 describe("the setup checklist", () => {
   it("lists every part of the system once", async () => {
     const keys = (await setupStatus()).map((item) => item.key);
-    expect(keys).toEqual(["database", "email", "sms", "payments", "timer", "photos", "pixel", "capi", "analytics", "copy", "legal"]);
+    expect(keys).toEqual(["database", "email", "sms", "payments", "timer", "photos", "pixel", "capi", "analytics", "copy", "founding-queenstown", "legal"]);
   });
 
   it("marks nothing as ready on a fresh install", async () => {
@@ -26,7 +26,18 @@ describe("the setup checklist", () => {
     const copy = await statusOf("copy");
     expect(copy.state).toBe("todo");
     expect(copy.detail).toMatch(/\d+ \[EDIT\] placeholders? still to replace/);
-    expect(copy.detail).toContain("content/landing-owner.md");
+    // The page copy is written. The contact email and company name are the owner's to fill in.
+    expect(copy.detail).toContain("2 in config/brand.ts");
+    expect(copy.detail).not.toContain("content/landing-owner.md");
+  });
+
+  it("shows the founding promises next to what billing actually does, until someone checks", async () => {
+    const line = await statusOf("founding-queenstown");
+    expect(line.label).toBe("Founding billing (Queenstown)");
+    expect(line.state).toBe("todo");
+    expect(line.detail).toContain('"Half price for your first three months: $49.50 a month, then $99"');
+    expect(line.detail).toContain("the deposit comes off the first month's bill (up to one month's price), then the membership is full price");
+    expect(line.detail).toContain("0 founding spots taken so far.");
   });
 });
 

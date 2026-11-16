@@ -46,6 +46,13 @@ export function tradeLabel(lead: Lead): string {
   return (lead.trade && findTrade(lead.trade)?.label) || lead.trade || "";
 }
 
+/** Which button an owner pressed, in plain words. Empty for tradies and older leads. */
+export function intentLabel(lead: Pick<Lead, "intent">): string {
+  if (lead.intent === "deposit") return "wants a founding spot";
+  if (lead.intent === "pricelist") return "asked for the price list";
+  return "";
+}
+
 /** One line summing up what the lead told us. */
 export function leadSummary(lead: Lead): string {
   if (lead.leadType === "owner") {
@@ -54,6 +61,7 @@ export function leadSummary(lead: Lead): string {
       `${count} ${count === 1 ? "property" : "properties"}`,
       managedByLabel(lead.managedBy),
       lead.ownerLocation ? `lives in ${lead.ownerLocation}` : "",
+      intentLabel(lead),
     ]
       .filter((part) => part !== "")
       .join(" · ");

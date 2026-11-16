@@ -1,6 +1,6 @@
 # HostFix — Plan and data model (v0, 15 Nov 2026)
 
-> **Status, 15 November 2026: Phases 0 to 4 are built and tested.** Phase 5 is planned in section 9 and not built.
+> **Status, 16 November 2026: Phases 0 to 4 are built and tested, and the demand test is ready to run.** Phase 5 is planned in section 9 and not built.
 > To try it: `docs/TRY-IT.md`. To put it online: `SETUP.md`. For the dispatcher: `RUNBOOK.md`.
 > What similar products do and what was taken from them: `docs/MARKET-RESEARCH.md`.
 >
@@ -28,8 +28,15 @@
 > - **Referral rewards are tracked and put in the queue when due, then paid by bank transfer by hand.**
 > - **A membership's price is fixed once properties have joined it.** To change a price you add a new
 >   membership and close the old one to new members (`RUNBOOK.md`).
-> - **Urgent call-outs included in Priority cost the business the surcharge** (the tradie still gets it). The
->   Numbers page shows the running total, and each membership can cap how many are included a month.
+> - **There is one membership: Essential, NZ$99 per property per month, 24-hour response** (`DECISIONS.md`,
+>   16 Nov 2026). Priority was removed because delivering it cost more than it charged, so everything below
+>   about Priority, its included urgent call-outs and its quarterly check is history. Urgent is always an
+>   add-on the owner pays for, and the whole surcharge goes to the tradie.
+> - **The real Queenstown prices are loaded** (59 researched jobs, `seed/menu-queenstown.json`): urgent
+>   NZ$90, after hours NZ$140, NZ$225 to come and look at something off the menu, owner's yes needed above
+>   NZ$600. After-hours is before 7am, from 4:30pm and all weekend.
+> - **The demand test is built** (`docs/DEMAND-TEST.md`): the owner page sells founding spots for a
+>   refundable NZ$99 deposit or sends the full price list, and the leads page keeps the 14-day scorecard.
 >
 > The five questions in section 6 were never answered, so each default written there is what was built.
 > Question 1 (who is the seller for GST) still needs your accountant before the first real job.

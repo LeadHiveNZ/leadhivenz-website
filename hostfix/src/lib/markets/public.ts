@@ -2,7 +2,7 @@ import "server-only";
 import { cacheLife, cacheTag } from "next/cache";
 import { launchMarket, markets as configuredMarkets, type Market } from "@config/markets";
 import { databaseKind, getDb } from "@/lib/db";
-import { readMenuSeed } from "@/lib/db/seed-core";
+import { readMenuSeed, startsOnTheMenu, withMenuSettings } from "@/lib/db/seed-core";
 import path from "node:path";
 import { listMarkets, listMenu } from "./store";
 
@@ -25,16 +25,20 @@ export const MARKETS_TAG = "markets";
 
 function fromConfig(market: Market): PublicMarket {
   let menu: PublicMenuItem[] = [];
+  let settings = market;
   try {
     const seed = readMenuSeed(path.join(process.cwd(), "seed"), market.slug);
-    menu = (seed?.items ?? []).map((item) => ({
+    // The same two steps the database gets: the file's surcharges laid over the
+    // market, and jobs that cannot be booked yet left off the menu.
+    settings = withMenuSettings(market, seed);
+    menu = (seed?.items ?? []).filter(startsOnTheMenu).map((item) => ({
       code: item.code, trade: item.trade, name: item.name, ownerPriceCents: Math.round(item.ownerPriceDollars * 100),
       tradiePayoutCents: Math.round(item.tradiePayoutDollars * 100), licenceRequired: item.licenceRequired, tryFirst: item.tryFirst ?? "",
     }));
   } catch {
     // No menu file is fine: the page simply shows no menu.
   }
-  return { market, menu };
+  return { market: settings, menu };
 }
 
 function building(): boolean {

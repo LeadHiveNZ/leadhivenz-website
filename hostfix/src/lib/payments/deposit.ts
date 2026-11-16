@@ -103,11 +103,12 @@ export async function startDepositCheckout(
   lead: Lead,
   market: Market,
   base: string,
-  deps: { store: LeadStore; stripe?: Stripe; now?: () => number },
+  deps: { store: LeadStore; stripe?: Stripe; now?: () => number; spotsLeft?: number | null },
 ): Promise<{ url: string; sessionId: string }> {
-  if (lead.depositStatus === "paid" || lead.depositStatus === "refunded") {
+  if (lead.depositStatus === "paid" || lead.depositStatus === "refunded" || lead.depositStatus === "credited") {
     throw new DepositNotAllowedError("This deposit has already been paid.");
   }
+  if (deps.spotsLeft === 0) throw new DepositNotAllowedError(`All the founding spots in ${market.name} have been taken.`);
   const availability = depositAvailability(market);
   if (!availability.available) throw new DepositNotAllowedError(availability.reason);
 

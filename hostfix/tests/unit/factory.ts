@@ -6,7 +6,8 @@ import type { Db } from "@/lib/db/types";
 import { recordUpload } from "@/lib/files/uploads";
 import { createJob, type NewJob } from "@/lib/jobs/create";
 import type { Job } from "@/lib/jobs/types";
-import { getMarket, listMenu, listTiers, type MenuItem } from "@/lib/markets/store";
+import { saveTier } from "@/lib/markets/admin";
+import { getMarket, listMenu, listTiers, type MenuItem, type Tier } from "@/lib/markets/store";
 import { listMessages, type LoggedMessage } from "@/lib/notify/outbox";
 import { createOwnerAccount, saveBilling } from "@/lib/owners/service";
 import { createDemoGateway, DEMO_CARD_DECLINES, DEMO_CARD_OK } from "@/lib/payments/demo-gateway";
@@ -54,14 +55,30 @@ export async function makeOwner(db: Db, options: { card?: "ok" | "declines" | "n
   return { user, ownerId };
 }
 
+/**
+ * The business sells one membership, Essential. The app can hold more, and can
+ * include urgent call-outs in one. Tests of those abilities add their own
+ * second membership here, the way an admin would on the Markets screen.
+ * "plus" costs NZ$149 a month and includes urgent call-outs.
+ */
+export async function addPlusTier(db: Db, overrides: { urgentIncludedPerMonth?: number | null; priceCents?: number } = {}): Promise<Tier> {
+  await saveTier(db, "queenstown", {
+    id: null, key: "plus", name: "Plus", priceCents: overrides.priceCents ?? 14900, responseHours: 24, urgentResponseHours: 4,
+    urgentIncluded: true, urgentIncludedPerMonth: overrides.urgentIncludedPerMonth ?? null, quarterlyCheck: false,
+    blurb: "Urgent call-outs included.", active: true,
+  }, "test");
+  return (await listTiers(db, "queenstown")).find((tier) => tier.key === "plus")!;
+}
+
 export async function makeProperty(
   db: Db,
   ownerId: string,
-  options: { tier?: "essential" | "priority"; member?: boolean; name?: string; referralCode?: string } = {},
+  options: { tier?: "essential" | "plus"; member?: boolean; name?: string; referralCode?: string } = {},
 ): Promise<Property> {
   const n = next();
   const tiers = await listTiers(db, "queenstown");
-  const tier = tiers.find((candidate) => candidate.key === (options.tier ?? "essential"))!;
+  const tier = tiers.find((candidate) => candidate.key === (options.tier ?? "essential"));
+  if (!tier) throw new Error(`No "${options.tier}" membership. Call addPlusTier first.`);
   const property = await createProperty(db, ownerId, {
     market: "queenstown", name: options.name ?? `Lakeview ${n}`, addressLine1: `${n} Lake Esplanade`, suburb: "Frankton", postcode: "9300",
     accessNotes: `Lockbox code ${1000 + n} by the front door.`, tierId: tier.id, referralCode: options.referralCode ?? null,

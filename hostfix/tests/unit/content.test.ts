@@ -147,13 +147,18 @@ describe("mistakes in the copy are caught with a clear message", () => {
 
 describe("placeholders", () => {
   it("come from the market and brand settings, so nothing is tied to one town or currency", () => {
+    // Queenstown's starting values (config/markets.ts and DECISIONS.md): $99 a month, $99 founding deposit,
+    // urgent $90, after hours $140, $225 to come and look at something off the menu, quotes over $600 need a yes.
     expect(contentTokens(launchMarket)).toEqual({
       brand: "HostFix",
       market: "Queenstown",
       country: "New Zealand",
-      deposit: "NZ$49",
+      deposit: "NZ$99",
       essential: "NZ$99",
-      priority: "NZ$149",
+      urgent: "NZ$90",
+      after_hours: "NZ$140",
+      callout: "NZ$225",
+      approval_limit: "NZ$600",
       payout_days: "5 to 6 working days",
     });
     const noosa = {
@@ -161,27 +166,27 @@ describe("placeholders", () => {
       name: "Noosa",
       countryName: "Australia",
       currency: "AUD" as const,
-      tiers: launchMarket.tiers.map((tier) => ({
-        ...tier,
-        monthlyPriceCents: tier.key === "essential" ? 10900 : 16950,
-      })),
-      foundingDeposit: { enabled: true, amountCents: 5900, terms: [] },
+      tiers: launchMarket.tiers.map((tier) => ({ ...tier, monthlyPriceCents: 10900 })),
+      urgentSurchargeCents: 9500,
+      approvalThresholdCents: 75000,
+      foundingDeposit: { enabled: true, amountCents: 5900, spots: 25, terms: [] },
     };
-    expect(contentTokens(noosa)).toMatchObject({ market: "Noosa", deposit: "A$59", essential: "A$109", priority: "A$169.50" });
+    expect(contentTokens(noosa)).toMatchObject({ market: "Noosa", deposit: "A$59", essential: "A$109", urgent: "A$95", approval_limit: "A$750" });
     // Australian card money clears faster than New Zealand's, so the page says so.
     expect(contentTokens({ ...noosa, country: "AU" as const }).payout_days).toBe("3 to 4 working days");
   });
 
   it("still fill in the prices after a membership has been replaced by one with a new short code", () => {
-    const [essential, priority] = launchMarket.tiers;
-    // The admin put the price up: a new membership at the new price, the old one closed to new members.
-    const repriced = { ...launchMarket, tiers: [{ ...essential!, key: "essential_2027", monthlyPriceCents: 11900 }, priority!] };
-    expect(contentTokens(repriced)).toMatchObject({ essential: "NZ$119", priority: "NZ$149" });
-    // Short codes that match nothing: the cheapest stands in for essential and the dearest for priority.
-    const renamed = { ...launchMarket, tiers: [{ ...priority!, key: "gold" }, { ...essential!, key: "basic" }] };
-    expect(contentTokens(renamed)).toMatchObject({ essential: "NZ$99", priority: "NZ$149" });
-    // One membership only: both placeholders show it.
-    expect(contentTokens({ ...launchMarket, tiers: [{ ...essential!, key: "standard" }] })).toMatchObject({ essential: "NZ$99", priority: "NZ$99" });
+    const [essential] = launchMarket.tiers;
+    // The admin put the price up: a new membership at the new price, the old one closed to new members (so not in the list).
+    const repriced = { ...launchMarket, tiers: [{ ...essential!, key: "essential_2027", monthlyPriceCents: 11900 }] };
+    expect(contentTokens(repriced)).toMatchObject({ essential: "NZ$119" });
+    // Short codes that match nothing: the cheapest one on offer stands in.
+    const renamed = { ...launchMarket, tiers: [{ ...essential!, key: "gold", monthlyPriceCents: 14900 }, { ...essential!, key: "basic" }] };
+    expect(contentTokens(renamed)).toMatchObject({ essential: "NZ$99" });
+    // The one called "essential" wins over a cheaper one with another name.
+    const both = { ...launchMarket, tiers: [{ ...essential!, key: "trial", monthlyPriceCents: 4900 }, essential!] };
+    expect(contentTokens(both)).toMatchObject({ essential: "NZ$99" });
     // None at all cannot show a price, and says what to do.
     expect(() => contentTokens({ ...launchMarket, tiers: [] })).toThrow('The market "Queenstown" has no membership on offer');
   });
@@ -208,16 +213,25 @@ describe("the real landing page files", () => {
     for (const section of content.sections) expect(section.blocks.length).toBeGreaterThan(0);
   });
 
-  it("the owner page keeps its note about job charges below the two price cards", () => {
+  it("the owner page keeps its note about job charges below the one membership card", () => {
     const pricing = loadLanding("owner", launchMarket).sections.find((s) => s.id === "what-it-costs");
-    expect(pricing?.blocks.map((b) => b.type)).toEqual(["card", "card", "paragraph"]);
+    expect(pricing?.blocks.map((b) => b.type)).toEqual(["card", "paragraph"]);
   });
 
-  it("the owner page states the real prices from the market settings", () => {
+  it("the owner page states the real prices from the market settings, and no second membership", () => {
     const text = JSON.stringify(loadLanding("owner", launchMarket));
-    expect(text).toContain("NZ$99");
-    expect(text).toContain("NZ$149");
-    expect(text).toContain("NZ$49");
+    for (const price of ["NZ$99", "NZ$90", "NZ$140", "NZ$225", "NZ$600"]) expect(text).toContain(price);
+    // Priority was removed (DECISIONS.md): its old price and name must not come back.
+    expect(text).not.toContain("NZ$149");
+    expect(text).not.toMatch(/priority/i);
+  });
+
+  it("the owner page does not promise what is not built", () => {
+    const text = JSON.stringify(loadLanding("owner", launchMarket)).toLowerCase();
+    // Not built yet: one number to ring, calendar or guest-message links, one-off door codes. See DECISIONS.md.
+    for (const phrase of ["one number", "calendar", "airbnb messages", "one-off code", "72%"]) expect(text).not.toContain(phrase);
+    // And no claim that owners pay more for the fixed price.
+    expect(text).not.toMatch(/premium/);
   });
 
   it("the tradie page promises pay no faster than the payment company can deliver it", () => {

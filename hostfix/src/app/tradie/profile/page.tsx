@@ -14,6 +14,7 @@ import { getTradie, listLicences } from "@/lib/tradies/service";
 import { dateKey } from "@/lib/time";
 import { WEEKDAY_OPTIONS } from "@/lib/weekdays";
 import { payTiming } from "@/lib/markets/display";
+import { workingHours } from "@/lib/leads/price-list";
 
 export const metadata: Metadata = { title: "Profile" };
 
@@ -72,7 +73,7 @@ export default async function TradieProfilePage({ searchParams }: { searchParams
             options={trades.filter((trade) => trade.key !== "other").map((trade) => ({ key: trade.key, label: trade.label, detail: trade.licenceRequired ? "Needs a licence on file" : undefined }))}
           />
           <Checks label="Days you work" name="daysAvailable" options={WEEKDAY_OPTIONS} defaultValues={tradie.daysAvailable} hint="Urgent jobs are only offered on your working days." />
-          <Tick name="afterHours" label="I take after-hours call-outs" hint={`Outside ${market.hoursStart}:00 to ${market.hoursEnd}:00. You get the full after-hours surcharge.`} defaultChecked={tradie.afterHours} />
+          <Tick name="afterHours" label="I take after-hours call-outs" hint={`Outside ${workingHours(market)}. You get the full after-hours surcharge.`} defaultChecked={tradie.afterHours} />
           <Tick name="gstRegistered" label={`I am registered for ${market.taxName}`} defaultChecked={tradie.gstRegistered} />
           <Field label={`${market.taxName} number (if registered)`} name="gstNumber" maxLength={20} defaultValue={tradie.gstNumber ?? ""} />
           <Field label="Public liability insurance runs out on" name="insuranceExpiresOn" type="date" defaultValue={tradie.insuranceExpiresOn ?? ""} hint="Owners are told every tradie on the network is insured, so we check this date." />

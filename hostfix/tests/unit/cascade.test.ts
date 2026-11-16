@@ -12,11 +12,17 @@ const t = testDb();
 beforeEach(() => setTestNow(MONDAY_10AM));
 afterEach(() => setTestNow(null));
 
-/** An owner with one member property, the starting point for nearly every test here. */
-async function member(tier: "essential" | "priority" = "essential") {
+/**
+ * An owner with one member property, the starting point for nearly every test here.
+ *
+ * The job most of these log is PL-01 on seed/menu-queenstown.json: "Toilet seat or cistern parts",
+ * NZ$225 to the owner and NZ$190 to the tradie. Urgent adds NZ$90. If the menu changes, work the
+ * amounts below out again from the file.
+ */
+async function member() {
   await liveMarket(t.db);
   const owner = await makeOwner(t.db);
-  const property = await makeProperty(t.db, owner.ownerId, { tier });
+  const property = await makeProperty(t.db, owner.ownerId);
   return { owner, property };
 }
 
@@ -40,9 +46,9 @@ describe("the offer cascade", () => {
 
     const sent = await textsTo(t.db, first.phone, "offer");
     expect(sent).toHaveLength(1);
-    expect(sent[0]!.body).toContain("Unblock a toilet");
+    expect(sent[0]!.body).toContain("Toilet seat or cistern parts");
     expect(sent[0]!.body).toContain("Frankton");
-    expect(sent[0]!.body).toContain("Pays NZ$187");
+    expect(sent[0]!.body).toContain("Pays NZ$190");
     expect(sent[0]!.body).toContain("Yours for 15 min");
     expect(sent[0]!.body).toMatch(/\/o\/\d+\.[A-Za-z0-9]{12}/);
     // The street address stays private until someone accepts.
@@ -439,7 +445,7 @@ describe("reports from guests and cleaners", () => {
     const told = await textsTo(t.db, owner.user.phone!, "job_logged");
     expect(told).toHaveLength(1);
     expect(told[0]!.body).toContain("Sam the cleaner logged");
-    expect(told[0]!.body).toContain("NZ$220");
+    expect(told[0]!.body).toContain("NZ$225");
   });
 
   it("a guest's report waits for the owner's go-ahead: nobody is offered anything and no clock is running", async () => {
@@ -461,7 +467,7 @@ describe("reports from guests and cleaners", () => {
     // The owner says yes, as urgent, an hour later. The promise runs from now.
     setTestNow(addMinutes(MONDAY_10AM, 60));
     const approved = await approveGuestReport(t.db, result.job.id, { urgent: true }, `owner:${owner.ownerId}`);
-    expect(approved).toMatchObject({ status: "offering", urgency: "urgent", ownerTotalCents: 22000 + 8000 });
+    expect(approved).toMatchObject({ status: "offering", urgency: "urgent", ownerTotalCents: 22500 + 9000 });
     expect(approved!.respondBy?.getTime()).toBe(addMinutes(MONDAY_10AM, 60 + 4 * 60).getTime());
     expect(await textsTo(t.db, tradie.phone, "offer")).toHaveLength(1);
   });
@@ -476,7 +482,7 @@ describe("reports from guests and cleaners", () => {
       urgent: true, uploadIds: [], uploader: `report:${property.id}`, actor: `report:${property.id}`,
     });
     if (!result.ok) throw new Error("expected a job");
-    expect(result.job).toMatchObject({ status: "offering", urgency: "standard", ownerTotalCents: 22000 });
+    expect(result.job).toMatchObject({ status: "offering", urgency: "standard", ownerTotalCents: 22500 });
   });
 
   it("the same problem reported twice is one job, not two call-outs", async () => {

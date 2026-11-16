@@ -10,7 +10,27 @@ import { saveBilling, unpaidJobs } from "@/lib/owners/service";
 import { DEMO_CARD_OK } from "@/lib/payments/demo-gateway";
 import type { Property } from "@/lib/properties/service";
 import { testDb } from "./db";
-import { auditActions, gatewayFor, liveMarket, logJob, makeOwner, makeProperty, makeTradie, MONDAY_10AM, MONDAY_9PM, offersFor, openExceptions, photo, textsTo } from "./factory";
+import { addPlusTier, auditActions, gatewayFor, liveMarket, logJob, makeOwner, makeProperty, makeTradie, MONDAY_10AM, MONDAY_9PM, offersFor, openExceptions, photo, textsTo } from "./factory";
+
+/**
+ * THE PRICES THESE TESTS ARE BUILT ON. They come from seed/menu-queenstown.json
+ * (whole dollars there, cents here) and were worked out by hand from that file:
+ *
+ *   PL-01  Toilet seat or cistern parts     owner 22500   tradie 19000   we keep 3500
+ *   PL-03, PL-04, PL-06, PL-07 (plumbing)   owner 23500   tradie 20000   we keep 3500
+ *   Urgent surcharge 9000 and after-hours surcharge 14000: the tradie gets all of both
+ *   Off-menu call-out                       owner 22500   tradie 19000   we keep 3500
+ *   A quote takes the job over the limit when quotes add up to more than 60000
+ *   Parts above 15000 need the owner's yes whatever the total
+ *   Off-menu labour: the tradie gets 85%. Parts pass through at cost.
+ *   Essential membership 9900 a month
+ *
+ * A job logged without a code is PL-01.
+ *
+ * IF THE MENU CHANGES, WORK EVERY NUMBER OUT AGAIN FROM THE FILE. Never paste
+ * in what the code returns: these tests are the only independent check on the
+ * money, and a test copied from the code's output checks nothing.
+ */
 
 const t = testDb();
 
@@ -19,7 +39,7 @@ afterEach(() => setTestNow(null));
 
 type Setup = Awaited<ReturnType<typeof setup>>;
 
-async function setup(options: { tier?: "essential" | "priority"; card?: "ok" | "declines"; market?: Record<string, unknown>; trades?: string[] } = {}) {
+async function setup(options: { tier?: "essential" | "plus"; card?: "ok" | "declines"; market?: Record<string, unknown>; trades?: string[] } = {}) {
   await liveMarket(t.db, options.market ?? {});
   const owner = await makeOwner(t.db, { card: options.card ?? "ok" });
   const property = await makeProperty(t.db, owner.ownerId, { tier: options.tier ?? "essential" });
@@ -55,33 +75,34 @@ describe("a finished menu job", () => {
     const job = await onSite(s, { code: "PL-01" });
     setTestNow(addMinutes(MONDAY_10AM, 90));
     const done = await finish(s, job.id);
-    expect(done).toMatchObject({ status: "completed", outcome: "done", ownerTotalCents: 22000, tradieTotalCents: 18700 });
+    expect(done).toMatchObject({ status: "completed", outcome: "done", ownerTotalCents: 22500, tradieTotalCents: 19000 });
 
     // Recorded as owed in the same step as the job being marked done.
-    expect(await payment(job.id)).toMatchObject({ status: "pending", amount_cents: 22000 });
-    expect(await payout(job.id)).toMatchObject({ status: "waiting", amount_cents: 18700 });
+    expect(await payment(job.id)).toMatchObject({ status: "pending", amount_cents: 22500 });
+    expect(await payout(job.id)).toMatchObject({ status: "waiting", amount_cents: 19000 });
 
     expect(await chargeJob(t.db, gatewayFor(t.db), job.id)).toBe("succeeded");
-    expect(await payment(job.id)).toMatchObject({ status: "succeeded", amount_cents: 22000, attempts: 1 });
+    expect(await payment(job.id)).toMatchObject({ status: "succeeded", amount_cents: 22500, attempts: 1 });
     const due = await payout(job.id);
-    expect(due).toMatchObject({ status: "scheduled", amount_cents: 18700 });
+    expect(due).toMatchObject({ status: "scheduled", amount_cents: 19000 });
     expect(new Date(due!.release_at).getTime()).toBe(addHours(addMinutes(MONDAY_10AM, 90), 24).getTime());
 
     const told = await textsTo(t.db, s.owner.user.phone!, "job_done");
     expect(told).toHaveLength(1);
-    expect(told[0]!.body).toContain("NZ$220 charged to your card");
+    expect(told[0]!.body).toContain("NZ$225 charged to your card");
 
     // 23 hours on: still held. 24 hours on: sent.
     setTestNow(addHours(addMinutes(MONDAY_10AM, 90), 23));
     expect(await releaseDuePayouts(t.db, gatewayFor(t.db))).toBe(0);
     setTestNow(addHours(addMinutes(MONDAY_10AM, 90), 24));
     expect(await releaseDuePayouts(t.db, gatewayFor(t.db))).toBe(1);
-    expect(await payout(job.id)).toMatchObject({ status: "sent", amount_cents: 18700 });
-    expect((await textsTo(t.db, s.tradie.phone, "payout_sent"))[0]!.body).toContain("NZ$187 for job");
+    expect(await payout(job.id)).toMatchObject({ status: "sent", amount_cents: 19000 });
+    expect((await textsTo(t.db, s.tradie.phone, "payout_sent"))[0]!.body).toContain("NZ$190 for job");
 
-    expect(await moneyLog(job.id)).toEqual(["job.created:22000", "job.completed:22000", "payment.succeeded:22000", "payout.sent:18700"]);
-    // What the platform keeps is the difference: 15% of the job.
-    expect(22000 - 18700).toBe(3300);
+    expect(await moneyLog(job.id)).toEqual(["job.created:22500", "job.completed:22500", "payment.succeeded:22500", "payout.sent:19000"]);
+    // What the platform keeps is the difference. The menu sets each owner price at the tradie's
+    // payout divided by 0.85, to the nearest NZ$5: 190 / 0.85 = 223.53, so NZ$225, and we keep NZ$35.
+    expect(22500 - 19000).toBe(3500);
   });
 
   it("a charge cut off half-way is repeated with the same key, so it can never become two charges", async () => {
@@ -176,23 +197,24 @@ describe("a finished menu job", () => {
 });
 
 describe("surcharges", () => {
-  it("urgent: the owner pays NZ$80 more and all of it goes to the tradie", async () => {
+  it("urgent: the owner pays NZ$90 more and all of it goes to the tradie", async () => {
     const s = await setup();
     const job = await onSite(s, { urgent: true });
-    expect(job).toMatchObject({ urgency: "urgent", afterHours: false, ownerTotalCents: 30000, tradieTotalCents: 26700, responseHours: 4 });
+    expect(job).toMatchObject({ urgency: "urgent", afterHours: false, ownerTotalCents: 22500 + 9000, tradieTotalCents: 19000 + 9000, responseHours: 4 });
     const done = await finish(s, job.id);
-    expect(done.ownerTotalCents - done.tradieTotalCents).toBe(3300);
+    // The surcharge adds nothing to what we keep: still the NZ$35 on the job itself.
+    expect(done.ownerTotalCents - done.tradieTotalCents).toBe(3500);
   });
 
   it("urgent at 9pm: after-hours is added too, and both go to the tradie in full", async () => {
     setTestNow(MONDAY_9PM);
     const s = await setup();
     const job = await onSite(s, { urgent: true });
-    expect(job).toMatchObject({ afterHours: true, ownerTotalCents: 22000 + 8000 + 12000, tradieTotalCents: 18700 + 8000 + 12000 });
+    expect(job).toMatchObject({ afterHours: true, ownerTotalCents: 22500 + 9000 + 14000, tradieTotalCents: 19000 + 9000 + 14000 });
     expect((await listLines(t.db, job.id)).map((line) => [line.kind, line.ownerCents, line.tradieCents])).toEqual([
-      ["menu", 22000, 18700],
-      ["urgent", 8000, 8000],
-      ["after_hours", 12000, 12000],
+      ["menu", 22500, 19000],
+      ["urgent", 9000, 9000],
+      ["after_hours", 14000, 14000],
     ]);
   });
 
@@ -200,26 +222,31 @@ describe("surcharges", () => {
     setTestNow(MONDAY_9PM);
     const s = await setup();
     const job = await logJob(t.db, s.property);
-    expect(job).toMatchObject({ afterHours: false, ownerTotalCents: 22000 });
+    expect(job).toMatchObject({ afterHours: false, ownerTotalCents: 22500 });
   });
 
-  it("Priority members are not charged for urgent, and the tradie still gets it", async () => {
-    const s = await setup({ tier: "priority" });
+  // The business sells one membership and urgent is always paid for (DECISIONS.md). The app can still
+  // hold a membership that includes urgent call-outs, and the rule that matters must hold if one is ever
+  // added: the owner is let off the surcharge, the tradie never is.
+  it("on a membership that includes urgent, the owner is not charged for it and the tradie still gets it", async () => {
+    await addPlusTier(t.db);
+    const s = await setup({ tier: "plus" });
     const job = await onSite(s, { urgent: true });
-    expect(job).toMatchObject({ ownerTotalCents: 22000, tradieTotalCents: 26700 });
+    expect(job).toMatchObject({ ownerTotalCents: 22500, tradieTotalCents: 19000 + 9000 });
     const lines = await listLines(t.db, job.id);
-    expect(lines[1]).toMatchObject({ kind: "urgent", ownerCents: 0, tradieCents: 8000 });
+    expect(lines[1]).toMatchObject({ kind: "urgent", ownerCents: 0, tradieCents: 9000 });
     expect(lines[1]!.label).toContain("included");
   });
 
   it("the included urgent call-outs can be capped per month", async () => {
-    const s = await setup({ tier: "priority" });
-    await t.db.query("update public.membership_tiers set urgent_included_per_month = 1 where market = 'queenstown' and key = 'priority'");
+    await addPlusTier(t.db, { urgentIncludedPerMonth: 1 });
+    const s = await setup({ tier: "plus" });
     const first = await onSite(s, { code: "PL-01", urgent: true });
-    expect(first.ownerTotalCents).toBe(22000);
+    expect(first.ownerTotalCents).toBe(22500);
     await finish(s, first.id);
+    // The month's one included call-out is used. The next is charged: PL-03 plus the surcharge.
     const second = await logJob(t.db, s.property, { code: "PL-03", urgent: true });
-    expect(second.ownerTotalCents).toBe(19000 + 8000);
+    expect(second.ownerTotalCents).toBe(23500 + 9000);
     // A cancelled job does not use up the allowance.
     await cancelJob(t.db, first.id, { actor: "staff:x", staff: true }, "test");
   });
@@ -237,15 +264,17 @@ describe("tax", () => {
     const s = await setup({ market: { tax_registered: true } });
     const job = await onSite(s, { urgent: true });
     await finish(s, job.id);
-    // NZ$300 including 15% GST contains NZ$39.13 of GST.
-    expect(await payment(job.id)).toMatchObject({ amount_cents: 30000, tax_cents: 3913 });
+    // NZ$315 (the NZ$225 job plus NZ$90 urgent) including 15% GST. The GST inside a price that includes
+    // it is 3/23 of the price: 315 x 3 / 23 = 41.0869..., so NZ$41.09 to the nearest cent.
+    expect(await payment(job.id)).toMatchObject({ amount_cents: 31500, tax_cents: 4109 });
   });
 
   it("uses each market's own rate", async () => {
     const s = await setup({ market: { tax_registered: true, tax_rate: 0.1 } });
     const job = await onSite(s);
     await finish(s, job.id);
-    expect(await payment(job.id)).toMatchObject({ amount_cents: 22000, tax_cents: 2000 });
+    // NZ$225 including 10% GST: one eleventh of the price is tax. 225 / 11 = 20.4545..., so NZ$20.45.
+    expect(await payment(job.id)).toMatchObject({ amount_cents: 22500, tax_cents: 2045 });
   });
 });
 
@@ -261,7 +290,7 @@ describe("when the card is declined", () => {
     expect(new Date(failed!.next_retry_at!).getTime()).toBe(addHours(MONDAY_10AM, 24).getTime());
     expect(await payout(job.id)).toMatchObject({ status: "waiting" });
     expect(await openExceptions(t.db, job.id)).toEqual(["payment_failed"]);
-    expect((await textsTo(t.db, s.owner.user.phone!, "payment_failed"))[0]!.body).toContain("could not charge your card NZ$220");
+    expect((await textsTo(t.db, s.owner.user.phone!, "payment_failed"))[0]!.body).toContain("could not charge your card NZ$225");
     expect(await textsTo(t.db, s.owner.user.phone!, "job_done")).toHaveLength(0);
 
     // Nothing is released to the tradie however long we wait.
@@ -309,7 +338,7 @@ describe("when the card is declined", () => {
     expect(await payment(job.id)).toMatchObject({ status: "failed", attempts: 5 });
 
     // The owner is shown it on their home screen. Another owner is not.
-    expect(await unpaidJobs(t.db, s.owner.ownerId)).toEqual([{ jobId: job.id, number: job.number, title: job.title, amountCents: 22000, currency: "NZD" }]);
+    expect(await unpaidJobs(t.db, s.owner.ownerId)).toEqual([{ jobId: job.id, number: job.number, title: job.title, amountCents: 22500, currency: "NZD" }]);
     expect(await unpaidJobs(t.db, (await makeOwner(t.db)).ownerId)).toEqual([]);
 
     // The owner updates their card. The next manual try charges it, exactly once.
@@ -360,7 +389,7 @@ describe("when the owner says something is wrong", () => {
     expect(await resolveDispute(t.db, gatewayFor(t.db), dispute.disputeId, { outcome: "pay_tradie" }, "Photos show it was fixed", "staff:va")).toEqual({ ok: true });
     expect(await openExceptions(t.db, job.id)).toEqual([]);
     expect(await releaseDuePayouts(t.db, gatewayFor(t.db))).toBe(1);
-    expect(await payout(job.id)).toMatchObject({ status: "sent", amount_cents: 18700 });
+    expect(await payout(job.id)).toMatchObject({ status: "sent", amount_cents: 19000 });
     expect(await payment(job.id)).toMatchObject({ status: "succeeded", refunded_cents: 0 });
   });
 
@@ -372,12 +401,12 @@ describe("when the owner says something is wrong", () => {
     const dispute = await raiseDispute(t.db, job.id, `owner:${s.owner.ownerId}`, "Nothing was done");
     if (!dispute.ok) throw new Error("expected a dispute");
 
-    expect(await resolveDispute(t.db, gatewayFor(t.db), dispute.disputeId, { outcome: "refund", refundCents: 22000 }, "No work done", "staff:va")).toEqual({ ok: true });
-    expect(await payment(job.id)).toMatchObject({ status: "refunded", refunded_cents: 22000 });
+    expect(await resolveDispute(t.db, gatewayFor(t.db), dispute.disputeId, { outcome: "refund", refundCents: 22500 }, "No work done", "staff:va")).toEqual({ ok: true });
+    expect(await payment(job.id)).toMatchObject({ status: "refunded", refunded_cents: 22500 });
     expect(await payout(job.id)).toMatchObject({ status: "cancelled" });
     setTestNow(addHours(MONDAY_10AM, 72));
     expect(await releaseDuePayouts(t.db, gatewayFor(t.db))).toBe(0);
-    expect(await moneyLog(job.id)).toEqual(["job.created:22000", "job.completed:22000", "payment.succeeded:22000", "refund.issued:22000", "payout.reduced:18700"]);
+    expect(await moneyLog(job.id)).toEqual(["job.created:22500", "job.completed:22500", "payment.succeeded:22500", "refund.issued:22500", "payout.reduced:19000"]);
   });
 
   it("part refund: it comes off the tradie's share and the platform's share in proportion", async () => {
@@ -388,14 +417,15 @@ describe("when the owner says something is wrong", () => {
     const dispute = await raiseDispute(t.db, job.id, `owner:${s.owner.ownerId}`, "Left a mess");
     if (!dispute.ok) throw new Error("expected a dispute");
 
-    // Half back to the owner: NZ$110. The tradie's NZ$187 becomes NZ$93.50; the platform's NZ$33 becomes NZ$16.50.
-    expect(await resolveDispute(t.db, gatewayFor(t.db), dispute.disputeId, { outcome: "refund", refundCents: 11000 }, "Half back", "staff:va")).toEqual({ ok: true });
-    expect(await payment(job.id)).toMatchObject({ status: "part_refunded", refunded_cents: 11000 });
-    expect(await payout(job.id)).toMatchObject({ status: "scheduled", amount_cents: 9350 });
+    // Half back to the owner: NZ$112.50 of the NZ$225. The tradie's NZ$190 becomes NZ$95, and the platform's NZ$35 becomes NZ$17.50.
+    expect(await resolveDispute(t.db, gatewayFor(t.db), dispute.disputeId, { outcome: "refund", refundCents: 11250 }, "Half back", "staff:va")).toEqual({ ok: true });
+    expect(await payment(job.id)).toMatchObject({ status: "part_refunded", refunded_cents: 11250 });
+    expect(await payout(job.id)).toMatchObject({ status: "scheduled", amount_cents: 9500 });
     expect(await releaseDuePayouts(t.db, gatewayFor(t.db))).toBe(1);
-    expect(await payout(job.id)).toMatchObject({ status: "sent", amount_cents: 9350 });
+    expect(await payout(job.id)).toMatchObject({ status: "sent", amount_cents: 9500 });
     const refund = await t.db.query<{ detail: { from_tradie: number; from_platform: number } }>("select detail from public.audit_log where entity_id = $1 and action = 'refund.issued'", [job.id]);
-    expect(refund[0]!.detail).toMatchObject({ from_tradie: 9350, from_platform: 1650 });
+    // The two shares add back up to the refund: 9500 + 1750 = 11250.
+    expect(refund[0]!.detail).toMatchObject({ from_tradie: 9500, from_platform: 1750 });
   });
 
   it("refuses a refund bigger than the owner paid, and a second resolution", async () => {
@@ -405,7 +435,7 @@ describe("when the owner says something is wrong", () => {
     await chargeJob(t.db, gatewayFor(t.db), job.id);
     const dispute = await raiseDispute(t.db, job.id, `owner:${s.owner.ownerId}`, "Not happy");
     if (!dispute.ok) throw new Error("expected a dispute");
-    expect(await resolveDispute(t.db, gatewayFor(t.db), dispute.disputeId, { outcome: "refund", refundCents: 22001 }, "", "staff:va")).toMatchObject({ ok: false });
+    expect(await resolveDispute(t.db, gatewayFor(t.db), dispute.disputeId, { outcome: "refund", refundCents: 22501 }, "", "staff:va")).toMatchObject({ ok: false });
     expect(await resolveDispute(t.db, gatewayFor(t.db), dispute.disputeId, { outcome: "refund", refundCents: 0 }, "", "staff:va")).toMatchObject({ ok: false });
     expect(await payment(job.id)).toMatchObject({ refunded_cents: 0 });
 
@@ -427,7 +457,7 @@ describe("when the owner says something is wrong", () => {
     const queue = await t.db.query<{ summary: string }>("select summary from public.exceptions where job_id = $1::uuid and kind = 'dispute'", [job.id]);
     expect(queue[0]!.summary).toContain("already been paid");
     if (!dispute.ok) throw new Error("expected a dispute");
-    expect(await resolveDispute(t.db, gatewayFor(t.db), dispute.disputeId, { outcome: "refund", refundCents: 22000 }, "", "staff:va")).toEqual({ ok: true });
+    expect(await resolveDispute(t.db, gatewayFor(t.db), dispute.disputeId, { outcome: "refund", refundCents: 22500 }, "", "staff:va")).toEqual({ ok: true });
     expect(await payout(job.id)).toMatchObject({ status: "reversed" });
     expect(await auditActions(t.db, job.id)).toContain("payout.reversed");
   });
@@ -552,42 +582,53 @@ describe("off-menu work and quotes", () => {
   it("starts with the fixed diagnosis fee, and is a diagnosis-only job if nothing more is approved", async () => {
     const s = await setup();
     const job = await onSite(s, { menuItemId: null, offMenuTrade: "plumber", offMenuTitle: "Water coming through the ceiling" });
-    expect(job).toMatchObject({ offMenu: true, licenceRequired: true, ownerTotalCents: 12000, tradieTotalCents: 10200 });
+    expect(job).toMatchObject({ offMenu: true, licenceRequired: true, ownerTotalCents: 22500, tradieTotalCents: 19000 });
     const done = await finish(s, job.id);
-    expect(done).toMatchObject({ outcome: "diagnosis_only", ownerTotalCents: 12000, tradieTotalCents: 10200 });
+    expect(done).toMatchObject({ outcome: "diagnosis_only", ownerTotalCents: 22500, tradieTotalCents: 19000 });
   });
 
-  it("a quote of NZ$400 or less goes ahead and the owner is told", async () => {
+  it("a quote of NZ$600 or less goes ahead and the owner is told", async () => {
     const s = await setup();
     const job = await onSite(s, { menuItemId: null, offMenuTrade: "plumber", offMenuTitle: "Leak under the sink" });
-    const result = await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Replace waste trap", labourCents: 30000, partsCents: 4000, uploadIds: [] });
+    // Exactly NZ$600: NZ$520 labour and NZ$80 parts. "Over NZ$600" needs a yes, so NZ$600 itself does not.
+    const result = await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Replace waste trap and isolating valve", labourCents: 52000, partsCents: 8000, uploadIds: [] });
     if (!result.ok) throw new Error(result.message);
-    expect(result.quote).toMatchObject({ status: "auto_approved", needsApproval: false, ownerTotalCents: 34000, tradieTotalCents: 25500 + 4000 });
-    expect(result.job).toMatchObject({ status: "on_site", ownerTotalCents: 12000 + 34000, tradieTotalCents: 10200 + 29500 });
+    // The tradie gets 85% of the labour (520 x 0.85 = NZ$442) and all of the parts.
+    expect(result.quote).toMatchObject({ status: "auto_approved", needsApproval: false, ownerTotalCents: 60000, tradieTotalCents: 44200 + 8000 });
+    expect(result.job).toMatchObject({ status: "on_site", ownerTotalCents: 22500 + 60000, tradieTotalCents: 19000 + 52200 });
     expect((await textsTo(t.db, s.owner.user.phone!, "quote_going_ahead"))[0]!.body).toContain("inside your pre-approved limit");
     const done = await finish(s, job.id);
     expect(done.outcome).toBe("done");
   });
 
-  it("a quote over NZ$400 stops everything until the owner says yes", async () => {
+  it("one dollar over the limit needs the owner's yes", async () => {
+    const s = await setup();
+    const job = await onSite(s, { menuItemId: null, offMenuTrade: "plumber", offMenuTitle: "Leak under the sink" });
+    const result = await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Replace waste trap and isolating valve", labourCents: 60100, partsCents: 0, uploadIds: [] });
+    expect(result.ok && result.quote).toMatchObject({ status: "pending", needsApproval: true, ownerTotalCents: 60100 });
+  });
+
+  it("a quote over NZ$600 stops everything until the owner says yes", async () => {
     const s = await setup();
     const job = await onSite(s, { menuItemId: null, offMenuTrade: "plumber", offMenuTitle: "Hot water cylinder leaking" });
-    const result = await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Replace cylinder valve", labourCents: 45000, partsCents: 12000, uploadIds: [] });
+    // NZ$550 labour and NZ$120 parts: NZ$670.
+    const result = await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Replace cylinder valve", labourCents: 55000, partsCents: 12000, uploadIds: [] });
     if (!result.ok) throw new Error(result.message);
-    expect(result.quote).toMatchObject({ status: "pending", needsApproval: true, ownerTotalCents: 57000 });
+    expect(result.quote).toMatchObject({ status: "pending", needsApproval: true, ownerTotalCents: 67000 });
     // Nothing is added to the bill yet, and the job cannot be finished.
-    expect(result.job).toMatchObject({ status: "awaiting_approval", ownerTotalCents: 12000 });
+    expect(result.job).toMatchObject({ status: "awaiting_approval", ownerTotalCents: 22500 });
     expect((await textsTo(t.db, s.owner.user.phone!, "quote_needs_approval"))[0]!.body).toContain("Nothing starts until you say yes");
     expect(await completeJob(t.db, job.id, s.tradie.tradieId, { note: "", uploadIds: [await photo(t.db, `tradie:${s.tradie.tradieId}`)] })).toMatchObject({ ok: false });
     expect(await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Another", labourCents: 1000, partsCents: 0, uploadIds: [] })).toMatchObject({ ok: false });
 
     const approved = await decideQuote(t.db, result.quote.id, true, `owner:${s.owner.ownerId}`);
     if (!approved.ok) throw new Error(approved.message);
-    // Platform keeps 15% of the NZ$450 labour (NZ$67.50). Parts pass through at cost.
-    expect(approved.job).toMatchObject({ status: "on_site", ownerTotalCents: 12000 + 57000, tradieTotalCents: 10200 + 38250 + 12000 });
-    expect((await textsTo(t.db, s.tradie.phone, "quote_approved"))[0]!.body).toContain("approved your quote of NZ$570");
+    // The platform keeps 15% of the NZ$550 labour (NZ$82.50), so the tradie gets NZ$467.50 of it. Parts pass through at cost.
+    expect(approved.job).toMatchObject({ status: "on_site", ownerTotalCents: 22500 + 67000, tradieTotalCents: 19000 + 46750 + 12000 });
+    expect((await textsTo(t.db, s.tradie.phone, "quote_approved"))[0]!.body).toContain("approved your quote of NZ$670");
     const done = await finish(s, job.id);
-    expect(done).toMatchObject({ outcome: "done", ownerTotalCents: 69000 });
+    // The call-out and the quote together: 225 + 670.
+    expect(done).toMatchObject({ outcome: "done", ownerTotalCents: 89500 });
     // Deciding again changes nothing.
     await decideQuote(t.db, result.quote.id, false, `owner:${s.owner.ownerId}`);
     expect((await listQuotes(t.db, job.id))[0]!.status).toBe("approved");
@@ -600,19 +641,20 @@ describe("off-menu work and quotes", () => {
     if (!result.ok) throw new Error(result.message);
     const declined = await decideQuote(t.db, result.quote.id, false, `owner:${s.owner.ownerId}`);
     if (!declined.ok) throw new Error(declined.message);
-    expect(declined.job).toMatchObject({ status: "on_site", ownerTotalCents: 12000, tradieTotalCents: 10200 });
+    expect(declined.job).toMatchObject({ status: "on_site", ownerTotalCents: 22500, tradieTotalCents: 19000 });
     expect(await textsTo(t.db, s.tradie.phone, "quote_declined")).toHaveLength(1);
     const done = await finish(s, job.id);
-    expect(done).toMatchObject({ outcome: "diagnosis_only", ownerTotalCents: 12000 });
+    expect(done).toMatchObject({ outcome: "diagnosis_only", ownerTotalCents: 22500 });
     expect((await listLines(t.db, job.id)).filter((line) => line.status === "void").map((line) => line.kind)).toEqual(["quote"]);
   });
 
   it("small quotes cannot be stacked up past the limit without approval", async () => {
     const s = await setup();
     const job = await onSite(s, { code: "PL-01" });
-    const first = await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Replace pan connector", labourCents: 25000, partsCents: 0, uploadIds: [] });
+    // NZ$350 is inside the NZ$600 limit by itself. A second NZ$300 would take the extras to NZ$650, so it waits for a yes.
+    const first = await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Replace pan connector", labourCents: 35000, partsCents: 0, uploadIds: [] });
     expect(first.ok && first.quote.status).toBe("auto_approved");
-    const second = await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Replace isolating valve", labourCents: 20000, partsCents: 0, uploadIds: [] });
+    const second = await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Replace isolating valve", labourCents: 30000, partsCents: 0, uploadIds: [] });
     expect(second.ok && second.quote.status).toBe("pending");
   });
 
@@ -639,11 +681,12 @@ describe("when the tradie cannot get in", () => {
   it("charges the call-out fee instead of the job", async () => {
     const s = await setup();
     const job = await onSite(s, { code: "PL-06", urgent: true });
-    expect(job.ownerTotalCents).toBe(26000 + 8000);
+    expect(job.ownerTotalCents).toBe(23500 + 9000);
     const result = await reportNoAccess(t.db, job.id, s.tradie.tradieId, { note: "Lockbox code did not work, nobody answering.", uploadIds: [await photo(t.db, `tradie:${s.tradie.tradieId}`)] });
     if (!result.ok) throw new Error(result.message);
-    expect(result.job).toMatchObject({ status: "completed", outcome: "no_access", ownerTotalCents: 12000 + 8000, tradieTotalCents: 10200 + 8000 });
-    expect(await payment(job.id)).toMatchObject({ amount_cents: 20000 });
+    // The job's own price is replaced by the call-out (225 to the owner, 190 to the tradie). The urgent surcharge stays.
+    expect(result.job).toMatchObject({ status: "completed", outcome: "no_access", ownerTotalCents: 22500 + 9000, tradieTotalCents: 19000 + 9000 });
+    expect(await payment(job.id)).toMatchObject({ amount_cents: 31500 });
   });
 
   it("needs a reason and a photo", async () => {
@@ -698,6 +741,7 @@ describe("other money rules", () => {
     // What the owner paid is exactly what the tradie gets plus what the platform keeps.
     const platform = lines.filter((l) => l.status === "active").reduce((sum, l) => sum + l.ownerCents - l.tradieCents, 0);
     expect(paid!.amount_cents).toBe(owed!.amount_cents + platform);
-    expect(platform).toBe(3300 + 500);
+    // NZ$35 on the menu job. On the quote: the tradie's 85% of 3333 cents is 2833.05, paid as 2833, which leaves 500.
+    expect(platform).toBe(3500 + 500);
   });
 });

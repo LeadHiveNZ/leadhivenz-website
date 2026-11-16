@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import { brand } from "@config/brand";
 import { findMarket, launchMarket, markets } from "@config/markets";
 import { findTrade, trades } from "@config/trades";
+import { startsOnTheMenu, withMenuSettings, type MenuSeed, type MenuSeedItem } from "@/lib/db/seed-core";
 import menu from "../../seed/menu-queenstown.json";
 
 const CURRENCY_FOR_COUNTRY = { NZ: "NZD", AU: "AUD" } as const;
+const items = menu.items as MenuSeedItem[];
 
 describe("markets", () => {
   it("each has a unique, link-friendly code", () => {
@@ -20,28 +22,37 @@ describe("markets", () => {
     expect(market.taxRate).toBeLessThan(0.5);
   });
 
-  it.each(markets)("$name prices are whole cents, with Priority above Essential", (market) => {
-    const essential = market.tiers.find((t) => t.key === "essential");
-    const priority = market.tiers.find((t) => t.key === "priority");
-    expect(essential).toBeDefined();
-    expect(priority).toBeDefined();
+  it.each(markets)("$name sells one membership, priced in whole cents, with urgent never included", (market) => {
+    // DECISIONS.md: there is one membership. Urgent response is an add-on the owner pays for, because a
+    // membership that included it cost more to deliver than it charged.
+    expect(market.tiers.map((t) => t.key)).toEqual(["essential"]);
     for (const tier of market.tiers) {
       expect(Number.isInteger(tier.monthlyPriceCents)).toBe(true);
       expect(tier.monthlyPriceCents).toBeGreaterThan(0);
+      expect(tier.urgentIncluded).toBe(false);
+      expect(tier.quarterlyCheck).toBe(false);
     }
-    expect(priority!.monthlyPriceCents).toBeGreaterThan(essential!.monthlyPriceCents);
     expect(Number.isInteger(market.foundingDeposit.amountCents)).toBe(true);
     expect(market.foundingDeposit.amountCents).toBeGreaterThanOrEqual(100);
   });
 
-  it("the launch market is Queenstown at the prices in the brief", () => {
+  it("the launch market is Queenstown: Essential at NZ$99, on site in 24 hours, 4 hours when urgent", () => {
     expect(launchMarket).toMatchObject({ slug: "queenstown", country: "NZ", currency: "NZD", taxRate: 0.15 });
-    expect(launchMarket.tiers.map((t) => [t.key, t.monthlyPriceCents])).toEqual([
-      ["essential", 9900],
-      ["priority", 14900],
-    ]);
+    expect(launchMarket.tiers.map((t) => [t.key, t.monthlyPriceCents, t.responseHours, t.urgentResponseHours])).toEqual([["essential", 9900, 24, 4]]);
     expect(findMarket("queenstown")).toBe(launchMarket);
     expect(findMarket("atlantis")).toBeUndefined();
+  });
+
+  it("a market added later starts from the same surcharges and limits as the Queenstown menu file", () => {
+    // DECISIONS.md: the file wins for Queenstown either way, but the next market copies these.
+    expect(launchMarket).toMatchObject({
+      urgentSurchargeCents: menu.surcharges.urgentDollars * 100,
+      afterHoursSurchargeCents: menu.surcharges.afterHoursDollars * 100,
+      diagnosisFeeCents: menu.offMenu.diagnosisFeeDollars * 100,
+      diagnosisPayoutCents: menu.offMenu.diagnosisTradiePayoutDollars * 100,
+      approvalThresholdCents: menu.offMenu.ownerApprovalAboveDollars * 100,
+    });
+    expect(withMenuSettings(launchMarket, menu as MenuSeed)).toEqual(launchMarket);
   });
 });
 
@@ -75,14 +86,38 @@ describe("the Queenstown menu file", () => {
     expect(typeof menu.placeholderPrices).toBe("boolean");
   });
 
-  it("has about 25 jobs with unique codes", () => {
-    expect(menu.items.length).toBeGreaterThanOrEqual(20);
-    expect(menu.items.length).toBeLessThanOrEqual(30);
-    const codes = menu.items.map((item) => item.code);
+  it("holds real prices, not placeholders: 59 researched jobs with unique codes", () => {
+    // Nothing may be shown to an owner as a price unless this is false (DECISIONS.md).
+    expect(menu.placeholderPrices).toBe(false);
+    expect(items).toHaveLength(59);
+    const codes = items.map((item) => item.code);
     expect(new Set(codes).size).toBe(codes.length);
   });
 
-  it.each(menu.items)("$code has a known trade and sensible whole-dollar prices", (item) => {
+  it.each(items)("$code is priced so that we keep 15%: the owner pays the payout divided by 0.85, to the nearest $5", (item) => {
+    expect(item.ownerPriceDollars).toBe(5 * Math.round(item.tradiePayoutDollars / 0.85 / 5));
+  });
+
+  it("loads the five jobs priced from national averages, and the two add-ons, switched off", () => {
+    // Ring a local and confirm each price before an owner can book one. An add-on cannot be booked by itself.
+    const needQuote = items.filter((item) => item.needsLocalQuote).map((item) => item.code);
+    expect(needQuote.sort()).toEqual(["GD-01", "OD-03", "PV-01", "PV-02", "PV-04"]);
+    const addOns = items.filter((item) => item.isAddOn).map((item) => item.code);
+    expect(addOns.sort()).toEqual(["HP-01", "PV-03"]);
+    const off = items.filter((item) => !startsOnTheMenu(item)).map((item) => item.code);
+    expect(off.sort()).toEqual([...needQuote, ...addOns].sort());
+    expect(items.filter(startsOnTheMenu)).toHaveLength(59 - 7);
+  });
+
+  it("keeps jobs an owner arranges off the form a guest sees", () => {
+    const guest = items.filter((item) => startsOnTheMenu(item) && item.guestVisible !== false).map((item) => item.name);
+    // What a guest in the house would report.
+    expect(guest).toEqual(expect.arrayContaining(["Blocked toilet, sink or shower drain", "No hot water, first-hour diagnosis", "Lockout, business hours", "Wi-Fi router reset and smart TV setup"]));
+    // What only an owner would book.
+    for (const name of ["Lawn mow and edges", "Gutter clean, single storey", "Lockbox or smart lock install", "Switchboard and RCD safety test"]) expect(guest).not.toContain(name);
+  });
+
+  it.each(items)("$code has a known trade and sensible whole-dollar prices", (item) => {
     const trade = findTrade(item.trade);
     expect(trade, `unknown trade "${item.trade}"`).toBeDefined();
     expect(item.name.trim().length).toBeGreaterThan(5);
@@ -95,9 +130,13 @@ describe("the Queenstown menu file", () => {
     if (trade!.licenceRequired) expect(item.licenceRequired).toBe(true);
   });
 
-  it("carries the surcharges and the off-menu rules from the brief", () => {
-    expect(menu.surcharges).toEqual({ urgentDollars: 80, afterHoursDollars: 120 });
-    expect(menu.offMenu.ownerApprovalAboveDollars).toBe(400);
-    expect(menu.offMenu.diagnosisTradiePayoutDollars).toBeLessThan(menu.offMenu.diagnosisFeeDollars);
+  it("carries the surcharges and the off-menu rules that were decided", () => {
+    // DECISIONS.md, 16 November 2026: urgent 90, after hours 140, call-out 225 (190 to the tradie), approval above 600.
+    expect(menu.surcharges).toEqual({ urgentDollars: 90, afterHoursDollars: 140 });
+    expect(menu.offMenu).toEqual({ diagnosisFeeDollars: 225, diagnosisTradiePayoutDollars: 190, ownerApprovalAboveDollars: 600 });
+    // The call-out follows the same 15% rule as every job on the menu.
+    expect(menu.offMenu.diagnosisFeeDollars).toBe(5 * Math.round(menu.offMenu.diagnosisTradiePayoutDollars / 0.85 / 5));
+    // The limit sits above every job on the menu, so being asked means something unusual was found.
+    expect(Math.max(...items.map((item) => item.ownerPriceDollars))).toBeLessThan(menu.offMenu.ownerApprovalAboveDollars);
   });
 });

@@ -35,6 +35,7 @@ function lead(overrides: Partial<Lead> = {}): Lead {
     propertyCount: 2,
     managedBy: "property_manager",
     ownerLocation: "Auckland",
+    intent: null,
     trade: null,
     licenceNumber: null,
     daysAvailable: null,

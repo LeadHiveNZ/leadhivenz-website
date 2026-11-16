@@ -76,7 +76,7 @@ test.describe("signed in", () => {
     await signIn(page);
 
     await expect(page.getByText("Demo mode.")).toBeVisible();
-    await expect(page.locator("dl")).toContainText("Owners");
+    await expect(page.locator('dl[aria-label="Totals"]')).toContainText("Owners");
     await expect(leadCard(page, owner.name)).toBeVisible();
 
     const checklist = page.getByRole("region", { name: "Setup checklist" });
@@ -86,6 +86,9 @@ test.describe("signed in", () => {
     await expect(checklist.locator('[data-status-key="payments"]')).toContainText("STRIPE_NZ_SECRET_KEY is not set.");
     await expect(checklist.locator('[data-status-key="copy"]')).toContainText("[EDIT] placeholder");
     await expect(checklist.locator('[data-status-key="legal"]')).toContainText("A lawyer needs to write them");
+    // The founding promises sit next to what billing actually does, until someone builds the rest.
+    await expect(checklist.locator('[data-status-key="founding-queenstown"]')).toContainText("Half price for your first three months");
+    await expect(checklist.locator('[data-status-key="founding-queenstown"]')).toContainText("Billing only does this");
 
     // Visiting the sign-in page while signed in goes straight to the team's queue.
     await page.goto("/admin");
@@ -119,11 +122,12 @@ test.describe("signed in", () => {
     const csv = await response.text();
     const lines = csv.replace(/^﻿/, "").trim().split("\r\n");
     expect(lines[0]).toBe(
-      "Date,Type,Name,Phone,Email,Properties,Looked after by,Lives in,Trade,Licence number,Days available,Market,Source,Campaign,Ad,Referred by,Came from site,Landed on,Deposit,Deposit amount,Deposit currency,Lead ID",
+      "Date,Type,Name,Phone,Email,Properties,Looked after by,Lives in,Pressed,Trade,Licence number,Days available,Market,Source,Campaign,Ad,Referred by,Came from site,Landed on,Deposit,Deposit amount,Deposit currency,Lead ID",
     );
     const row = lines.find((line) => line.includes(owner.email));
     expect(row).toBeDefined();
     expect(row).toContain('"Spreadsheet, Sam"');
+    expect(row).toContain("asked for the price list");
     expect(row).toContain("Owner");
     expect(row).toContain("+6421");
     expect(row).toContain("queenstown");

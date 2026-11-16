@@ -12,7 +12,22 @@ import { useFocusFirstError } from "./useFocusFirstError";
 
 const initialState: LeadFormState = {};
 
-export function OwnerLeadForm({ marketName, brandName, buttonLabel }: { marketName: string; brandName: string; buttonLabel: string }) {
+type Props = {
+  marketName: string;
+  brandName: string;
+  /**
+   * The founding deposit, when it can be taken right now: the amount as shown,
+   * for example "NZ$99". Null shows a single "send me the price list" button.
+   */
+  deposit: string | null;
+};
+
+/**
+ * The owner form on the landing page. It has two buttons on purpose: taking a
+ * founding spot (the deposit) or just getting the price list. Which one people
+ * press is the main thing the demand test measures.
+ */
+export function OwnerLeadForm({ marketName, brandName, deposit }: Props) {
   const [state, formAction] = useActionState(submitOwnerLead, initialState);
   const formRef = useFocusFirstError(state);
   const value = (name: string) => {
@@ -80,7 +95,21 @@ export function OwnerLeadForm({ marketName, brandName, buttonLabel }: { marketNa
         error={errors.ownerLocation}
       />
 
-      <SubmitButton className="w-full">{buttonLabel}</SubmitButton>
+      {deposit ? (
+        <div className="space-y-2.5 pt-1">
+          <SubmitButton name="intent" value="deposit" className="w-full" pendingLabel="Opening the card page...">
+            Take a founding spot · {deposit} deposit
+          </SubmitButton>
+          <SubmitButton name="intent" value="pricelist" variant="secondary" className="w-full" pendingLabel="Sending...">
+            Not yet: just send me the price list
+          </SubmitButton>
+          <p className="text-center text-xs text-muted">The deposit is taken by card on a secure page run by Stripe. We never see your card number.</p>
+        </div>
+      ) : (
+        <SubmitButton name="intent" value="pricelist" className="w-full">
+          Send me the price list
+        </SubmitButton>
+      )}
       <p className="text-center text-xs text-muted">
         We only use your details to contact you about {brandName}.{" "}
         <Link href="/legal/privacy" className="underline">

@@ -54,8 +54,10 @@ three-digit code work with them.
       back to `4242 4242 4242 4242` for the steps below.
 
 **A5. Changing plan and cancelling.**
-- [ ] On the property page: **Change plan** to Priority. *Should happen:* Stripe shows the new price on the
-      subscription, with no part-month charge.
+- [ ] There is one membership, so to test a change of plan first add a second one on the Markets page (for
+      example "Test plan" at NZ$1). On the property page: **Change plan** to it. *Should happen:* Stripe
+      shows the new price on the subscription, with no part-month charge. Change back, then close the test
+      plan to new members.
 - [ ] **Cancel membership**. *Should happen:* the site says when it ends, and Stripe shows the
       subscription set to cancel on that date, not cancelled today.
 

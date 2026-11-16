@@ -9,7 +9,7 @@ import { addMonths } from "@/lib/payments/gateway";
 import { activateMembership, changeTier, createProperty, endMembership, getProperty, PropertyError, recordMembershipPaymentFailed, recordRenewal, requestCancel, startMembership } from "@/lib/properties/service";
 import { SqlLeadStore } from "@/lib/store/sql";
 import { testDb } from "./db";
-import { gatewayFor, liveMarket, makeOwner, makeProperty, MONDAY_10AM, openExceptions, textsTo } from "./factory";
+import { addPlusTier, gatewayFor, liveMarket, makeOwner, makeProperty, MONDAY_10AM, openExceptions, textsTo } from "./factory";
 import { ownerLead } from "./store-contract";
 
 const t = testDb();
@@ -51,10 +51,11 @@ describe("starting a membership", () => {
   it("uses the saved card for the owner's next property, with no card page", async () => {
     await liveMarket(t.db);
     const owner = await makeOwner(t.db);
-    const second = await makeProperty(t.db, owner.ownerId, { member: false, tier: "priority" });
+    const second = await makeProperty(t.db, owner.ownerId, { member: false });
     const started = await startMembership(t.db, createDemoGateway(t.db, "NZ"), { ownerId: owner.ownerId, propertyId: second.id, ...urls });
     expect(started.kind).toBe("active");
-    expect(await invoices(second.id)).toEqual([{ amount_cents: 14900, list_cents: 14900, status: "paid" }]);
+    // Essential, NZ$99 a month. Each property is its own membership at the full price.
+    expect(await invoices(second.id)).toEqual([{ amount_cents: 9900, list_cents: 9900, status: "paid" }]);
   });
 
   it("being told twice about the same payment changes nothing the second time", async () => {
@@ -194,13 +195,14 @@ describe("leaving and changing", () => {
     expect((await getProperty(t.db, owner.ownerId, property.id))!.status).toBe("cancelled");
   });
 
-  it("a property can move between tiers", async () => {
+  it("a property can move between memberships, when there is more than one", async () => {
+    // The business sells one membership today. If a second is ever added on the Markets screen, moving must work.
     await liveMarket(t.db);
+    const plus = await addPlusTier(t.db);
     const owner = await makeOwner(t.db);
     const property = await makeProperty(t.db, owner.ownerId, { tier: "essential" });
-    const priority = (await listTiers(t.db, "queenstown")).find((tier) => tier.key === "priority")!;
-    const changed = await changeTier(t.db, createDemoGateway(t.db, "NZ"), owner.ownerId, property.id, priority.id);
-    expect(changed!.tierId).toBe(priority.id);
+    const changed = await changeTier(t.db, createDemoGateway(t.db, "NZ"), owner.ownerId, property.id, plus.id);
+    expect(changed!.tierId).toBe(plus.id);
   });
 });
 
@@ -272,17 +274,19 @@ describe("changing a membership price", () => {
 
   it("is allowed when nobody is a member on it, or everyone on it has left", async () => {
     await liveMarket(t.db);
+    await addPlusTier(t.db);
     const owner = await makeOwner(t.db);
-    const property = await makeProperty(t.db, owner.ownerId, { tier: "priority" });
+    const property = await makeProperty(t.db, owner.ownerId, { tier: "plus" });
 
     // Nobody is on Essential.
     await saveTier(t.db, "queenstown", input(await tierNamed("essential"), { priceCents: 10900 }), "admin");
     expect((await tierNamed("essential")).monthlyPriceCents).toBe(10900);
 
-    // The only Priority member leaves.
+    // One property is on the second membership, so its price is locked. Then that member leaves.
+    await expect(saveTier(t.db, "queenstown", input(await tierNamed("plus"), { priceCents: 15900 }), "admin")).rejects.toThrow(/1 property is a member/);
     await endMembership(t.db, { provider: "demo", subscriptionId: property.subscriptionId! });
-    await saveTier(t.db, "queenstown", input(await tierNamed("priority"), { priceCents: 15900 }), "admin");
-    expect((await tierNamed("priority")).monthlyPriceCents).toBe(15900);
+    await saveTier(t.db, "queenstown", input(await tierNamed("plus"), { priceCents: 15900 }), "admin");
+    expect((await tierNamed("plus")).monthlyPriceCents).toBe(15900);
   });
 
   it("says so plainly when the membership does not exist", async () => {

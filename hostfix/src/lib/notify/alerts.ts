@@ -99,6 +99,7 @@ export function leadDetailRows(lead: Lead): { label: string; value: string }[] {
     rows.push({ label: "Properties", value: String(lead.propertyCount ?? "") });
     rows.push({ label: "Looked after by", value: managedByLabel(lead.managedBy) });
     rows.push({ label: "Lives in", value: lead.ownerLocation ?? "" });
+    if (lead.intent) rows.push({ label: "Pressed", value: lead.intent === "deposit" ? "Take a founding spot (the deposit)" : "Send me the price list" });
   } else {
     rows.push({ label: "Trade", value: tradeLabel(lead) });
     rows.push({ label: "Licence number", value: lead.licenceNumber ?? "None given" });
@@ -172,8 +173,9 @@ export function leadAlertContent(lead: Lead, options: { saved: boolean }): Alert
     const count = lead.propertyCount ?? 1;
     sms =
       `${unsavedPrefix}${brand.name} lead: OWNER ${lead.name}, ${phone}. ` +
-      `${count} ${count === 1 ? "property" : "properties"} in ${market}, lives in ${lead.ownerLocation ?? "?"}. Via ${source}.`;
-    subject = `New owner lead: ${lead.name} (${market})`;
+      `${count} ${count === 1 ? "property" : "properties"} in ${market}, lives in ${lead.ownerLocation ?? "?"}. Via ${source}.` +
+      (lead.intent === "deposit" ? " Went for a founding spot." : lead.intent === "pricelist" ? " Asked for the price list." : "");
+    subject = `New owner lead: ${lead.name} (${market})${lead.intent === "deposit" ? ", wants a founding spot" : ""}`;
   } else {
     sms =
       `${unsavedPrefix}${brand.name} lead: TRADIE ${lead.name}, ${phone}. ` +

@@ -9,12 +9,14 @@ Nobody takes a call, writes a quote or sends an invoice.
 Launch market: Queenstown, New Zealand. Built for many towns across New Zealand and Australia: nothing
 is tied to one town, one currency or one tax rate.
 
-**Phases 0 to 4 are built and tested. Phase 5 is planned, not built.**
+**Phases 0 to 4 are built and tested. Phase 5 is planned, not built.** The next step is the demand
+test: 14 days of ads to the owner page, which passes if three owners put a card down for a founding spot.
 
 ## Start here
 
 | You want to | Read |
 | --- | --- |
+| Run the demand test | **[docs/DEMAND-TEST.md](docs/DEMAND-TEST.md)**: what to set up, the ads, the daily routine, how to read the result |
 | Try it now, with nothing set up | **[docs/TRY-IT.md](docs/TRY-IT.md)**: what to click, phase by phase, and what is not done |
 | Put it online | **[SETUP.md](SETUP.md)**: every account and key, in order |
 | Run it day to day | **[RUNBOOK.md](RUNBOOK.md)**: for the dispatcher, what each alert means and what to do |

@@ -62,14 +62,14 @@ async function phone(page: Page, who: string) {
 
 test("a tradie takes a job from the link in a text, without signing in, and finishes it", async ({ page }) => {
   const texts = await phone(page, "dave");
-  const offer = texts.filter({ hasText: "Fix a dripping tap" }).last();
-  await expect(offer).toContainText("Pays NZ$161");
+  const offer = texts.filter({ hasText: "Dripping tap" }).last();
+  await expect(offer).toContainText("Pays NZ$200");
   await offer.locator('a[href^="/o/"]').click();
   await ready(page);
 
   // Before accepting: what it pays and where roughly, but not the address or how to get in.
-  await expect(page.getByRole("heading", { name: "Fix a dripping tap or mixer" })).toBeVisible();
-  await expect(shown(page, "NZ$161").first().first()).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Dripping tap or tap washer" })).toBeVisible();
+  await expect(shown(page, "NZ$200").first().first()).toBeVisible();
   await expect(shown(page, "14B Lake Esplanade")).toHaveCount(0);
   await expect(shown(page, "code 4821")).toHaveCount(0);
 
@@ -96,30 +96,30 @@ test("a tradie takes a job from the link in a text, without signing in, and fini
   await page.waitForURL(/done=1/);
   await ready(page);
   await expect(shown(page, "Job finished. Thank you.").first()).toBeVisible();
-  await expect(shown(page, /NZ\$161 will be sent on .+\. It reaches your bank about 5 to 6 working days after the job\./).first()).toBeVisible();
+  await expect(shown(page, /NZ\$200 will be sent on .+\. It reaches your bank about 5 to 6 working days after the job\./).first()).toBeVisible();
 
   // The owner was texted at each step, and charged the fixed price.
   const owner = await phone(page, "sam");
   await expect(owner.filter({ hasText: "Dave's Plumbing & Gas is booked for Lakeview Apartment" }).last()).toBeVisible();
   await expect(owner.filter({ hasText: "has arrived at Lakeview Apartment" }).last()).toBeVisible();
-  await expect(owner.filter({ hasText: '"Fix a dripping tap or mixer" at Lakeview Apartment is done. NZ$190 charged to your card.' })).toHaveCount(1);
+  await expect(owner.filter({ hasText: '"Dripping tap or tap washer" at Lakeview Apartment is done. NZ$235 charged to your card.' })).toHaveCount(1);
 });
 
 test("an owner answers a quote from the link in their text, without signing in", async ({ page }) => {
   const texts = await phone(page, "sam");
-  const quote = texts.filter({ hasText: "has quoted NZ$605" }).last();
+  const quote = texts.filter({ hasText: "has quoted NZ$685" }).last();
   await quote.locator('a[href^="/j/"]').click();
   await ready(page);
 
   await expect(shown(page, "A quote needs your answer").first()).toBeVisible();
   await expect(shown(page, "Replace the leaking shower mixer and the section of pipe behind it").first().first()).toBeVisible();
-  await page.getByRole("button", { name: "Yes, go ahead · NZ$605" }).click();
+  await page.getByRole("button", { name: "Yes, go ahead · NZ$685" }).click();
   await page.waitForURL(/answered=1/);
   await ready(page);
   await expect(shown(page, "Thanks, the tradie has been told").first()).toBeVisible();
 
   const tradie = await phone(page, "mere");
-  await expect(tradie.filter({ hasText: "the owner approved your quote of NZ$605. Go ahead." })).toHaveCount(1);
+  await expect(tradie.filter({ hasText: "the owner approved your quote of NZ$685. Go ahead." })).toHaveCount(1);
 });
 
 test("a guest's report waits for the owner's yes, and the guest never sees a price", async ({ page }) => {
@@ -141,15 +141,15 @@ test("a guest's report waits for the owner's yes, and the guest never sees a pri
   await expect(page.getByRole("heading", { name: "Something not working?" })).toBeVisible();
   await expect(shown(page, "In danger? Call 111 first").first()).toBeVisible();
   await page.getByRole("button", { name: /Plumbing/ }).click();
-  await expect(page.getByRole("radio", { name: "Unblock a toilet" })).toBeVisible();
+  await expect(page.getByRole("radio", { name: "Toilet seat or cistern parts" })).toBeVisible();
   await expect(shown(page, /NZ\$\d/)).toHaveCount(0);
 
   // A name that is too short is turned back, with the chosen job kept.
-  await page.getByRole("radio", { name: "Unblock a toilet" }).click();
+  await page.getByRole("radio", { name: "Toilet seat or cistern parts" }).click();
   await page.getByLabel("Your name").fill("G");
   await page.getByRole("button", { name: "Report it" }).click();
   await expect(page.locator('form [role="alert"]').first()).toContainText("Please check the highlighted fields.");
-  await expect(page.getByRole("radio", { name: "Unblock a toilet" })).toHaveAttribute("aria-checked", "true");
+  await expect(page.getByRole("radio", { name: "Toilet seat or cistern parts" })).toHaveAttribute("aria-checked", "true");
 
   await page.getByLabel("Your name").fill("Gus Guest");
   await page.getByRole("button", { name: "Report it" }).click();
@@ -159,12 +159,12 @@ test("a guest's report waits for the owner's yes, and the guest never sees a pri
 
   // Nobody has been sent. The owner is asked first.
   await be(page, "Sam Taylor");
-  const waiting = page.getByRole("link", { name: /Unblock a toilet/ });
+  const waiting = page.getByRole("link", { name: /Toilet seat or cistern parts/ });
   await expect(waiting).toContainText("Waiting for your go-ahead");
   await waiting.click();
   await ready(page);
   await expect(shown(page, "Gus Guest reported this from the QR card").first()).toBeVisible();
-  await page.getByRole("button", { name: /Yes, send a tradie · NZ\$220/ }).click();
+  await page.getByRole("button", { name: /Yes, send a tradie · NZ\$225/ }).click();
   await page.waitForURL(/sent=1/);
   await ready(page);
   await expect(shown(page, "Finding a tradie").first().first()).toBeVisible();
@@ -173,7 +173,7 @@ test("a guest's report waits for the owner's yes, and the guest never sees a pri
 test("the dispatcher gives a job nobody accepted to a tradie they have rung", async ({ page }) => {
   await be(page, "Maria (dispatcher)");
   const item = page.locator("li", { hasText: "nobody accepted" }).first();
-  await expect(item).toContainText("Replace or re-code a door lock or key safe");
+  await expect(item).toContainText("Lock re-key or replace");
   await expect(item).toContainText("What to do:");
   await item.getByRole("link", { name: /Open job/ }).click();
   await ready(page);
@@ -198,8 +198,8 @@ test("an offer nobody answers moves on to the backup after 15 minutes", async ({
   await page.getByRole("link", { name: /Lakeview Apartment/ }).click();
   await ready(page);
   await page.getByRole("button", { name: /Plumbing/ }).click();
-  await page.getByRole("radio", { name: /Fix a running or leaking toilet cistern/ }).click();
-  await expect(shown(page, "NZ$210").last().first()).toBeVisible();
+  await page.getByRole("radio", { name: /Running toilet or cistern repair/ }).click();
+  await expect(shown(page, "NZ$235").last().first()).toBeVisible();
   await page.getByRole("button", { name: "Send a tradie" }).click();
   await page.waitForURL(/sent=1/);
   const jobUrl = page.url().split("?")[0]!;
@@ -220,7 +220,7 @@ test("people only see their own data", async ({ page, request }) => {
   // Collect the address of one of Sam's jobs, one of his properties and one of his photos.
   await be(page, "Sam Taylor");
   await open(page, "/app/jobs");
-  await page.getByRole("link", { name: /Unblock a sink, basin, shower or bath drain/ }).click();
+  await page.getByRole("link", { name: /Blocked toilet, sink or shower drain/ }).click();
   await page.waitForURL(/\/app\/jobs\/[0-9a-f-]{36}$/);
   await ready(page);
   const jobPath = new URL(page.url()).pathname;
@@ -305,7 +305,7 @@ test("people only see their own data", async ({ page, request }) => {
 test("an admin changes a price and owners see it straight away; jobs already logged keep theirs", async ({ page }) => {
   await be(page, "Admin (you)");
   await open(page, "/admin/markets/queenstown");
-  const row = page.locator("details", { hasText: "Replace a tap or mixer (owner supplies the tap)" }).first();
+  const row = page.locator("details", { hasText: "Dripping tap or tap washer" }).first();
   await row.locator("summary").click();
   await row.getByLabel("Owner pays (NZD)").fill("255");
   await row.getByLabel("Tradie gets (NZD)").fill("216");
@@ -317,13 +317,14 @@ test("an admin changes a price and owners see it straight away; jobs already log
   await page.getByRole("link", { name: /Arthurs Point Cabin/ }).click();
   await ready(page);
   await page.getByRole("button", { name: /Plumbing/ }).click();
-  await expect(page.getByRole("radio", { name: /Replace a tap or mixer/ })).toContainText("NZ$255");
+  await expect(page.getByRole("radio", { name: /Dripping tap or tap washer/ })).toContainText("NZ$255");
 
-  // The job finished earlier at the old menu price is unchanged.
+  // The same job, finished in the first test at the old menu price, is unchanged.
   await open(page, "/app/jobs");
-  await page.getByRole("link", { name: /Fix a dripping tap or mixer/ }).click();
+  await page.getByRole("link", { name: /Dripping tap or tap washer/ }).click();
   await ready(page);
-  await expect(shown(page, "NZ$190").first().first()).toBeVisible();
+  await expect(shown(page, "NZ$235").first().first()).toBeVisible();
+  await expect(shown(page, "NZ$255")).toHaveCount(0);
 });
 
 test("a new owner joins, pays for a membership and gets their QR card", async ({ page }) => {
@@ -357,7 +358,9 @@ test("a new owner joins, pays for a membership and gets their QR card", async ({
   await page.getByLabel("Street address").fill("120 Gorge Road");
   await page.getByLabel("Suburb or town").fill("Queenstown");
   await page.getByLabel("How does a tradie get in?").fill("Lockbox by the meter box, code 1357.");
-  await page.getByRole("radio", { name: /Priority/ }).check();
+  // There is one membership (DECISIONS.md), already chosen.
+  await expect(page.getByRole("radio", { name: /Essential/ })).toBeChecked();
+  await expect(page.getByRole("radio", { name: /Priority/ })).toHaveCount(0);
   await page.getByRole("button", { name: "Save and continue" }).click();
   await page.waitForURL(/added=1/);
   await ready(page);
@@ -371,14 +374,14 @@ test("a new owner joins, pays for a membership and gets their QR card", async ({
   await page.getByRole("button", { name: "Continue to payment" }).click();
   await page.waitForURL(/demo\/checkout/);
   await ready(page);
-  await expect(shown(page, "Priority membership").first()).toBeVisible();
-  await expect(shown(page, "NZ$149").first().first()).toBeVisible();
-  await page.getByRole("button", { name: "Pay NZ$149 and start" }).click();
+  await expect(shown(page, "Essential membership").first()).toBeVisible();
+  await expect(shown(page, "NZ$99").first().first()).toBeVisible();
+  await page.getByRole("button", { name: "Pay NZ$99 and start" }).click();
   await page.waitForURL(/member=1/);
   await ready(page);
   await expect(shown(page, "You are covered").first()).toBeVisible();
   await expect(page.getByRole("link", { name: "Print the QR card" })).toBeVisible();
-  await expect(shown(page, "Priority, NZ$149 a month").first()).toBeVisible();
+  await expect(shown(page, "Essential, NZ$99 a month").first()).toBeVisible();
 
   // The statement shows the first month.
   await open(page, "/app/billing");

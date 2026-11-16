@@ -59,6 +59,7 @@ export type MarketPatch = Partial<{
   depositEnabled: boolean;
   depositCents: number;
   depositTerms: string[];
+  depositSpots: number | null;
   replyByText: boolean;
 }>;
 
@@ -70,7 +71,7 @@ const COLUMNS: Record<keyof MarketPatch, string> = {
   partsIncludedCents: "parts_included_cents", partsApprovalCents: "parts_approval_cents", offerMinutes: "offer_minutes",
   hoursStart: "hours_start", hoursEnd: "hours_end", workDays: "work_days", payoutHoldHours: "payout_hold_hours",
   referralRewardCents: "referral_reward_cents", referralPaidMonths: "referral_paid_months", depositEnabled: "deposit_enabled",
-  depositCents: "deposit_cents", depositTerms: "deposit_terms", replyByText: "reply_by_text",
+  depositCents: "deposit_cents", depositTerms: "deposit_terms", depositSpots: "deposit_spots", replyByText: "reply_by_text",
 };
 
 function checkMarket(patch: MarketPatch, current: { hoursStart: number; hoursEnd: number; diagnosisFeeCents: number; diagnosisPayoutCents: number }): void {
@@ -92,9 +93,18 @@ function checkMarket(patch: MarketPatch, current: { hoursStart: number; hoursEnd
   }
   const start = patch.hoursStart ?? current.hoursStart;
   const end = patch.hoursEnd ?? current.hoursEnd;
-  if (!Number.isInteger(start) || !Number.isInteger(end) || start < 0 || end > 24 || end <= start) throw new AdminInputError("Working hours must start before they end.");
+  const halfHour = (value: number) => Number.isInteger(value * 2);
+  if (!halfHour(start) || !halfHour(end) || start < 0 || start > 23.5 || end > 24 || end <= start) {
+    throw new AdminInputError("Working hours must start before they end, on the hour or the half hour.");
+  }
   if (patch.workDays !== undefined && (patch.workDays.length === 0 || patch.workDays.some((day) => !WEEKDAYS.includes(day as (typeof WEEKDAYS)[number])))) {
     throw new AdminInputError("Choose at least one working day.");
+  }
+  if (patch.depositSpots !== undefined && patch.depositSpots !== null && (!Number.isInteger(patch.depositSpots) || patch.depositSpots < 1 || patch.depositSpots > 1000)) {
+    throw new AdminInputError("Founding spots must be a whole number from 1 to 1000, or left empty for no limit.");
+  }
+  if (patch.depositTerms !== undefined && (patch.depositTerms.length > 6 || patch.depositTerms.some((term) => term.length > 140))) {
+    throw new AdminInputError("Keep the deposit's promises to six lines of up to 140 characters each.");
   }
   if (patch.payoutHoldHours !== undefined && (!Number.isInteger(patch.payoutHoldHours) || patch.payoutHoldHours < 0 || patch.payoutHoldHours > 48)) {
     throw new AdminInputError("The payout hold must be between 0 and 48 hours.");
@@ -280,10 +290,10 @@ export async function createMarket(db: Db, input: NewMarket, actor: string): Pro
        values ($1, $2::timestamptz, $2::timestamptz, $3, $4, $5, $6, 'draft', $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20::text[], $21, $22, $23)`,
       [
         slug, at, input.name.trim(), input.country, defaults.currency, input.timezone, defaults.taxRate, defaults.taxName,
-        template?.platformFeeBps ?? 1500, template?.urgentSurchargeCents ?? 8000, template?.afterHoursSurchargeCents ?? 12000,
-        template?.diagnosisFeeCents ?? 12000, template?.diagnosisPayoutCents ?? 10200, template?.approvalThresholdCents ?? 40000,
+        template?.platformFeeBps ?? 1500, template?.urgentSurchargeCents ?? 9000, template?.afterHoursSurchargeCents ?? 14000,
+        template?.diagnosisFeeCents ?? 22500, template?.diagnosisPayoutCents ?? 19000, template?.approvalThresholdCents ?? 60000,
         template?.partsIncludedCents ?? 3000, template?.partsApprovalCents ?? 15000, template?.offerMinutes ?? 15,
-        template?.hoursStart ?? 7, template?.hoursEnd ?? 18, template?.workDays ?? ["mon", "tue", "wed", "thu", "fri", "sat"],
+        template?.hoursStart ?? 7, template?.hoursEnd ?? 16.5, template?.workDays ?? ["mon", "tue", "wed", "thu", "fri"],
         template?.payoutHoldHours ?? 24, template?.referralRewardCents ?? 10000, template?.referralPaidMonths ?? 3,
       ],
     );

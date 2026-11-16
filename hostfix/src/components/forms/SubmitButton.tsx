@@ -19,17 +19,19 @@ type Props = {
 const LOOKS = { primary: buttonClass, secondary: secondaryButtonClass, accent: accentButtonClass, danger: dangerButtonClass, small: smallButtonClass };
 
 export function SubmitButton({ children, pendingLabel = "Sending...", variant = "primary", className = "", name, value }: Props) {
-  const { pending } = useFormStatus();
+  const { pending, data } = useFormStatus();
+  // In a form with more than one button, only the one that was pressed says it is working.
+  const thisOne = pending && (!name || !data || data.get(name) === (value ?? ""));
   return (
     <button
       type="submit"
       disabled={pending}
-      aria-busy={pending}
+      aria-busy={thisOne}
       name={name}
       value={value}
       className={`${LOOKS[variant]} ${className}`}
     >
-      {pending ? pendingLabel : children}
+      {thisOne ? pendingLabel : children}
     </button>
   );
 }

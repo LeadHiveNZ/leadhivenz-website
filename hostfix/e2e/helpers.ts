@@ -45,11 +45,20 @@ export async function fillOwnerForm(page: Page, details: OwnerDetails) {
   await page.getByLabel("Where do you live?").fill(details.location);
 }
 
+/**
+ * The owner form's price list button. With card payments connected the form has two buttons and this
+ * is the second ("Not yet: just send me the price list"). Without, it is the only one.
+ */
+export function priceListButton(page: Page) {
+  return page.getByRole("button", { name: /send me the price list/i });
+}
+
+/** Fills in the owner form and asks for the price list. Ends on the thank-you page. */
 export async function submitOwnerLead(page: Page, base: string, details: OwnerDetails, query = "") {
   await page.goto(`${base}/owners${query}`);
   await fillOwnerForm(page, details);
   await waitLikeAPerson(page);
-  await page.getByRole("button", { name: "Get early access" }).click();
+  await priceListButton(page).click();
   await expect(page).toHaveURL(`${base}/owners/thanks`);
   await expect(page.getByRole("heading", { name: "You're on the list." })).toBeVisible();
 }

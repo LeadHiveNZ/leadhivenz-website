@@ -102,7 +102,7 @@ What the software does, which the terms need to match:
   (no access, owner cancels, off-menu work, a guest report still waiting for the owner) need wording.*
 - **Fixed menu prices**, the urgent and after-hours surcharges, small parts included in the price, and
   parts above a set amount needing the owner's yes.
-- **Off-menu jobs:** a fixed call-out fee, then a quote. A quote above NZ$400, or above the owner's own
+- **Off-menu jobs:** a fixed call-out fee, then a quote. A quote above NZ$600, or above the owner's own
   limit for that property, needs the owner's yes before work starts. If they say no, the call-out is still charged.
 - **Who may commit the owner to a charge.** Anyone holding the property's team link (meant for cleaners
   and co-hosts) can send a tradie at the owner's expense with no further check. A guest's report waits for
@@ -114,10 +114,13 @@ What the software does, which the terms need to match:
   payment. HostFix staff decide the outcome: the work stands, or a full or part refund.
 - **Price changes.** The software keeps a member on the price they joined at. Moving existing members to a
   new price is not built. The terms should say how and with what notice it can be done.
-- **The founding member deposit:** refundable before launch, credited against the first month. What happens
-  if HostFix does not launch, or launches late.
-- **The quarterly property check** promised with Priority is not automated yet. Do not promise more than
-  will be delivered by hand.
+- **The founding offer**, as shown on the owner page, the card page and the price list email: 25 founding
+  properties, a NZ$99 deposit that comes off the first bills and is refundable any time before the first
+  job, and half price for the first three months (NZ$49.50 a month, then NZ$99). What happens if HostFix
+  does not launch, or launches late. **Billing does not give the half price yet**: see the go-live
+  checklist and `DECISIONS.md`.
+- **After-hours** is before 7am, from 4:30pm, and all weekend, in Queenstown time. Public holidays are not
+  treated differently yet.
 - Cancellation, minimum term (none today), and the wording of the automatic-renewal notice.
 
 ## 3. Tradie agreement

@@ -81,15 +81,22 @@ describe("what we ask Stripe to charge", () => {
     expect(params.line_items).toHaveLength(1);
     expect(params.line_items?.[0]).toMatchObject({
       quantity: 1,
-      price_data: { currency: "nzd", unit_amount: 4900, product_data: { name: "HostFix founding member deposit" } },
+      // Queenstown's founding deposit is $99 (config/markets.ts).
+      price_data: { currency: "nzd", unit_amount: 9900, product_data: { name: "HostFix founding member deposit" } },
     });
     expect(params.client_reference_id).toBe(lead.id);
     expect(params.customer_email).toBe("olive@example.com");
     expect(params.metadata).toEqual({ lead_id: lead.id, market: "queenstown", purpose: "founding_deposit" });
     expect(params.payment_intent_data?.metadata).toEqual(params.metadata);
     expect(params.payment_intent_data?.receipt_email).toBe("olive@example.com");
+    // The small print next to the pay button is the market's own promises, word for word, so the card page
+    // never says something different from the page the owner just read.
     expect(params.custom_text).toEqual({
-      submit: { message: "Comes off your first month. Fully refundable any time before we launch." },
+      submit: {
+        message:
+          "Half price for your first three months: $49.50 a month, then $99. Your $99 deposit comes off your first bills. " +
+          "Refundable any time before your first job. One email and it is back on your card.",
+      },
     });
     expect(params.success_url).toBe("https://hostfix.example/owners/deposit/return?session_id={CHECKOUT_SESSION_ID}");
     expect(params.cancel_url).toBe("https://hostfix.example/owners/thanks?deposit=cancelled");
@@ -98,7 +105,7 @@ describe("what we ask Stripe to charge", () => {
   it("follows the market: an Australian market charges Australian dollars", async () => {
     const store = await freshStore();
     const lead = await store.insertLead(ownerLead());
-    const noosa: Market = { ...market, slug: "noosa", name: "Noosa", country: "AU", currency: "AUD", foundingDeposit: { enabled: true, amountCents: 5900, terms: [] } };
+    const noosa: Market = { ...market, slug: "noosa", name: "Noosa", country: "AU", currency: "AUD", foundingDeposit: { enabled: true, amountCents: 5900, spots: null, terms: [] } };
     const params = buildDepositSessionParams(lead, noosa, BASE);
     expect(params.line_items?.[0]?.price_data).toMatchObject({ currency: "aud", unit_amount: 5900 });
     expect(params.metadata?.market).toBe("noosa");
@@ -176,11 +183,11 @@ describe("starting the card payment", () => {
     expect(result).toEqual({ url: "https://checkout.stripe.com/c/pay/cs_test_new", sessionId: "cs_test_new" });
     expect(create).toHaveBeenCalledTimes(1);
     const [params, options] = create.mock.calls[0] as unknown as [Stripe.Checkout.SessionCreateParams, { idempotencyKey: string }];
-    expect(params.line_items?.[0]?.price_data?.unit_amount).toBe(4900);
+    expect(params.line_items?.[0]?.price_data?.unit_amount).toBe(9900);
     expect(options.idempotencyKey).toBe(`hostfix-deposit-${lead.id}-${Math.floor(1_700_000_000_000 / 60_000)}`);
     expect(await store.getLead(lead.id)).toMatchObject({
       depositStatus: "started",
-      depositAmount: 4900,
+      depositAmount: 9900,
       depositCurrency: "NZD",
       stripeAccount: "NZ",
       stripeCheckoutSessionId: "cs_test_new",

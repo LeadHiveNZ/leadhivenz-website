@@ -4,11 +4,12 @@ import Link from "next/link";
 import { after, connection } from "next/server";
 import { Suspense } from "react";
 import { brand } from "@config/brand";
-import { findMarket, launchMarket } from "@config/markets";
 import { NextSteps, ThanksShell } from "@/components/ThanksShell";
 import { TrackEvent } from "@/components/tracking/TrackEvent";
+import { getDb } from "@/lib/db";
 import { baseUrl } from "@/lib/env";
 import { currentLead, wasPaidRecently } from "@/lib/leads/current";
+import { currentMarket } from "@/lib/leads/founding";
 import { sendMetaEvent } from "@/lib/meta/capi";
 import { formatMoney } from "@/lib/money";
 import { clientIp } from "@/lib/request";
@@ -33,7 +34,8 @@ async function Confirmation() {
   const contact = brand.contact.email.includes("[EDIT") ? null : brand.contact.email;
 
   if (lead?.depositStatus === "paid" && lead.depositAmount && lead.depositCurrency) {
-    const market = findMarket(lead.market) ?? launchMarket;
+    // The promises as they are set on the admin screen now.
+    const market = await currentMarket(getDb, lead.market);
     const money = formatMoney(lead.depositAmount, lead.depositCurrency);
     const eventId = `deposit-${lead.id}`;
     const paidRecently = wasPaidRecently(lead);

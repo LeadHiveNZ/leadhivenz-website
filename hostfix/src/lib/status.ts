@@ -12,6 +12,8 @@ import { smsSettings } from "@/lib/notify/sms";
 import { depositAvailability } from "@/lib/payments/deposit";
 import { databaseSettings, getDb } from "@/lib/db";
 import { lastTick } from "@/lib/dispatch/tick";
+import { foundingBillingLine, foundingSpotsTaken } from "@/lib/leads/founding";
+import { listMarkets } from "@/lib/markets/store";
 import { storageSettings } from "@/lib/files/store";
 import { getStore, storeKind } from "@/lib/store";
 
@@ -237,6 +239,17 @@ export async function setupStatus(): Promise<StatusItem[]> {
           detail: `${placeholders.count} [EDIT] placeholder${placeholders.count === 1 ? "" : "s"} still to replace: ${placeholders.where.join(", ")}.`,
         },
   );
+
+  // Founding members: what the page promised against what billing does.
+  try {
+    const db = await getDb();
+    for (const market of await listMarkets(db)) {
+      const line = foundingBillingLine(market, await foundingSpotsTaken(db, market.slug));
+      if (line) items.push({ key: `founding-${market.slug}`, label: `Founding billing (${market.name})`, ...line });
+    }
+  } catch {
+    // The database line above already says what is wrong.
+  }
 
   // Legal
   items.push({

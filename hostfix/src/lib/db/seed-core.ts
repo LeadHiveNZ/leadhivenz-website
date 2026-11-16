@@ -18,7 +18,7 @@ export type SeedTarget = {
   query(sql: string, params?: unknown[]): Promise<Record<string, unknown>[]>;
 };
 
-type MenuSeedItem = {
+export type MenuSeedItem = {
   code: string;
   trade: string;
   name: string;
@@ -28,9 +28,26 @@ type MenuSeedItem = {
   tradiePayoutDollars: number;
   licenceRequired: boolean;
   guestVisible?: boolean;
+  /** Whether the job is on the menu. Left out, it follows the two flags below. */
+  active?: boolean;
+  /** Priced from national averages, not a local quote. Loaded switched off until someone confirms it. */
+  needsLocalQuote?: boolean;
+  /** Only makes sense alongside another job on the same visit. Loaded switched off: the app cannot attach it yet. */
+  isAddOn?: boolean;
+  /** A note for the tradie, used as the description when there is none. */
+  notes?: string;
+  /** For people reading the file. Nothing reads these yet. */
+  isDiagnosis?: boolean;
+  seasonal?: { months: number[] };
+  tags?: string[];
 };
 
-type MenuSeed = {
+/** A job nobody should be able to book yet is loaded switched off, for the admin to switch on. */
+export function startsOnTheMenu(item: Pick<MenuSeedItem, "active" | "needsLocalQuote" | "isAddOn">): boolean {
+  return item.active ?? !(item.needsLocalQuote || item.isAddOn);
+}
+
+export type MenuSeed = {
   surcharges?: { urgentDollars?: number; afterHoursDollars?: number };
   offMenu?: { diagnosisFeeDollars?: number; diagnosisTradiePayoutDollars?: number; ownerApprovalAboveDollars?: number };
   items: MenuSeedItem[];
@@ -78,7 +95,7 @@ export async function insertMarket(db: SeedTarget, market: Market): Promise<void
        parts_included_cents, parts_approval_cents,
        offer_minutes, hours_start, hours_end, work_days, payout_hold_hours,
        referral_reward_cents, referral_paid_months,
-       deposit_enabled, deposit_cents, deposit_terms, reply_by_text
+       deposit_enabled, deposit_cents, deposit_terms, reply_by_text, deposit_spots
      ) values (
        $1, $2, $3, $4, $5, $6,
        $7, $8, $9, $10,
@@ -87,7 +104,7 @@ export async function insertMarket(db: SeedTarget, market: Market): Promise<void
        $17, $18,
        $19, $20, $21, $22::text[], $23,
        $24, $25,
-       $26, $27, $28::text[], $29
+       $26, $27, $28::text[], $29, $30
      )`,
     [
       market.slug, market.name, market.country, market.currency, market.timezone, market.stage,
@@ -98,6 +115,7 @@ export async function insertMarket(db: SeedTarget, market: Market): Promise<void
       market.offerMinutes, market.hoursStart, market.hoursEnd, market.workDays, market.payoutHoldHours,
       market.referralRewardCents, market.referralPaidMonths,
       market.foundingDeposit.enabled, market.foundingDeposit.amountCents, market.foundingDeposit.terms, market.replyByText,
+      market.foundingDeposit.spots,
     ],
   );
 
@@ -126,12 +144,12 @@ export async function insertMenu(db: SeedTarget, slug: string, items: MenuSeedIt
     await db.query(
       `insert into public.menu_items (
          market, code, trade, name, description, try_first,
-         owner_price_cents, tradie_payout_cents, licence_required, guest_visible, sort
-       ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+         owner_price_cents, tradie_payout_cents, licence_required, guest_visible, active, sort
+       ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
        on conflict (market, code) do nothing`,
       [
-        slug, item.code, item.trade, item.name, item.description ?? "", item.tryFirst ?? "",
-        owner, payout, item.licenceRequired, item.guestVisible ?? true, sort,
+        slug, item.code, item.trade, item.name, item.description ?? item.notes ?? "", item.tryFirst ?? "",
+        owner, payout, item.licenceRequired, item.guestVisible ?? true, startsOnTheMenu(item), sort,
       ],
     );
     sort += 10;

@@ -1,7 +1,7 @@
 import { sourceLabel } from "@/lib/attribution";
 import { currentStaff } from "@/lib/auth/current";
 import { toCsv } from "@/lib/csv";
-import { formatWhenSortable, leadTimezone, tradeLabel } from "@/lib/leads/display";
+import { formatWhenSortable, intentLabel, leadTimezone, tradeLabel } from "@/lib/leads/display";
 import { daysLabel, managedByLabel } from "@/lib/leads/options";
 import { getStore } from "@/lib/store";
 
@@ -29,6 +29,7 @@ export async function GET() {
     "Properties",
     "Looked after by",
     "Lives in",
+    "Pressed",
     "Trade",
     "Licence number",
     "Days available",
@@ -53,6 +54,7 @@ export async function GET() {
     lead.propertyCount,
     managedByLabel(lead.managedBy),
     lead.ownerLocation,
+    intentLabel(lead),
     tradeLabel(lead),
     lead.licenceNumber,
     daysLabel(lead.daysAvailable),

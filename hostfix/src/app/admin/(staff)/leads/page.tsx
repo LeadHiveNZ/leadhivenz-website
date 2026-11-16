@@ -16,6 +16,10 @@ import { listMarkets } from "@/lib/markets/store";
 import { getStore, storeKind } from "@/lib/store";
 import type { Lead, LeadCounts, LeadType, StoredNotification } from "@/lib/store/types";
 import { SetupChecklist } from "@/components/admin/SetupChecklist";
+import { DemandTestCard } from "@/components/admin/DemandTestCard";
+import { demandNumbers, getDemandTest, verdict, type DemandNumbers, type DemandTest, type Verdict } from "@/lib/leads/demand-test";
+import { PRICE_LIST_TEMPLATE } from "@/lib/leads/price-list-template";
+import { launchMarket } from "@config/markets";
 
 export const metadata: Metadata = { title: "Leads" };
 
@@ -55,15 +59,31 @@ async function LeadsDashboard({ searchParams }: { searchParams: SearchParams }) 
   }
   const status = await setupStatus();
   let liveMarkets = new Set<string>();
+  let testMarket = { slug: launchMarket.slug, name: launchMarket.name, timezone: launchMarket.timezone };
+  let test: DemandTest | null = null;
+  let numbers: DemandNumbers | null = null;
+  let standing: Verdict | null = null;
   try {
-    liveMarkets = new Set((await listMarkets(await getDb())).filter((market) => market.stage === "live").map((market) => market.slug));
+    const db = await getDb();
+    const markets = await listMarkets(db);
+    liveMarkets = new Set(markets.filter((market) => market.stage === "live").map((market) => market.slug));
+    test = await getDemandTest(db);
+    const found = markets.find((market) => market.slug === (test?.market ?? launchMarket.slug));
+    if (found) testMarket = { slug: found.slug, name: found.name, timezone: found.timezone };
+    if (test) {
+      numbers = await demandNumbers(db, test);
+      standing = verdict(numbers, test);
+    }
   } catch {
-    // The page still shows the leads if the markets cannot be read.
+    // The page still shows the leads if the markets or the scorecard cannot be read.
   }
 
   const alertsByLead = new Map<string, StoredNotification[]>();
+  const priceListByLead = new Map<string, StoredNotification>();
   for (const notification of notifications) {
-    if (!notification.leadId || notification.template !== "lead_alert") continue;
+    if (!notification.leadId) continue;
+    if (notification.template === PRICE_LIST_TEMPLATE) priceListByLead.set(notification.leadId, notification);
+    if (notification.template !== "lead_alert") continue;
     alertsByLead.set(notification.leadId, [...(alertsByLead.get(notification.leadId) ?? []), notification]);
   }
 
@@ -95,8 +115,10 @@ async function LeadsDashboard({ searchParams }: { searchParams: SearchParams }) 
         </p>
       )}
 
+      <DemandTestCard test={test} numbers={numbers} verdict={standing} marketName={testMarket.name} marketSlug={testMarket.slug} timezone={testMarket.timezone} />
+
       {counts && (
-        <dl className="grid grid-cols-3 gap-3">
+        <dl aria-label="Totals" className="grid grid-cols-3 gap-3">
           <Stat label="Owners" value={String(counts.owners)} />
           <Stat label="Tradies" value={String(counts.tradies)} />
           <Stat label="Deposits paid" value={String(counts.depositsPaid)} note={depositTotal} />
@@ -151,6 +173,7 @@ async function LeadsDashboard({ searchParams }: { searchParams: SearchParams }) 
                 <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
                   <DepositBadge lead={lead} />
                   <AlertText alerts={alertsByLead.get(lead.id) ?? []} />
+                  <PriceListText sent={priceListByLead.get(lead.id)} />
                 </div>
                 <LeadActions leadId={lead.id} leadType={lead.leadType} converted={Boolean(lead.convertedAt)} invited={Boolean(lead.invitedAt)} live={liveMarkets.has(lead.market)} />
               </li>
@@ -208,6 +231,7 @@ async function LeadsDashboard({ searchParams }: { searchParams: SearchParams }) 
                       <div className="mt-1">
                         <AlertText alerts={alertsByLead.get(lead.id) ?? []} />
                       </div>
+                      <PriceListText sent={priceListByLead.get(lead.id)} />
                     </td>
                     <td className="px-4 py-3">
                       <DepositBadge lead={lead} />
@@ -307,4 +331,12 @@ function AlertText({ alerts }: { alerts: StoredNotification[] }) {
   if (parts.length === 0) return null;
   const failed = parts.some((part) => part?.includes("FAILED"));
   return <span className={`text-xs ${failed ? "font-semibold text-red-700" : "text-muted"}`}>{parts.join(" · ")}</span>;
+}
+
+/** Whether the price list the owner asked for reached their inbox. */
+function PriceListText({ sent }: { sent: StoredNotification | undefined }) {
+  if (!sent) return null;
+  if (sent.status === "sent") return <span className="block text-xs text-muted">Price list emailed</span>;
+  if (sent.status === "failed") return <span className="block text-xs font-semibold text-red-700">Price list email FAILED</span>;
+  return <span className="block text-xs text-muted">Price list not emailed (email to owners not set up)</span>;
 }

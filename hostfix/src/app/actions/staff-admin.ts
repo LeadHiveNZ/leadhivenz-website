@@ -15,6 +15,8 @@ import { emails } from "@/lib/notify/messages";
 import { enqueue } from "@/lib/notify/outbox";
 import { markReferralPaid } from "@/lib/owners/referrers";
 import { getStore } from "@/lib/store";
+import { startDemandTest } from "@/lib/leads/demand-test";
+import { launchMarket } from "@config/markets";
 import { AccountExistsError } from "@/lib/auth/users";
 import { findTrade } from "@config/trades";
 import { createTradie, TradieError } from "@/lib/tradies/service";
@@ -63,6 +65,36 @@ function percent(formData: FormData, name: string, errors: Record<string, string
   return Number(raw);
 }
 
+/** A time of day on the hour or half hour: "7", "16:30" or "4:30pm". 16.5 means 4:30pm. */
+function hourOfDay(formData: FormData, name: string, errors: Record<string, string>): number | undefined {
+  const raw = text(formData, name).toLowerCase().replace(/\s+/g, "");
+  const match = /^(\d{1,2})(?::(00|30))?(am|pm)?$/.exec(raw);
+  if (!match) {
+    errors[name] = "Enter a time on the hour or half hour, for example 7 or 16:30.";
+    return undefined;
+  }
+  let hour = Number(match[1]);
+  if (match[3] === "pm" && hour < 12) hour += 12;
+  if (match[3] === "am" && hour === 12) hour = 0;
+  const value = hour + (match[2] === "30" ? 0.5 : 0);
+  if (value > 24) {
+    errors[name] = "Enter a time between 0 and 24.";
+    return undefined;
+  }
+  return value;
+}
+
+/** A whole number, or nothing at all for "no limit". */
+function spots(formData: FormData, name: string, errors: Record<string, string>): number | null | undefined {
+  const raw = text(formData, name);
+  if (raw === "") return null;
+  if (!/^\d{1,4}$/.test(raw)) {
+    errors[name] = "Enter a whole number, or leave it empty for no limit.";
+    return undefined;
+  }
+  return Number(raw);
+}
+
 export async function saveMarketSettings(_previous: FormState, formData: FormData): Promise<FormState> {
   const staff = await requireAdminRole();
   const slug = text(formData, "slug");
@@ -87,14 +119,16 @@ export async function saveMarketSettings(_previous: FormState, formData: FormDat
     partsApprovalCents: amount(formData, "partsApproval", errors),
     referralRewardCents: amount(formData, "referralReward", errors),
     offerMinutes: whole(formData, "offerMinutes", errors),
-    hoursStart: whole(formData, "hoursStart", errors),
-    hoursEnd: whole(formData, "hoursEnd", errors),
+    hoursStart: hourOfDay(formData, "hoursStart", errors),
+    hoursEnd: hourOfDay(formData, "hoursEnd", errors),
     payoutHoldHours: whole(formData, "payoutHoldHours", errors),
     referralPaidMonths: whole(formData, "referralPaidMonths", errors),
     workDays: list(formData, "workDays"),
     replyByText: ticked(formData, "replyByText"),
     depositEnabled: ticked(formData, "depositEnabled"),
     depositCents: amount(formData, "deposit", errors),
+    depositSpots: spots(formData, "depositSpots", errors),
+    depositTerms: text(formData, "depositTerms").split(/\r?\n/).map((line) => line.trim()).filter(Boolean),
   };
   if (Object.keys(errors).length > 0) return problem(formData, "Please check the highlighted fields. Nothing was saved.", errors);
   try {
@@ -275,4 +309,13 @@ export async function tradieFromLead(_previous: FormState, formData: FormData): 
   void staff;
   revalidatePath("/admin/leads");
   redirect(`/admin/tradies/${tradieId}?added=1&edit=1`);
+}
+
+/** Starts the demand test's fourteen days from now, for the scorecard on the leads page. */
+export async function startDemandTestAction(_previous: FormState, formData: FormData): Promise<FormState> {
+  const staff = await requireAdminRole();
+  const market = text(formData, "market") || launchMarket.slug;
+  await startDemandTest(await getDb(), market, staff.actor);
+  revalidatePath("/admin/leads");
+  return { done: "Started. Day 1 of 14 is today." };
 }

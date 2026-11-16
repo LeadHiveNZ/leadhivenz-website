@@ -21,7 +21,8 @@ import { sha256Hex } from "@/lib/auth/signing";
 
 export const DEFAULT_GRAPH_VERSION = "v27.0";
 
-export type MetaEventName = "Lead" | "SubmitApplication" | "Purchase";
+/** Lead: an owner filled in the form. InitiateCheckout: they went to the card page for the deposit. Purchase: they paid it. */
+export type MetaEventName = "Lead" | "SubmitApplication" | "InitiateCheckout" | "Purchase";
 
 export type MetaServerEvent = {
   name: MetaEventName;

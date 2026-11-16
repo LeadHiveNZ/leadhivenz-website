@@ -32,6 +32,12 @@ const STAGES = [
   { key: "paused", label: "Paused: no new members or jobs, existing jobs carry on" },
 ];
 
+/** 16.5 shows as "16:30", 7 as "7". */
+function clockText(value: number): string {
+  const whole = Math.floor(value);
+  return value === whole ? String(whole) : `${whole}:${String(Math.round((value - whole) * 60)).padStart(2, "0")}`;
+}
+
 function TierForm({ slug, currency, tier }: { slug: string; currency: string; tier: Tier | null }) {
   const key = tier?.id ?? "new";
   return (
@@ -187,8 +193,8 @@ export default async function MarketPage({ params, searchParams }: { params: Pro
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Minutes each tradie has to accept" name="offerMinutes" required inputMode="numeric" maxLength={3} defaultValue={String(market.offerMinutes)} />
             <Field label="Hours a tradie's payment is held after a job" name="payoutHoldHours" required inputMode="numeric" maxLength={2} defaultValue={String(market.payoutHoldHours)} hint="The window for the owner to raise a problem. 48 at most." />
-            <Field label="Working day starts (hour, 0 to 23)" name="hoursStart" required inputMode="numeric" maxLength={2} defaultValue={String(market.hoursStart)} />
-            <Field label="Working day ends (hour, 1 to 24)" name="hoursEnd" required inputMode="numeric" maxLength={2} defaultValue={String(market.hoursEnd)} hint="Urgent jobs outside these hours carry the after-hours surcharge." />
+            <Field label="Working day starts (for example 7 or 7:30)" name="hoursStart" required maxLength={7} defaultValue={clockText(market.hoursStart)} />
+            <Field label="Working day ends (for example 17 or 16:30)" name="hoursEnd" required maxLength={7} defaultValue={clockText(market.hoursEnd)} hint="24-hour clock. Urgent jobs outside these hours, or on a day that is not ticked, carry the after-hours surcharge." />
           </div>
           <Checks label="Working days" name="workDays" options={WEEKDAY_OPTIONS} defaultValues={market.workDays} />
           <Tick name="replyByText" label="Tradies can accept by replying YES to the text" hint="Only switch this on once this market's text number can receive replies and you have tested it. The link in the text always works." defaultChecked={market.replyByText} />
@@ -206,8 +212,24 @@ export default async function MarketPage({ params, searchParams }: { params: Pro
             <Field label="Reward for a cleaner or co-host" name="referralReward" required inputMode="decimal" maxLength={8} defaultValue={centsToDollars(market.referralRewardCents)} />
             <Field label="Paid after this many paid months" name="referralPaidMonths" required inputMode="numeric" maxLength={2} defaultValue={String(market.referralPaidMonths)} />
             <Field label="Founding deposit amount" name="deposit" required inputMode="decimal" maxLength={8} defaultValue={centsToDollars(market.foundingDeposit.amountCents)} />
+            <Field
+              label="Founding spots"
+              name="depositSpots"
+              inputMode="numeric"
+              maxLength={4}
+              defaultValue={market.foundingDeposit.spots === null ? "" : String(market.foundingDeposit.spots)}
+              hint="How many owners can put a deposit down. Leave empty for no limit. When they are gone, the page stops taking cards."
+            />
           </div>
           <Tick name="depositEnabled" label="Offer the founding deposit on the waiting-list page" defaultChecked={market.foundingDeposit.enabled} />
+          <Area
+            label="What the deposit gets them (one promise per line)"
+            name="depositTerms"
+            rows={4}
+            maxLength={900}
+            defaultValue={market.foundingDeposit.terms.join("\n")}
+            hint="Shown next to the deposit button and on the card page. Up to six lines. Only promise what billing actually does: see the go-live checklist."
+          />
 
           <SubmitButton pendingLabel="Saving...">Save settings</SubmitButton>
         </ActionForm>

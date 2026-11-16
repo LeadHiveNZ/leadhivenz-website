@@ -7,6 +7,7 @@ import type {
   DepositStartedArgs,
   Lead,
   LeadCounts,
+  LeadIntent,
   LeadStore,
   LeadType,
   NewLead,
@@ -31,6 +32,7 @@ type LeadRow = {
   property_count: number | null;
   managed_by: string | null;
   owner_location: string | null;
+  intent: Lead["intent"];
   trade: string | null;
   licence_number: string | null;
   days_available: string[] | null;
@@ -73,6 +75,7 @@ export function rowToLead(row: LeadRow): Lead {
     propertyCount: row.property_count,
     managedBy: row.managed_by,
     ownerLocation: row.owner_location,
+    intent: row.intent ?? null,
     trade: row.trade,
     licenceNumber: row.licence_number,
     daysAvailable: row.days_available,
@@ -113,14 +116,14 @@ export class SqlLeadStore implements LeadStore {
       `insert into public.leads (
          lead_type, market, name, phone, email, property_count, managed_by, owner_location,
          trade, licence_number, days_available, source, utm_source, utm_medium, utm_campaign,
-         utm_content, utm_term, fbclid, gclid, ref_code, referrer, landing_path
-       ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::text[], $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22)
+         utm_content, utm_term, fbclid, gclid, ref_code, referrer, landing_path, intent
+       ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::text[], $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)
        returning *`,
       [
         lead.leadType, lead.market, lead.name, lead.phone, lead.email, lead.propertyCount, lead.managedBy,
         lead.ownerLocation, lead.trade, lead.licenceNumber, lead.daysAvailable, lead.source, lead.utmSource,
         lead.utmMedium, lead.utmCampaign, lead.utmContent, lead.utmTerm, lead.fbclid, lead.gclid, lead.refCode,
-        lead.referrer, lead.landingPath,
+        lead.referrer, lead.landingPath, lead.leadType === "owner" ? (lead.intent ?? null) : null,
       ],
     );
     const row = rows[0];
@@ -185,6 +188,16 @@ export class SqlLeadStore implements LeadStore {
     const db = await this.open();
     const rows = await db.query<LeadRow>(sql, params);
     return rows[0]?.id ? rowToLead(rows[0]) : null;
+  }
+
+  recordIntent(leadId: string, intent: LeadIntent): Promise<Lead | null> {
+    return this.leadFunction(
+      `update public.leads
+          set intent = case when $2 = 'deposit' then 'deposit' else coalesce(intent, $2) end
+        where id = $1::uuid and lead_type = 'owner'
+        returning *`,
+      [leadId, intent],
+    );
   }
 
   markDepositStarted(args: DepositStartedArgs): Promise<Lead | null> {

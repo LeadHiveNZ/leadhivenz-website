@@ -24,13 +24,13 @@ business, no accounts and no real money. See "Try the demo" at the bottom.
 | Vercel | US$20 a month | You need the Pro plan: the free plan does not allow business use, and the timer only runs every minute on Pro. |
 | Supabase | Free to start, then US$25 a month | Free projects are paused after one week with no activity. Move to Pro before you take real members. |
 | Stripe: cards | 2.65% + NZ$0.30 per NZ card payment | Applies to memberships and to each job. Check the pricing page in your own Stripe dashboard: it may add a small percentage for recurring billing. |
-| Stripe: paying tradies | NZ$2 per tradie in any month they are paid, plus 0.25% + NZ$0.25 per payment to them | You pay this, not the tradie. On a NZ$187 payout it is about NZ$0.72. |
+| Stripe: paying tradies | NZ$2 per tradie in any month they are paid, plus 0.25% + NZ$0.25 per payment to them | You pay this, not the tradie. On a NZ$200 payout it is about NZ$0.75. |
 | Resend | Free | Up to 3,000 emails a month, 100 a day. |
 | Texts | About 1 to 3 US cents each | A job sends 6 to 10 texts. Pay as you go. |
 | Domain name | About NZ$25 to NZ$40 a year | |
 
-On a NZ$220 job where you keep NZ$33, Stripe's card fee is about NZ$6.13, the payout fee about NZ$0.72
-and the texts about NZ$0.30. Roughly NZ$26 is left before your own time. The membership fee is where
+On a NZ$235 job (a dripping tap) where you keep NZ$35, Stripe's card fee is about NZ$6.53, the payout fee
+about NZ$0.75 and the texts about NZ$0.30. Roughly NZ$27 is left before your own time. The membership fee is where
 the margin is. `docs/MARKET-RESEARCH.md` goes through the numbers.
 
 ---
@@ -290,6 +290,9 @@ Everything below is done on the site, signed in as admin. No code.
 - [ ] **Invite the waiting list.** More > Leads > "Invite to join" beside each owner.
 
 ## Step 10. Before you spend money on ads
+
+For the demand test you need less than all of this: `docs/DEMAND-TEST.md` lists exactly which steps, and
+how to run the 14 days.
 
 - [ ] Replace every `[EDIT: ...]` placeholder. The setup checklist counts them for you.
 - [ ] Put your contact email and company name in `config/brand.ts`.

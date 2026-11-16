@@ -74,11 +74,25 @@ export function isValidTimeZone(timeZone: string): boolean {
 
 type Hours = { timezone: string; hoursStart: number; hoursEnd: number; workDays: string[] };
 
-/** True when that moment is outside the market's normal working hours. */
+/**
+ * True when that moment is outside the market's normal working hours. Hours
+ * can be on the half hour: 16.5 is 4:30pm, so 4:29pm is inside and 4:30pm is not.
+ */
 export function isAfterHours(date: Date, market: Hours): boolean {
   const p = localParts(date, market.timezone);
   if (!market.workDays.includes(p.weekday)) return true;
-  return p.hour < market.hoursStart || p.hour >= market.hoursEnd;
+  const hourOfDay = p.hour + p.minute / 60;
+  return hourOfDay < market.hoursStart || hourOfDay >= market.hoursEnd;
+}
+
+/** A working-day hour as people say it: 7 is "7am", 16.5 is "4:30pm", 12 is "midday", 0 and 24 are "midnight". */
+export function formatHourOfDay(value: number): string {
+  if (value === 0 || value === 24) return "midnight";
+  if (value === 12) return "midday";
+  const whole = Math.floor(value);
+  const minutes = Math.round((value - whole) * 60);
+  const hour12 = whole % 12 === 0 ? 12 : whole % 12;
+  return `${hour12}${minutes ? `:${two(minutes)}` : ""}${whole < 12 ? "am" : "pm"}`;
 }
 
 function clock(p: LocalParts): string {

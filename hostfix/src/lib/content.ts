@@ -23,10 +23,18 @@ import { formatMoney } from "@/lib/money";
  *                                        paragraph sits below the cards)
  *
  * These placeholders are filled in from the config files:
- *   {{brand}} {{market}} {{country}} {{deposit}} {{essential}} {{priority}}
- *   {{payout_days}}                     (how long a tradie's money takes to
+ *   {{brand}} {{market}} {{country}}
+ *   {{essential}}                       the membership price, per property per month
+ *   {{deposit}}                         the founding deposit
+ *   {{urgent}} {{after_hours}}          the two surcharges
+ *   {{callout}}                         the fee for a tradie to come and look at
+ *                                        something that is not on the menu
+ *   {{approval_limit}}                  quotes above this need the owner's yes
+ *   {{payout_days}}                     how long a tradie's money takes to
  *                                        reach their bank, for example
- *                                        "5 to 6 working days")
+ *                                        "5 to 6 working days"
+ * Every one is read from the market's settings, so the words on the page can
+ * never drift from what the app charges.
  *
  * Anything written as [EDIT: ...] is shown highlighted on the page and counted
  * on the admin screen, so unfinished copy is hard to miss.
@@ -63,23 +71,24 @@ export type LandingContent = {
 export class ContentError extends Error {}
 
 export function contentTokens(market: Market): Record<string, string> {
-  // {{essential}} and {{priority}} are the prices of the memberships on offer.
-  // A market whose memberships have other short codes still works (for example
-  // after a price change, when "essential" was replaced by "essential_2027"):
-  // the cheapest one on offer stands in for essential, the dearest for priority.
+  // {{essential}} is the price of the membership on offer. There is one
+  // membership (DECISIONS.md). A market whose membership has another short code
+  // still works (for example after a price change, when "essential" was
+  // replaced by "essential_2027"): the cheapest one on offer stands in.
   const byPrice = [...market.tiers].sort((a, b) => a.monthlyPriceCents - b.monthlyPriceCents);
-  const tierPrice = (key: string, standIn: (typeof byPrice)[number] | undefined): string => {
-    const tier = market.tiers.find((t) => t.key === key) ?? byPrice.find((t) => t.key.startsWith(key)) ?? standIn;
-    if (!tier) throw new ContentError(`The market "${market.name}" has no membership on offer, so its page cannot show a price. Add one under More, Markets.`);
-    return formatMoney(tier.monthlyPriceCents, market.currency);
-  };
+  const membership = market.tiers.find((t) => t.key === "essential") ?? byPrice.find((t) => t.key.startsWith("essential")) ?? byPrice[0];
+  if (!membership) throw new ContentError(`The market "${market.name}" has no membership on offer, so its page cannot show a price. Add one under More, Markets.`);
+  const money = (cents: number) => formatMoney(cents, market.currency);
   return {
     brand: brand.name,
     market: market.name,
     country: market.countryName,
-    deposit: formatMoney(market.foundingDeposit.amountCents, market.currency),
-    essential: tierPrice("essential", byPrice[0]),
-    priority: tierPrice("priority", byPrice[byPrice.length - 1]),
+    deposit: money(market.foundingDeposit.amountCents),
+    essential: money(membership.monthlyPriceCents),
+    urgent: money(market.urgentSurchargeCents),
+    after_hours: money(market.afterHoursSurchargeCents),
+    callout: money(market.diagnosisFeeCents),
+    approval_limit: money(market.approvalThresholdCents),
     payout_days: payoutArrival(market.country),
   };
 }

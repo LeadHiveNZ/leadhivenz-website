@@ -76,7 +76,7 @@ something on the tour, delete the `.data` folder and start again to get it back.
 | Do this | You should see |
 | --- | --- |
 | Demo menu > **The public site** > **I own a holiday home** > **Join in Queenstown**. Make up a name, email and mobile. The six-digit code is shown on screen in the demo (on the real site it is emailed). | A new owner account, with no password |
-| Add a property: a name, the address, how a tradie gets in. Choose **Priority**. **Save and continue**. | The property, not yet covered |
+| Add a property: a name, the address, how a tradie gets in. The one membership, **Essential**, is already chosen. **Save and continue**. | The property, not yet covered |
 | Press **Report** before paying | "Start a membership first" |
 | **Continue to payment**, then pay on the pretend card page | "You are covered", and the plan and price |
 | On the property page: **Print the QR card** | A card to print and leave in the property, with the guest link under it |
@@ -86,8 +86,8 @@ something on the tour, delete the `.data` folder and start again to get it back.
 | **Account > Billing** (as Sam, who has history) | The card on file with **Change card**, and a statement for each month with **Print or save**: jobs, memberships, credits and the GST inside the total |
 | On Sam's property page: **Change plan**, then **Cancel membership** | The plan changes with no part-month charge. Cancelling takes effect at the end of the paid month. |
 
-**Not done in Phase 1:** real card payments need your Stripe account (`SETUP.md` step 6). The quarterly
-property check that Priority promises is not automated. Owners cannot delete their own account.
+**Not done in Phase 1:** real card payments need your Stripe account (`SETUP.md` step 6). Owners cannot
+delete their own account.
 
 ## Phase 2: jobs and dispatch
 
@@ -96,11 +96,11 @@ property check that Priority promises is not automated. Owners cannot delete the
 | Demo menu > **Scan the QR card as a guest**. Choose Plumbing, pick a job, give a name, **Report it**. | No prices anywhere. "Your host has been told." Nobody is sent. |
 | Open **Sam's phone** | A text asking whether to send someone |
 | Demo menu > **Report as the cleaner**. Pick a job, **Report it**. | A tradie is being found at once. Sam is texted the price. |
-| As Sam: **Report** at Arthurs Point Cabin (Essential), choose a job, choose **Urgent** | NZ$80 more, and on site within 4 hours. Do the same at Lakeview Apartment (Priority): urgent says "Included". |
-| As Sam: **Report**, choose **Something else** | NZ$120 for a tradie to come and look, with a quote to follow |
+| As Sam: **Report** at Arthurs Point Cabin, choose a job, choose **Urgent** | NZ$90 more, and on site within 4 hours. Before 7am, after 4:30pm or at the weekend it is NZ$140 more on top. |
+| As Sam: **Report**, choose **Something else** | NZ$225 for a tradie to come and look, with a quote to follow |
 | Log a plumbing job as Sam. Demo menu > **Skip 15 minutes**. As Maria, open it from **Jobs**. | "Who was offered it": the first choice ran out, the backup is being asked now |
 | **Skip 15 minutes** again | The backup ran out too. The sample has no third plumber, so it is in Maria's queue as "Nobody accepted", and Sam has been texted that the team is on it. |
-| **Be Mere (plumber)**. Open her job. | She is on site with a quote of NZ$605 waiting. It is over NZ$400, so she cannot start until the owner says yes. |
+| **Be Mere (plumber)**. Open her job. | She is on site with a quote of NZ$685 waiting. It is over NZ$600, so she cannot start until the owner says yes. |
 | As a tradie who has arrived at a job: **Could not get in?** | The tradie is paid the call-out and the owner is charged it. A photo is needed as proof. |
 | **Be Dave**, open **Profile** | His licences and their end dates. **Taking a break?** pauses offers. |
 | As Admin: Tradies > open a tradie > change a licence's "Runs out on" date to last month > **Save licence** | The licence shows "Run out", and the page says they are no longer offered that work. Their other work is unaffected. |
@@ -195,8 +195,8 @@ In order. `SETUP.md` has the steps.
   the owner switches that off.
 - **A membership's price cannot be changed while members are on it.** Otherwise they are shown one price
   and charged another.
-- **Priority's "urgent included" is your cost, not the tradie's.** The tradie still gets the NZ$80. Watch
-  "Urgent surcharges we covered" on the Numbers page, and consider capping how many a month are included.
+- **Urgent is always paid for, and never discounted to the tradie** (`DECISIONS.md`). If a membership that
+  includes urgent call-outs ever comes back, the tradie still gets the full surcharge and you pay it.
 - **Do not switch on slot fees yet** (`docs/PLAN.md`, section 9, item 5).
 - **The membership price is five to ten times what comparable software charges** (`docs/MARKET-RESEARCH.md`).
   Sell the guarantee, not the app.

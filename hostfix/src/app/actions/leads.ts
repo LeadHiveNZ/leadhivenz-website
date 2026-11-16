@@ -6,11 +6,15 @@ import { after } from "next/server";
 import { brand } from "@config/brand";
 import { launchMarket } from "@config/markets";
 import { createLeadToken, LEAD_COOKIE, LEAD_COOKIE_SECONDS } from "@/lib/auth/lead-token";
+import { getDb } from "@/lib/db";
 import { appSecret, baseUrl } from "@/lib/env";
+import { currentMarket, foundingSpotsTaken, spotsLeft } from "@/lib/leads/founding";
 import { HONEYPOT_FIELD, type LeadFormState } from "@/lib/leads/form-state";
+import { sendPriceList } from "@/lib/leads/send-price-list";
 import { submitLead } from "@/lib/leads/service";
-import { sendMetaEvent } from "@/lib/meta/capi";
+import { sendMetaEvent, type MetaEventName } from "@/lib/meta/capi";
 import { leadAlertContent, sendAlert } from "@/lib/notify/alerts";
+import { DepositNotAllowedError, startDepositCheckout } from "@/lib/payments/deposit";
 import { clientIp, ipKey } from "@/lib/request";
 import { getStore } from "@/lib/store";
 import type { Lead, LeadType } from "@/lib/store/types";
@@ -46,6 +50,8 @@ async function handle(leadType: LeadType, formData: FormData): Promise<LeadFormS
           propertyCount: text(formData, "propertyCount"),
           managedBy: text(formData, "managedBy"),
           ownerLocation: text(formData, "ownerLocation"),
+          // Which button they pressed: "deposit" (take a founding spot) or "pricelist".
+          intent: text(formData, "intent"),
         }
       : {
           name: text(formData, "name"),
@@ -100,8 +106,43 @@ async function handle(leadType: LeadType, formData: FormData): Promise<LeadFormS
         });
       }
       if (!result.duplicate) trackLeadWithMeta(lead, headerList, cookieStore);
+      if (leadType === "owner" && result.saved) {
+        if (lead.intent === "deposit") return redirect(await depositDestination(lead, headerList, cookieStore));
+        if (lead.intent === "pricelist" && !result.duplicate) {
+          after(async () => {
+            const outcome = await sendPriceList(lead, { store: getStore(), open: getDb });
+            if (outcome.status === "failed") console.error("[price list]", outcome.detail);
+          });
+        }
+      }
       return redirect(THANKS_PAGE[leadType]);
     }
+  }
+}
+
+/**
+ * An owner pressed "take a founding spot": straight to the card page, with no
+ * second button to press. If the deposit cannot be taken right now, they land
+ * on the thank-you page, which says why and shows the price list.
+ */
+async function depositDestination(
+  lead: Lead,
+  headerList: { get(name: string): string | null },
+  cookieStore: { get(name: string): { value: string } | undefined },
+): Promise<string> {
+  if (lead.depositStatus === "paid" || lead.depositStatus === "credited") return "/owners/founding-member";
+  try {
+    const market = await currentMarket(getDb, lead.market);
+    const left = spotsLeft(market, await foundingSpotsTaken(await getDb(), market.slug));
+    if (left === 0) return "/owners/thanks?deposit=full";
+    const checkout = await startDepositCheckout(lead, market, baseUrl(), { store: getStore(), spotsLeft: left });
+    trackWithMeta("InitiateCheckout", lead, headerList, cookieStore, { eventId: `${lead.id}-checkout`, valueCents: market.foundingDeposit.amountCents, currency: market.currency });
+    return checkout.url;
+  } catch (error) {
+    if (!(error instanceof DepositNotAllowedError)) {
+      console.error("[deposit] could not start the card payment:", error instanceof Error ? error.message : error);
+    }
+    return "/owners/thanks?deposit=unavailable";
   }
 }
 
@@ -111,9 +152,20 @@ function trackLeadWithMeta(
   headerList: { get(name: string): string | null },
   cookieStore: { get(name: string): { value: string } | undefined },
 ) {
+  trackWithMeta(lead.leadType === "owner" ? "Lead" : "SubmitApplication", lead, headerList, cookieStore, { eventId: lead.id });
+}
+
+function trackWithMeta(
+  name: MetaEventName,
+  lead: Lead,
+  headerList: { get(name: string): string | null },
+  cookieStore: { get(name: string): { value: string } | undefined },
+  extra: { eventId: string; valueCents?: number; currency?: string },
+) {
   const event = {
-    name: lead.leadType === "owner" ? ("Lead" as const) : ("SubmitApplication" as const),
-    eventId: lead.id,
+    name,
+    eventId: extra.eventId,
+    ...(extra.valueCents !== undefined && extra.currency ? { valueCents: extra.valueCents, currency: extra.currency } : {}),
     sourceUrl: `${baseUrl()}${FORM_PAGE[lead.leadType]}`,
     userAgent: headerList.get("user-agent"),
     ip: clientIp(headerList),

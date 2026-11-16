@@ -48,11 +48,15 @@ it when you change one.
 - **All times come from the app's clock** (`now()` in `src/lib/clock.ts`), never `new Date()` or the
   database's `now()`. The tests and the demo move that clock.
 - **Nothing tied to one town, currency or tax rate.** Those live on the market row in the database.
-- **The real prices are researched but not loaded yet.** `seed/menu-queenstown.proposed.json` holds 59
-  researched Queenstown jobs and is the file that should replace the live menu. Swapping it in breaks 27
-  money tests on purpose and is a task in `DECISIONS.md`. Until then `seed/menu-queenstown.json` is still
-  placeholders and nothing may be shown to a real owner as a price. The researched prices sit at local
-  market rate, not above it, so nothing may tell an owner they pay a premium for price certainty.
+- **The real prices are loaded.** `seed/menu-queenstown.json` is the 59 researched Queenstown jobs. It only
+  fills an empty database: after that, prices change on the admin screen. The prices sit at local market
+  rate, not above it, so nothing may tell an owner they pay a premium for price certainty. Money tests
+  are worked out by hand from the menu file, never pasted from what the code returns.
+- **Every promise on a public page must be something the code does today**, or be tracked as owed in
+  `DECISIONS.md` and on the go-live checklist (the founding half price is one). No unsourced statistics.
+- **The demand test's pass mark is three owners with a card down** (`src/lib/leads/demand-test.ts`). The
+  owner page's two buttons are the measurement: keep "take a founding spot" and "send me the price list"
+  as separate, recorded choices (`leads.intent`).
 - **There is one membership.** Essential, 24-hour response. Urgent response is an add-on the owner pays
   for, never an inclusion. Priority was removed because delivering it cost more than it charged
   (`DECISIONS.md`). A surcharge always goes to the tradie in full.

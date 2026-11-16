@@ -11,7 +11,7 @@ We send you fixed-price maintenance jobs at holiday homes, straight to your phon
 - **No tyre-kickers.** The owner's card is on file before you get the job. No quotes that go nowhere.
 - **No paperwork.** No invoices, no statements, no chasing. We handle the money.
 - **Work that fits around your day.** Short jobs, close together, at homes that are often empty between guests.
-- **First pick of the jobs.** Our first-choice tradie for each trade is offered every job first. [EDIT: confirm how you'll choose first-choice tradies.]
+- **First pick of the jobs.** Each trade has a first-choice tradie who is offered every job first. You keep the spot while you take the jobs and turn up on time.
 
 ## How it works
 
@@ -25,13 +25,12 @@ We send you fixed-price maintenance jobs at holiday homes, straight to your phon
 - Handymen, plumbers, electricians, gasfitters and appliance techs working in and around {{market}}
 - Licensed where the law requires it. We'll need your licence number and expiry date
 - Reliable. Owners are promised a response time, so we track who turns up on time
-- [EDIT: add your insurance requirement, for example public liability cover, once your lawyer or broker confirms it.]
 
 ## Questions
 
 ### What does it cost me?
 
-Nothing to join. We keep a platform fee out of each job, and the payout you see when the job is offered is what you get. [EDIT: confirm.]
+Nothing to join, and no lead fees. We keep a fee out of each job, and the payout you see in the text is what you get.
 
 ### Do I have to take every job?
 
@@ -43,4 +42,4 @@ By bank transfer, automatically. You set up your bank details once. Your payment
 
 ### When do you start?
 
-[EDIT: add your launch date.] Put your name down now and we'll be in touch before launch.
+We're signing up one tradie per trade first. Put your name down and we'll give you a call.

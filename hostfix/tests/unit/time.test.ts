@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { launchMarket } from "@config/markets";
-import { dateKey, formatClock, formatDateTime, formatDeadline, formatDuration, isAfterHours, isValidTimeZone, localParts, monthBounds, monthKey, monthLabel } from "@/lib/time";
+import { dateKey, formatClock, formatDateTime, formatDeadline, formatDuration, formatHourOfDay, isAfterHours, isValidTimeZone, localParts, monthBounds, monthKey, monthLabel } from "@/lib/time";
 
 const NZ = "Pacific/Auckland";
 const QLD = "Australia/Brisbane";
@@ -44,24 +44,37 @@ describe("local time", () => {
 });
 
 describe("after-hours", () => {
+  // Queenstown: 7am to 4:30pm, Monday to Friday (DECISIONS.md: the after-hours rate applies after 4:30pm and on Saturdays).
+  // November in New Zealand is daylight saving time, 13 hours ahead of UTC. 16 November 2026 is a Monday.
   const at = (iso: string) => isAfterHours(new Date(iso), launchMarket);
 
-  it("is false inside 7am to 6pm, Monday to Saturday", () => {
-    expect(at("2026-11-16T20:00:00Z")).toBe(false); // Tue 9am
-    expect(at("2026-11-13T18:00:00Z")).toBe(false); // Sat 7am exactly
-    expect(at("2026-11-16T04:59:00Z")).toBe(false); // Mon 5:59pm
+  it("is false inside 7am to 4:30pm, Monday to Friday", () => {
+    expect(at("2026-11-16T20:00:00Z")).toBe(false); // Tue 17 Nov, 9am
+    expect(at("2026-11-19T18:00:00Z")).toBe(false); // Fri 20 Nov, 7am exactly
+    expect(at("2026-11-16T03:29:00Z")).toBe(false); // Mon 16 Nov, 4:29pm
   });
 
-  it("is true before 7am, from 6pm, and all day Sunday", () => {
-    expect(at("2026-11-16T17:59:00Z")).toBe(true); // Tue 6:59am
-    expect(at("2026-11-16T05:00:00Z")).toBe(true); // Mon 6pm exactly
-    expect(at("2026-11-15T01:00:00Z")).toBe(true); // Sun 2pm
+  it("is true before 7am, from 4:30pm, and all weekend", () => {
+    expect(at("2026-11-16T17:59:00Z")).toBe(true); // Tue 17 Nov, 6:59am
+    expect(at("2026-11-16T03:30:00Z")).toBe(true); // Mon 16 Nov, 4:30pm exactly
+    expect(at("2026-11-16T04:59:00Z")).toBe(true); // Mon 16 Nov, 5:59pm
+    expect(at("2026-11-13T18:00:00Z")).toBe(true); // Sat 14 Nov, 7am
+    expect(at("2026-11-13T21:00:00Z")).toBe(true); // Sat 14 Nov, 10am
+    expect(at("2026-11-15T01:00:00Z")).toBe(true); // Sun 15 Nov, 2pm
   });
 
   it("follows the market's own hours and days", () => {
     const sevenDay = { ...launchMarket, workDays: ["mon", "tue", "wed", "thu", "fri", "sat", "sun"], hoursStart: 8, hoursEnd: 20 };
     expect(isAfterHours(new Date("2026-11-15T01:00:00Z"), sevenDay)).toBe(false); // Sun 2pm
     expect(isAfterHours(new Date("2026-11-16T18:30:00Z"), sevenDay)).toBe(true); // Tue 7:30am
+    const halfPast = { ...launchMarket, hoursStart: 7.5, hoursEnd: 17 };
+    expect(isAfterHours(new Date("2026-11-16T18:15:00Z"), halfPast)).toBe(true); // Tue 7:15am
+    expect(isAfterHours(new Date("2026-11-16T18:30:00Z"), halfPast)).toBe(false); // Tue 7:30am exactly
+    expect(isAfterHours(new Date("2026-11-16T03:59:00Z"), halfPast)).toBe(false); // Mon 4:59pm
+  });
+
+  it("is said the way people say it", () => {
+    expect([7, 7.5, 12, 12.5, 16.5, 17, 0, 24].map(formatHourOfDay)).toEqual(["7am", "7:30am", "midday", "12:30pm", "4:30pm", "5pm", "midnight", "midnight"]);
   });
 });
 

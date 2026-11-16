@@ -32,7 +32,7 @@ type MarketRow = {
   parts_included_cents: number; parts_approval_cents: number;
   offer_minutes: number; hours_start: number; hours_end: number; work_days: string[]; payout_hold_hours: number;
   referral_reward_cents: number; referral_paid_months: number;
-  deposit_enabled: boolean; deposit_cents: number; deposit_terms: string[]; reply_by_text: boolean;
+  deposit_enabled: boolean; deposit_cents: number; deposit_terms: string[]; deposit_spots: number | null; reply_by_text: boolean;
 };
 
 type TierRow = {
@@ -98,7 +98,10 @@ function rowToMarket(row: MarketRow, tiers: Tier[]): Market {
     referralPaidMonths: row.referral_paid_months,
     replyByText: row.reply_by_text,
     tiers: tiers.filter((tier) => tier.market === row.slug && tier.active),
-    foundingDeposit: { enabled: row.deposit_enabled, amountCents: row.deposit_cents, terms: row.deposit_terms },
+    foundingDeposit: {
+      enabled: row.deposit_enabled, amountCents: row.deposit_cents, terms: row.deposit_terms,
+      spots: row.deposit_spots === null || row.deposit_spots === undefined ? null : Number(row.deposit_spots),
+    },
   };
 }
 
