@@ -66,6 +66,10 @@ passes. If no tradie is booked at all, treat it as "Nobody accepted". It closes 
 **already been credited automatically** and they have been texted. (One credit per property per month:
 a second miss in the same month is not credited again.)
 
+On a **Portfolio** property (a manager's account) nothing is credited automatically: the note says
+"Missed window on a Portfolio property". Ask the admin what to credit, then give it with **Give the
+owner a credit** on the owner's page.
+
 **Do.**
 1. Ring the owner and say sorry. Do not make them chase you.
 2. Make sure a tradie is actually going. If not, assign one.
@@ -133,6 +137,13 @@ bank sets a short deadline to answer.
 
 **Do.** **Tell the admin the same day.** They answer it in Stripe using the photos and the job history.
 
+### Portfolio price needs a person
+**Means.** A property manager's Portfolio retainer needs a decision the app will not make: they have
+dropped below 10 properties (they stay on the lowest band meanwhile), or reached 100 or more (priced by
+arrangement: they keep paying the 50-99 band meanwhile, or cannot start until a price is set).
+
+**Do.** Tell the admin. They agree the price with the manager (see "A manager's Portfolio band" below).
+
 ### Credit could not be applied / Needs a look
 **Means.** Something happened that the app cannot finish by itself: a credit did not reach the payment
 company, or someone made a refund in Stripe instead of on the job page.
@@ -184,6 +195,17 @@ untick **Offered to new members** on the old one. Existing members stay on the o
 price, until they switch in their app. Moving existing members to a new price needs written notice
 (ask your lawyer how much) and a developer. The promise hours and what is included can be changed at
 any time, and apply to members straight away.
+
+**A manager's Portfolio band.** More > Owners > the manager. The Portfolio card shows how many properties
+are on it, the retainer they pay from the next payment, the band, and the next payment date. The band
+changes by itself when they add or take off properties (10-24 NZ$600, 25-49 NZ$900, 50-99 NZ$1,200),
+always from the next monthly payment. Every change is in More > Audit log as "portfolio.band_changed".
+To set a different price (100 or more properties, or anything agreed with them), open **Set an agreed
+retainer**, enter the monthly amount and save: it is sent to Stripe for their next payment. Empty the
+box to go back to the bands. To change the bands themselves for everyone: More > Markets > the market >
+Memberships > Portfolio (only while no Portfolio is paying on them; otherwise add a new Portfolio
+membership and close the old one to new members, as for a price change). The 60-day pilot is not
+tracked by the app: note it in `DECISIONS.md` and review it by hand.
 
 **Opening a new town.** More > Markets, prices and the menu > **Add a market**. See `SETUP.md`.
 

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { staffGoodwill } from "@/app/actions/staff";
+import { setPortfolioRetainer } from "@/app/actions/staff-admin";
 import { ActionForm, Field } from "@/components/forms/ActionForm";
 import { SubmitButton } from "@/components/forms/SubmitButton";
 import { smallButtonClass } from "@/components/forms/styles";
@@ -17,6 +18,9 @@ import { formatMoney } from "@/lib/money";
 import { getOwner, listCredits } from "@/lib/owners/service";
 import { displayPhone } from "@/lib/phone";
 import { membershipLabel } from "@/lib/properties/display";
+import { centsToDollars } from "@/lib/forms";
+import { bandFor } from "@/lib/markets/bands";
+import { countPortfolioProperties, listPortfolios } from "@/lib/properties/portfolio";
 import { addressLine, listProperties } from "@/lib/properties/service";
 import { formatDate } from "@/lib/time";
 
@@ -37,6 +41,10 @@ export default async function StaffOwnerPage({ params }: { params: Promise<{ id:
   const tiers = new Map((await listTiers(db)).map((tier) => [tier.id, tier]));
   const zone = (slug: string) => markets.get(slug)?.timezone ?? "Pacific/Auckland";
   const at = now();
+  const portfolios = [];
+  for (const portfolio of await listPortfolios(db, owner.id)) {
+    if (portfolio.status !== "cancelled") portfolios.push({ portfolio, count: await countPortfolioProperties(db, portfolio.id) });
+  }
 
   return (
     <div className="mx-auto max-w-3xl space-y-5">
@@ -62,6 +70,50 @@ export default async function StaffOwnerPage({ params }: { params: Promise<{ id:
         />
       </Card>
 
+      {portfolios.map(({ portfolio, count }) => {
+        const market = markets.get(portfolio.market);
+        const tier = tiers.get(portfolio.tierId);
+        const money = (cents: number) => formatMoney(cents, market?.currency ?? "NZD");
+        const band = tier ? bandFor(tier, portfolio.propertyCountBilled) : null;
+        return (
+          <Card key={portfolio.id}>
+            <SectionTitle>Portfolio{market ? `, ${market.name}` : ""}</SectionTitle>
+            <Facts
+              rows={[
+                { label: "Status", value: portfolio.status === "setup" ? "Chosen, retainer not started" : portfolio.status === "past_due" ? "Card problem" : portfolio.cancelAtPeriodEnd ? "Ending" : "Paying" },
+                { label: "Properties on it", value: String(count) },
+                {
+                  label: "Retainer from the next payment",
+                  value: portfolio.bandCents === null
+                    ? "Not started"
+                    : `${money(portfolio.bandCents)} a month${portfolio.agreedCents !== null ? " (agreed price)" : band ? ` (${band.label})` : ""}, worked out from ${portfolio.propertyCountBilled} properties`,
+                },
+                ...(portfolio.currentPeriodEnd ? [{ label: portfolio.cancelAtPeriodEnd ? "Ends" : "Next payment", value: formatDate(portfolio.currentPeriodEnd, zone(portfolio.market)) }] : []),
+                ...(portfolio.memberSince ? [{ label: "Paying since", value: formatDate(portfolio.memberSince, zone(portfolio.market)) }] : []),
+              ]}
+            />
+            <div className="mt-3">
+              <Reveal label="Set an agreed retainer (admin)">
+                <ActionForm action={setPortfolioRetainer} className="space-y-3">
+                  <input type="hidden" name="portfolioId" value={portfolio.id} />
+                  <Field
+                    label={`Agreed retainer each month (${market?.currency ?? "NZD"})`}
+                    name="agreedRetainer"
+                    inputMode="decimal"
+                    maxLength={9}
+                    defaultValue={portfolio.agreedCents === null ? "" : centsToDollars(portfolio.agreedCents)}
+                    hint="For 100 or more properties, which are priced by arrangement. Leave empty to go back to the bands. It starts with their next monthly payment, never part-way through a month."
+                  />
+                  <SubmitButton variant="secondary" pendingLabel="Saving...">
+                    Save retainer
+                  </SubmitButton>
+                </ActionForm>
+              </Reveal>
+            </div>
+          </Card>
+        );
+      })}
+
       <section>
         <SectionTitle>Properties</SectionTitle>
         {properties.length === 0 ? (
@@ -84,7 +136,9 @@ export default async function StaffOwnerPage({ params }: { params: Promise<{ id:
                     <Chip tone={label.tone}>{label.label}</Chip>
                   </div>
                   <p className="mt-2 text-sm text-muted">
-                    {tier && market ? `${tier.name}, ${formatMoney(tier.monthlyPriceCents, market.currency)} a month` : "No membership chosen"}
+                    {property.portfolioId
+                      ? "On their Portfolio (covered by the one retainer)"
+                      : tier && market ? `${tier.name}, ${formatMoney(tier.monthlyPriceCents, market.currency)} a month` : "No membership chosen"}
                     {property.memberSince ? ` · member since ${formatDate(property.memberSince, zone(property.market))}` : ""}
                     {property.currentPeriodEnd && property.status === "active" ? ` · ${property.cancelAtPeriodEnd ? "ends" : "next payment"} ${formatDate(property.currentPeriodEnd, zone(property.market))}` : ""}
                   </p>

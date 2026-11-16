@@ -28,13 +28,17 @@
 > - **Referral rewards are tracked and put in the queue when due, then paid by bank transfer by hand.**
 > - **A membership's price is fixed once properties have joined it.** To change a price you add a new
 >   membership and close the old one to new members (`RUNBOOK.md`).
-> - **There is one membership: Essential, NZ$99 per property per month, 24-hour response** (`DECISIONS.md`,
+> - **Owners have one membership: Essential, NZ$99 per property per month, 24-hour response** (`DECISIONS.md`,
 >   16 Nov 2026). Priority was removed because delivering it cost more than it charged, so everything below
 >   about Priority, its included urgent call-outs and its quarterly check is history. Urgent is always an
 >   add-on the owner pays for, and the whole surcharge goes to the tradie.
 > - **The real Queenstown prices are loaded** (59 researched jobs, `seed/menu-queenstown.json`): urgent
 >   NZ$90, after hours NZ$140, NZ$225 to come and look at something off the menu, owner's yes needed above
 >   NZ$600. After-hours is before 7am, from 4:30pm and all weekend.
+> - **Portfolio, the second tier, is built** (`DECISIONS.md`, 17 Nov 2026): managers with 10+ properties pay
+>   one monthly retainer per account, banded by property count (NZ$600 / 900 / 1,200, 100+ by arrangement),
+>   re-banded from the next payment when properties are added or taken off. The 15% job fee is unchanged.
+>   100+ pricing, missed-promise credits on Portfolio properties and the 60-day pilot are handled by a person.
 > - **The demand test is built** (`docs/DEMAND-TEST.md`): the owner page sells founding spots for a
 >   refundable NZ$99 deposit or sends the full price list, and the leads page keeps the 14-day scorecard.
 >

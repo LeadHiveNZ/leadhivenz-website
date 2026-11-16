@@ -1,10 +1,11 @@
-import { countryDefaults, type CountryCode, type MarketStage } from "@config/markets";
+import { countryDefaults, type BillingBasis, type CountryCode, type MarketStage, type RetainerBand } from "@config/markets";
 import { findTrade } from "@config/trades";
 import { audit } from "@/lib/audit";
 import { now } from "@/lib/clock";
 import type { Db } from "@/lib/db/types";
 import { isValidTimeZone, WEEKDAYS } from "@/lib/time";
 import { isUuid } from "@/lib/uuid";
+import { bandProblem, lowestBand } from "./bands";
 import { getMarket, listMenu, listTiers } from "./store";
 
 /**
@@ -138,20 +139,33 @@ export type TierInput = {
   quarterlyCheck: boolean;
   blurb: string;
   active: boolean;
+  /** Left out: per property, as before Portfolio existed. */
+  billingBasis?: BillingBasis;
+  /** per_account only: the retainer bands, lowest first. */
+  bands?: RetainerBand[];
 };
 
 export async function saveTier(db: Db, market: string, input: TierInput, actor: string): Promise<string> {
   if (!/^[a-z][a-z0-9_]{1,30}$/.test(input.key)) throw new AdminInputError("The tier's short code must be lower-case letters, for example essential.");
   if (input.name.trim().length < 2) throw new AdminInputError("The tier needs a name.");
-  if (!Number.isInteger(input.priceCents) || input.priceCents <= 0 || input.priceCents > 500_000) throw new AdminInputError("The monthly price must be more than zero.");
+  const basis: BillingBasis = input.billingBasis ?? "per_property";
+  if (basis !== "per_property" && basis !== "per_account") throw new AdminInputError("Choose how the membership is charged.");
+  const bands = basis === "per_account" ? (input.bands ?? []) : [];
+  if (basis === "per_account") {
+    const problem = bandProblem(bands);
+    if (problem) throw new AdminInputError(problem);
+  }
+  // A retainer's headline price is its lowest band: what a portfolio starts from.
+  const priceCents = basis === "per_account" ? lowestBand({ billingBasis: basis, bands, monthlyPriceCents: 0 })!.cents : input.priceCents;
+  if (!Number.isInteger(priceCents) || priceCents <= 0 || priceCents > 5_000_000) throw new AdminInputError("The monthly price must be more than zero.");
   if (!Number.isInteger(input.responseHours) || input.responseHours < 1 || input.responseHours > 168) throw new AdminInputError("The response promise must be between 1 and 168 hours.");
   if (!Number.isInteger(input.urgentResponseHours) || input.urgentResponseHours < 1 || input.urgentResponseHours > 48) throw new AdminInputError("The urgent response promise must be between 1 and 48 hours.");
   if (input.urgentIncludedPerMonth !== null && (!Number.isInteger(input.urgentIncludedPerMonth) || input.urgentIncludedPerMonth < 0)) {
     throw new AdminInputError("Included urgent call-outs per month must be a whole number, or left empty for no limit.");
   }
   const values = [
-    market, input.key, input.name.trim(), input.priceCents, input.responseHours, input.urgentResponseHours, input.urgentIncluded,
-    input.urgentIncludedPerMonth, input.quarterlyCheck, input.blurb.trim(), input.active,
+    market, input.key, input.name.trim(), priceCents, input.responseHours, input.urgentResponseHours, input.urgentIncluded,
+    input.urgentIncludedPerMonth, input.quarterlyCheck, input.blurb.trim(), input.active, basis, JSON.stringify(bands),
   ];
   let id = input.id ?? null;
   if (id) {
@@ -159,9 +173,32 @@ export async function saveTier(db: Db, market: string, input: TierInput, actor: 
     // The price members see is this price, and the payment company charges
     // what was agreed when they joined. Changing it under them would make the
     // two disagree, so a membership with members on it keeps its price.
-    const before = await db.query<{ price_cents: number }>("select price_cents from public.membership_tiers where market = $1 and id = $2::uuid", [market, id]);
+    const before = await db.query<{ price_cents: number; billing_basis: BillingBasis; bands: unknown }>(
+      "select price_cents, billing_basis, bands from public.membership_tiers where market = $1 and id = $2::uuid",
+      [market, id],
+    );
     if (before.length === 0) throw new AdminInputError("That tier does not exist.");
-    if (Number(before[0]!.price_cents) !== input.priceCents) {
+    const was = before[0]!;
+    const portfolios = await db.query<{ count: number }>(
+      "select count(*) as count from public.portfolios where tier_id = $1::uuid and status <> 'cancelled'",
+      [id],
+    );
+    const portfolioCount = Number(portfolios[0]?.count ?? 0);
+    if (was.billing_basis !== basis) {
+      const using = await db.query<{ count: number }>("select count(*) as count from public.properties where tier_id = $1::uuid and status <> 'cancelled'", [id]);
+      if (Number(using[0]?.count ?? 0) + portfolioCount > 0) {
+        throw new AdminInputError("This membership is in use, so how it is charged cannot change. Add a new membership instead, and untick \"Offered to new members\" on this one.");
+      }
+    }
+    // The same rule as a price: a Portfolio that is paying keeps the bands it joined on.
+    const shape = (list: RetainerBand[]) => JSON.stringify(list.map((band) => [Number(band.from), band.to === null ? null : Number(band.to), band.cents === null ? null : Number(band.cents)]));
+    const storedBands = (typeof was.bands === "string" ? JSON.parse(was.bands) : (was.bands ?? [])) as RetainerBand[];
+    if (basis === "per_account" && shape(storedBands) !== shape(bands) && portfolioCount > 0) {
+      throw new AdminInputError(
+        `${portfolioCount} ${portfolioCount === 1 ? "portfolio is" : "portfolios are"} on these bands. To change them, add a new Portfolio membership with the new bands and untick "Offered to new members" on this one. To change one manager's retainer, use their page under Owners.`,
+      );
+    }
+    if (Number(was.price_cents) !== priceCents && basis === "per_property") {
       const members = await db.query<{ count: number }>(
         "select count(*) as count from public.properties where tier_id = $1::uuid and status in ('active', 'past_due')",
         [id],
@@ -176,21 +213,22 @@ export async function saveTier(db: Db, market: string, input: TierInput, actor: 
     }
     const rows = await db.query(
       `update public.membership_tiers set key = $2, name = $3, price_cents = $4, response_hours = $5, urgent_response_hours = $6,
-              urgent_included = $7, urgent_included_per_month = $8, quarterly_check = $9, blurb = $10, active = $11
-        where market = $1 and id = $12::uuid returning id`,
+              urgent_included = $7, urgent_included_per_month = $8, quarterly_check = $9, blurb = $10, active = $11,
+              billing_basis = $12, bands = $13::jsonb
+        where market = $1 and id = $14::uuid returning id`,
       [...values, id],
     );
     if (rows.length === 0) throw new AdminInputError("That tier does not exist.");
   } else {
     const rows = await db.query<{ id: string }>(
-      `insert into public.membership_tiers (market, key, name, price_cents, response_hours, urgent_response_hours, urgent_included, urgent_included_per_month, quarterly_check, blurb, active, sort)
-       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, (select coalesce(max(sort), 0) + 10 from public.membership_tiers where market = $1))
+      `insert into public.membership_tiers (market, key, name, price_cents, response_hours, urgent_response_hours, urgent_included, urgent_included_per_month, quarterly_check, blurb, active, billing_basis, bands, sort)
+       values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13::jsonb, (select coalesce(max(sort), 0) + 10 from public.membership_tiers where market = $1))
        returning id`,
       values,
     );
     id = rows[0]!.id;
   }
-  await audit(db, { actor, action: "tier.saved", entity: "market", entityId: market, amount: input.priceCents, detail: { tier: input.key, ...input } });
+  await audit(db, { actor, action: "tier.saved", entity: "market", entityId: market, amount: priceCents, detail: { tier: input.key, ...input, priceCents, billingBasis: basis, bands } });
   return id!;
 }
 
@@ -302,9 +340,9 @@ export async function createMarket(db: Db, input: NewMarket, actor: string): Pro
     if (template) {
       for (const tier of await listTiers(tx, template.slug)) {
         await tx.query(
-          `insert into public.membership_tiers (market, key, name, price_cents, response_hours, urgent_response_hours, urgent_included, urgent_included_per_month, quarterly_check, blurb, sort, active)
-           values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)`,
-          [slug, tier.key, tier.name, tier.monthlyPriceCents, tier.responseHours, tier.urgentResponseHours, tier.urgentIncluded, tier.urgentIncludedPerMonth, tier.quarterlyCheck, tier.blurb, tier.sort, tier.active],
+          `insert into public.membership_tiers (market, key, name, price_cents, response_hours, urgent_response_hours, urgent_included, urgent_included_per_month, quarterly_check, blurb, sort, active, billing_basis, bands)
+           values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14::jsonb)`,
+          [slug, tier.key, tier.name, tier.monthlyPriceCents, tier.responseHours, tier.urgentResponseHours, tier.urgentIncluded, tier.urgentIncludedPerMonth, tier.quarterlyCheck, tier.blurb, tier.sort, tier.active, tier.billingBasis, JSON.stringify(tier.bands)],
         );
         copiedTiers += 1;
       }

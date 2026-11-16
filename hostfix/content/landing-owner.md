@@ -25,6 +25,10 @@ One place for every trade your holiday home needs. A checked local tradie on sit
 
 A tradie on site within 24 hours, at the fixed menu price. Need someone within 4 hours? Add {{urgent}} on the day, plus {{after_hours}} outside working hours. Both go to the tradie in full.
 
+### Managing 10 or more?
+
+Portfolio: one monthly retainer from {{portfolio_from}}, banded by how many properties, plus the same fixed job prices. Pilot on 10 properties first.
+
 ---
 
 Jobs are charged at the fixed price when the job is done, GST included. Small parts are in the price, and bigger parts are charged at cost. Not on the menu? {{callout}} for a tradie to come and look, then a quote. Nothing over {{approval_limit}} starts without your yes.

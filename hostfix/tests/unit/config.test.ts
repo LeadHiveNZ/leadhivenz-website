@@ -22,10 +22,10 @@ describe("markets", () => {
     expect(market.taxRate).toBeLessThan(0.5);
   });
 
-  it.each(markets)("$name sells one membership, priced in whole cents, with urgent never included", (market) => {
-    // DECISIONS.md: there is one membership. Urgent response is an add-on the owner pays for, because a
+  it.each(markets)("$name sells two tiers, Essential per property and Portfolio per account, priced in whole cents, with urgent never included", (market) => {
+    // DECISIONS.md: two tiers, one fee. Urgent response is an add-on the owner pays for, because a
     // membership that included it cost more to deliver than it charged.
-    expect(market.tiers.map((t) => t.key)).toEqual(["essential"]);
+    expect(market.tiers.map((t) => [t.key, t.billingBasis])).toEqual([["essential", "per_property"], ["portfolio", "per_account"]]);
     for (const tier of market.tiers) {
       expect(Number.isInteger(tier.monthlyPriceCents)).toBe(true);
       expect(tier.monthlyPriceCents).toBeGreaterThan(0);
@@ -36,9 +36,16 @@ describe("markets", () => {
     expect(market.foundingDeposit.amountCents).toBeGreaterThanOrEqual(100);
   });
 
-  it("the launch market is Queenstown: Essential at NZ$99, on site in 24 hours, 4 hours when urgent", () => {
+  it("the launch market is Queenstown: Essential at NZ$99, Portfolio from NZ$600, on site in 24 hours, 4 hours when urgent", () => {
     expect(launchMarket).toMatchObject({ slug: "queenstown", country: "NZ", currency: "NZD", taxRate: 0.15 });
-    expect(launchMarket.tiers.map((t) => [t.key, t.monthlyPriceCents, t.responseHours, t.urgentResponseHours])).toEqual([["essential", 9900, 24, 4]]);
+    expect(launchMarket.tiers.map((t) => [t.key, t.monthlyPriceCents, t.responseHours, t.urgentResponseHours])).toEqual([["essential", 9900, 24, 4], ["portfolio", 60000, 24, 4]]);
+    // Portfolio's bands, from DECISIONS.md (2026-11-17): 10-24 $600, 25-49 $900, 50-99 $1,200, 100+ by arrangement.
+    expect(launchMarket.tiers[1]!.bands).toEqual([
+      { from: 10, to: 24, cents: 60000 },
+      { from: 25, to: 49, cents: 90000 },
+      { from: 50, to: 99, cents: 120000 },
+      { from: 100, to: null, cents: null },
+    ]);
     expect(findMarket("queenstown")).toBe(launchMarket);
     expect(findMarket("atlantis")).toBeUndefined();
   });

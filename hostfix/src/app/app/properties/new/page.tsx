@@ -9,13 +9,14 @@ import { getDb } from "@/lib/db";
 import { tierLine } from "@/lib/markets/display";
 import { listMarkets, listTiers } from "@/lib/markets/store";
 import { formatMoney } from "@/lib/money";
+import { openPortfolio } from "@/lib/properties/portfolio";
 
 export const metadata: Metadata = { title: "Add a property" };
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 export default async function NewPropertyPage({ searchParams }: { searchParams: SearchParams }) {
-  await requireOwner("/app/properties/new");
+  const viewer = await requireOwner("/app/properties/new");
   const params = await searchParams;
   const db = await getDb();
   const live = (await listMarkets(db)).filter((market) => market.stage === "live");
@@ -36,7 +37,11 @@ export default async function NewPropertyPage({ searchParams }: { searchParams: 
   }
 
   const market = live.find((candidate) => candidate.slug === params.market) ?? live[0]!;
-  const tiers = (await listTiers(db, market.slug)).filter((tier) => tier.active);
+  const offered = (await listTiers(db, market.slug)).filter((tier) => tier.active);
+  // Per-property memberships first. Portfolio is for the whole account, so it is offered as its own choice.
+  const tiers = offered.filter((tier) => tier.billingBasis === "per_property");
+  const portfolioOffer = offered.find((tier) => tier.billingBasis === "per_account") ?? null;
+  const portfolio = await openPortfolio(db, viewer.ownerId, market.slug);
   const preferred = tiers.find((tier) => tier.id === params.tier) ?? tiers[0];
 
   return (
@@ -78,21 +83,43 @@ export default async function NewPropertyPage({ searchParams }: { searchParams: 
             placeholder="Lockbox by the front door, code 4821. Park on the street. Water shut-off is under the kitchen sink."
             hint="Only shown to the tradie who takes a job, never before."
           />
-          <RadioCards
-            name="tierId"
-            legend="Choose a membership"
-            defaultValue={preferred?.id}
-            options={tiers.map((tier, index) => ({
-              value: tier.id,
-              title: tier.name,
-              detail: tierLine(tier, market),
-              right: `${formatMoney(tier.monthlyPriceCents, market.currency)} a month`,
-              badge: index === 1 ? "Most cover" : undefined,
-            }))}
-          />
-          <p className="text-sm text-muted">
-            Nothing is charged yet. On the next screen you start the membership and add your card. Jobs are charged at the fixed price when they are done.
-          </p>
+          {portfolio ? (
+            <>
+              <input type="hidden" name="tierId" value={portfolio.tierId} />
+              <p className="rounded-xl bg-tint px-4 py-3 text-ink">
+                This property joins your Portfolio. There is nothing to pay for it on its own: your one monthly retainer covers it
+                {portfolio.status === "active" || portfolio.status === "past_due" ? " from today." : " once you start the retainer on the Billing page."}
+              </p>
+              <p className="text-sm text-muted">Your retainer follows how many properties you have, from the next monthly payment. Jobs are charged at the fixed price when they are done.</p>
+            </>
+          ) : (
+            <>
+              <RadioCards
+                name="tierId"
+                legend="Choose a membership"
+                defaultValue={preferred?.id}
+                options={[
+                  ...tiers.map((tier) => ({
+                    value: tier.id,
+                    title: tier.name,
+                    detail: tierLine(tier, market),
+                    right: `${formatMoney(tier.monthlyPriceCents, market.currency)} a month`,
+                  })),
+                  ...(portfolioOffer
+                    ? [{
+                        value: portfolioOffer.id,
+                        title: `${portfolioOffer.name}: for 10 or more properties`,
+                        detail: "One monthly retainer for your whole account, banded by how many properties you have. Every property you add after this joins it.",
+                        right: `from ${formatMoney(portfolioOffer.monthlyPriceCents, market.currency)} a month`,
+                      }]
+                    : []),
+                ]}
+              />
+              <p className="text-sm text-muted">
+                Nothing is charged yet. On the next screen you start the membership and add your card. Jobs are charged at the fixed price when they are done.
+              </p>
+            </>
+          )}
           <SubmitButton pendingLabel="Saving..." className="w-full">
             Save and continue
           </SubmitButton>

@@ -66,26 +66,79 @@ The pilot is also how the prices get tested. Every price in the menu is
 researched rather than observed, and ten properties for 60 days produces real
 job costs before the other 53 are priced.
 
-### Code still to change
+### What is built (the app bills Portfolio itself)
 
-`MembershipTier` in `config/markets.ts` documents `monthlyPriceCents` as
-"Price per property, per month". Portfolio does not fit that, so this is not a
-matter of adding a third entry to `tiers`:
+- **A tier says how it is charged.** `billingBasis` on `MembershipTier`
+  (`config/markets.ts`) is `per_property` (Essential) or `per_account`
+  (Portfolio), and a per-account tier carries its bands. Both are columns on
+  `membership_tiers` (migration `20261119000000_portfolio.sql`), editable on
+  Admin > Markets > the market > Memberships, with plain-language labels. The
+  bands are checked there: lowest first, no gaps or overlaps, only the top band
+  open-ended or "by arrangement". Queenstown has Portfolio with the bands above.
+- **The membership belongs to the account.** A new `portfolios` table holds the
+  one retainer: the subscription, the band it is billed at and how many
+  properties that was worked out from. Each property under it points at it and
+  keeps the portfolio's status, so jobs, guest reports and cover checks are
+  unchanged. Essential is untouched: still one subscription per property.
+- **The owner picks Portfolio once**, on the Billing page or as the membership
+  for a new property. Properties not yet paying for themselves join it, and so
+  does every property added after. There is no per-property card page. The
+  retainer cannot start below 10 properties ("Portfolio is for 10 or more
+  properties"). The Billing page shows the one retainer, the band, the number
+  of properties and the next payment date.
+- **The band follows the property count.** Adding or taking a property off
+  re-checks it (`bandFor` in `src/lib/markets/bands.ts`, `rebandPortfolio` in
+  `src/lib/properties/portfolio.ts`). A change goes to Stripe for the next
+  monthly payment, never a part-month charge, and is written to the audit log.
+- **Jobs are the same.** Menu price, surcharges, the 15% fee, the owner's card
+  charged and the tradie paid, exactly as for Essential.
+- **The numbers count each retainer once.** Monthly membership income is
+  per-property members times their price, plus each Portfolio retainer once.
+- **Content:** `{{portfolio_from}}` (the lowest band) and a second "What it
+  costs" card for managers on the owner page.
 
-- a tier needs a billing basis — per property or per account — and the
-  billing code needs to branch on it
-- a Portfolio account owns many properties, so whatever a membership is
-  attached to has to be able to hold a portfolio rather than one address
-- the bands need a lookup from property count to retainer, re-evaluated when a
-  manager adds or removes properties mid-term
-- `src/lib/content.ts` carries a `tier: "essential" | "priority"` union that is
-  already wrong (see the Priority decision below) and will need "portfolio"
-- the pricing page shows per-property pricing and needs a second panel
+### What is still done by a person
 
-Until all of that exists, a Portfolio customer is billed by hand against the
-bands above, and the band they are on is written here:
+- **100 or more properties is priced by arrangement.** The app never sets that
+  price. Starting a Portfolio of 100+ is refused with a message, and the queue
+  gets a "Portfolio price needs a person" item. An account that grows to 100
+  keeps paying the 50-99 band until the admin sets the agreed retainer on the
+  owner's page under Owners (it then takes effect from the next payment).
+- **Fewer than 10 properties.** An account that drops below 10 stays on the
+  lowest band and goes to the queue. Nobody is moved to Essential
+  automatically.
+- **The 60-day pilot.** A Portfolio with exactly 10 properties is billed at the
+  10-24 band, which is the pilot. The 60 days themselves are not tracked by the
+  app: note the start date and the review date below, and talk to the manager
+  before day 60.
+- **Missed promises on a Portfolio property** are not credited automatically
+  (see "Owner decisions still outstanding").
 
-<!-- Portfolio customers on manual billing: add each one here with the band. -->
+Portfolio pilots under way (manager, start date, review date):
+
+<!-- Add each pilot here: name, the date the retainer started, the date 60 days on. -->
+
+### Settled in the build, to confirm with the founder
+
+These were not covered by the decision. Each was the simplest reading, and
+each can be changed:
+
+- Taking a property off a Portfolio stops its cover at once (there is no
+  part-month refund, as the retainer is for the account). The band drops from
+  the next payment.
+- An owner already paying Essential for a property keeps that subscription
+  when they pick Portfolio. Only properties not yet paying join. To move one
+  across, cancel its Essential membership; once the month it paid for has run
+  out, add it to the Portfolio from its page.
+- The founding deposit is never taken off a Portfolio retainer (Portfolio has
+  no discount).
+- Referral rewards are not paid for properties on a Portfolio (the reward
+  counts a property's own monthly payments, and a Portfolio property has none).
+- A market that offers no Portfolio shows an `[EDIT]` marker where
+  `{{portfolio_from}}` would be, so the gap is counted on the admin screen.
+- The first draft of this entry listed a `tier: "essential" | "priority"`
+  union in `src/lib/content.ts` to fix. It no longer exists, so nothing needed
+  changing there.
 
 ---
 
@@ -311,6 +364,12 @@ cannot be pre-authorised means the job never gets offered.
 
 Not mine to make and not the code's.
 
+- **What a missed promise on a Portfolio property is worth.** Essential credits
+  that month's membership for the property. A Portfolio property has no price
+  of its own, and a twelfth of the retainer, a share per property or a flat
+  amount are all possible. Until this is decided the app credits nothing
+  automatically on a Portfolio property and puts "Missed window on a Portfolio
+  property" in the queue for a person to decide and credit by hand.
 - **GST: principal or agent.** Whether the platform charges owners $235 and
   pays a tradie $200 as a principal, or collects $235 on the tradie's behalf
   and keeps $35 as commission. It changes what goes on every invoice and what

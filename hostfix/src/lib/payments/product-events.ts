@@ -6,6 +6,7 @@ import { baseUrl } from "@/lib/env";
 import { formatMoney } from "@/lib/money";
 import { raiseException } from "@/lib/ops/exceptions";
 import { findOwnerByCustomer, saveBilling } from "@/lib/owners/service";
+import { activatePortfolio } from "@/lib/properties/portfolio";
 import { activateMembership, endMembership, recordMembershipPaymentFailed, recordRenewal } from "@/lib/properties/service";
 import type { StripeMessage } from "./deposit";
 import { stripeClient, type StripeAccount } from "./stripe";
@@ -96,6 +97,14 @@ export async function handleProductMessage(db: Db, message: StripeMessage, accou
       if (session.mode !== "subscription" || session.metadata?.hostfix_purpose !== "membership") return null;
       const membership = await (deps.membershipFromCheckout ?? membershipFromCheckout)(account, session.id);
       if (!membership) return { handled: true, outcome: "membership_not_paid" };
+      if (membership.portfolioId) {
+        const portfolio = await activatePortfolio(db, {
+          portfolioId: membership.portfolioId, provider: "stripe", subscriptionId: membership.subscriptionId, periodEnd: membership.periodEnd,
+          invoice: membership.invoice, card: membership.card, customerId: membership.customerId,
+        });
+        return { handled: true, outcome: portfolio ? "portfolio_started" : "portfolio_missing" };
+      }
+      if (!membership.propertyId) return { handled: true, outcome: "property_missing" };
       const property = await activateMembership(db, {
         propertyId: membership.propertyId, provider: "stripe", subscriptionId: membership.subscriptionId, periodEnd: membership.periodEnd,
         invoice: membership.invoice, card: membership.card, customerId: membership.customerId,
@@ -142,7 +151,23 @@ export async function handleProductMessage(db: Db, message: StripeMessage, accou
           returning id`,
         [subscription.id, subscription.cancel_at_period_end === true || subscription.cancel_at != null, end ? new Date(end * 1000).toISOString() : null],
       );
-      return { handled: true, outcome: rows.length > 0 ? "membership_updated" : "nothing_to_change" };
+      // The same for a Portfolio retainer, and the properties on it.
+      const retainers = await db.query<{ id: string }>(
+        `update public.portfolios set cancel_at_period_end = $2,
+                current_period_end = coalesce($3::timestamptz, current_period_end)
+          where subscription_provider = 'stripe' and subscription_id = $1 and status <> 'cancelled'
+            and (cancel_at_period_end is distinct from $2 or ($3::timestamptz is not null and current_period_end is distinct from $3::timestamptz))
+          returning id`,
+        [subscription.id, subscription.cancel_at_period_end === true || subscription.cancel_at != null, end ? new Date(end * 1000).toISOString() : null],
+      );
+      for (const retainer of retainers) {
+        await db.query(
+          `update public.properties set cancel_at_period_end = p.cancel_at_period_end, current_period_end = p.current_period_end
+             from public.portfolios p where p.id = $1::uuid and properties.portfolio_id = p.id and properties.status <> 'cancelled'`,
+          [retainer.id],
+        );
+      }
+      return { handled: true, outcome: rows.length + retainers.length > 0 ? "membership_updated" : "nothing_to_change" };
     }
 
     // The owner's bank has reversed a payment. This has a deadline, so it goes straight to the queue.

@@ -27,6 +27,7 @@ import { formatMoney } from "@/lib/money";
 import { getBilling, unusedDeposit } from "@/lib/owners/service";
 import { paymentsProblem } from "@/lib/payments";
 import { membershipLabel } from "@/lib/properties/display";
+import { getPortfolio, openPortfolio } from "@/lib/properties/portfolio";
 import { addressLine, getProperty } from "@/lib/properties/service";
 import { qrSvg } from "@/lib/qr";
 import { formatDate } from "@/lib/time";
@@ -46,8 +47,13 @@ export default async function PropertyPage({ params, searchParams }: { params: P
   const market = await getMarket(db, property.market);
   if (!market) notFound();
 
-  const tiers = (await listTiers(db, market.slug)).filter((tier) => tier.active || tier.id === property.tierId);
-  const tier = tiers.find((candidate) => candidate.id === property.tierId) ?? null;
+  const allTiers = (await listTiers(db, market.slug)).filter((tier) => tier.active || tier.id === property.tierId);
+  const tier = allTiers.find((candidate) => candidate.id === property.tierId) ?? null;
+  // Only per-property memberships are chosen here. Portfolio is chosen once for the account, on the Billing page.
+  const tiers = allTiers.filter((candidate) => candidate.billingBasis === "per_property");
+  // The account's Portfolio, if the owner has one in this area: this property's cover comes from it.
+  const portfolio = property.portfolioId ? await getPortfolio(db, viewer.ownerId, property.portfolioId) : await openPortfolio(db, viewer.ownerId, market.slug);
+  const onPortfolio = Boolean(property.portfolioId);
   const billing = await getBilling(db, viewer.ownerId, market.country);
   const deposit = property.status === "setup" || property.status === "cancelled" ? await unusedDeposit(db, viewer.ownerId, market.currency) : null;
   const jobs = await listJobsForOwner(db, viewer.ownerId, { propertyId: property.id, limit: 6 });
@@ -67,7 +73,7 @@ export default async function PropertyPage({ params, searchParams }: { params: P
 
       {query.added && property.status === "setup" && (
         <Notice tone="good" title="Saved. One step left">
-          Start the membership below and this property is covered.
+          {portfolio ? "This property is on your Portfolio. Start the retainer on the Billing page and it is covered." : "Start the membership below and this property is covered."}
         </Notice>
       )}
       {query.member && member && (
@@ -75,7 +81,12 @@ export default async function PropertyPage({ params, searchParams }: { params: P
           Next: print the QR card for the property, and send the team link to your cleaner. Both are just below.
         </Notice>
       )}
-      {query.cancelled && (
+      {query.cancelled && property.portfolioId && (
+        <Notice tone="good" title="Taken off your Portfolio">
+          No tradies can be sent here now. Your retainer follows the new number of properties from the next monthly payment.
+        </Notice>
+      )}
+      {query.cancelled && !property.portfolioId && (
         <Notice tone="good" title="Membership cancelled">
           {property.currentPeriodEnd && property.status === "active"
             ? `The property stays covered until ${formatDate(property.currentPeriodEnd, market.timezone)}. No further payments will be taken.`
@@ -88,8 +99,34 @@ export default async function PropertyPage({ params, searchParams }: { params: P
         </Notice>
       )}
 
+      {/* ON A PORTFOLIO, NOT COVERED: the retainer covers it, nothing to pay here */}
+      {!member && portfolio && (
+        <Card className="border-brand/30 sm:p-6">
+          <SectionTitle>On your Portfolio</SectionTitle>
+          {portfolio.status === "active" || portfolio.status === "past_due" ? (
+            <ActionForm action={beginMembership} className="space-y-4">
+              <input type="hidden" name="propertyId" value={property.id} />
+              <p className="text-muted">
+                {onPortfolio && property.status === "cancelled" ? "This property was taken off your Portfolio." : "Add this property to your Portfolio."} It is covered from today, with nothing to pay for it on its own. Your retainer
+                follows the new number of properties from the next monthly payment.
+              </p>
+              <SubmitButton pendingLabel="Adding..." className="w-full">
+                {onPortfolio && property.status === "cancelled" ? "Put it back on my Portfolio" : "Add it to my Portfolio"}
+              </SubmitButton>
+            </ActionForm>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-muted">There is nothing to pay for this property on its own. It is covered once you start your Portfolio retainer.</p>
+              <Link href="/app/billing" className={buttonClass}>
+                Go to Billing
+              </Link>
+            </div>
+          )}
+        </Card>
+      )}
+
       {/* NOT A MEMBER YET: starting the membership comes first */}
-      {!member && (
+      {!member && !portfolio && (
         <Card className="border-brand/30 sm:p-6">
           <SectionTitle>{property.status === "cancelled" ? "Start the membership again" : "Start the membership"}</SectionTitle>
           {notReady ? (
@@ -230,7 +267,12 @@ export default async function PropertyPage({ params, searchParams }: { params: P
           )}
           <Facts
             rows={[
-              { label: "Plan", value: tier ? `${tier.name}, ${money(tier.monthlyPriceCents)} a month` : "None" },
+              {
+                label: "Plan",
+                value: onPortfolio
+                  ? `${tier?.name ?? "Portfolio"}: covered by your one monthly retainer`
+                  : tier ? `${tier.name}, ${money(tier.monthlyPriceCents)} a month` : "None",
+              },
               {
                 label: property.cancelAtPeriodEnd ? "Covered until" : "Next payment",
                 value: property.currentPeriodEnd ? formatDate(property.currentPeriodEnd, market.timezone) : "Soon",
@@ -238,8 +280,32 @@ export default async function PropertyPage({ params, searchParams }: { params: P
               ...(cardLine ? [{ label: "Card", value: cardLine }] : []),
             ]}
           />
-          {tier && <p className="mt-2 text-sm text-muted">{tierLine(tier, market)}</p>}
-          {!property.cancelAtPeriodEnd && (
+          {tier && !onPortfolio && <p className="mt-2 text-sm text-muted">{tierLine(tier, market)}</p>}
+          {onPortfolio && (
+            <p className="mt-2 text-sm text-muted">
+              The retainer and the band you are on are on the{" "}
+              <Link href="/app/billing" className="font-semibold text-brand underline underline-offset-2">
+                Billing page
+              </Link>
+              .
+            </p>
+          )}
+          {onPortfolio && !property.cancelAtPeriodEnd && (
+            <div className="mt-4">
+              <Reveal label="Take off my Portfolio" tone="alert">
+                <ActionForm action={endMembership} className="space-y-3">
+                  <input type="hidden" name="propertyId" value={property.id} />
+                  <p className="text-muted">
+                    It stops being covered now: no tradies can be sent here and the report links stop working. Your retainer follows the new number of properties from the next monthly payment. There is no part-month refund.
+                  </p>
+                  <SubmitButton variant="danger" pendingLabel="Taking it off...">
+                    Yes, take it off my Portfolio
+                  </SubmitButton>
+                </ActionForm>
+              </Reveal>
+            </div>
+          )}
+          {!onPortfolio && !property.cancelAtPeriodEnd && (
             <div className="mt-4 space-y-2.5">
               {tiers.filter((candidate) => candidate.active && candidate.id !== property.tierId).length > 0 && (
                 <Reveal label="Change plan">

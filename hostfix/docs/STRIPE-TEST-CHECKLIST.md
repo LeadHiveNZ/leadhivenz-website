@@ -66,6 +66,16 @@ three-digit code work with them.
       deposit on the thank-you page. Set the market to "Live" again.
 - [ ] Join at `/sign-up` with that same email. *Should happen:* the first month's charge is reduced by the deposit.
 
+**A7. A Portfolio retainer, and its band changing.**
+- [ ] As a new owner, add a property and choose **Portfolio: for 10 or more properties**. Add nine more
+      (they join it with no card page). Billing > **Start the retainer**, and pay on Stripe's page.
+- [ ] *Should happen:* Billing shows NZ$600 a month (10 to 24 properties). Stripe shows ONE subscription
+      for the account at NZ$600, not ten.
+- [ ] Add properties until there are 25. *Should happen:* Stripe shows the subscription's price as NZ$900
+      with no part-month charge on the upcoming invoice; the audit log shows "portfolio.band_changed".
+- [ ] Take one property off (its page > **Take off my Portfolio**). *Should happen:* the price goes back
+      to NZ$600 in Stripe, again with no part-month charge.
+
 ## B. A job, start to finish
 
 **B1. A tradie sets up their bank details.**

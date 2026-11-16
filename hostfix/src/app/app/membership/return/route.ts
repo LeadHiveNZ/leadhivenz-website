@@ -5,6 +5,7 @@ import { getDb } from "@/lib/db";
 import { getMarket } from "@/lib/markets/store";
 import { stripeAccount } from "@/lib/payments/stripe";
 import { membershipFromCheckout } from "@/lib/payments/stripe-gateway";
+import { activatePortfolio, getPortfolio } from "@/lib/properties/portfolio";
 import { activateMembership, getProperty } from "@/lib/properties/service";
 
 /**
@@ -17,9 +18,36 @@ export async function GET(request: NextRequest) {
   const propertyId = request.nextUrl.searchParams.get("property") ?? "";
   const sessionId = request.nextUrl.searchParams.get("session_id");
 
+  const portfolioId = request.nextUrl.searchParams.get("portfolio");
   const viewer = await currentViewer();
-  if (!viewer?.ownerId) return to(`/sign-in?next=${encodeURIComponent(`/app/properties/${propertyId}`)}`);
+  if (!viewer?.ownerId) return to(`/sign-in?next=${encodeURIComponent(portfolioId ? "/app/billing" : `/app/properties/${propertyId}`)}`);
   const db = await getDb();
+
+  // A Portfolio retainer: one payment for the whole account.
+  if (portfolioId) {
+    const portfolio = await getPortfolio(db, viewer.ownerId, portfolioId);
+    if (!portfolio) return to("/app/billing");
+    if (portfolio.status === "active") return to("/app/billing?member=1");
+    const market = await getMarket(db, portfolio.market);
+    const stripe = market ? stripeAccount(market.country) : null;
+    if (sessionId && stripe && "account" in stripe) {
+      try {
+        const membership = await membershipFromCheckout(stripe.account, sessionId);
+        // Only this owner's own portfolio, whatever the link says.
+        if (membership && membership.portfolioId === portfolio.id) {
+          const activated = await activatePortfolio(db, {
+            portfolioId: portfolio.id, provider: "stripe", subscriptionId: membership.subscriptionId, periodEnd: membership.periodEnd,
+            invoice: membership.invoice, card: membership.card, customerId: membership.customerId,
+          });
+          await sendQueued(db);
+          if (activated) return to("/app/billing?member=1");
+        }
+      } catch (error) {
+        console.error("[membership] reading the finished Portfolio card page failed:", error instanceof Error ? error.message : error);
+      }
+    }
+    return to("/app/billing?pending=1");
+  }
   const property = await getProperty(db, viewer.ownerId, propertyId);
   if (!property) return to("/app");
   if (property.status === "active") return to(`/app/properties/${property.id}?member=1`);

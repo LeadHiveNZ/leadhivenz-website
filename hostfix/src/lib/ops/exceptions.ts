@@ -25,7 +25,9 @@ export type ExceptionKind =
   | "referral_due"
   | "chargeback"
   | "credit_failed"
-  | "needs_review";
+  | "needs_review"
+  /** A Portfolio's band needs a person: fewer than 10 properties, 100 and more, or a price that could not be changed. */
+  | "portfolio_band";
 
 /** The ones worth a text to the founder as well as an email. */
 const URGENT: ExceptionKind[] = ["nobody_accepted", "missed_window", "dispute", "chargeback"];
@@ -196,13 +198,14 @@ export const EXCEPTION_LABELS: Record<ExceptionKind, string> = {
   chargeback: "Bank dispute (chargeback)",
   credit_failed: "Credit could not be applied",
   needs_review: "Needs a look",
+  portfolio_band: "Portfolio price needs a person",
 };
 
 /** One line on what to do about each kind. The runbook (RUNBOOK.md) has the longer version. */
 export const EXCEPTION_ACTIONS: Record<ExceptionKind, string> = {
   nobody_accepted: "Ring a tradie who does this trade. If they say yes, assign them on the job page. Or start the offers again.",
   at_risk: "The promised time is close. Ring the tradie and check they are on their way.",
-  missed_window: "The month's membership has already been credited. Ring the owner to say sorry, and make sure a tradie is going.",
+  missed_window: "On Essential the month's membership has already been credited. On a Portfolio property nothing was credited: ask the admin what to credit. Ring the owner to say sorry, and make sure a tradie is going.",
   dispute: "Read what the owner said, look at the photos, ring both sides, then settle it on the job page.",
   payment_failed: "The owner's card was declined. It is tried again each day. Ask them to update their card, then try again on the job page.",
   payout_failed: "The tradie could not be paid. Ask them to check their bank details in their profile, then try again on the job page.",
@@ -213,4 +216,5 @@ export const EXCEPTION_ACTIONS: Record<ExceptionKind, string> = {
   chargeback: "The owner's bank has reversed a payment. Tell the admin today: the bank sets a deadline to answer.",
   credit_failed: "A credit could not be passed to the payment company. Tell the admin.",
   needs_review: "Something happened outside the app that the app cannot sort out by itself. Read the note and tell the admin.",
+  portfolio_band: "A manager's Portfolio retainer needs a decision. Tell the admin: they agree the price with the manager and set it on the manager's page under Owners.",
 };

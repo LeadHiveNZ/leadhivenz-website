@@ -12,6 +12,10 @@ import { raiseException } from "@/lib/ops/exceptions";
 import { getBilling, getOwner, saveBilling, unusedDeposit } from "@/lib/owners/service";
 import type { CardSummary, InvoiceSummary, PaymentsGateway, Provider } from "@/lib/payments/gateway";
 import { monthKey } from "@/lib/time";
+import {
+  endPortfolioIn, ensurePortfolioIn, joinPortfolio, lockPortfolioBySubscription, openPortfolio, portfolioPaymentFailedIn, rebandOrFlag,
+  removeFromPortfolio, renewPortfolioIn,
+} from "./portfolio";
 
 /**
  * PROPERTIES AND THEIR MEMBERSHIPS.
@@ -47,6 +51,8 @@ export type Property = {
   guestAutoDispatch: boolean;
   spendLimitCents: number | null;
   referrerId: string | null;
+  /** Set when the property is under a Portfolio account: its cover comes from the one retainer, not its own membership. */
+  portfolioId: string | null;
 };
 
 type PropertyRow = {
@@ -55,6 +61,7 @@ type PropertyRow = {
   status: PropertyStatus; subscription_provider: Provider | null; subscription_id: string | null;
   current_period_end: Date | null; cancel_at_period_end: boolean; member_since: Date | null; cancelled_at: Date | null;
   team_token: string; guest_token: string; guest_auto_dispatch: boolean; spend_limit_cents: number | null; referrer_id: string | null;
+  portfolio_id: string | null;
 };
 
 const date = (value: Date | null) => (value ? new Date(value) : null);
@@ -67,6 +74,7 @@ export function rowToProperty(row: PropertyRow): Property {
     subscriptionId: row.subscription_id, currentPeriodEnd: date(row.current_period_end), cancelAtPeriodEnd: row.cancel_at_period_end,
     memberSince: date(row.member_since), cancelledAt: date(row.cancelled_at), teamToken: row.team_token, guestToken: row.guest_token,
     guestAutoDispatch: row.guest_auto_dispatch, spendLimitCents: row.spend_limit_cents, referrerId: row.referrer_id,
+    portfolioId: row.portfolio_id ?? null,
   };
 }
 
@@ -104,11 +112,20 @@ async function tierForMarket(db: Db, tierId: string, market: string): Promise<Ti
   return tier;
 }
 
-export async function createProperty(db: Db, ownerId: string, input: PropertyInput): Promise<Property> {
-  return db.tx(async (tx) => {
+/**
+ * Adds a property. If the owner has a Portfolio in that market (or picks the
+ * Portfolio membership here, which sets one up for the whole account), the
+ * property joins it: no membership of its own, covered at once if the
+ * retainer is already paid, and the band is checked again. The gateway is
+ * needed for that check to change the retainer; without one a person is told.
+ */
+export async function createProperty(db: Db, ownerId: string, input: PropertyInput, gateway: PaymentsGateway | null = null): Promise<Property> {
+  const created = await db.tx(async (tx) => {
     const market = await getMarket(tx, input.market);
     if (!market || market.stage !== "live") throw new PropertyError("We are not taking new properties in that area yet.");
-    await tierForMarket(tx, input.tierId, market.slug);
+    const chosen = await tierForMarket(tx, input.tierId, market.slug);
+    const portfolio = chosen.billingBasis === "per_account" ? await ensurePortfolioIn(tx, ownerId, market.slug, chosen) : await openPortfolio(tx, ownerId, market.slug);
+    const covered = portfolio && (portfolio.status === "active" || portfolio.status === "past_due") ? portfolio.status : null;
 
     let referrerId: string | null = null;
     if (input.referralCode) {
@@ -116,20 +133,28 @@ export async function createProperty(db: Db, ownerId: string, input: PropertyInp
       referrerId = found[0]?.id ?? null;
     }
 
+    const at = now().toISOString();
     const rows = await tx.query<PropertyRow>(
       `insert into public.properties
-         (created_at, owner_id, market, name, address_line1, address_line2, suburb, postcode, access_notes, tier_id, team_token, guest_token, referrer_id)
-       values ($1::timestamptz, $2::uuid, $3, $4, $5, $6, $7, $8, $9, $10::uuid, $11, $12, $13::uuid)
+         (created_at, owner_id, market, name, address_line1, address_line2, suburb, postcode, access_notes, tier_id, team_token, guest_token, referrer_id,
+          portfolio_id, status, member_since)
+       values ($1::timestamptz, $2::uuid, $3, $4, $5, $6, $7, $8, $9, $10::uuid, $11, $12, $13::uuid, $14::uuid, $15, $16::timestamptz)
        returning *`,
       [
-        now().toISOString(), ownerId, market.slug, input.name.trim(), input.addressLine1.trim(), input.addressLine2?.trim() || null,
-        input.suburb.trim(), input.postcode.trim(), input.accessNotes.trim(), input.tierId, randomToken(20), randomToken(20), referrerId,
+        at, ownerId, market.slug, input.name.trim(), input.addressLine1.trim(), input.addressLine2?.trim() || null,
+        input.suburb.trim(), input.postcode.trim(), input.accessNotes.trim(), portfolio?.tierId ?? input.tierId, randomToken(20), randomToken(20), referrerId,
+        portfolio?.id ?? null, covered ?? "setup", covered ? at : null,
       ],
     );
     const property = rowToProperty(rows[0]!);
-    await audit(tx, { actor: `owner:${ownerId}`, action: "property.created", entity: "property", entityId: property.id, detail: { market: market.slug, referred: Boolean(referrerId) } });
-    return property;
+    await audit(tx, {
+      actor: `owner:${ownerId}`, action: "property.created", entity: "property", entityId: property.id,
+      detail: { market: market.slug, referred: Boolean(referrerId), portfolio: portfolio?.id ?? null },
+    });
+    return { property, rebandPortfolio: covered ? portfolio!.id : null };
   });
+  if (created.rebandPortfolio) await rebandOrFlag(db, gateway, created.rebandPortfolio, `owner:${ownerId}`);
+  return created.property;
 }
 
 export type PropertyPatch = Partial<Pick<PropertyInput, "name" | "addressLine1" | "addressLine2" | "suburb" | "postcode" | "accessNotes">> & {
@@ -231,12 +256,22 @@ export async function startMembership(
   const owner = await getOwner(db, input.ownerId);
   if (!property || !owner) return { kind: "error", message: "We could not find that property." };
   if (property.status === "active" || property.status === "past_due") return { kind: "active", property };
+
+  // An account on Portfolio: the property joins the one retainer instead of paying for itself.
+  const portfolio = await openPortfolio(db, input.ownerId, property.market);
+  if (portfolio) {
+    await joinPortfolio(db, gateway, input.ownerId, property.id, portfolio);
+    const joined = (await getProperty(db, input.ownerId, property.id))!;
+    if (joined.status === "active" || joined.status === "past_due") return { kind: "active", property: joined };
+    return { kind: "error", message: "This property is on your Portfolio. Start the Portfolio retainer from the Billing page to cover it." };
+  }
   if (!property.tierId) return { kind: "error", message: "Choose a membership for this property first." };
 
   const market = await getMarket(db, property.market);
   const tier = await getTier(db, property.tierId);
   if (!market || !tier) return { kind: "error", message: "That membership is not available any more. Choose another." };
   if (market.stage !== "live") return { kind: "error", message: "We are not taking new members in that area right now." };
+  if (tier.billingBasis === "per_account") return { kind: "error", message: "Portfolio is chosen once for your whole account, on the Billing page." };
 
   const existing = await getBilling(db, input.ownerId, market.country);
   const usable = existing && existing.provider === gateway.provider ? existing : null;
@@ -383,7 +418,12 @@ async function findBySubscription(db: Db, provider: Provider, subscriptionId: st
 export async function recordRenewal(db: Db, input: { provider: Provider; subscriptionId: string; invoice: InvoiceSummary }): Promise<boolean> {
   return db.tx(async (tx) => {
     const property = await findBySubscription(tx, input.provider, input.subscriptionId);
-    if (!property || !property.tierId) return false;
+    if (!property) {
+      // Not a property's own membership: perhaps a Portfolio retainer.
+      const portfolio = await lockPortfolioBySubscription(tx, input.provider, input.subscriptionId);
+      return portfolio ? renewPortfolioIn(tx, portfolio, input.provider, input.invoice) : false;
+    }
+    if (!property.tierId) return false;
     const market = await getMarket(tx, property.market);
     const tier = await getTier(tx, property.tierId);
     if (!market || !tier) return false;
@@ -407,7 +447,11 @@ export async function recordMembershipPaymentFailed(
 ): Promise<boolean> {
   return db.tx(async (tx) => {
     const property = await findBySubscription(tx, input.provider, input.subscriptionId);
-    if (!property || !property.tierId) return false;
+    if (!property) {
+      const portfolio = await lockPortfolioBySubscription(tx, input.provider, input.subscriptionId);
+      return portfolio ? portfolioPaymentFailedIn(tx, portfolio, input.provider, input.invoice, input.updateCardUrl) : false;
+    }
+    if (!property.tierId) return false;
     const market = await getMarket(tx, property.market);
     const tier = await getTier(tx, property.tierId);
     const owner = await getOwner(tx, property.ownerId);
@@ -431,7 +475,11 @@ export async function recordMembershipPaymentFailed(
 export async function endMembership(db: Db, input: { provider: Provider; subscriptionId: string }): Promise<boolean> {
   return db.tx(async (tx) => {
     const property = await findBySubscription(tx, input.provider, input.subscriptionId);
-    if (!property || property.status === "cancelled") return false;
+    if (!property) {
+      const portfolio = await lockPortfolioBySubscription(tx, input.provider, input.subscriptionId);
+      return portfolio ? endPortfolioIn(tx, portfolio, input.provider, input.subscriptionId) : false;
+    }
+    if (property.status === "cancelled") return false;
     await tx.query("update public.properties set status = 'cancelled', cancelled_at = $2::timestamptz, cancel_at_period_end = false where id = $1::uuid", [
       property.id,
       now().toISOString(),
@@ -446,6 +494,11 @@ export async function endMembership(db: Db, input: { provider: Provider; subscri
 export async function requestCancel(db: Db, gateway: PaymentsGateway | null, ownerId: string, propertyId: string): Promise<Property | null> {
   const property = await getProperty(db, ownerId, propertyId);
   if (!property) return null;
+  if (property.portfolioId) {
+    // On a Portfolio there is nothing of its own to cancel: it comes off the portfolio, and the band is checked again.
+    await removeFromPortfolio(db, gateway, ownerId, propertyId);
+    return getProperty(db, ownerId, propertyId);
+  }
   if (property.status === "setup") {
     await db.query("update public.properties set status = 'cancelled', cancelled_at = $2::timestamptz where id = $1::uuid", [propertyId, now().toISOString()]);
     return getProperty(db, ownerId, propertyId);
@@ -464,6 +517,8 @@ export async function changeTier(db: Db, gateway: PaymentsGateway | null, ownerI
   const property = await getProperty(db, ownerId, propertyId);
   if (!property) return null;
   const tier = await tierForMarket(db, tierId, property.market);
+  if (property.portfolioId) throw new PropertyError("This property is on your Portfolio. Its cover comes from the one retainer, so there is no plan to change here.");
+  if (tier.billingBasis === "per_account") throw new PropertyError("Portfolio is chosen once for your whole account, on the Billing page.");
   const market = await getMarket(db, property.market);
   if (!market) return null;
   if (property.subscriptionId && gateway && gateway.provider === property.subscriptionProvider && property.status !== "cancelled") {

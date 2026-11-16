@@ -2,7 +2,7 @@
 
 import { revalidatePath, updateTag } from "next/cache";
 import { redirect } from "next/navigation";
-import type { CountryCode, MarketStage } from "@config/markets";
+import type { CountryCode, MarketStage, RetainerBand } from "@config/markets";
 import { sendQueued } from "@/lib/after";
 import { requireAdminRole } from "@/lib/auth/current";
 import { addStaff, removeStaff, StaffError } from "@/lib/auth/staff";
@@ -14,6 +14,9 @@ import { MARKETS_TAG } from "@/lib/markets/public";
 import { emails } from "@/lib/notify/messages";
 import { enqueue } from "@/lib/notify/outbox";
 import { markReferralPaid } from "@/lib/owners/referrers";
+import { getMarket } from "@/lib/markets/store";
+import { paymentsFor } from "@/lib/payments";
+import { getPortfolioForStaff, PortfolioError, setAgreedRetainer } from "@/lib/properties/portfolio";
 import { getStore } from "@/lib/store";
 import { startDemandTest } from "@/lib/leads/demand-test";
 import { launchMarket } from "@config/markets";
@@ -141,13 +144,39 @@ export async function saveMarketSettings(_previous: FormState, formData: FormDat
   return { done: "Saved. New prices apply to jobs logged from now on. Jobs already logged keep the price they were logged at." };
 }
 
+/** How many band rows the tier form shows. */
+const BAND_ROWS = 6;
+
+/** Reads the band rows of the tier form. A row left completely empty is skipped. */
+function bandRows(formData: FormData, suffix: string, errors: Record<string, string>): RetainerBand[] {
+  const bands: RetainerBand[] = [];
+  for (let index = 0; index < BAND_ROWS; index += 1) {
+    const fromName = `bandFrom-${suffix}-${index}`;
+    const toName = `bandTo-${suffix}-${index}`;
+    const priceName = `bandPrice-${suffix}-${index}`;
+    const from = text(formData, fromName);
+    const to = text(formData, toName);
+    const price = text(formData, priceName);
+    if (!from && !to && !price) continue;
+    if (!/^\d{1,4}$/.test(from)) errors[fromName] = "Enter the smallest number of properties for this band.";
+    if (to && !/^\d{1,4}$/.test(to)) errors[toName] = "A whole number, or leave it empty for \"and up\".";
+    const cents = price ? dollarsToCents(price) : null;
+    if (price && cents === null) errors[priceName] = "Enter an amount, for example 600, or leave it empty for \"by arrangement\".";
+    bands.push({ from: Number(from), to: to ? Number(to) : null, cents });
+  }
+  return bands;
+}
+
 export async function saveTierAction(_previous: FormState, formData: FormData): Promise<FormState> {
   const staff = await requireAdminRole();
   const slug = text(formData, "slug");
   const id = text(formData, "tierId");
   const suffix = id || "new";
   const errors: Record<string, string> = {};
-  const price = amount(formData, `price-${suffix}`, errors);
+  const basis = text(formData, `basis-${suffix}`) === "per_account" ? "per_account" : "per_property";
+  // A retainer's price comes from its lowest band, so the per-property price box is only read for per-property memberships.
+  const price = basis === "per_property" ? amount(formData, `price-${suffix}`, errors) : 0;
+  const bands = basis === "per_account" ? bandRows(formData, suffix, errors) : [];
   const responseHours = whole(formData, `responseHours-${suffix}`, errors);
   const urgentHours = whole(formData, `urgentHours-${suffix}`, errors);
   const perMonthRaw = text(formData, `urgentPerMonth-${suffix}`);
@@ -164,6 +193,8 @@ export async function saveTierAction(_previous: FormState, formData: FormData): 
       quarterlyCheck: ticked(formData, "quarterlyCheck"),
       blurb: text(formData, `blurb-${suffix}`),
       active: ticked(formData, "active"),
+      billingBasis: basis,
+      bands,
     }, staff.actor);
   } catch (error) {
     if (error instanceof AdminInputError) return problem(formData, `${error.message} Nothing was saved.`);
@@ -318,4 +349,30 @@ export async function startDemandTestAction(_previous: FormState, formData: Form
   await startDemandTest(await getDb(), market, staff.actor);
   revalidatePath("/admin/leads");
   return { done: "Started. Day 1 of 14 is today." };
+}
+
+/**
+ * Sets the retainer a person agreed with a Portfolio manager (100 and more
+ * properties are by arrangement), or clears it to go back to the bands. It
+ * takes effect from the manager's next monthly payment.
+ */
+export async function setPortfolioRetainer(_previous: FormState, formData: FormData): Promise<FormState> {
+  const staff = await requireAdminRole();
+  const db = await getDb();
+  const portfolio = await getPortfolioForStaff(db, text(formData, "portfolioId"));
+  if (!portfolio) return { message: "That Portfolio does not exist." };
+  const raw = text(formData, "agreedRetainer");
+  const cents = raw === "" ? null : dollarsToCents(raw);
+  if (raw !== "" && cents === null) return problem(formData, "Enter the agreed retainer, for example 1500, or leave it empty to go back to the bands.", { agreedRetainer: "Enter an amount." });
+  const market = await getMarket(db, portfolio.market);
+  try {
+    await setAgreedRetainer(db, market ? paymentsFor(db, market.country) : null, portfolio.id, cents, staff.actor);
+  } catch (error) {
+    if (error instanceof PortfolioError) return problem(formData, error.message);
+    console.error("[portfolio] setting the agreed retainer failed:", error instanceof Error ? error.message : error);
+    return problem(formData, "The payment company could not be reached, so nothing was changed. Try again in a minute.");
+  }
+  await sendQueued(db);
+  revalidatePath(`/admin/owners/${portfolio.ownerId}`);
+  return { done: cents === null ? "Back on the bands. Any change starts with their next monthly payment." : "Saved. The agreed retainer starts with their next monthly payment." };
 }

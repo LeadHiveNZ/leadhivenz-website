@@ -56,14 +56,18 @@ export interface PaymentsGateway {
   ensureCustomer(input: { ownerId: string; name: string; email: string | null; phone: string | null; existingCustomerId: string | null }): Promise<string>;
 
   /**
-   * Starts the monthly membership for one property. With no card on file the
-   * owner is sent to a card page. With one, the membership starts at once.
+   * Starts the monthly membership for one property, or the one retainer for a
+   * Portfolio account (portfolioId set, propertyId null). With no card on file
+   * the owner is sent to a card page. With one, it starts at once.
    */
   startMembership(input: {
     customerId: string;
     paymentMethodId: string | null;
     ownerId: string;
-    propertyId: string;
+    propertyId: string | null;
+    /** Set for a Portfolio retainer: one payment for the whole account. */
+    portfolioId?: string | null;
+    /** The property's name, or for a Portfolio a line like "Portfolio, 12 properties". */
     propertyName: string;
     tier: TierForBilling;
     market: Market;
@@ -78,6 +82,12 @@ export interface PaymentsGateway {
   cancelMembership(subscriptionId: string): Promise<{ endsAt: Date | null }>;
   /** Moves a membership to another tier from the next payment. */
   changeMembershipTier(input: { subscriptionId: string; tier: TierForBilling; market: Market }): Promise<{ providerProductId?: string | null }>;
+  /**
+   * Changes what a Portfolio retainer charges, from the next monthly payment.
+   * Never a part-month charge or refund. The key makes a repeat of the same
+   * change harmless.
+   */
+  changeMembershipPrice(input: { subscriptionId: string; tier: TierForBilling; market: Market; idempotencyKey: string }): Promise<void>;
 
   /** Charges the owner's saved card for a finished job. Never throws for a declined card. */
   chargeJob(input: {

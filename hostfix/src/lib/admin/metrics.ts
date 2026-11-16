@@ -19,8 +19,14 @@ export type MarketNumbers = {
   cancelled: number;
   /** Cancelled in the period as a share of members at its start. 0 to 1, or null with no history. */
   churnRate: number | null;
-  /** Monthly recurring revenue: the monthly price of every member property. */
+  /**
+   * Monthly recurring revenue: the monthly price of every member property on
+   * its own membership, plus each Portfolio retainer once (at the band it is
+   * billed at), never once per property under it.
+   */
   mrrCents: number;
+  /** Portfolio accounts paying a retainer right now. */
+  portfolios: number;
   /** In the last 30 days: */
   jobsLogged: number;
   jobsCompleted: number;
@@ -53,22 +59,25 @@ export async function marketNumbers(db: Db, market: string): Promise<MarketNumbe
   const since = addHours(at, -24 * PERIOD_DAYS).toISOString();
   const nowIso = at.toISOString();
 
-  const props = await db.query<{ currency: string; active: number; past_due: number; setup: number; new_members: number; cancelled: number; mrr: number }>(
+  const props = await db.query<{ currency: string; active: number; past_due: number; setup: number; new_members: number; cancelled: number; mrr: number; portfolios: number }>(
     `select m.currency,
             count(p.id) filter (where p.status = 'active') as active,
             count(p.id) filter (where p.status = 'past_due') as past_due,
             count(p.id) filter (where p.status = 'setup') as setup,
             count(p.id) filter (where p.member_since >= $2::timestamptz and p.status in ('active', 'past_due')) as new_members,
             count(p.id) filter (where p.cancelled_at >= $2::timestamptz and p.member_since is not null) as cancelled,
-            coalesce(sum(t.price_cents) filter (where p.status in ('active', 'past_due')), 0) as mrr
+            coalesce(sum(t.price_cents) filter (where p.status in ('active', 'past_due') and p.portfolio_id is null), 0)
+              + (select coalesce(sum(coalesce(f.band_cents, ft.price_cents)), 0) from public.portfolios f join public.membership_tiers ft on ft.id = f.tier_id
+                  where f.market = m.slug and f.status in ('active', 'past_due')) as mrr,
+            (select count(*) from public.portfolios f where f.market = m.slug and f.status in ('active', 'past_due')) as portfolios
        from public.markets m
        left join public.properties p on p.market = m.slug
        left join public.membership_tiers t on t.id = p.tier_id
       where m.slug = $1
-      group by m.currency`,
+      group by m.slug, m.currency`,
     [market, since],
   );
-  const p = props[0] ?? { currency: "NZD", active: 0, past_due: 0, setup: 0, new_members: 0, cancelled: 0, mrr: 0 };
+  const p = props[0] ?? { currency: "NZD", active: 0, past_due: 0, setup: 0, new_members: 0, cancelled: 0, mrr: 0, portfolios: 0 };
   const members = Number(p.active) + Number(p.past_due);
   const membersAtStart = members + Number(p.cancelled) - Number(p.new_members);
 
@@ -128,6 +137,7 @@ export async function marketNumbers(db: Db, market: string): Promise<MarketNumbe
     cancelled: Number(p.cancelled),
     churnRate: membersAtStart > 0 ? Number(p.cancelled) / membersAtStart : null,
     mrrCents: Number(p.mrr),
+    portfolios: Number(p.portfolios),
     jobsLogged: Number(j.logged),
     jobsCompleted: completed,
     jobsCancelled: Number(j.cancelled),

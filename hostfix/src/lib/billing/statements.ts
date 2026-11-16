@@ -39,14 +39,21 @@ export async function ownerStatement(db: Db, ownerId: string, market: { slug: st
   const range = [ownerId, market.slug, start.toISOString(), end.toISOString()];
   const lines: OwnerStatementLine[] = [];
 
-  const memberships = await db.query<{ paid_at: Date; amount_cents: number; tax_cents: number; property: string; period_start: Date | null }>(
-    `select i.paid_at, i.amount_cents, i.tax_cents, p.name as property, i.period_start
-       from public.membership_invoices i join public.properties p on p.id = i.property_id
-      where i.owner_id = $1::uuid and p.market = $2 and i.status = 'paid' and i.paid_at >= $3::timestamptz and i.paid_at < $4::timestamptz`,
+  const memberships = await db.query<{ paid_at: Date; amount_cents: number; tax_cents: number; property: string | null; period_start: Date | null; portfolio_id: string | null }>(
+    `select i.paid_at, i.amount_cents, i.tax_cents, p.name as property, i.period_start, i.portfolio_id
+       from public.membership_invoices i
+       left join public.properties p on p.id = i.property_id
+       left join public.portfolios f on f.id = i.portfolio_id
+      where i.owner_id = $1::uuid and coalesce(p.market, f.market) = $2 and i.status = 'paid' and i.paid_at >= $3::timestamptz and i.paid_at < $4::timestamptz`,
     range,
   );
   for (const row of memberships) {
-    lines.push({ date: new Date(row.paid_at), kind: "membership", description: "Monthly membership", property: row.property, amountCents: row.amount_cents, taxCents: row.tax_cents });
+    // A Portfolio retainer is one payment for the whole account, not for one property.
+    const retainer = Boolean(row.portfolio_id);
+    lines.push({
+      date: new Date(row.paid_at), kind: "membership", description: retainer ? "Monthly Portfolio retainer" : "Monthly membership",
+      property: retainer ? "All properties on your Portfolio" : (row.property ?? ""), amountCents: row.amount_cents, taxCents: row.tax_cents,
+    });
   }
 
   const jobs = await db.query<{ paid_at: Date; amount_cents: number; tax_cents: number; refunded_cents: number; number: number; title: string; property: string }>(

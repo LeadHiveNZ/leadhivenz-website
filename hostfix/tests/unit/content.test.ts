@@ -155,6 +155,8 @@ describe("placeholders", () => {
       country: "New Zealand",
       deposit: "NZ$99",
       essential: "NZ$99",
+      // Portfolio's lowest band, 10-24 properties: NZ$600 a month (DECISIONS.md, 2026-11-17).
+      portfolio_from: "NZ$600",
       urgent: "NZ$90",
       after_hours: "NZ$140",
       callout: "NZ$225",
@@ -213,9 +215,20 @@ describe("the real landing page files", () => {
     for (const section of content.sections) expect(section.blocks.length).toBeGreaterThan(0);
   });
 
-  it("the owner page keeps its note about job charges below the one membership card", () => {
+  it("the owner page shows the Essential card and the Portfolio card for managers, with the note about job charges below both", () => {
     const pricing = loadLanding("owner", launchMarket).sections.find((s) => s.id === "what-it-costs");
-    expect(pricing?.blocks.map((b) => b.type)).toEqual(["card", "paragraph"]);
+    expect(pricing?.blocks.map((b) => b.type)).toEqual(["card", "card", "paragraph"]);
+    const managers = JSON.stringify(pricing?.blocks[1]);
+    // From the lowest band (10-24 properties, NZ$600), and the pilot on 10 properties: nothing more is promised.
+    expect(managers).toContain("Managing 10 or more?");
+    expect(managers).toContain("one monthly retainer from NZ$600");
+    expect(managers).toContain("Pilot on 10 properties first.");
+  });
+
+  it("a market with no Portfolio on offer shows an [EDIT] marker where its price would be, rather than breaking the page", () => {
+    const essentialOnly = { ...launchMarket, tiers: launchMarket.tiers.filter((tier) => tier.billingBasis === "per_property") };
+    expect(contentTokens(essentialOnly).portfolio_from).toMatch(/^\[EDIT/);
+    expect(contentTokens(essentialOnly).essential).toBe("NZ$99");
   });
 
   it("the owner page states the real prices from the market settings, and no second membership", () => {

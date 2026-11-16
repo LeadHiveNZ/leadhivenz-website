@@ -92,7 +92,10 @@ function plainReason(error: unknown): { reason: string; code: string | null; pay
 }
 
 export type StripeMembership = {
-  propertyId: string;
+  /** Set for a property's own membership. */
+  propertyId: string | null;
+  /** Set for a Portfolio retainer. Exactly one of the two is set. */
+  portfolioId?: string | null;
   ownerId: string | null;
   subscriptionId: string;
   customerId: string;
@@ -114,9 +117,10 @@ export async function membershipFromCheckout(account: StripeAccount, sessionId: 
   if (session.mode !== "subscription" || session.metadata?.hostfix_purpose !== "membership") return null;
   if (session.status !== "complete" || !session.subscription || typeof session.subscription === "string") return null;
   const subscription = session.subscription;
-  const propertyId = session.metadata?.hostfix_property ?? session.client_reference_id;
+  const portfolioId = session.metadata?.hostfix_portfolio ?? null;
+  const propertyId = portfolioId ? null : (session.metadata?.hostfix_property ?? session.client_reference_id);
   const customerId = typeof session.customer === "string" ? session.customer : session.customer?.id;
-  if (!propertyId || !customerId) return null;
+  if ((!propertyId && !portfolioId) || !customerId) return null;
 
   const card = cardOf(subscription.default_payment_method as Stripe.PaymentMethod | string | null);
   if (card) {
@@ -127,6 +131,7 @@ export async function membershipFromCheckout(account: StripeAccount, sessionId: 
   const invoice = subscription.latest_invoice && typeof subscription.latest_invoice !== "string" ? subscription.latest_invoice : null;
   return {
     propertyId,
+    portfolioId,
     ownerId: session.metadata?.hostfix_owner ?? null,
     subscriptionId: subscription.id,
     customerId,
@@ -163,7 +168,7 @@ export function createStripeGateway(account: StripeAccount): PaymentsGateway {
     unit_amount: tier.priceCents,
   });
 
-  async function coupon(input: { propertyId: string; discountCents: number; discountLabel: string | null; market: Market }): Promise<string | null> {
+  async function coupon(input: { propertyId: string | null; portfolioId?: string | null; discountCents: number; discountLabel: string | null; market: Market }): Promise<string | null> {
     if (input.discountCents <= 0) return null;
     const created = await stripe.coupons.create(
       {
@@ -173,7 +178,7 @@ export function createStripeGateway(account: StripeAccount): PaymentsGateway {
         max_redemptions: 1,
         name: (input.discountLabel ?? "Credit").slice(0, 40),
       },
-      { idempotencyKey: `hostfix-coupon-${input.propertyId}-${input.discountCents}` },
+      { idempotencyKey: `hostfix-coupon-${input.portfolioId ?? input.propertyId}-${input.discountCents}` },
     );
     return created.id;
   }
@@ -194,14 +199,20 @@ export function createStripeGateway(account: StripeAccount): PaymentsGateway {
     async startMembership(input): Promise<MembershipStart & { providerProductId?: string | null }> {
       const productId = await ensureProduct(input.tier, input.market);
       const couponId = await coupon(input);
-      const metadata = { hostfix_purpose: "membership", hostfix_property: input.propertyId, hostfix_owner: input.ownerId, hostfix_tier: input.tier.id };
+      // A Portfolio retainer is for the whole account, so it carries the portfolio, not a property.
+      const subject: Record<string, string> = input.portfolioId ? { hostfix_portfolio: input.portfolioId } : { hostfix_property: input.propertyId ?? "" };
+      const reference = input.portfolioId ?? input.propertyId ?? "";
+      const metadata = { hostfix_purpose: "membership", ...subject, hostfix_owner: input.ownerId, hostfix_tier: input.tier.id };
       const price = formatMoney(input.tier.priceCents, input.market.currency);
+      const charges = input.portfolioId
+        ? `It is charged ${price} a month for your Portfolio retainer (the amount follows how many properties you have), and the fixed price of each job logged, when that job is finished.`
+        : `It is charged ${price} a month for this property, and the fixed price of each job logged for it, when that job is finished.`;
 
       const cardPage = async (): Promise<MembershipStart & { providerProductId: string }> => {
         const session = await stripe.checkout.sessions.create({
           mode: "subscription",
           customer: input.customerId,
-          client_reference_id: input.propertyId,
+          client_reference_id: reference,
           line_items: [{ quantity: 1, price_data: monthly(input.tier, input.market, productId) }],
           subscription_data: { metadata, description: `${input.tier.name} membership: ${input.propertyName}`.slice(0, 500) },
           metadata,
@@ -210,7 +221,7 @@ export function createStripeGateway(account: StripeAccount): PaymentsGateway {
           custom_text: {
             submit: {
               // What the saved card will be used for. Keep this in step with the terms your lawyer writes.
-              message: `Your card is saved. It is charged ${price} a month for this property, and the fixed price of each job logged for it, when that job is finished.`,
+              message: `Your card is saved. ${charges}`,
             },
           },
           success_url: `${input.successUrl}${input.successUrl.includes("?") ? "&" : "?"}session_id={CHECKOUT_SESSION_ID}`,
@@ -235,7 +246,7 @@ export function createStripeGateway(account: StripeAccount): PaymentsGateway {
             ...(couponId ? { discounts: [{ coupon: couponId }] } : {}),
             expand: ["latest_invoice"],
           },
-          { idempotencyKey: `hostfix-sub-${input.propertyId}-${input.tier.id}-${new Date().toISOString().slice(0, 13)}` },
+          { idempotencyKey: `hostfix-sub-${reference}-${input.tier.id}-${input.tier.priceCents}-${new Date().toISOString().slice(0, 13)}` },
         );
         const invoice = subscription.latest_invoice && typeof subscription.latest_invoice !== "string" ? subscription.latest_invoice : null;
         if (subscription.status !== "active" || !invoice) return cardPage();
@@ -264,6 +275,30 @@ export function createStripeGateway(account: StripeAccount): PaymentsGateway {
         metadata: { ...subscription.metadata, hostfix_tier: input.tier.id },
       });
       return { providerProductId: productId };
+    },
+
+    async changeMembershipPrice(input) {
+      // Stripe: replace the price on the subscription's one item, naming the
+      // item so it is replaced rather than added, with proration_behavior
+      // "none" so nothing is charged or refunded for the part month: the new
+      // amount is simply what the next invoice charges (docs.stripe.com,
+      // "Change the price of existing subscriptions" and "Prorations", read
+      // Nov 2026). Same monthly interval, so the billing date does not move.
+      // Only our own metadata key is sent (Stripe merges metadata keys), so a
+      // retry sends exactly the same request under the same key.
+      const productId = await ensureProduct(input.tier, input.market);
+      const subscription = await stripe.subscriptions.retrieve(input.subscriptionId);
+      const item = subscription.items.data[0];
+      if (!item) throw new Error("That retainer has nothing on it to change.");
+      await stripe.subscriptions.update(
+        input.subscriptionId,
+        {
+          items: [{ id: item.id, price_data: monthly(input.tier, input.market, productId) }],
+          proration_behavior: "none",
+          metadata: { hostfix_retainer_cents: String(input.tier.priceCents) },
+        },
+        { idempotencyKey: input.idempotencyKey },
+      );
     },
 
     async chargeJob(input): Promise<ChargeResult> {

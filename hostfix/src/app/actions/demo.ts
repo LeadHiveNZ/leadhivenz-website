@@ -14,6 +14,7 @@ import { text, type FormState } from "@/lib/forms";
 import { handleInboundSms } from "@/lib/notify/inbound";
 import { saveBilling } from "@/lib/owners/service";
 import { completeDemoCheckout, DEMO_CARD_DECLINES, DEMO_CARD_OK, getDemoCheckout } from "@/lib/payments/demo-gateway";
+import { activatePortfolio } from "@/lib/properties/portfolio";
 import { activateMembership } from "@/lib/properties/service";
 import { getTradie, savePayoutAccount } from "@/lib/tradies/service";
 
@@ -64,9 +65,18 @@ export async function payDemoCheckout(_previous: FormState, formData: FormData):
   const id = text(formData, "checkoutId");
   const checkout = await getDemoCheckout(db, id);
   if (!checkout || !viewer?.ownerId || viewer.ownerId !== checkout.ownerId) return { message: "That payment page is not yours, or has run out. Go back and start again." };
-  if (checkout.completed) redirect(`/app/properties/${checkout.propertyId}?member=1`);
+  const after = checkout.portfolioId || !checkout.propertyId ? "/app/billing?member=1" : `/app/properties/${checkout.propertyId}?member=1`;
+  if (checkout.completed) redirect(after);
   const paid = await completeDemoCheckout(db, id);
   if (!paid) return { message: "That payment page has already been used." };
+  if (checkout.portfolioId || !checkout.propertyId) {
+    await activatePortfolio(db, {
+      portfolioId: checkout.portfolioId!, provider: "demo", subscriptionId: paid.subscriptionId, periodEnd: paid.periodEnd, invoice: paid.invoice,
+      card: paid.card, customerId: checkout.customerId,
+    });
+    await sendQueued(db);
+    redirect(after);
+  }
   await activateMembership(db, {
     propertyId: checkout.propertyId, provider: "demo", subscriptionId: paid.subscriptionId, periodEnd: paid.periodEnd, invoice: paid.invoice,
     card: paid.card, customerId: checkout.customerId,

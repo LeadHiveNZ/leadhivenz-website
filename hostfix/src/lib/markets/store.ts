@@ -1,5 +1,5 @@
 import { isUuid } from "@/lib/uuid";
-import { countryDefaults, type CountryCode, type CurrencyCode, type Market, type MarketStage, type MembershipTier } from "@config/markets";
+import { countryDefaults, type BillingBasis, type CountryCode, type CurrencyCode, type Market, type MarketStage, type MembershipTier, type RetainerBand } from "@config/markets";
 import type { Db } from "@/lib/db/types";
 
 /**
@@ -39,7 +39,18 @@ type TierRow = {
   id: string; market: string; key: string; name: string; price_cents: number; response_hours: number;
   urgent_response_hours: number; urgent_included: boolean; urgent_included_per_month: number | null;
   quarterly_check: boolean; blurb: string; sort: number; active: boolean; provider_product_id: string | null;
+  billing_basis: BillingBasis; bands: RetainerBand[] | string | null;
 };
+
+/** The bands as stored, read back as whole numbers whichever way the database hands them over. */
+function readBands(raw: TierRow["bands"]): RetainerBand[] {
+  const list = typeof raw === "string" ? (JSON.parse(raw) as RetainerBand[]) : (raw ?? []);
+  return list.map((band) => ({
+    from: Number(band.from),
+    to: band.to === null || band.to === undefined ? null : Number(band.to),
+    cents: band.cents === null || band.cents === undefined ? null : Number(band.cents),
+  }));
+}
 
 type MenuRow = {
   id: string; market: string; code: string; trade: string; name: string; description: string; try_first: string;
@@ -65,6 +76,8 @@ function rowToTier(row: TierRow): Tier {
     active: row.active,
     sort: row.sort,
     providerProductId: row.provider_product_id,
+    billingBasis: row.billing_basis ?? "per_property",
+    bands: readBands(row.bands),
   };
 }
 

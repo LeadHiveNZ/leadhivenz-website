@@ -124,11 +124,12 @@ export async function insertMarket(db: SeedTarget, market: Market): Promise<void
     await db.query(
       `insert into public.membership_tiers (
          market, key, name, price_cents, response_hours, urgent_response_hours,
-         urgent_included, urgent_included_per_month, quarterly_check, blurb, sort
-       ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+         urgent_included, urgent_included_per_month, quarterly_check, blurb, sort, billing_basis, bands
+       ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13::jsonb)`,
       [
         market.slug, tier.key, tier.name, tier.monthlyPriceCents, tier.responseHours, tier.urgentResponseHours,
         tier.urgentIncluded, tier.urgentIncludedPerMonth, tier.quarterlyCheck, tier.blurb, sort,
+        tier.billingBasis ?? "per_property", JSON.stringify(tier.bands ?? []),
       ],
     );
     sort += 10;

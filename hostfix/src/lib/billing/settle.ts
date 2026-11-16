@@ -485,7 +485,12 @@ export async function creditMissedWindows(db: Db): Promise<{ missed: number; cre
 
       const month = monthKey(job.respondBy, market.timezone);
       let credited = false;
-      if (tier && tier.monthlyPriceCents > 0) {
+      // A Portfolio property is covered by one retainer for the whole account,
+      // so "that month's membership" has no amount of its own. What to credit
+      // is an owner decision still outstanding (DECISIONS.md): nothing is
+      // credited automatically, and a person decides from the queue.
+      const portfolio = Boolean(property.portfolioId);
+      if (!portfolio && tier && tier.monthlyPriceCents > 0) {
         const inserted = await tx.query(
           `insert into public.credits (created_at, owner_id, property_id, job_id, reason, amount_cents, currency, month, status, note, created_by)
            values ($1::timestamptz, $2::uuid, $3::uuid, $4::uuid, 'missed_window', $5, $6, $7, 'pending', $8, 'system')
@@ -496,7 +501,7 @@ export async function creditMissedWindows(db: Db): Promise<{ missed: number; cre
       }
       await audit(tx, {
         actor: "system", action: "job.window_missed", entity: "job", entityId: job.id,
-        detail: { promised: job.respondBy.toISOString(), credited, capped: !credited && Boolean(tier), status: job.status },
+        detail: { promised: job.respondBy.toISOString(), credited, capped: !credited && !portfolio && Boolean(tier), portfolio, status: job.status },
       });
       if (credited && tier) {
         result.credited += 1;
@@ -511,7 +516,9 @@ export async function creditMissedWindows(db: Db): Promise<{ missed: number; cre
       }
       await raiseException(tx, {
         kind: "missed_window", market: job.market, jobId: job.id,
-        summary: `Job ${job.number}: no tradie on site at ${property.name} by ${formatDeadline(job.respondBy, at, market.timezone)}. ${credited ? "The month's membership has been credited." : "No credit this time (one per property per month)."}`,
+        summary: portfolio
+          ? `Missed window on a Portfolio property. Job ${job.number}: no tradie on site at ${property.name} by ${formatDeadline(job.respondBy, at, market.timezone)}. Nothing was credited automatically: decide what to credit and add it on the owner's page under Owners.`
+          : `Job ${job.number}: no tradie on site at ${property.name} by ${formatDeadline(job.respondBy, at, market.timezone)}. ${credited ? "The month's membership has been credited." : "No credit this time (one per property per month)."}`,
         dedupeKey: `missed_window:${job.id}`,
       });
     });

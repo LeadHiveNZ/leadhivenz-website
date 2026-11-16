@@ -38,6 +38,18 @@ function clockText(value: number): string {
   return value === whole ? String(whole) : `${whole}:${String(Math.round((value - whole) * 60)).padStart(2, "0")}`;
 }
 
+const BASIS_OPTIONS = [
+  { key: "per_property", label: "Per property, each month (owners)" },
+  { key: "per_account", label: "One retainer for the whole account, banded by number of properties (managers)" },
+];
+/** The same number of band rows the save action reads. */
+const BAND_ROWS = 6;
+
+/** "10-24 NZ$600 · 25-49 NZ$900 · 100+ by arrangement". */
+function bandSummary(tier: Tier, money: (cents: number) => string): string {
+  return tier.bands.map((band) => `${band.from}${band.to === null ? "+" : `-${band.to}`} ${band.cents === null ? "by arrangement" : money(band.cents)}`).join(" · ");
+}
+
 function TierForm({ slug, currency, tier }: { slug: string; currency: string; tier: Tier | null }) {
   const key = tier?.id ?? "new";
   return (
@@ -47,7 +59,21 @@ function TierForm({ slug, currency, tier }: { slug: string; currency: string; ti
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Name" name={`name-${key}`} required maxLength={40} defaultValue={tier?.name ?? ""} placeholder="Essential" />
         <Field label="Short code" name={`key-${key}`} required maxLength={30} defaultValue={tier?.key ?? ""} placeholder="essential" hint="Lower-case, no spaces." />
-        <Field label={`Price per property each month (${currency})`} name={`price-${key}`} required inputMode="decimal" maxLength={8} defaultValue={tier ? centsToDollars(tier.monthlyPriceCents) : ""} />
+        <Select
+          label="How it is charged"
+          name={`basis-${key}`}
+          placeholder="Choose"
+          options={BASIS_OPTIONS}
+          defaultValue={tier?.billingBasis ?? "per_property"}
+        />
+        <Field
+          label={`Price per property each month (${currency})`}
+          name={`price-${key}`}
+          inputMode="decimal"
+          maxLength={8}
+          defaultValue={tier && tier.billingBasis === "per_property" ? centsToDollars(tier.monthlyPriceCents) : ""}
+          hint="Per-property memberships only. A retainer's price comes from its bands below."
+        />
         <Field label="Promise for a normal job (hours)" name={`responseHours-${key}`} required inputMode="numeric" maxLength={3} defaultValue={String(tier?.responseHours ?? 24)} />
         <Field label="Promise for an urgent job (hours)" name={`urgentHours-${key}`} required inputMode="numeric" maxLength={2} defaultValue={String(tier?.urgentResponseHours ?? 4)} />
         <Field
@@ -60,6 +86,29 @@ function TierForm({ slug, currency, tier }: { slug: string; currency: string; ti
         />
       </div>
       <Field label="One line under the name" name={`blurb-${key}`} maxLength={140} defaultValue={tier?.blurb ?? ""} />
+      <fieldset className="space-y-3 rounded-2xl border border-line p-4">
+        <legend className="px-1 font-semibold text-ink">Retainer bands (one retainer for the whole account only)</legend>
+        <p className="text-sm text-muted">
+          Lowest first, with no gaps: each band starts one above where the last one ended. Leave &ldquo;up to&rdquo; empty on the top band for &ldquo;and up&rdquo;. Leave its retainer empty
+          for &ldquo;by arrangement&rdquo;: the app then never charges that many properties by itself, and asks a person instead. Rows left empty are ignored.
+        </p>
+        {Array.from({ length: BAND_ROWS }, (_, index) => {
+          const band = tier?.bands[index];
+          return (
+            <div key={index} className="grid grid-cols-3 gap-2">
+              <Field label={`Band ${index + 1}: from (properties)`} name={`bandFrom-${key}-${index}`} inputMode="numeric" maxLength={4} defaultValue={band ? String(band.from) : ""} />
+              <Field label="Up to (empty: and up)" name={`bandTo-${key}-${index}`} inputMode="numeric" maxLength={4} defaultValue={band && band.to !== null ? String(band.to) : ""} />
+              <Field
+                label={`Retainer a month (${currency}, empty: by arrangement)`}
+                name={`bandPrice-${key}-${index}`}
+                inputMode="decimal"
+                maxLength={9}
+                defaultValue={band && band.cents !== null ? centsToDollars(band.cents) : ""}
+              />
+            </div>
+          );
+        })}
+      </fieldset>
       <Tick name="urgentIncluded" label="Urgent call-outs cost the owner nothing extra" hint="The tradie still gets the urgent surcharge. We pay it. Watch 'Urgent surcharges we covered' on the Numbers page." defaultChecked={tier?.urgentIncluded ?? false} />
       <Tick name="quarterlyCheck" label="Includes a property check every three months" hint="This is a promise on the page. The check itself is booked by a person: it is not automatic yet." defaultChecked={tier?.quarterlyCheck ?? false} />
       <Tick name="active" label="Offered to new members" defaultChecked={tier?.active ?? true} />
@@ -243,7 +292,7 @@ export default async function MarketPage({ params, searchParams }: { params: Pro
               key={tier.id}
               label={
                 <span>
-                  {tier.name} <span className="font-normal text-muted">· {money(tier.monthlyPriceCents)} a month · {tier.responseHours} h, urgent {tier.urgentResponseHours} h{tier.urgentIncluded ? ", urgent included" : ""}{tier.active ? "" : " · not offered"}</span>
+                  {tier.name} <span className="font-normal text-muted">· {tier.billingBasis === "per_account" ? `one retainer: ${bandSummary(tier, money)}` : `${money(tier.monthlyPriceCents)} a month per property`} · {tier.responseHours} h, urgent {tier.urgentResponseHours} h{tier.urgentIncluded ? ", urgent included" : ""}{tier.active ? "" : " · not offered"}</span>
                 </span>
               }
             >

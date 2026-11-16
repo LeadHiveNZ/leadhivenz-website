@@ -16,15 +16,16 @@ import { registerReferrer } from "@/lib/owners/referrers";
 import { createOwnerAccount, saveBilling } from "@/lib/owners/service";
 import { createDemoGateway, DEMO_CARD_DECLINES, DEMO_CARD_OK } from "@/lib/payments/demo-gateway";
 import { addMonths } from "@/lib/payments/gateway";
+import { openPortfolio, startPortfolio } from "@/lib/properties/portfolio";
 import { activateMembership, createProperty, type Property } from "@/lib/properties/service";
 import { createTradie, listLicences, markLicenceVerified, saveLicence, savePayoutAccount, setSlot, setTradieStatus } from "@/lib/tradies/service";
 import { demoPhoto } from "./png";
 
 /**
  * SAMPLE DATA FOR THE DEMO. The first time the app starts in demo mode it
- * makes up a small, believable business: three owners, five tradies and nine
- * jobs, each stopped at a different point, so every screen has something on
- * it.
+ * makes up a small, believable business: three owners, one property manager
+ * on Portfolio, five tradies and nine jobs, each stopped at a different point,
+ * so every screen has something on it.
  *
  * Nothing here is written straight into the database. Every owner, property,
  * job, payment and text is created by calling the same functions the live app
@@ -67,7 +68,7 @@ async function property(
   ctx: Ctx, ownerId: string,
   input: { name: string; address: string; suburb: string; postcode: string; access: string; referralCode?: string },
 ): Promise<Property> {
-  // There is one membership (DECISIONS.md).
+  // Owners are on Essential, priced per property (DECISIONS.md).
   const tier = ctx.tiers.get("essential")!;
   const created = await createProperty(ctx.db, ownerId, {
     market: MARKET, name: input.name, addressLine1: input.address, suburb: input.suburb, postcode: input.postcode, accessNotes: input.access,
@@ -212,6 +213,30 @@ export async function buildSampleData(db: Db, files: FileStore | null, real: Dat
     access: "Lockbox on the gate post, code 7730. Gas bottles are down the right-hand side of the house.", referralCode: cleaner.code,
   });
 
+  // A property manager on Portfolio (DECISIONS.md, 2026-11-17): ten properties, the pilot size, on the
+  // 10-24 band. She picked Portfolio with her first property, every later one joined it, and one
+  // retainer covers them all. Started through the same steps as the Billing page's button.
+  const hana = await owner(ctx, { name: "Hana Moore", email: "hana@example.com", phone: "+64211234514", home: "Queenstown", card: "ok" });
+  const portfolioTier = ctx.tiers.get("portfolio")!;
+  setTestNow(new Date(real.getTime() - 21 * DAY));
+  const managed = [
+    ["Frankton Townhouse 1", "2 Hawthorne Drive", "Frankton"], ["Frankton Townhouse 2", "4 Hawthorne Drive", "Frankton"],
+    ["Fernhill Loft", "12 Richards Park Lane", "Fernhill"], ["Goldfields Cottage", "9 Goldfield Heights", "Queenstown"],
+    ["Jacks Point Villa", "31 Maori Jack Road", "Jacks Point"], ["Lake Hayes Retreat", "7 Lower Shotover Road", "Lake Hayes"],
+    ["Sunshine Bay Studio", "18 Fernhill Road", "Sunshine Bay"], ["Remarkables Park Apartment", "5 Hawthorne Drive", "Frankton"],
+    ["Arthurs Point Chalet", "60 Arthurs Point Road", "Arthurs Point"], ["Queenstown Hill Suite", "22 Belfast Terrace", "Queenstown"],
+  ] as const;
+  for (const [name, address, suburb] of managed) {
+    await createProperty(db, hana.ownerId, {
+      market: MARKET, name, addressLine1: address, suburb, postcode: "9300", tierId: portfolioTier.id,
+      accessNotes: "Key safe by the front door. Code is in the manager's notes: ring the office on arrival.",
+    });
+  }
+  setTestNow(new Date(real.getTime() - 20 * DAY));
+  const hanaPortfolio = await openPortfolio(db, hana.ownerId, MARKET);
+  const retainer = await startPortfolio(db, gatewayFor("NZ")!, { ownerId: hana.ownerId, portfolioId: hanaPortfolio!.id, successUrl: "/app/billing", cancelUrl: "/app/billing" });
+  if (retainer.kind !== "active") throw new Error(`Sample data: the Portfolio did not start (${retainer.kind === "error" ? retainer.message : "card page"}).`);
+
   // The codes below are jobs on seed/menu-queenstown.json: PL-08 blocked drain, HP-03 heat pump fault, HM-14 reseal a
   // shower, EL-01 power point, PL-06 no hot water, LS-02 lock replace, HM-03 light bulbs, PL-03 dripping tap.
 
@@ -331,6 +356,7 @@ export async function buildSampleData(db: Db, files: FileStore | null, real: Dat
   return [
     { key: "sam", label: "Sam Taylor", role: "owner", userId: sam.user.id, phone: sam.user.phone, note: "Owns Lakeview Apartment and Arthurs Point Cabin. Has a quote and a guest report waiting for an answer." },
     { key: "priya", label: "Priya Patel", role: "owner", userId: priya.user.id, phone: priya.user.phone, note: "Owns Fernhill Studio. Her card is declining." },
+    { key: "hana", label: "Hana Moore (manager)", role: "owner", userId: hana.user.id, phone: hana.user.phone, note: "Manages ten properties on Portfolio: one NZ$600 retainer a month for all of them." },
     { key: "tane", label: "Tane Rangi", role: "owner", userId: tane.user.id, phone: tane.user.phone, note: "Owns Kelvin Heights House. A plumber is on the way to an urgent job." },
     { key: "dave", label: "Dave (plumber and gasfitter)", role: "tradie", userId: dave.user.id, phone: dave.phone, note: "Has a job offer waiting right now, and is on the way to an urgent one." },
     { key: "mere", label: "Mere (plumber)", role: "tradie", userId: mere.user.id, phone: mere.phone, note: "On site, waiting for the owner to answer her quote." },

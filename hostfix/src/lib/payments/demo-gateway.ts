@@ -20,7 +20,9 @@ export const DEMO_CARD_DECLINES: CardSummary = { paymentMethodId: "demo_pm_decli
 export type DemoCheckout = {
   id: string;
   ownerId: string;
-  propertyId: string;
+  /** Null for a Portfolio retainer, which is for the whole account. */
+  propertyId: string | null;
+  portfolioId?: string | null;
   propertyName: string;
   tierId: string;
   tierName: string;
@@ -81,6 +83,7 @@ export function createDemoGateway(db: Db, country: CountryCode): PaymentsGateway
           id: randomToken(16),
           ownerId: input.ownerId,
           propertyId: input.propertyId,
+          portfolioId: input.portfolioId ?? null,
           propertyName: input.propertyName,
           tierId: input.tier.id,
           tierName: input.tier.name,
@@ -110,6 +113,10 @@ export function createDemoGateway(db: Db, country: CountryCode): PaymentsGateway
 
     async changeMembershipTier() {
       return {};
+    },
+
+    async changeMembershipPrice() {
+      // Pretend money: the next demo renewal charges the portfolio's band from the database.
     },
 
     async chargeJob(input): Promise<ChargeResult> {

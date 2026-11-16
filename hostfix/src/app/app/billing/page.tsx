@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { changeCard } from "@/app/actions/owner";
+import { beginPortfolio, changeCard, choosePortfolioAction, endPortfolio } from "@/app/actions/owner";
 import { ActionForm } from "@/components/forms/ActionForm";
 import { SubmitButton } from "@/components/forms/SubmitButton";
 import { smallButtonClass } from "@/components/forms/styles";
-import { Card, EmptyState, Facts, PageTitle, SectionTitle } from "@/components/ui/Bits";
+import { Card, EmptyState, Facts, Notice, PageTitle, SectionTitle } from "@/components/ui/Bits";
+import { Reveal } from "@/components/ui/Reveal";
 import { PrintButton } from "@/components/ui/Buttons";
 import { Icon } from "@/components/ui/Icon";
 import { requireOwner } from "@/lib/auth/current";
@@ -16,6 +17,8 @@ import { formatMoney } from "@/lib/money";
 import { isMonthKey, shiftMonth } from "@/lib/months";
 import { getBilling } from "@/lib/owners/service";
 import { membershipLabel } from "@/lib/properties/display";
+import { minimumProperties } from "@/lib/markets/bands";
+import { countPortfolioProperties, listPortfolios, retainerFor } from "@/lib/properties/portfolio";
 import { listProperties } from "@/lib/properties/service";
 import { formatDate, monthKey, monthLabel } from "@/lib/time";
 
@@ -53,11 +56,125 @@ export default async function BillingPage({ searchParams }: { searchParams: Sear
   const money = (cents: number) => formatMoney(cents, statement.currency);
   const link = (target: string) => `/app/billing?market=${market.slug}&month=${target}`;
 
+  // PORTFOLIO: one retainer for the whole account, in this market.
+  const portfolio = (await listPortfolios(db, viewer.ownerId)).find((candidate) => candidate.market === market.slug && candidate.status !== "cancelled") ?? null;
+  const portfolioTierOffered = [...tiers.values()].find((tier) => tier.market === market.slug && tier.active && tier.billingBasis === "per_account") ?? null;
+  const portfolioTier = portfolio ? (tiers.get(portfolio.tierId) ?? null) : null;
+  const portfolioCount = portfolio ? await countPortfolioProperties(db, portfolio.id) : 0;
+  const portfolioPaying = portfolio?.status === "active" || portfolio?.status === "past_due";
+  const portfolioPrice = portfolio && portfolioTier ? retainerFor(portfolioTier, portfolioPaying ? portfolio.propertyCountBilled : portfolioCount, portfolio.agreedCents) : null;
+  const portfolioMinimum = portfolioTier ? minimumProperties(portfolioTier) : 10;
+
   return (
     <div className="space-y-6">
       <div className="no-print">
         <PageTitle title="Billing" back={{ href: "/app/account", label: "Account" }} />
       </div>
+
+      {query.member && portfolioPaying && (
+        <Notice tone="good" title="Your Portfolio is covered">
+          Every property on it is covered now. Properties you add from here join it with nothing more to pay on the day.
+        </Notice>
+      )}
+      {query.pending && !portfolioPaying && (
+        <Notice tone="info" title="We are confirming your payment">
+          This usually takes under a minute. Refresh this page shortly.
+        </Notice>
+      )}
+
+      {portfolio && portfolioTier && (
+        <Card className="no-print sm:p-6">
+          <SectionTitle>Portfolio{markets.length > 1 ? `, ${market.name}` : ""}</SectionTitle>
+          <p className="text-muted">One monthly retainer for your whole account, set by how many properties are on it. Jobs are charged at the same fixed prices.</p>
+          <div className="mt-3">
+            <Facts
+              rows={[
+                { label: "Properties on it", value: String(portfolioCount) },
+                {
+                  label: portfolioPaying ? "Your retainer" : "Retainer when you start",
+                  value: portfolioPaying && portfolio.bandCents
+                    ? `${money(portfolio.bandCents)} a month${portfolioPrice ? ` (${portfolioPrice.label})` : ""}`
+                    : portfolioPrice && portfolioPrice.needsPerson === null
+                      ? `${money(portfolioPrice.cents)} a month (${portfolioPrice.label})`
+                      : portfolioCount < portfolioMinimum ? `Starts at ${money(portfolioTier.monthlyPriceCents)} a month` : "Agreed with you",
+                },
+                ...(portfolioPaying && portfolio.currentPeriodEnd
+                  ? [{ label: portfolio.cancelAtPeriodEnd ? "Covered until" : "Next payment", value: formatDate(portfolio.currentPeriodEnd, market.timezone) }]
+                  : []),
+              ]}
+            />
+          </div>
+          {portfolioPaying && (
+            <p className="mt-2 text-sm text-muted">Add or take off a property and the retainer follows from your next monthly payment, never part-way through a month.</p>
+          )}
+          {portfolio.status === "past_due" && (
+            <div className="mt-4 space-y-3">
+              <Notice tone="error" title="Your last payment did not go through">
+                Tradies cannot be sent to your properties until the card is fixed.
+              </Notice>
+              <ActionForm action={changeCard}>
+                <input type="hidden" name="country" value={market.country} />
+                <SubmitButton pendingLabel="Opening...">Update my card</SubmitButton>
+              </ActionForm>
+            </div>
+          )}
+          {portfolio.status === "setup" && (
+            <div className="mt-4 space-y-3">
+              {portfolioCount < portfolioMinimum ? (
+                <>
+                  <p className="rounded-xl bg-tint px-4 py-3 text-ink">
+                    Portfolio is for {portfolioMinimum} or more properties. You have {portfolioCount} so far: add {portfolioMinimum - portfolioCount} more, then start the retainer here.
+                  </p>
+                  <Link href={`/app/properties/new?market=${market.slug}`} className={smallButtonClass}>
+                    Add a property
+                  </Link>
+                </>
+              ) : (
+                <ActionForm action={beginPortfolio} className="space-y-3">
+                  <input type="hidden" name="portfolioId" value={portfolio.id} />
+                  <p className="text-sm text-muted">Charged today, then monthly. Every property on your Portfolio is covered from today.</p>
+                  <SubmitButton pendingLabel="Starting..." className="w-full sm:w-auto">
+                    Start the retainer
+                  </SubmitButton>
+                </ActionForm>
+              )}
+            </div>
+          )}
+          {!portfolio.cancelAtPeriodEnd && (
+            <div className="mt-4">
+              <Reveal label={portfolio.status === "setup" ? "Do not use Portfolio" : "Cancel the retainer"} tone="alert">
+                <ActionForm action={endPortfolio} className="space-y-3">
+                  <input type="hidden" name="portfolioId" value={portfolio.id} />
+                  <p className="text-muted">
+                    {portfolio.status === "setup"
+                      ? "Your properties go back to choosing a membership each. Nothing has been charged."
+                      : `Every property on it stays covered until ${portfolio.currentPeriodEnd ? formatDate(portfolio.currentPeriodEnd, market.timezone) : "the end of the month you paid for"}. After that no tradies can be sent and no further payments are taken.`}
+                  </p>
+                  <SubmitButton variant="danger" pendingLabel="Cancelling...">
+                    {portfolio.status === "setup" ? "Yes, do not use Portfolio" : "Yes, cancel the retainer"}
+                  </SubmitButton>
+                </ActionForm>
+              </Reveal>
+            </div>
+          )}
+        </Card>
+      )}
+
+      {!portfolio && portfolioTierOffered && market.stage === "live" && (
+        <Card className="no-print">
+          <SectionTitle>Managing 10 or more properties?</SectionTitle>
+          <p className="text-muted">
+            Portfolio is one monthly retainer for your whole account, from {money(portfolioTierOffered.monthlyPriceCents)}, banded by how many properties you have, plus the same fixed job prices.
+            Properties that have not started a membership yet join it, and so does every property you add after.
+          </p>
+          <ActionForm action={choosePortfolioAction} className="mt-4">
+            <input type="hidden" name="market" value={market.slug} />
+            <SubmitButton variant="secondary" pendingLabel="Saving...">
+              Use Portfolio for my account
+            </SubmitButton>
+          </ActionForm>
+        </Card>
+      )}
 
       <div className="no-print grid gap-5 md:grid-cols-2">
         {cards.map(({ country, billing }) => (
@@ -102,10 +219,12 @@ export default async function BillingPage({ searchParams }: { searchParams: Sear
                     {property.name}
                   </Link>
                   <span className="block text-sm text-muted">
-                    {property.status === "active" && tier
+                    {property.portfolioId
+                      ? `On your Portfolio${property.status === "active" ? "" : `. ${label.label}`}`
+                      : property.status === "active" && tier
                       ? `${tier.name}, ${formatMoney(tier.monthlyPriceCents, allMarkets.find((candidate) => candidate.slug === property.market)?.currency ?? market.currency)} a month`
                       : label.label}
-                    {property.status === "active" && property.currentPeriodEnd ? `. ${property.cancelAtPeriodEnd ? "Ends" : "Next payment"} ${formatDate(property.currentPeriodEnd, zone)}` : ""}
+                    {property.status === "active" && property.currentPeriodEnd && !property.portfolioId ? `. ${property.cancelAtPeriodEnd ? "Ends" : "Next payment"} ${formatDate(property.currentPeriodEnd, zone)}` : ""}
                   </span>
                 </li>
               );

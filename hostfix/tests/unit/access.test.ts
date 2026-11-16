@@ -6,8 +6,10 @@ import { getJobForOwner, getJobForTradie, listJobsForOwner, listJobsForTradie, l
 import { completeJob, markArrived, markEnRoute, reportNoAccess, submitQuote } from "@/lib/jobs/work";
 import { offerLinkCode, offerLinkMatches, ownerJobLinkCode, ownerJobLinkMatches, parseLinkCode } from "@/lib/links";
 import { changeTier, findPropertyByReportToken, getProperty, listProperties, requestCancel, rotateReportLink, updateProperty } from "@/lib/properties/service";
+import { createDemoGateway } from "@/lib/payments/demo-gateway";
+import { cancelPortfolio, countPortfolioProperties, getPortfolio, joinPortfolio, listPortfolios, openPortfolio, removeFromPortfolio, startPortfolio } from "@/lib/properties/portfolio";
 import { testDb } from "./db";
-import { liveMarket, logJob, makeOwner, makeProperty, makeTradie, MONDAY_10AM, offersFor, photo } from "./factory";
+import { liveMarket, logJob, makeOwner, makePortfolio, makeProperty, makeTradie, MONDAY_10AM, offersFor, photo } from "./factory";
 
 /**
  * PEOPLE ONLY SEE THEIR OWN DATA.
@@ -60,6 +62,37 @@ describe("owners", () => {
     expect(await getJobForOwner(t.db, bob.ownerId, aliceJob.id)).toBeNull();
     expect(await listJobsForOwner(t.db, bob.ownerId)).toEqual([]);
     expect((await listJobsForOwner(t.db, alice.ownerId)).map((job) => job.id)).toEqual([aliceJob.id]);
+  });
+});
+
+describe("owners on Portfolio", () => {
+  it("cannot read, start, cancel, re-price or change another owner's portfolio or its properties", async () => {
+    await liveMarket(t.db);
+    const alice = await makeOwner(t.db);
+    const bob = await makeOwner(t.db);
+    const { portfolio, properties } = await makePortfolio(t.db, alice.ownerId, 10);
+    const gateway = createDemoGateway(t.db, "NZ");
+
+    // Alice sees hers. Bob sees nothing, whichever way he asks.
+    expect((await getPortfolio(t.db, alice.ownerId, portfolio.id))?.id).toBe(portfolio.id);
+    expect(await getPortfolio(t.db, bob.ownerId, portfolio.id)).toBeNull();
+    expect(await listPortfolios(t.db, bob.ownerId)).toEqual([]);
+    expect(await openPortfolio(t.db, bob.ownerId, "queenstown")).toBeNull();
+    expect(await getProperty(t.db, bob.ownerId, properties[0]!.id)).toBeNull();
+
+    // Nor can he act on it.
+    expect(await startPortfolio(t.db, gateway, { ownerId: bob.ownerId, portfolioId: portfolio.id, successUrl: "/", cancelUrl: "/" })).toEqual({ kind: "error", message: "We could not find that Portfolio." });
+    expect(await cancelPortfolio(t.db, gateway, bob.ownerId, portfolio.id)).toBeNull();
+    expect(await removeFromPortfolio(t.db, gateway, bob.ownerId, properties[0]!.id)).toBe(false);
+    expect(await requestCancel(t.db, gateway, bob.ownerId, properties[0]!.id)).toBeNull();
+    // Putting his own property on Alice's portfolio is refused too.
+    const bobHome = await makeProperty(t.db, bob.ownerId, { member: false });
+    expect(await joinPortfolio(t.db, gateway, bob.ownerId, bobHome.id, portfolio)).toBe(false);
+    expect((await getProperty(t.db, bob.ownerId, bobHome.id))?.portfolioId).toBeNull();
+
+    // Alice's portfolio is exactly as it was: ten properties covered, NZ$600, not ending.
+    expect(await getPortfolio(t.db, alice.ownerId, portfolio.id)).toMatchObject({ status: "active", bandCents: 60000, cancelAtPeriodEnd: false });
+    expect(await countPortfolioProperties(t.db, portfolio.id)).toBe(10);
   });
 });
 

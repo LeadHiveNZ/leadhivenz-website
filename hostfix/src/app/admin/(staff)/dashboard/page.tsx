@@ -50,7 +50,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Se
         <SectionTitle>Memberships</SectionTitle>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <Stat label="Member properties" value={n.properties} note={n.propertiesPastDue > 0 ? `${n.propertiesPastDue} more with a card problem` : n.propertiesSetup > 0 ? `${n.propertiesSetup} added but not started` : undefined} />
-          <Stat label="Monthly membership income" value={money(n.mrrCents)} note="What members pay each month" tone="good" />
+          <Stat label="Monthly membership income" value={money(n.mrrCents)} note={n.portfolios > 0 ? `What members pay each month, with ${n.portfolios} Portfolio ${n.portfolios === 1 ? "retainer" : "retainers"} counted once each` : "What members pay each month"} tone="good" />
           <Stat label="New members" value={n.newMembers} />
           <Stat label="Cancelled" value={n.cancelled} note={n.churnRate === null ? undefined : `${Math.round(n.churnRate * 100)}% of members a month ago`} tone={n.churnRate !== null && n.churnRate > 0.05 ? "alert" : undefined} />
         </div>

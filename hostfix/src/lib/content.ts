@@ -4,6 +4,7 @@ import path from "node:path";
 import { Lexer, type Token } from "marked";
 import { brand } from "@config/brand";
 import { payoutArrival, type Market } from "@config/markets";
+import { lowestBand } from "@/lib/markets/bands";
 import { formatMoney } from "@/lib/money";
 
 /**
@@ -25,6 +26,8 @@ import { formatMoney } from "@/lib/money";
  * These placeholders are filled in from the config files:
  *   {{brand}} {{market}} {{country}}
  *   {{essential}}                       the membership price, per property per month
+ *   {{portfolio_from}}                  the lowest Portfolio retainer, for
+ *                                        managers with 10 or more properties
  *   {{deposit}}                         the founding deposit
  *   {{urgent}} {{after_hours}}          the two surcharges
  *   {{callout}}                         the fee for a tradie to come and look at
@@ -71,12 +74,18 @@ export type LandingContent = {
 export class ContentError extends Error {}
 
 export function contentTokens(market: Market): Record<string, string> {
-  // {{essential}} is the price of the membership on offer. There is one
-  // membership (DECISIONS.md). A market whose membership has another short code
+  // {{essential}} is the price of the per-property membership on offer, for
+  // owners (DECISIONS.md). A market whose membership has another short code
   // still works (for example after a price change, when "essential" was
   // replaced by "essential_2027"): the cheapest one on offer stands in.
-  const byPrice = [...market.tiers].sort((a, b) => a.monthlyPriceCents - b.monthlyPriceCents);
-  const membership = market.tiers.find((t) => t.key === "essential") ?? byPrice.find((t) => t.key.startsWith("essential")) ?? byPrice[0];
+  // Only per-property memberships stand in for {{essential}}: a Portfolio retainer is not a price per property.
+  const perProperty = market.tiers.filter((t) => (t.billingBasis ?? "per_property") === "per_property");
+  const byPrice = [...perProperty].sort((a, b) => a.monthlyPriceCents - b.monthlyPriceCents);
+  const membership = perProperty.find((t) => t.key === "essential") ?? byPrice.find((t) => t.key.startsWith("essential")) ?? byPrice[0];
+  // {{portfolio_from}} is the lowest band of the Portfolio retainer on offer (DECISIONS.md, 2026-11-17).
+  // A market that offers no Portfolio shows an [EDIT] marker instead, so the gap is counted on the admin screen.
+  const portfolio = market.tiers.find((t) => t.billingBasis === "per_account");
+  const portfolioFrom = portfolio ? lowestBand(portfolio) : null;
   if (!membership) throw new ContentError(`The market "${market.name}" has no membership on offer, so its page cannot show a price. Add one under More, Markets.`);
   const money = (cents: number) => formatMoney(cents, market.currency);
   return {
@@ -85,6 +94,7 @@ export function contentTokens(market: Market): Record<string, string> {
     country: market.countryName,
     deposit: money(market.foundingDeposit.amountCents),
     essential: money(membership.monthlyPriceCents),
+    portfolio_from: portfolioFrom ? money(portfolioFrom.cents) : "[EDIT: no Portfolio membership is on offer in this market]",
     urgent: money(market.urgentSurchargeCents),
     after_hours: money(market.afterHoursSurchargeCents),
     callout: money(market.diagnosisFeeCents),

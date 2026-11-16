@@ -6,6 +6,9 @@ offered by text to a local tradie, who has 15 minutes to take it before it moves
 it is done the owner's card is charged, the tradie is paid, and the business keeps the difference.
 Nobody takes a call, writes a quote or sends an invoice.
 
+Property managers with 10 or more properties can pick Portfolio instead: one monthly retainer for the
+whole account, banded by how many properties are on it, with the same job prices and the same 15% fee.
+
 Launch market: Queenstown, New Zealand. Built for many towns across New Zealand and Australia: nothing
 is tied to one town, one currency or one tax rate.
 

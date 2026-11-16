@@ -23,13 +23,35 @@ export type CurrencyCode = "NZD" | "AUD";
  */
 export type MarketStage = "draft" | "waitlist" | "live" | "paused";
 
+/**
+ * How a membership is charged (DECISIONS.md, 2026-11-17):
+ *   per_property  one monthly price for each property (Essential, for owners)
+ *   per_account   one monthly retainer for the whole account, set by how many
+ *                 properties are on it (Portfolio, for managers with 10+)
+ */
+export type BillingBasis = "per_property" | "per_account";
+
+/**
+ * One band of a retainer: from this many properties up to that many, this much
+ * a month. `to: null` means "and up". `cents: null` means "by arrangement":
+ * the app never sets that price itself, a person agrees it with the manager.
+ */
+export type RetainerBand = { from: number; to: number | null; cents: number | null };
+
 export type MembershipTier = {
   /** Set once the tier is in the database. */
   id?: string;
   key: string;
   name: string;
-  /** Price per property, per month, in cents, including tax. */
+  /**
+   * per_property: the price per property, per month, in cents, including tax.
+   * per_account: the lowest band, the retainer a Portfolio starts from. The
+   * bands below decide what each account actually pays.
+   */
   monthlyPriceCents: number;
+  billingBasis: BillingBasis;
+  /** per_account only: the retainer bands, lowest first, with no gaps. Empty for per_property. */
+  bands: RetainerBand[];
   /** The promise for a normal job: a tradie on site within this many hours. */
   responseHours: number;
   /** The promise for an urgent job. */
@@ -173,6 +195,8 @@ export function defineMarket(input: MarketInput): Market {
       urgentIncludedPerMonth: null,
       quarterlyCheck: false,
       blurb: "",
+      billingBasis: "per_property" as const,
+      bands: [],
       ...tier,
     })),
   };
@@ -185,15 +209,32 @@ export const markets: Market[] = [
     country: "NZ",
     timezone: "Pacific/Auckland",
     tiers: [
-      // One membership. Urgent response is an add-on the owner pays for on the
-      // day, never an inclusion. A second tier was dropped because delivering
-      // it cost more than it charged (DECISIONS.md). The app still supports
-      // more than one: add it on the admin screen if that ever changes.
+      // Essential, for owners. Urgent response is an add-on the owner pays for
+      // on the day, never an inclusion. Priority was dropped because
+      // delivering it cost more than it charged (DECISIONS.md).
       {
         key: "essential",
         name: "Essential",
         monthlyPriceCents: 9900,
         blurb: "A tradie on site within 24 hours. Urgent 4-hour response when you need it, for a surcharge.",
+      },
+      // For property managers with 10 or more properties (DECISIONS.md,
+      // 2026-11-17): one monthly retainer for the whole account, banded by how
+      // many properties are on it. The same 15% fee and the same job prices.
+      // No discount: the intro offer is a 60-day pilot on 10 properties at the
+      // 10-24 band, kept by hand. 100+ is priced by a person, never by the app.
+      {
+        key: "portfolio",
+        name: "Portfolio",
+        monthlyPriceCents: 60000,
+        billingBasis: "per_account",
+        bands: [
+          { from: 10, to: 24, cents: 60000 },
+          { from: 25, to: 49, cents: 90000 },
+          { from: 50, to: 99, cents: 120000 },
+          { from: 100, to: null, cents: null },
+        ],
+        blurb: "For managers with 10 or more properties. One monthly retainer for the whole portfolio, plus the same fixed job prices.",
       },
     ],
     // The demand test (DECISIONS.md): 25 founding properties, a $99 deposit

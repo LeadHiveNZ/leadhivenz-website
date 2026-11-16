@@ -5,8 +5,8 @@ import { E2E } from "../playwright.config";
  * THE PRODUCT, END TO END, in a real browser at phone size.
  *
  * These run against the copy of the site that starts with the made-up sample
- * business (see src/lib/demo/sample.ts): three owners, five tradies and nine
- * jobs at different points. Each test picks up one of those and carries it
+ * business (see src/lib/demo/sample.ts): three owners, a property manager on
+ * Portfolio, five tradies and nine jobs at different points. Each test picks up one of those and carries it
  * through the way a real person would, pressing the real buttons.
  *
  * They run one after another and share the same data, in this order.
@@ -216,6 +216,21 @@ test("an offer nobody answers moves on to the backup after 15 minutes", async ({
   await expect(page.locator("li", { hasText: "Lakes Plumbing" }).filter({ hasText: "Backup" })).toContainText("Waiting for an answer");
 });
 
+test("a property manager pays one retainer for the whole portfolio", async ({ page }) => {
+  // Hana manages ten properties on Portfolio (DECISIONS.md): the 10-24 band, NZ$600 a month, one payment for all ten.
+  await be(page, "Hana Moore (manager)");
+  await open(page, "/app/billing");
+  await expect(shown(page, "NZ$600 a month (10 to 24 properties)").first()).toBeVisible();
+  await expect(shown(page, "Properties on it").first()).toBeVisible();
+  // Each property is covered by the retainer, with nothing to pay or choose on its own.
+  await open(page, "/app/properties");
+  await page.getByRole("link", { name: /Fernhill Loft/ }).click();
+  await page.waitForURL(/\/app\/properties\/[0-9a-f-]{36}$/);
+  await ready(page);
+  await expect(shown(page, "Portfolio: covered by your one monthly retainer").first()).toBeVisible();
+  await expect(shown(page, "Change plan")).toHaveCount(0);
+});
+
 test("people only see their own data", async ({ page, request }) => {
   // Collect the address of one of Sam's jobs, one of his properties and one of his photos.
   await be(page, "Sam Taylor");
@@ -238,15 +253,27 @@ test("people only see their own data", async ({ page, request }) => {
   await open(page, "/app");
   await expect(shown(page, /We could not charge your card/)).toHaveCount(0);
 
+  // And one of the Portfolio manager's properties.
+  await be(page, "Hana Moore (manager)");
+  await open(page, "/app/properties");
+  await page.getByRole("link", { name: /Jacks Point Villa/ }).click();
+  await page.waitForURL(/\/app\/properties\/[0-9a-f-]{36}$/);
+  await ready(page);
+  const managedPath = new URL(page.url()).pathname;
+
   // Another owner cannot open any of them. Her own home screen warns her about her own unpaid job, and only that.
   await be(page, "Priya Patel");
   await expect(shown(page, "We could not charge your card for job 1004")).toHaveCount(1);
   await expect(page.getByRole("link", { name: "check or change your card" })).toHaveAttribute("href", "/app/billing");
-  for (const path of [jobPath, propertyPath, `${propertyPath}/card`]) {
+  for (const path of [jobPath, propertyPath, `${propertyPath}/card`, managedPath]) {
     await open(page, path);
     await expect(page.getByRole("heading", { name: "We can't find that page." })).toBeVisible();
     await expect(shown(page, "Lakeview Apartment")).toHaveCount(0);
+    await expect(shown(page, "Jacks Point Villa")).toHaveCount(0);
   }
+  // Her billing page shows no one else's Portfolio.
+  await open(page, "/app/billing");
+  await expect(shown(page, "Properties on it")).toHaveCount(0);
   expect((await page.request.get(`${BASE}${photoPath}`)).status()).toBe(404);
   await open(page, "/app/jobs");
   await expect(shown(page, "Lakeview Apartment")).toHaveCount(0);

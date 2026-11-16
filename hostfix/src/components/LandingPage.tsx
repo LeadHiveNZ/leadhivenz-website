@@ -265,11 +265,11 @@ function Pricing({ section, menu }: { section: Section; menu: MenuPreview | null
         )}
         <div className={`mt-8 grid gap-4 ${cards.length > 1 ? "md:grid-cols-2" : ""}`}>
           {cards.map((card, index) => (
-            <div key={index} className={`rounded-3xl p-6 sm:p-8 ${index === cards.length - 1 && cards.length > 1 ? "on-dark bg-brand text-white" : "border border-line bg-sand/70"}`}>
-              <h3 className={`display text-2xl sm:text-[1.7rem] ${index === cards.length - 1 && cards.length > 1 ? "text-white" : "text-ink"}`}>
+            <div key={index} className={`rounded-3xl p-6 sm:p-8 ${index === 0 && cards.length > 1 ? "on-dark bg-brand text-white" : "border border-line bg-sand/70"}`}>
+              <h3 className={`display text-2xl sm:text-[1.7rem] ${index === 0 && cards.length > 1 ? "text-white" : "text-ink"}`}>
                 <InlineText nodes={card.title} />
               </h3>
-              <div className={`mt-3 space-y-3 text-lg leading-relaxed ${index === cards.length - 1 && cards.length > 1 ? "text-white/80 [&_strong]:text-white" : "text-muted"}`}>
+              <div className={`mt-3 space-y-3 text-lg leading-relaxed ${index === 0 && cards.length > 1 ? "text-white/80 [&_strong]:text-white" : "text-muted"}`}>
                 <Blocks blocks={card.blocks} />
               </div>
             </div>

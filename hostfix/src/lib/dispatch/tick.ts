@@ -10,7 +10,7 @@ import { texts } from "@/lib/notify/messages";
 import { enqueue, flushOutbox, type FlushDeps } from "@/lib/notify/outbox";
 import { raiseException } from "@/lib/ops/exceptions";
 import { addMonths } from "@/lib/payments/gateway";
-import { recordRenewal } from "@/lib/properties/service";
+import { endMembership, recordRenewal } from "@/lib/properties/service";
 import { savePayoutAccount } from "@/lib/tradies/service";
 import { baseUrl } from "@/lib/env";
 import { randomToken } from "@/lib/ids";
@@ -154,6 +154,41 @@ async function renewDemoMemberships(db: Db): Promise<number> {
       [row.id, addMonths(start, -1).toISOString(), start.toISOString()],
     );
     const amount = Math.max(0, row.price_cents - Number(credits[0]?.total ?? 0));
+    const fresh = await recordRenewal(db, {
+      provider: "demo", subscriptionId: row.subscription_id,
+      invoice: { invoiceId: `demo_in_${randomToken(14)}`, amountCents: amount, currency: row.currency, periodStart: start, periodEnd: addMonths(start, 1), paidAt: at },
+    });
+    if (fresh) renewed += 1;
+  }
+  // Portfolio retainers renew on the same turn, counted with the rest.
+  return renewed + (await renewDemoPortfolios(db));
+}
+
+/** The same for Portfolio retainers on pretend money: one payment for the account, at the band it is billed at. */
+async function renewDemoPortfolios(db: Db): Promise<number> {
+  const at = now();
+  const due = await db.query<{ id: string; subscription_id: string; current_period_end: Date; band_cents: number | null; price_cents: number; currency: string; cancel_at_period_end: boolean }>(
+    `select f.id, f.subscription_id, f.current_period_end, f.band_cents, t.price_cents, m.currency, f.cancel_at_period_end
+       from public.portfolios f
+       join public.membership_tiers t on t.id = f.tier_id
+       join public.markets m on m.slug = f.market
+      where f.subscription_provider = 'demo' and f.status = 'active' and f.current_period_end <= $1::timestamptz
+      limit 100`,
+    [at.toISOString()],
+  );
+  let renewed = 0;
+  for (const row of due) {
+    if (row.cancel_at_period_end) {
+      await endMembership(db, { provider: "demo", subscriptionId: row.subscription_id });
+      continue;
+    }
+    const start = new Date(row.current_period_end);
+    const credits = await db.query<{ total: number }>(
+      `select coalesce(sum(c.amount_cents), 0) as total from public.credits c join public.properties p on p.id = c.property_id
+        where p.portfolio_id = $1::uuid and c.status = 'applied' and c.reason <> 'founding_deposit' and c.created_at > $2::timestamptz and c.created_at <= $3::timestamptz`,
+      [row.id, addMonths(start, -1).toISOString(), start.toISOString()],
+    );
+    const amount = Math.max(0, Number(row.band_cents ?? row.price_cents) - Number(credits[0]?.total ?? 0));
     const fresh = await recordRenewal(db, {
       provider: "demo", subscriptionId: row.subscription_id,
       invoice: { invoiceId: `demo_in_${randomToken(14)}`, amountCents: amount, currency: row.currency, periodStart: start, periodEnd: addMonths(start, 1), paidAt: at },

@@ -18,7 +18,19 @@ describe("the demo's sample data", () => {
   it("builds through the real rules and leaves each job at the right point", async () => {
     const people = await buildSampleData(t.db, null, new Date("2026-11-18T01:30:00.000Z")); // a Wednesday afternoon in Queenstown
     expect(people.map((person) => person.key)).toEqual(expect.arrayContaining(["sam", "dave", "maria", "admin", "emma"]));
-    expect(people.filter((person) => person.role === "owner")).toHaveLength(3);
+    // Three owners on Essential and one property manager on Portfolio.
+    expect(people.filter((person) => person.role === "owner")).toHaveLength(4);
+
+    // The manager: one Portfolio, paying, ten properties on it, all covered, billed at the 10-24 band.
+    // DECISIONS.md (2026-11-17): 10-24 properties is NZ$600 a month, so one retainer payment of 60000 cents.
+    const portfolios = await t.db.query<{ status: string; band_cents: number; property_count_billed: number; id: string }>(
+      "select id, status, band_cents, property_count_billed from public.portfolios",
+    );
+    expect(portfolios.map((row) => [row.status, Number(row.band_cents), Number(row.property_count_billed)])).toEqual([["active", 60000, 10]]);
+    const covered = await t.db.query<{ status: string }>("select status from public.properties where portfolio_id = $1::uuid", [portfolios[0]!.id]);
+    expect(covered.map((row) => row.status)).toEqual(Array(10).fill("active"));
+    const retainerPayments = await t.db.query<{ amount_cents: number }>("select amount_cents from public.membership_invoices where portfolio_id is not null");
+    expect(retainerPayments.map((row) => Number(row.amount_cents))).toEqual([60000]);
 
     const jobs = await t.db.query<{ number: number; title: string; status: string; outcome: string | null; window_missed_at: Date | null }>(
       "select number, title, status, outcome, window_missed_at from public.jobs order by number",

@@ -19,6 +19,7 @@ import { getMarket } from "@/lib/markets/store";
 import { getBilling, updateOwnerContact } from "@/lib/owners/service";
 import { paymentsFor } from "@/lib/payments";
 import { normalisePhone } from "@/lib/phone";
+import { cancelPortfolio, choosePortfolio, getPortfolio, PortfolioError, startPortfolio } from "@/lib/properties/portfolio";
 import { changeTier, createProperty, getProperty, PropertyError, requestCancel, rotateReportLink, startMembership, updateProperty } from "@/lib/properties/service";
 
 /**
@@ -54,15 +55,71 @@ export async function addProperty(_previous: FormState, formData: FormData): Pro
   if (Object.keys(errors).length > 0) return problem(formData, "Please check the highlighted fields.", errors);
 
   const db = await getDb();
-  let propertyId: string;
+  let property;
   try {
-    const property = await createProperty(db, viewer.ownerId, { ...fields, market, tierId, referralCode: text(formData, "ref") || null });
-    propertyId = property.id;
+    const where = await getMarket(db, market);
+    // The gateway lets a property joining a Portfolio change the retainer's band straight away.
+    property = await createProperty(db, viewer.ownerId, { ...fields, market, tierId, referralCode: text(formData, "ref") || null }, where ? paymentsFor(db, where.country) : null);
   } catch (error) {
     if (error instanceof PropertyError) return problem(formData, error.message);
     throw error;
   }
-  redirect(`/app/properties/${propertyId}?added=1`);
+  redirect(`/app/properties/${property.id}?added=1`);
+}
+
+/** The owner picks Portfolio for their whole account in one area. */
+export async function choosePortfolioAction(_previous: FormState, formData: FormData): Promise<FormState> {
+  const viewer = await requireOwner("/app/billing");
+  try {
+    await choosePortfolio(await getDb(), viewer.ownerId, text(formData, "market"));
+  } catch (error) {
+    if (error instanceof PortfolioError) return { message: error.message };
+    throw error;
+  }
+  revalidatePath("/app/billing");
+  redirect("/app/billing?portfolio=1");
+}
+
+/** Starts the one Portfolio retainer. Sends the owner to the card page the first time. */
+export async function beginPortfolio(_previous: FormState, formData: FormData): Promise<FormState> {
+  const viewer = await requireOwner("/app/billing");
+  const db = await getDb();
+  const portfolio = await getPortfolio(db, viewer.ownerId, text(formData, "portfolioId"));
+  if (!portfolio) return { message: "We could not find your Portfolio." };
+  const market = await getMarket(db, portfolio.market);
+  const gateway = market ? paymentsFor(db, market.country) : null;
+  if (!gateway) return { message: "Card payments are not switched on yet, so the retainer cannot start. Please try again soon." };
+  let result;
+  try {
+    result = await startPortfolio(db, gateway, {
+      ownerId: viewer.ownerId, portfolioId: portfolio.id,
+      successUrl: `${baseUrl()}/app/membership/return?portfolio=${portfolio.id}`,
+      cancelUrl: `${baseUrl()}/app/billing`,
+    });
+  } catch (error) {
+    console.error("[portfolio] starting the retainer failed:", error instanceof Error ? error.message : error);
+    return { message: "The retainer could not be started just now. Nothing has been charged. Please try again." };
+  }
+  await sendQueued(db);
+  if (result.kind === "error") return { message: result.message };
+  if (result.kind === "redirect") redirect(result.url);
+  redirect("/app/billing?member=1");
+}
+
+export async function endPortfolio(_previous: FormState, formData: FormData): Promise<FormState> {
+  const viewer = await requireOwner("/app/billing");
+  const db = await getDb();
+  const portfolio = await getPortfolio(db, viewer.ownerId, text(formData, "portfolioId"));
+  if (!portfolio) return { message: "We could not find your Portfolio." };
+  const market = await getMarket(db, portfolio.market);
+  try {
+    await cancelPortfolio(db, market ? paymentsFor(db, market.country) : null, viewer.ownerId, portfolio.id);
+  } catch (error) {
+    console.error("[portfolio] cancelling failed:", error instanceof Error ? error.message : error);
+    return { message: "The retainer could not be cancelled just now. Please try again, or contact us." };
+  }
+  revalidatePath("/app/billing");
+  return { done: portfolio.status === "setup" ? "Portfolio removed. Choose a membership for each property instead." : "Cancelled. Your properties stay covered until the month you paid for ends." };
 }
 
 export async function saveProperty(_previous: FormState, formData: FormData): Promise<FormState> {

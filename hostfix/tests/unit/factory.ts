@@ -11,8 +11,9 @@ import { getMarket, listMenu, listTiers, type MenuItem, type Tier } from "@/lib/
 import { listMessages, type LoggedMessage } from "@/lib/notify/outbox";
 import { createOwnerAccount, saveBilling } from "@/lib/owners/service";
 import { createDemoGateway, DEMO_CARD_DECLINES, DEMO_CARD_OK } from "@/lib/payments/demo-gateway";
-import { addMonths } from "@/lib/payments/gateway";
-import { activateMembership, createProperty, type Property } from "@/lib/properties/service";
+import { addMonths, type PaymentsGateway } from "@/lib/payments/gateway";
+import { openPortfolio, startPortfolio, type Portfolio } from "@/lib/properties/portfolio";
+import { activateMembership, createProperty, getProperty, type Property } from "@/lib/properties/service";
 import { createTradie, saveLicence, savePayoutAccount, setSlot, setTradieStatus } from "@/lib/tradies/service";
 
 /**
@@ -168,4 +169,39 @@ export async function offersFor(db: Db, jobId: string) {
     "select id, tradie_id, stage, round, status, expires_at from public.offers where job_id = $1::uuid order by sent_at, number",
     [jobId],
   );
+}
+
+/**
+ * A manager on Portfolio: picks the Portfolio membership with their first
+ * property (which sets it up for the whole account), adds the rest, and, if
+ * asked, starts the one retainer with the card already on file. Everything
+ * goes through the same functions the owner's screens use.
+ */
+export async function makePortfolio(
+  db: Db,
+  ownerId: string,
+  count: number,
+  options: { start?: boolean; gateway?: PaymentsGateway } = {},
+): Promise<{ portfolio: Portfolio; properties: Property[] }> {
+  const tier = (await listTiers(db, "queenstown")).find((candidate) => candidate.key === "portfolio");
+  if (!tier) throw new Error('No "portfolio" membership in Queenstown.');
+  const properties: Property[] = [];
+  for (let index = 0; index < count; index += 1) {
+    const n = next();
+    properties.push(
+      await createProperty(db, ownerId, {
+        market: "queenstown", name: `Managed unit ${n}`, addressLine1: `${n} Hallenstein Street`, suburb: "Queenstown", postcode: "9300",
+        accessNotes: `Key safe code ${2000 + n}.`, tierId: tier.id,
+      }, options.gateway ?? createDemoGateway(db, "NZ")),
+    );
+  }
+  let portfolio = (await openPortfolio(db, ownerId, "queenstown"))!;
+  if (options.start !== false) {
+    const started = await startPortfolio(db, options.gateway ?? createDemoGateway(db, "NZ"), { ownerId, portfolioId: portfolio.id, successUrl: "/app/billing", cancelUrl: "/app/billing" });
+    if (started.kind !== "active") throw new Error(`Portfolio did not start: ${started.kind === "error" ? started.message : "sent to the card page"}`);
+    portfolio = started.portfolio;
+  }
+  // Read back: starting the retainer covered them all.
+  const fresh = await Promise.all(properties.map(async (property) => (await getProperty(db, ownerId, property.id))!));
+  return { portfolio, properties: fresh };
 }
