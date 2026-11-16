@@ -466,9 +466,32 @@ select.input-inline { width: auto; min-width: 140px; }
 .search .input { padding-left: 32px; }
 .toggle { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; min-height: 32px; }
 .toggle input, .recip input { width: 18px; height: 18px; accent-color: #303030; margin: 0; flex: none; }
-.line-item { display: grid; gap: 8px 12px; grid-template-columns: minmax(0, 1fr) 120px 170px 32px; align-items: end; padding: 12px; border: 1px solid var(--border); border-radius: var(--r-control); background: var(--surface-secondary); }
+.line-item { display: grid; gap: 8px 12px; grid-template-columns: 120px minmax(0, 1fr) 32px; align-items: end; padding: 12px; border: 1px solid var(--border); border-radius: var(--r-control); background: var(--surface-secondary); }
 .line-item .icon-btn { margin-bottom: 0; }
-@media (max-width: 767px) { .line-item { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 36px; } .line-item .li-desc { grid-column: 1 / -1; } }
+.line-item .li-desc { grid-column: 1 / 3; }
+.line-item .li-x { grid-column: 3; grid-row: 1; align-self: end; }
+.line-item.has-cat { grid-template-columns: 104px minmax(0, 1fr) minmax(0, 1fr) 32px; }
+.line-item.has-cat .li-desc { grid-column: 1 / 4; }
+.line-item.has-cat .li-x { grid-column: 4; }
+.line-item.tpl-task { grid-template-columns: minmax(0, 1fr) 96px 32px; }
+.line-item.tpl-task .li-desc { grid-column: auto; }
+@media (max-width: 767px) {
+  .line-item, .line-item.has-cat { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 36px; }
+  .line-item .li-desc, .line-item.has-cat .li-desc { grid-column: 1 / 3; }
+  .line-item .li-x, .line-item.has-cat .li-x { grid-column: 3; }
+  .line-item .li-gst { grid-column: 2 / 4; }
+  .line-item .li-cat { grid-column: 1 / -1; }
+  .line-item.tpl-task { grid-template-columns: minmax(0, 1fr) 88px 36px; }
+  .line-item.tpl-task .li-desc { grid-column: auto; }
+}
+/* Multi-select choice lists (Polaris ChoiceList with checkboxes) */
+.choice-box { border: 1px solid var(--border); border-radius: var(--r-control); background: var(--surface); padding: 4px 12px 8px; max-height: 280px; overflow-y: auto; overscroll-behavior: contain; }
+.choice-h { font-size: var(--fs-sm); line-height: var(--lh-sm); font-weight: var(--fw-medium); color: var(--text-secondary); margin: 8px 0 0; }
+.choice-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0 12px; }
+.choice-grid .toggle { min-height: 30px; line-height: var(--lh-sm); }
+.choice-grid .toggle input:disabled + span { color: var(--text-secondary); }
+.new-role { display: grid; gap: 8px 12px; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto; align-items: end; padding: 12px; margin-top: 8px; border: 1px solid var(--border); border-radius: var(--r-control); background: var(--surface-secondary); }
+@media (max-width: 767px) { .new-role { grid-template-columns: minmax(0, 1fr); } }
 
 /* ===== Banners ===== */
 .banner, .demo-banner {
@@ -726,6 +749,26 @@ a.row:hover, button.row:hover { background: var(--surface-hover); }
 .status-list .k { color: var(--text-secondary); }
 .status-list .v { display: inline-flex; align-items: center; gap: 8px; text-align: right; overflow-wrap: anywhere; }
 
+/* Editable stage lists (project Edit stages, wizard, templates) */
+.rows > * + * { border-top: 1px solid var(--border-secondary); }
+.stage-row { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px 12px; padding: 12px 0; }
+.stage-row:first-child { padding-top: 0; }
+.stage-row .field { flex: 1 1 220px; }
+.stage-row .btn-group { flex: none; }
+.tpl-row { padding: 8px 16px; }
+.tpl-row .si-n { width: 20px; flex: none; color: var(--text-secondary); font-variant-numeric: tabular-nums; }
+.tpl-row .end { display: flex; gap: 6px; align-items: center; }
+.t-edit { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.t-edit .input { flex: 1 1 240px; }
+.cat-block + .cat-block { margin-top: 20px; padding-top: 20px; border-top: 1px solid var(--border); }
+.cat-block .rows { margin-top: 8px; }
+.cat-block .role-row { display: flex; align-items: center; gap: 12px; padding: 6px 0; min-height: 40px; }
+.cat-block .role-row .body { flex: 1; min-width: 0; }
+.cat-block .role-row select.input { width: auto; min-width: 150px; max-width: 55%; min-height: var(--btn-h); padding-top: 2px; padding-bottom: 2px; }
+.ftype { font-family: var(--font); min-width: 44px; justify-content: center; flex: none; }
+.file-cell { display: flex; gap: 8px; align-items: flex-start; min-width: 0; }
+.file-cell .fn { min-width: 0; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; scroll-behavior: auto !important; }
 }
@@ -758,25 +801,53 @@ a.row:hover, button.row:hover { background: var(--surface-hover); }
 <section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title" hidden></section>
 <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
 <div class="tip" id="tip" hidden></div>
-<input type="file" id="file-input" hidden accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx">
+<input type="file" id="file-input" hidden multiple>
 <script>
 const LOGO_DATA_URI = "data:image/png;base64,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";
 /* ===== Constants ===== */
 const TODAY = '2026-11-02';
-const STORE_KEY = 'wellco_demo_v1';
+const STORE_KEY = 'wellco_demo_v2'; // v1 was the pre-16 Nov demo; its saved state is ignored
 function addDays(iso, n) { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
 const d = (n) => addDays(TODAY, n);
-
-const STAGES = [
-  { n: 1, name: 'Sourcing', short: 'Sourcing' },
-  { n: 2, name: 'Feasibility', short: 'Feaso' },
-  { n: 3, name: 'Acquisition & DD', short: 'Acq. & DD' },
-  { n: 4, name: 'Consultants', short: 'Consultants' },
-  { n: 5, name: 'Development Approval', short: 'DA' },
-  { n: 6, name: 'Construction', short: 'Construction' },
-  { n: 7, name: 'Sales & Settlements', short: 'Sales' },
-  { n: 8, name: 'Bonds & Wind-up', short: 'Wind-up' },
-];
+/* Stage templates per project type. Each stage: name, optional key ('cert' marks the sign-off stage that carries the
+   funds-needed list), default tasks as [title, days from project start, lead-time note]. Editable in Settings. */
+const PROJECT_TYPES = ['Land subdivision', 'Commercial / industrial', 'Residential build'];
+const DEFAULT_TEMPLATES = {
+  'Land subdivision': [
+    { name: 'Sourcing', tasks: [['Log site and source', 0], ['Desktop zoning check (Stash / Mecone Mosaic)', 3]] },
+    { name: 'Feasibility', tasks: [['Run feaso in Feasely', 10], ['Go / no-go decision', 14]] },
+    { name: 'Acquisition & DD', tasks: [['Register project company (ABN, GST, bank)', 21], ['Exchange contracts and pay deposit', 30], ['Due diligence: title, contamination, flooding, bushfire', 45], ['DD expiry: decide go / no-go', 50, 'Unconditional after this date.'], ['Settlement', 365]] },
+    { name: 'Consultants', tasks: [['Get 3 quotes: town planner', 60], ['Get 3 quotes: surveyor', 60], ['Get 3 quotes: civil engineer', 75], ['Geotech, ecology and bushfire reports', 120]] },
+    { name: 'Development Approval', tasks: [['Lodge DA and pay fees', 200], ['Request civil quotes during DA', 260, 'Quotes take 3 to 4 weeks. Execute the day DA lands.'], ['Respond to RFIs', 280], ['DA determination: review conditions', 380]] },
+    { name: 'Construction', tasks: [['Tender civil works: 3 quotes', 400], ['Construction certificate issued', 430], ['Electricity connection application (Endeavour / Energex)', 440, '3-month lead time. Needed before sign-off.'], ['Practical completion of civil works', 600]] },
+    { name: 'Certification & Registration', key: 'cert', tasks: [['Confirm contributions and headworks amounts', 580, 'Council and the water authority need paying before they sign. Line up the money early.'], ['Practical completion inspection with council', 610], ['Works-as-executed plans to council', 620], ['NBN and electricity sign-offs', 630], ['Water authority compliance certificate (Section 73 / s307)', 635], ['Lodge subdivision certificate application', 640, 'Council turnaround 6 to 8 weeks.'], ['Bank consent to the plan (mortgagee)', 660], ['Register plan (NSW LRS / Titles Queensland)', 680]] },
+    { name: 'Sales & Settlements', tasks: [['Appoint selling agent', 520], ['Settle lots and discharge loan', 720]] },
+    { name: 'Bonds & Wind-up', tasks: [['Lodge maintenance bond', 690], ['Bond inspection and return', 1060], ['Final accounts and distribution to trust', 1090], ['Deregister company', 1120]] },
+  ],
+  'Commercial / industrial': [
+    { name: 'Sourcing', tasks: [['Log site and source', 0], ['Desktop zoning check (Stash / Mecone Mosaic)', 3]] },
+    { name: 'Feasibility', tasks: [['Run feaso in Feasely', 10], ['Go / no-go decision', 14]] },
+    { name: 'Acquisition & DD', tasks: [['Register project company (ABN, GST, bank)', 21], ['Exchange contracts and pay deposit', 30], ['Due diligence: title, contamination, services', 45], ['DD expiry: decide go / no-go', 50, 'Unconditional after this date.'], ['Settlement', 120]] },
+    { name: 'Consultants', tasks: [['Get 3 quotes: town planner', 60], ['Get 3 quotes: traffic engineer', 60], ['Survey, geotech and stormwater', 90]] },
+    { name: 'Development Approval', tasks: [['Lodge DA and pay fees', 200], ['Request civil and building quotes during DA', 260, 'Quotes take 3 to 4 weeks. Execute the day DA lands.'], ['Respond to RFIs', 280], ['DA determination: review conditions', 380]] },
+    { name: 'Construction', tasks: [['Tender civil and building works: 3 quotes each', 400], ['Pay contributions and get CC', 430], ['Energy authority application (substation)', 440, '3-month lead time.'], ['Practical completion', 640]] },
+    { name: 'Certification & Registration', key: 'cert', tasks: [['Confirm contributions and headworks amounts', 600, 'Council and the water authority need paying before they sign. Line up the money early.'], ['Final inspection by certifier', 650], ['Water authority compliance certificate', 660], ['Fire safety certificate', 665], ['Occupation certificate', 670, "Units can't settle without it."], ['Bank consent to the strata plan', 690], ['Strata certificate and lodge strata plan', 695]] },
+    { name: 'Sales & Settlements', tasks: [['Appoint agent for pre-sales', 450], ['Settle units and discharge loan', 760]] },
+    { name: 'Bonds & Wind-up', tasks: [['Final accounts and distribution to trust', 1010], ['Deregister company', 1040]] },
+  ],
+  'Residential build': [
+    { name: 'Sourcing', tasks: [['Log site and source', 0], ['Desktop planning check: zoning, overlays, CDC eligible?', 3]] },
+    { name: 'Feasibility', tasks: [["Builder's estimate and feaso", 10], ['Go / no-go decision', 14]] },
+    { name: 'Acquisition & DD', tasks: [['Register project company (ABN, GST, bank)', 21], ['Exchange contracts and pay deposit', 30], ['Due diligence: title, easements, services, flood and bushfire', 45], ['Settlement', 90]] },
+    { name: 'Design & approvals', tasks: [['Designer: concept and working drawings', 120], ['Engineering: structural, stormwater and BASIX', 150], ['Lodge DA or CDC', 170, 'CDC is about 20 days if it complies. A DA takes 3 to 6 months.'], ["Check builder's licence (NSW Fair Trading)", 225], ['Home warranty insurance (HBCF) certificate', 230, 'Needed before work starts on residential jobs over $20,000 in NSW.'], ['Pay long service levy', 232], ['Construction certificate', 240]] },
+    { name: 'Construction', tasks: [['Sign fixed-price building contract', 245], ['Slab inspection by certifier', 290], ['Frame inspection by certifier', 330], ['Approve progress claims against the contract', 400], ['Practical completion and defects list', 480]] },
+    { name: 'Certification & Occupation', key: 'cert', tasks: [['Final inspection by certifier', 490], ['Water authority final sign-off', 495], ['Occupation certificate', 500, "Can't settle or lease without it."], ['Handover: keys, manuals and warranties', 505]] },
+    { name: 'Sales & Settlements', tasks: [['Appoint selling agent', 450], ['Settle sale and discharge loan', 560]] },
+    { name: 'Wind-up', tasks: [['Defects period: builder returns at 6 and 12 months', 870], ['Final accounts and distribution to trust', 900], ['Deregister company', 930]] },
+  ],
+};
+// Seed projects are stamped from the default templates
+function tplStages(type) { return (DEFAULT_TEMPLATES[type] || DEFAULT_TEMPLATES['Land subdivision']).map(s => (s.key ? { name: s.name, key: s.key } : { name: s.name })); }
 const CATEGORIES = ['Acquisition', 'Holding', 'Consultants', 'Council & Gov', 'Construction', 'Sales', 'Management fee'];
 const GST_TYPES = {
   taxable: { label: 'GST 10%', long: 'Taxable (10% GST)' },
@@ -784,12 +855,25 @@ const GST_TYPES = {
   input_taxed: { label: 'Input taxed', long: 'Input taxed (e.g. interest, bank fees)' },
   margin_scheme: { label: 'Margin scheme', long: 'Margin scheme (sales only)' },
 };
-const ROLES = ["Buyer's agent", 'Solicitor', 'Town planner', 'Surveyor', 'Civil engineer', 'Geotech', 'Ecology', 'Bushfire', 'Traffic engineer', 'Civil contractor', 'Electrical', 'NBN', 'Landscaping', 'Builder', 'Real estate agent', 'Accountant', 'Council', 'Government', 'Bank', 'Vendor', 'Project manager'];
-const DOC_TYPES = ['Contract', 'DA', 'Report', 'Quote', 'Engagement', 'InvoiceIn', 'InvoiceOut', 'Survey', 'Company', 'Correspondence'];
-const DOC_LABELS = { Contract: 'Contracts', DA: 'DA & planning', Report: 'Reports', Quote: 'Quotes', Engagement: 'Engagements & POs', InvoiceIn: 'Bills', InvoiceOut: 'Sales invoices', Survey: 'Survey & plans', Company: 'Company & ASIC', Correspondence: 'Correspondence' };
+// Contact categories (ordered) and the category each role sits in. Copied into state so Dan can change them.
+const DEFAULT_CATEGORIES = ['Consultants', 'Civil contractors', 'Building contractors', 'Agents & advisers', 'Council & government', 'Banks & vendors'];
+const DEFAULT_ROLES = {
+  'Town planner': 'Consultants', 'Surveyor': 'Consultants', 'Civil engineer': 'Consultants', 'Geotech': 'Consultants', 'Ecology': 'Consultants', 'Bushfire': 'Consultants', 'Traffic engineer': 'Consultants', 'Certifier': 'Consultants',
+  'Civil contractor': 'Civil contractors', 'Earthworks': 'Civil contractors', 'Electrical': 'Civil contractors', 'NBN': 'Civil contractors', 'Landscaping': 'Civil contractors',
+  'Builder': 'Building contractors', 'Carpenter': 'Building contractors', 'Plumber': 'Building contractors', 'Electrician (building)': 'Building contractors',
+  "Buyer's agent": 'Agents & advisers', 'Solicitor': 'Agents & advisers', 'Real estate agent': 'Agents & advisers', 'Accountant': 'Agents & advisers', 'Project manager': 'Agents & advisers',
+  'Council': 'Council & government', 'Government': 'Council & government',
+  'Bank': 'Banks & vendors', 'Vendor': 'Banks & vendors',
+};
+const DOC_TYPES = ['Contract', 'DA', 'Report', 'SalesEvidence', 'Quote', 'Engagement', 'InvoiceIn', 'InvoiceOut', 'Survey', 'Company', 'Correspondence'];
+const DOC_LABELS = { Contract: 'Contracts', DA: 'DA & planning', Report: 'Reports', SalesEvidence: 'Sales evidence', Quote: 'Quotes', Engagement: 'Engagements & POs', InvoiceIn: 'Bills', InvoiceOut: 'Sales invoices', Survey: 'Survey & plans', Company: 'Company & ASIC', Correspondence: 'Correspondence' };
+// Documents on a deal, and where each lands when the deal becomes a project: [project doc type, stage]
+const DEAL_DOC_TYPES = { Contract: 'Contract', Plans: 'Plans', SalesEvidence: 'Sales evidence', Planning: 'Planning / zoning', Report: 'Report', Correspondence: 'Correspondence' };
+const DEAL_TO_PROJECT_DOC = { Contract: ['Contract', 1], Plans: ['Survey', 1], Planning: ['DA', 1], Correspondence: ['Correspondence', 1], SalesEvidence: ['SalesEvidence', 2], Report: ['Report', 2] };
 
 /* ===== Seed: contacts (shared register) ===== */
-const C = (id, name, company, role, abn, email, phone, extra = {}) => ({ id, name, company, role, abn, email, phone, licenceExpiry: null, insuranceExpiry: null, rating: 4, notes: '', ...extra });
+// role can be one role or an array of roles; extra.categories puts a contact under more categories than its roles imply
+const C = (id, name, company, role, abn, email, phone, extra = {}) => ({ id, name, company, roles: Array.isArray(role) ? role : [role], categories: [], abn, email, phone, licenceExpiry: null, insuranceExpiry: null, rating: 4, notes: '', ...extra });
 const SEED_CONTACTS = [
   C('wellco', 'Dan Wellman', 'Wellco Developments Pty Ltd', 'Project manager', '81 096 401 400', 'dan@wellco.example', '0491 570 156', { rating: 5, notes: 'Project manager of every project company. Management fee invoiced to each.' }),
   C('ray', 'Ray Taylor', 'Taylor Property Advisory', "Buyer's agent", '23 611 482 907', 'ray@taylorproperty.example', '0491 570 157', { licenceExpiry: '2027-06-30', insuranceExpiry: '2027-03-31', rating: 5, notes: 'Finds off-market sites from Nowra to Batemans Bay. Brought us Croobyar and Woollamia.' }),
@@ -804,13 +888,13 @@ const SEED_CONTACTS = [
   C('harbour', 'Mick Donnelly', 'Harbour Survey Group', 'Surveyor', '47 226 091 385', 'mick@harboursurvey.example', '02 5550 4102', { licenceExpiry: '2027-09-30', insuranceExpiry: '2027-02-28', rating: 5, notes: 'Registered surveyor. Did detail, subdivision plan and set-out on Croobyar.' }),
   C('ridgeline', 'Ben Archer', 'Ridgeline Surveying', 'Surveyor', '92 774 310 556', 'ben@ridgelinesurvey.example', '0491 570 737', { licenceExpiry: '2027-03-31', insuranceExpiry: '2027-03-31', rating: 4, notes: 'Works NSW and QLD.' }),
   C('beausurvey', 'Grace Tully', 'Beaudesert Survey Co', 'Surveyor', '13 486 207 991', 'grace@beausurvey.example', '0491 571 266', { licenceExpiry: '2027-07-31', insuranceExpiry: '2027-07-31', rating: 4 }),
-  C('northcott', 'Ellie Northcott', 'Northcott Civil Engineers', 'Civil engineer', '38 662 154 720', 'ellie@northcottcivil.example', '02 5550 5519', { insuranceExpiry: '2027-06-30', rating: 5, notes: 'Civil design and CC drawings. Good with Shoalhaven Water.' }),
+  C('northcott', 'Ellie Northcott', 'Northcott Civil Engineers', 'Civil engineer', '38 662 154 720', 'ellie@northcottcivil.example', '02 5550 5519', { insuranceExpiry: '2027-06-30', rating: 5, categories: ['Civil contractors'], notes: 'Civil design and CC drawings. Good with Shoalhaven Water. Also runs civil superintendence on site, so listed with the civil contractors.' }),
   C('coastgeo', 'Raj Patel', 'Coastline Geotech', 'Geotech', '55 309 821 447', 'raj@coastlinegeotech.example', '02 5550 6630', { insuranceExpiry: d(40), rating: 4, notes: 'Fast turnaround on bore logs.' }),
   C('bushland', 'Claire Moss', 'Bushland Ecology Services', 'Ecology', '27 441 096 318', 'claire@bushlandeco.example', '02 5550 7714', { insuranceExpiry: '2027-04-30', rating: 4 }),
   C('firewise', 'Pete Collins', 'Firewise Consulting', 'Bushfire', '69 230 557 812', 'pete@firewise.example', '0491 571 491', { licenceExpiry: '2027-01-31', insuranceExpiry: d(-12), rating: 4, notes: 'BPAD accredited. Insurance certificate lapsed, request new one before next job.' }),
   C('trafficco', 'Nina Shaw', 'South Coast Traffic Engineering', 'Traffic engineer', '41 905 263 774', 'nina@sctraffic.example', '02 5550 8820', { insuranceExpiry: '2027-02-28', rating: 4 }),
   C('southcoastcivil', 'Jason Hale', 'Southcoast Civil Pty Ltd', 'Civil contractor', '64 118 739 205', 'jason@southcoastcivil.example', '02 5550 9031', { licenceExpiry: '2027-08-31', insuranceExpiry: d(51), rating: 5, notes: 'Appointed on Croobyar. Tidy site, claims are always backed by quantities.' }),
-  C('bayview', 'Craig Mullins', 'Bayview Earthworks', 'Civil contractor', '73 550 812 649', 'craig@bayviewearthworks.example', '02 5550 9144', { licenceExpiry: '2027-05-31', insuranceExpiry: '2027-05-31', rating: 3, notes: 'Cheapest on Croobyar but excluded rock. 16-week program.' }),
+  C('bayview', 'Craig Mullins', 'Bayview Earthworks', ['Earthworks', 'Civil contractor'], '73 550 812 649', 'craig@bayviewearthworks.example', '02 5550 9144', { licenceExpiry: '2027-05-31', insuranceExpiry: '2027-05-31', rating: 3, notes: 'Cheapest on Croobyar but excluded rock. 16-week program.' }),
   C('monaro', 'Steve Ruddock', 'Monaro Civil Group', 'Civil contractor', '35 228 940 107', 'steve@monarocivil.example', '0491 571 804', { licenceExpiry: '2027-10-31', insuranceExpiry: '2027-10-31', rating: 4 }),
   C('voltline', 'Luke Barrett', 'Volt Line Electrical', 'Electrical', '82 663 105 948', 'luke@voltline.example', '0491 572 549', { licenceExpiry: '2027-02-28', insuranceExpiry: '2027-02-28', rating: 5, notes: 'ASP Level 1 and 3. Handles the Endeavour Energy application.' }),
   C('southernpower', 'Dean Fraser', 'Southern Power Services', 'Electrical', '19 874 336 520', 'dean@southernpower.example', '0491 572 665', { licenceExpiry: '2026-12-31', insuranceExpiry: '2027-04-30', rating: 3 }),
@@ -824,6 +908,11 @@ const SEED_CONTACTS = [
   C('asic', 'ASIC', 'Australian Securities & Investments Commission', 'Government', '', '', '', { rating: 3, notes: 'Company registration and annual review fees. GST-free.' }),
   C('lrs', 'NSW Land Registry Services', 'NSW Land Registry Services', 'Government', '', '', '', { rating: 3, notes: 'Plan registration and dealings. GST-free.' }),
   C('coastalbank', 'Michael Chen', 'Coastal Mutual Bank', 'Bank', '33 087 651 942', 'mchen@coastalmutual.example', '02 5550 4800', { rating: 4, notes: 'Construction facilities for Croobyar and Ulladulla. Interest is input taxed.' }),
+  C('coastcert', 'Rob Feeney', 'South Coast Certifiers', 'Certifier', '46 219 830 572', 'rob@sccertifiers.example', '02 5550 6142', { licenceExpiry: '2027-05-31', insuranceExpiry: '2027-05-31', rating: 4, notes: 'Registered certifier. Final inspections, compliance and strata certificates.' }),
+  C('miltonhomes', 'Greg Pascoe', 'Milton Homes & Construction', 'Builder', '71 508 334 926', 'greg@miltonhomes.example', '0491 573 412', { licenceExpiry: '2027-08-31', insuranceExpiry: '2027-08-31', rating: 4, notes: 'Licensed builder for one-off houses and duplexes. Arranges HBCF home warranty cover.' }),
+  C('bannister', 'Kyle Bannister', 'Bannister Plumbing & Drainage', 'Plumber', '28 664 019 553', 'kyle@bannisterplumbing.example', '0491 573 528', { licenceExpiry: '2027-02-28', insuranceExpiry: '2027-02-28', rating: 4 }),
+  C('shoalwater', 'Development Services', 'Shoalhaven Water', 'Council', '59 855 182 344', 'water@shoalhaven.example', '02 5550 3010', { rating: 3, notes: 'Section 64 headworks charges and s307 certificates of compliance. GST-free charges.' }),
+  C('titlesqld', 'Titles Queensland', 'Titles Queensland', 'Government', '', '', '', { rating: 3, notes: 'Survey plan and dealing lodgement in QLD. GST-free.' }),
   C('hollis', 'P & J Hollis', 'Hollis family (vendor)', 'Vendor', '', '', '', { rating: 4, notes: 'Croobyar vendor. Farmers, not GST registered, so no GST on the land.' }),
 ];
 
@@ -847,9 +936,13 @@ const uid = (p) => p + (++_uid).toString(36);
 const T = (stage, title, due, done, extra = {}) => ({ id: uid('t'), stage, title, due, done: !!done, doneAt: done ? (typeof done === 'string' ? done : due) : null, notes: [], lead: null, ...extra });
 const Q = (contactId, amount, received, status, inc = [], exc = [], extra = {}) => ({ id: uid('q'), contactId, amount, gst: 'taxable', received, requestedAt: extra.requestedAt || (received ? addDays(received, -14) : null), status, inclusions: inc, exclusions: exc, ...extra });
 const L = (desc, amount, gst = 'taxable', extra = {}) => ({ desc, amount, gst, ...extra });
+// Each bill line carries its own cost category. The bill's category is only the default for its lines.
 function IN(number, contactId, date, desc, category, lines, status = 'paid', extra = {}) {
-  return { id: uid('i'), number, contactId, date, due: extra.due || addDays(date, 14), desc, category, lines: Array.isArray(lines) ? lines : [L(desc, lines, 'taxable')], status, paidDate: status === 'paid' ? (extra.paidDate || addDays(date, 10)) : null, engagementId: null, ...extra };
+  const ls = (Array.isArray(lines) ? lines : [L(desc, lines, 'taxable')]).map(l => ({ ...l, category: l.category || category }));
+  return { id: uid('i'), number, contactId, date, due: extra.due || addDays(date, 14), desc, category, lines: ls, status, paidDate: status === 'paid' ? (extra.paidDate || addDays(date, 10)) : null, engagementId: null, ...extra };
 }
+// Funds needed before sign-off: amount follows bill-line rules (GST on Expenses is ex GST). billRef links a line to a bill by number.
+const F = (desc, contactId, amount, gst, category, extra = {}) => ({ id: uid('fn'), desc, contactId, amount, gst, category, paid: false, billId: null, note: '', ...extra });
 const LOG = (ts, text, kind = 'note', who = 'Dan') => ({ id: uid('l'), ts, who, text, kind });
 
 function buildSeed() {
@@ -859,7 +952,7 @@ function buildSeed() {
   /* ---------- P1 CROOBYAR ---------- */
   const p1 = {
     id: 'CROOBYAR', name: 'Croobyar Rd, Milton', street: 'Croobyar Rd', suburb: 'Milton', state: 'NSW', lotPlan: 'Lot 12 DP 1187234',
-    type: 'Residential subdivision', yield: '14 lots', status: 'live', stage: 6, council: 'shoalcouncil', started: '2024-02-12',
+    type: 'Land subdivision', stages: tplStages('Land subdivision'), yield: '14 lots', status: 'live', stage: 6, council: 'shoalcouncil', started: '2024-02-12',
     company: { name: 'Croobyar Developments Pty Ltd', abn: '61 234 567 890', acn: '234 567 890', gst: true, gstFrom: '2024-03-01', bank: 'Coastal Mutual Bank', bsb: '633-000', acc: '1874 2209', tfn: 'On file' },
     stageNote: 'Civil works 60% complete. Southcoast Civil on road base and pavement.',
     budget: { 'Acquisition': 1535000, 'Holding': 150000, 'Consultants': 175000, 'Council & Gov': 205000, 'Construction': 820000, 'Sales': 70000, 'Management fee': 20000 },
@@ -874,20 +967,29 @@ function buildSeed() {
     T(5, 'Lodge DA and pay fees', '2025-04-08', true), T(5, 'Respond to council RFI', '2025-07-25', true),
     T(5, 'DA approved: review conditions', '2025-12-12', true), T(5, 'Request civil quotes during DA', '2025-11-14', true),
     T(6, 'Tender civil works: 3 quotes', '2026-03-13', true), T(6, 'Appoint civil contractor', '2026-03-27', true),
-    T(6, 'Pay s7.11 contributions before CC', '2026-03-06', true), T(6, 'Construction certificate issued', '2026-04-17', true),
+    T(6, 'Pay first contributions instalment before CC', '2026-03-06', true), T(6, 'Construction certificate issued', '2026-04-17', true),
     T(6, 'Engage electrical (ASP) and NBN', '2026-05-22', true),
     T(6, 'Submit Endeavour Energy connection application', d(7), false, { lead: '3-month lead time. Needed before subdivision certificate.', notes: [{ ts: '2026-10-28T09:12', text: 'Luke (Volt Line) has the design ready, just needs sign-off on the application form.' }] }),
     T(6, 'Approve progress claim #6: Southcoast Civil', d(3), false),
     T(6, 'Get 3 quotes: works-as-executed survey', d(-5), false, { notes: [{ ts: '2026-10-20T16:40', text: 'Harbour quoted. Ridgeline still to come back.' }] }),
     T(6, 'Request landscaping and street tree quotes', d(18), false),
-    T(6, 'Practical completion inspection with council', '2027-02-15', false),
-    T(6, 'Works-as-executed plans to council', '2027-03-01', false),
-    T(6, 'Lodge subdivision certificate application', '2027-03-15', false, { lead: 'Council turnaround 6 to 8 weeks.' }),
-    T(6, 'Register plan with NSW LRS', '2027-04-30', false),
-    T(7, 'Appoint selling agent', '2026-08-14', true), T(7, 'Pre-sell lots off the plan', '2027-03-31', false, { notes: [{ ts: '2026-10-09T15:05', text: 'Lots 3 and 9 exchanged. Jess has two more buyers looking.' }] }),
-    T(7, 'Confirm margin scheme valuation with Lucy', '2027-01-29', false), T(7, 'Bundle settlements after registration', '2027-05-28', false), T(7, 'Discharge construction loan', '2027-06-30', false),
-    T(8, 'Lodge maintenance bond with council', '2027-04-16', false), T(8, 'Council bond inspection (12 months)', '2028-04-14', false),
-    T(8, 'Final accounts to accountant', '2028-05-31', false), T(8, 'Distribution to Wellman Family Trust', '2028-06-30', false), T(8, 'Deregister company', '2028-09-29', false),
+    T(6, 'Practical completion of civil works', '2027-02-05', false),
+    T(7, 'Confirm contributions and headworks amounts with council and Shoalhaven Water', d(21), false, { lead: 'About $654,000 is due before council signs the subdivision certificate. Lock in the indexed figures, then line up the money.' }),
+    T(7, 'Arrange funds for contributions: trust loan or facility top-up', '2027-01-29', false, { notes: [{ ts: '2026-10-30T11:20', text: 'Michael Chen (Coastal Mutual) open to a $500k top-up if 4 lots are exchanged first.' }] }),
+    T(7, 'Practical completion inspection with council', '2027-02-15', false),
+    T(7, 'NBN certificate of practical completion (pit and pipe)', '2027-02-26', false),
+    T(7, 'Works-as-executed plans to council', '2027-03-01', false),
+    T(7, 'Endeavour Energy notification of arrangement', '2027-03-05', false),
+    T(7, 'Shoalhaven Water certificate of compliance (s307)', '2027-03-05', false),
+    T(7, 'Surveyor signs final plan and 88B instrument', '2027-03-08', false),
+    T(7, 'Pay s7.11 contributions and s64 headworks', '2027-03-10', false),
+    T(7, 'Lodge subdivision certificate application', '2027-03-15', false, { lead: 'Council turnaround 6 to 8 weeks.' }),
+    T(7, 'Coastal Mutual Bank consent to the plan (mortgagee)', '2027-04-09', false),
+    T(7, 'Register plan with NSW LRS', '2027-04-30', false),
+    T(8, 'Appoint selling agent', '2026-08-14', true), T(8, 'Pre-sell lots off the plan', '2027-03-31', false, { notes: [{ ts: '2026-10-09T15:05', text: 'Lots 3 and 9 exchanged. Jess has two more buyers looking.' }] }),
+    T(8, 'Confirm margin scheme valuation with Lucy', '2027-01-29', false), T(8, 'Bundle settlements after registration', '2027-05-28', false), T(8, 'Discharge construction loan', '2027-06-30', false),
+    T(9, 'Lodge maintenance bond with council', '2027-04-16', false), T(9, 'Council bond inspection (12 months)', '2028-04-14', false),
+    T(9, 'Final accounts to accountant', '2028-05-31', false), T(9, 'Distribution to Wellman Family Trust', '2028-06-30', false), T(9, 'Deregister company', '2028-09-29', false),
   ];
   p1.rfqs = [
     { id: uid('r'), scope: 'Town planning', stage: 4, category: 'Consultants', quotes: [
@@ -974,7 +1076,10 @@ function buildSeed() {
     IN('SCC-PC04', 'southcoastcivil', '2026-08-05', 'Progress claim #4: sewer and water', 'Construction', 79620, 'paid', { engagementId: 'e-civil' }),
     interest('2026-09-01', 15700),
     IN('SCC-PC05', 'southcoastcivil', '2026-09-07', 'Progress claim #5: kerb and gutter', 'Construction', 48990, 'paid', { engagementId: 'e-civil' }),
+    IN('NCE-6021', 'northcott', '2026-09-21', 'Civil superintendence and authority fee', 'Consultants', [L('Civil superintendence: August and September', 8400, 'taxable'), L('Shoalhaven Water design check fee (paid on our behalf)', 1120, 'gst_free', { category: 'Council & Gov' })], 'paid'),
     rates('2026-09-30', 1960),
+    IN('ML-2795', 'miltonlegal', '2026-10-12', 'Sales contracts: Lots 3 and 9', 'Sales', [L('Contract preparation and exchange: Lots 3 and 9', 3200, 'taxable'), L('Disbursements: s10.7 certificates and title searches', 486.5, 'gst_free', { category: 'Council & Gov' })], 'paid'),
+    IN('SCC-77412', 'shoalcouncil', '2026-10-27', 'Sewer and water connection works, final inspection', 'Council & Gov', [L('Section 7.11 contributions: indexation adjustment, 13 lots', 11640, 'gst_free'), L('Council works: sewer and water main connection, Croobyar Rd', 16800, 'taxable', { category: 'Construction' }), L('Final inspection fee: subdivision works', 1250, 'taxable')], 'paid', { paidDate: '2026-10-30', note: 'Split bill: GST-free contributions and GST-inclusive council works' }),
     IN('HSG-3902', 'harbour', '2026-10-12', 'Set-out survey for civil works', 'Consultants', 7450, 'approved', { engagementId: 'e-setout', due: d(7) }),
     IN('VLE-2264', 'voltline', '2026-10-20', 'Progress claim #1: conduits and pillars', 'Construction', 33780, 'approved', { engagementId: 'e-elec', due: d(4) }),
     IN('SCC-PC06', 'southcoastcivil', '2026-10-31', 'Progress claim #6: road base and pavement', 'Construction', 42300, 'draft', { engagementId: 'e-civil', due: d(5) }),
@@ -988,12 +1093,24 @@ function buildSeed() {
     { id: uid('o'), number: 'CD-0001', to: 'R & T Nguyen (buyer)', date: '2026-09-18', due: '2026-09-18', desc: 'Contract deposit: Lot 3 (10%)', lines: [L('10% deposit held in trust by Milton Legal', 46500, 'margin_scheme', { atSettlement: true, marginBase: 12800 })], status: 'received', paidDate: '2026-09-18' },
     { id: uid('o'), number: 'CD-0002', to: 'S Patterson (buyer)', date: '2026-10-09', due: '2026-10-09', desc: 'Contract deposit: Lot 9 (10%)', lines: [L('10% deposit held in trust by Milton Legal', 48900, 'margin_scheme', { atSettlement: true, marginBase: 12800 })], status: 'received', paidDate: '2026-10-09' },
   ];
+  p1.funds = [
+    F('Section 7.11 contributions: balance before subdivision certificate', 'shoalcouncil', 486000, 'gst_free', 'Council & Gov', { note: 'Indexed quarterly. Figure from council, 28 Oct.' }),
+    F('Section 64 headworks charges: water and sewer', 'shoalwater', 168000, 'gst_free', 'Council & Gov'),
+    F('Council works: sewer and water main connection', 'shoalcouncil', 16800, 'taxable', 'Construction', { billRef: 'SCC-77412' }),
+    F('Final inspection fee: subdivision works', 'shoalcouncil', 1250, 'taxable', 'Council & Gov', { billRef: 'SCC-77412' }),
+    F('Final inspection and compliance certificate: certifier', 'coastcert', 3800, 'taxable', 'Consultants'),
+    F('Subdivision certificate application fee', 'shoalcouncil', 4210, 'gst_free', 'Council & Gov'),
+    F('Plan lodgement and registration fees: NSW LRS', 'lrs', 2480, 'gst_free', 'Council & Gov'),
+  ];
   p1.trust = [
     { date: '2024-07-01', type: 'Intercompany loan', party: 'Wellman Family Trust', amount: 420000, note: 'Equity for deposit, duty and early consultants' },
     { date: '2025-10-01', type: 'Intercompany loan', party: 'Wellman Family Trust', amount: 150000, note: 'Top-up for contributions and CC' },
   ];
   p1.docs = [
-    ['Contract', 'Hollis', '2024-07-05', 'Contract for sale, Lot 12'], ['Contract', 'MiltonLegal', '2024-07-26', 'DD report'], ['Company', 'ASIC', '2024-03-08', 'Certificate of registration'],
+    ['Contract', 'Hollis', '2024-07-05', 'Contract for sale, Lot 12'], ['Contract', 'MiltonLegal', '2024-07-26', 'DD report', 'docx'], ['Company', 'ASIC', '2024-03-08', 'Certificate of registration'],
+    ['Report', 'Feasely', '2024-02-26', 'Feaso: 14 lots, 21% margin', 'xlsx'], ['SalesEvidence', 'CoastAndCoRealEstate', '2024-02-20', 'Milton land sales, last 12 months', 'pdf', 2],
+    ['Correspondence', 'ShoalhavenPlanningCo', '2025-07-21', 'RFI response letter', 'docx'], ['Report', 'NorthcottCivilEngineers', '2026-10-15', 'Civil cost-to-complete tracker', 'xlsx', 6],
+    ['Correspondence', 'ShoalhavenCityCouncil', '2026-10-28', 'Contributions estimate: subdivision certificate', 'pdf', 7],
     ['Company', 'ATO', '2024-03-11', 'ABN and GST registration'], ['DA', 'ShoalhavenPlanning', '2025-04-08', 'Statement of environmental effects'], ['DA', 'ShoalhavenCouncil', '2025-07-04', 'RFI letter'],
     ['DA', 'ShoalhavenCouncil', '2025-12-12', 'Notice of determination DA25/1187'], ['Report', 'CoastlineGeotech', '2024-11-12', 'Geotechnical report'], ['Report', 'BushlandEcology', '2024-11-25', 'Flora and fauna assessment'],
     ['Report', 'Firewise', '2024-12-09', 'Bushfire assessment'], ['Survey', 'HarbourSurvey', '2024-10-28', 'Detail survey'], ['Survey', 'HarbourSurvey', '2025-05-12', 'Draft plan of subdivision'],
@@ -1014,7 +1131,7 @@ function buildSeed() {
   /* ---------- P2 ULLADULLA-IND ---------- */
   const p2 = {
     id: 'ULLADULLA-IND', name: 'Princes Hwy, Ulladulla', street: 'Princes Hwy', suburb: 'Ulladulla', state: 'NSW', lotPlan: 'Lot 3 DP 1092211',
-    type: 'Commercial / factory units', yield: '8 factory units', status: 'live', stage: 5, council: 'shoalcouncil', started: '2024-11-04',
+    type: 'Commercial / industrial', stages: tplStages('Commercial / industrial'), yield: '8 factory units', status: 'live', stage: 5, council: 'shoalcouncil', started: '2024-11-04',
     company: { name: 'Ulladulla Industrial Pty Ltd', abn: '72 345 678 901', acn: '345 678 901', gst: true, gstFrom: '2025-01-15', bank: 'Coastal Mutual Bank', bsb: '633-000', acc: '1874 5512', tfn: 'On file' },
     stageNote: 'DA lodged 14 Aug. Council RFI received 21 Oct, response due 11 Nov.',
     budget: { 'Acquisition': 1760000, 'Holding': 120000, 'Consultants': 140000, 'Council & Gov': 95000, 'Construction': 2150000, 'Sales': 90000, 'Management fee': 20000 },
@@ -1029,8 +1146,13 @@ function buildSeed() {
     T(5, 'Endeavour Energy pre-application for substation', d(25), false, { lead: '3-month lead time.' }),
     T(5, 'DA determination expected', '2027-02-26', false),
     T(6, 'Tender civil and building works: 3 quotes each', '2027-03-19', false), T(6, 'Construction certificate', '2027-04-30', false), T(6, 'Pay s7.11 contributions', '2027-04-16', false),
-    T(7, 'Appoint agent for unit pre-sales', '2027-05-28', false), T(7, 'Strata plan registration', '2028-02-25', false),
-    T(8, 'Final accounts and distribution', '2028-08-31', false),
+    T(6, 'Practical completion', '2027-12-17', false),
+    T(7, 'Endeavour Energy: substation energised, notification of arrangement', '2027-12-10', false), T(7, 'NBN connection sign-off', '2027-12-17', false),
+    T(7, 'Final inspection by certifier', '2028-01-07', false), T(7, 'Occupation certificate for 8 units', '2028-01-14', false, { lead: "Units can't settle without it." }),
+    T(7, 'Shoalhaven Water certificate of compliance (s307)', '2028-01-21', false), T(7, 'Pay s64 headworks charges', '2028-01-21', false),
+    T(7, 'Coastal Mutual Bank consent to the strata plan', '2028-02-04', false), T(7, 'Strata certificate and lodge strata plan at NSW LRS', '2028-02-11', false), T(7, 'Strata plan registration', '2028-02-25', false),
+    T(8, 'Appoint agent for unit pre-sales', '2027-05-28', false), T(8, 'Settle units and discharge loan', '2028-04-28', false),
+    T(9, 'Final accounts and distribution', '2028-08-31', false),
   ];
   p2.rfqs = [
     { id: uid('r'), scope: 'Town planning', stage: 4, category: 'Consultants', quotes: [
@@ -1065,10 +1187,15 @@ function buildSeed() {
   ];
   p2.sales = Array.from({ length: 8 }, (_, i) => ({ lot: 'Unit ' + (i + 1), price: 540000 + i * 15000, status: 'Not released', buyer: '', exchanged: null, settlement: null, marginBase: 0 }));
   p2.invoicesOut = [];
+  p2.funds = [
+    F('Section 64 headworks charges: 8 units', 'shoalwater', 72000, 'gst_free', 'Council & Gov'),
+    F('Final inspection, occupation and strata certificates: certifier', 'coastcert', 6800, 'taxable', 'Consultants'),
+    F('Strata plan lodgement fees: NSW LRS', 'lrs', 1980, 'gst_free', 'Council & Gov'),
+  ];
   p2.trust = [{ date: '2025-03-10', type: 'Intercompany loan', party: 'Wellman Family Trust', amount: 600000, note: 'Equity for settlement' }];
   p2.docs = [
     ['Contract', 'Vendor', '2025-01-31', 'Contract for sale'], ['Company', 'ASIC', '2025-01-10', 'Certificate of registration'], ['DA', 'CoastalTownPlanning', '2026-08-14', 'DA lodgement package'],
-    ['DA', 'ShoalhavenCouncil', '2026-10-21', 'Request for information'], ['Report', 'SCTraffic', '2025-09-22', 'Traffic impact assessment'], ['Survey', 'HarbourSurvey', '2025-05-30', 'Detail survey'],
+    ['DA', 'ShoalhavenCouncil', '2026-10-21', 'Request for information'], ['Correspondence', 'CoastalTownPlanning', '2026-10-29', 'RFI response draft', 'docx'], ['Report', 'Feasely', '2024-11-22', 'Feaso: 8 units, strata', 'xlsx'], ['Report', 'SCTraffic', '2025-09-22', 'Traffic impact assessment'], ['Survey', 'HarbourSurvey', '2025-05-30', 'Detail survey'],
   ];
   p2.log = [
     LOG('2024-11-04T09:10', 'Site logged from listing', 'deal'), LOG('2025-03-14T15:00', 'Settlement complete', 'money'),
@@ -1080,7 +1207,7 @@ function buildSeed() {
   /* ---------- P3 JIMBOOMBA ---------- */
   const p3 = {
     id: 'JIMBOOMBA', name: 'Bells Rd, Jimboomba', street: 'Bells Rd', suburb: 'Jimboomba', state: 'QLD', lotPlan: 'Lot 2 SP 301887',
-    type: 'Residential subdivision', yield: '32 lots', status: 'live', stage: 3, council: 'logancouncil', started: '2026-06-15',
+    type: 'Land subdivision', stages: tplStages('Land subdivision'), yield: '32 lots', status: 'live', stage: 3, council: 'logancouncil', started: '2026-06-15',
     company: { name: 'Bells Road Land Pty Ltd', abn: '83 456 789 012', acn: '456 789 012', gst: true, gstFrom: '2026-09-01', bank: 'Coastal Mutual Bank', bsb: '633-000', acc: '1875 0381', tfn: 'Applied' },
     stageNote: 'Deposit paid. 12-month settlement. DD expires 23 Nov.',
     budget: { 'Acquisition': 3350000, 'Holding': 210000, 'Consultants': 260000, 'Council & Gov': 640000, 'Construction': 2400000, 'Sales': 190000, 'Management fee': 40000 },
@@ -1094,7 +1221,14 @@ function buildSeed() {
     T(3, 'Flood and overland flow check with Logan City Council', d(10), false),
     T(3, 'Settlement (12-month terms)', '2027-09-24', false, { lead: 'Line up construction finance 3 months before.' }),
     T(4, 'Get 3 quotes: civil engineer', '2026-12-11', false), T(4, 'Ecology and bushfire', '2027-01-29', false),
-    T(5, 'Lodge development application (Logan)', '2027-04-30', false), T(6, 'Tender civil works', '2027-11-26', false), T(7, 'Appoint selling agent', '2028-03-31', false), T(8, 'Wind-up', '2029-06-29', false),
+    T(5, 'Lodge development application (Logan)', '2027-04-30', false), T(6, 'Tender civil works', '2027-11-26', false),
+    T(7, 'Confirm Logan infrastructure charges notice', '2028-06-30', false, { lead: 'About $868,000 for 31 additional lots. Due before plan sealing.' }),
+    T(7, 'On-maintenance inspection with Logan City Council', '2028-09-15', false), T(7, 'As-constructed drawings to council', '2028-09-29', false),
+    T(7, 'Energex: electricity supply certificate', '2028-10-06', false), T(7, 'NBN practical completion certificate', '2028-10-06', false),
+    T(7, 'Logan Water: water and sewer connection sign-off', '2028-10-13', false), T(7, 'Pay Logan infrastructure charges', '2028-10-20', false),
+    T(7, 'Lodge survey plan for sealing with Logan City Council', '2028-10-27', false, { lead: 'Plan sealing takes about 20 business days.' }),
+    T(7, 'Bank: release of mortgage over the parent lot', '2028-11-10', false), T(7, 'Lodge sealed plan at Titles Queensland', '2028-11-24', false),
+    T(8, 'Appoint selling agent', '2028-03-31', false), T(9, 'Wind-up', '2029-06-29', false),
   ];
   p3.rfqs = [
     { id: uid('r'), scope: 'Town planning', stage: 3, category: 'Consultants', quotes: [
@@ -1115,6 +1249,11 @@ function buildSeed() {
   ];
   p3.sales = [];
   p3.invoicesOut = [];
+  p3.funds = [
+    F('Infrastructure charges: 31 additional lots', 'logancouncil', 868000, 'gst_free', 'Council & Gov', { note: 'Estimate at the adopted charge. Check the notice when the DA lands.' }),
+    F('Plan sealing fee: Logan City Council', 'logancouncil', 9600, 'gst_free', 'Council & Gov'),
+    F('Survey plan lodgement: Titles Queensland', 'titlesqld', 3400, 'gst_free', 'Council & Gov'),
+  ];
   p3.trust = [{ date: '2026-09-20', type: 'Intercompany loan', party: 'Wellman Family Trust', amount: 200000, note: 'Deposit and DD costs' }];
   p3.docs = [['Contract', 'Vendor', '2026-09-24', 'Contract of sale (QLD)'], ['Company', 'ASIC', '2026-08-28', 'Certificate of registration'], ['Quote', 'LoganPlanning', '2026-10-19', 'Planning fee proposal']];
   p3.log = [
@@ -1127,20 +1266,22 @@ function buildSeed() {
   /* ---------- P4 VINCENTIA ---------- */
   const p4 = {
     id: 'VINCENTIA', name: 'Hawken Dr, Vincentia', street: 'Hawken Dr', suburb: 'Vincentia', state: 'NSW', lotPlan: 'Lot 7 DP 1156002',
-    type: 'Residential subdivision', yield: '6 lots', status: 'live', stage: 8, council: 'shoalcouncil', started: '2023-05-08',
+    type: 'Land subdivision', stages: tplStages('Land subdivision'), yield: '6 lots', status: 'live', stage: 9, council: 'shoalcouncil', started: '2023-05-08',
     company: { name: 'Hawken Drive Developments Pty Ltd', abn: '94 567 890 123', acn: '567 890 123', gst: true, gstFrom: '2023-06-01', bank: 'Coastal Mutual Bank', bsb: '633-000', acc: '1871 3390', tfn: 'On file' },
     stageNote: 'All 6 lots settled. Maintenance bond with council. Distribution to trust pending.',
     budget: { 'Acquisition': 1180000, 'Holding': 60000, 'Consultants': 85000, 'Council & Gov': 110000, 'Construction': 395000, 'Sales': 52000, 'Management fee': 20000 },
   };
   p4.tasks = [
     T(1, 'Log site', '2023-05-08', true), T(2, 'Feaso and go decision', '2023-06-02', true), T(3, 'Acquire and register company', '2023-08-25', true),
-    T(4, 'Consultants appointed', '2023-11-17', true), T(5, 'DA approved', '2024-08-30', true), T(6, 'Civil works complete', '2025-10-31', true), T(6, 'Plan registered with LRS', '2026-01-23', true),
-    T(7, 'Settle all 6 lots', '2026-05-15', true), T(7, 'Discharge loan', '2026-05-22', true),
-    T(8, 'Council bond inspection', d(16), false, { lead: 'Book 2 weeks ahead. Bond is $18,400.', notes: [{ ts: '2026-10-30T13:00', text: 'Jason to fix two cracked kerb sections before inspection.' }] }),
-    T(8, 'Bond return from council', d(45), false),
-    T(8, 'Final accounts to Lucy (Pereira & Co)', d(30), false),
-    T(8, 'Distribution to Wellman Family Trust', d(40), false, { lead: 'Needs final accounts and accountant sign-off first.' }),
-    T(8, 'Deregister Hawken Drive Developments', '2027-03-31', false),
+    T(4, 'Consultants appointed', '2023-11-17', true), T(5, 'DA approved', '2024-08-30', true), T(6, 'Civil works complete', '2025-10-31', true),
+    T(7, 'Practical completion inspection with council', '2025-11-14', true), T(7, 'Works-as-executed plans to council', '2025-11-21', true),
+    T(7, 'Pay s7.11 contributions and s64 headworks', '2025-12-05', true), T(7, 'Subdivision certificate issued', '2026-01-09', true), T(7, 'Plan registered with LRS', '2026-01-23', true),
+    T(8, 'Settle all 6 lots', '2026-05-15', true), T(8, 'Discharge loan', '2026-05-22', true),
+    T(9, 'Council bond inspection', d(16), false, { lead: 'Book 2 weeks ahead. Bond is $18,400.', notes: [{ ts: '2026-10-30T13:00', text: 'Jason to fix two cracked kerb sections before inspection.' }] }),
+    T(9, 'Bond return from council', d(45), false),
+    T(9, 'Final accounts to Lucy (Pereira & Co)', d(30), false),
+    T(9, 'Distribution to Wellman Family Trust', d(40), false, { lead: 'Needs final accounts and accountant sign-off first.' }),
+    T(9, 'Deregister Hawken Drive Developments', '2027-03-31', false),
   ];
   p4.rfqs = [
     { id: uid('r'), scope: 'Civil works', stage: 6, category: 'Construction', quotes: [
@@ -1148,7 +1289,7 @@ function buildSeed() {
       Q('bayview', 302000, '2024-11-06', 'declined', ['Civil works'], ['Rock', 'Traffic control']),
       Q('monaro', 341000, '2024-11-08', 'declined', ['All civil works'], []) ],
       appointed: { reason: 'Full scope including rock. Best program.', date: '2024-11-15' } },
-    { id: uid('r'), scope: 'Bond inspection rectification', stage: 8, category: 'Construction', quotes: [Q('southcoastcivil', 2850, '2026-10-30', 'received', ['Replace 2 kerb sections'], [])] },
+    { id: uid('r'), scope: 'Bond inspection rectification', stage: 9, category: 'Construction', quotes: [Q('southcoastcivil', 2850, '2026-10-30', 'received', ['Replace 2 kerb sections'], [])] },
   ];
   p4.engagements = [
     { id: 'e4-civil', contactId: 'southcoastcivil', scope: 'Civil works', category: 'Construction', value: 318500, status: 'complete', issued: '2024-11-18' },
@@ -1168,12 +1309,17 @@ function buildSeed() {
     .map(([lot, price, settlement]) => ({ lot, price, status: 'Settled', buyer: '', exchanged: addDays(settlement, -60), settlement, marginBase: 196000 }));
   ['M & K Doyle', 'A Fernando', 'J Whitfield', 'L & P Russo', 'C Baxter', 'T Okafor'].forEach((b, i) => { p4.sales[i].buyer = b; });
   p4.invoicesOut = p4.sales.map((s, i) => ({ id: uid('o'), number: 'HD-S0' + (i + 1), to: s.buyer + ' (buyer)', date: s.settlement, due: s.settlement, desc: 'Settlement: Lot ' + s.lot, lines: [L('Sale price, margin scheme', s.price, 'margin_scheme', { marginBase: s.marginBase })], status: 'received', paidDate: s.settlement }));
+  p4.funds = [
+    F('Section 7.11 contributions: 5 additional lots', 'shoalcouncil', 78500, 'gst_free', 'Council & Gov', { paid: true }),
+    F('Section 64 headworks charges: water and sewer', 'shoalwater', 31200, 'gst_free', 'Council & Gov', { paid: true }),
+    F('Plan lodgement fee: NSW LRS', 'lrs', 2154, 'gst_free', 'Council & Gov', { billRef: 'LRS-77821' }),
+  ];
   p4.trust = [
     { date: '2023-08-20', type: 'Intercompany loan', party: 'Wellman Family Trust', amount: 380000, note: 'Equity for acquisition' },
     { date: '2026-06-30', type: 'Loan repayment', party: 'Wellman Family Trust', amount: -380000, note: 'Repaid from settlements' },
     { date: d(40), type: 'Distribution (pending)', party: 'Wellman Family Trust', amount: 512000, note: 'Pending final accounts' },
   ];
-  p4.docs = [['DA', 'ShoalhavenCouncil', '2024-08-30', 'Notice of determination'], ['Survey', 'NSWLRS', '2026-01-23', 'Registered plan DP 1301776'], ['Correspondence', 'ShoalhavenCouncil', '2026-01-19', 'Bond receipt']];
+  p4.docs = [['DA', 'ShoalhavenCouncil', '2024-08-30', 'Notice of determination'], ['Survey', 'NSWLRS', '2026-01-23', 'Registered plan DP 1301776'], ['Correspondence', 'ShoalhavenCouncil', '2026-01-19', 'Bond receipt'], ['DA', 'ShoalhavenCouncil', '2026-01-09', 'Subdivision certificate'], ['Report', 'PereiraAndCo', '2026-10-28', 'FY2025-26 working papers', 'xlsx']];
   p4.log = [
     LOG('2026-01-23T10:00', 'Plan registered with NSW LRS', 'stage'), LOG('2026-05-15T15:30', 'Final settlement: Lot 6. All lots settled', 'money'),
     LOG('2026-06-30T09:00', 'Trust loan repaid ($380,000)', 'money'), LOG('2026-10-30T13:05', 'Rectification quote received from Southcoast Civil ($2,850)', 'money', 'System'),
@@ -1183,33 +1329,49 @@ function buildSeed() {
   /* ---------- Closed: WANDANDIAN ---------- */
   const p5 = {
     id: 'WANDANDIAN', name: 'Wandandian Rd, Wandandian', street: 'Wandandian Rd', suburb: 'Wandandian', state: 'NSW', lotPlan: 'Lot 41 DP 755923',
-    type: 'Residential subdivision', yield: '14 lots', status: 'closed', stage: 8, council: 'shoalcouncil', started: '2022-03-14', closed: '2025-11-28',
+    type: 'Land subdivision', stages: tplStages('Land subdivision'), yield: '14 lots', status: 'closed', stage: 9, council: 'shoalcouncil', started: '2022-03-14', closed: '2025-11-28',
     company: { name: 'Wandandian Land Pty Ltd', abn: '15 678 901 234', acn: '678 901 234', gst: false, gstFrom: '2022-04-01', bank: 'Coastal Mutual Bank', bsb: '633-000', acc: '1869 2204', tfn: 'On file' },
     stageNote: 'Company deregistered 28 Nov 2025. Proceeds distributed to the trust.',
     budget: { 'Acquisition': 1240000, 'Holding': 90000, 'Consultants': 120000, 'Council & Gov': 190000, 'Construction': 760000, 'Sales': 110000, 'Management fee': 20000 },
   };
-  p5.tasks = STAGES.map(s => T(s.n, s.name + ' complete', '2025-11-28', true));
-  p5.rfqs = []; p5.engagements = []; p5.invoicesIn = []; p5.invoicesOut = []; p5.sales = []; p5.docs = [];
+  p5.tasks = p5.stages.map((s, i) => T(i + 1, s.name + ' complete', '2025-11-28', true));
+  p5.rfqs = []; p5.engagements = []; p5.invoicesIn = []; p5.invoicesOut = []; p5.sales = []; p5.docs = []; p5.funds = [];
   p5.trust = [{ date: '2025-10-31', type: 'Distribution', party: 'Wellman Family Trust', amount: 684000, note: 'Final distribution' }];
   p5.log = [LOG('2025-10-31T12:00', 'Final distribution to Wellman Family Trust', 'money'), LOG('2025-11-28T09:00', 'Company deregistered. Project closed', 'stage')];
   p5.spent = 2512000; p5.budgetTotal = 2530000;
   projects.push(p5);
 
-  // Expand doc tuples, plus auto docs for quotes and invoices
+  // Stage that was current on a date: the first finished stage whose last done task is on or after it, else the current stage
+  const stageAtDate = (p, date) => {
+    const last = p.status === 'closed' ? p.stages.length : p.stage - 1;
+    for (let n = 1; n <= last; n++) { const done = p.tasks.filter(t => t.stage === n && t.done).map(t => t.due).sort(); if (done.length && date <= done[done.length - 1]) return n; }
+    return p.stage;
+  };
+  const salesStage = (p) => (p.stages.findIndex(s => /^Sales/.test(s.name)) + 1) || p.stage;
+  // Expand doc tuples [type, party, date, title, ext, stage], plus auto docs for quotes and invoices
   projects.forEach(p => {
-    const manual = (p.docs || []).map(([type, party, date, title]) => ({ id: uid('f'), type, party, date, title, size: 180 + ((date.charCodeAt(9) * 37) % 2400), tags: [] }));
+    const manual = (p.docs || []).map(([type, party, date, title, ext, stage]) => ({ id: uid('f'), type, party, date, title, size: 180 + ((date.charCodeAt(9) * 37) % 2400), tags: [], ext: ext || 'pdf', stage: stage || stageAtDate(p, date) }));
     const auto = [];
-    p.rfqs.forEach(r => r.quotes.forEach(q => { if (q.received) auto.push({ id: uid('f'), type: 'Quote', party: partyKey(contactById(q.contactId, SEED_CONTACTS)), date: q.received, title: 'Quote: ' + r.scope, size: 240 + (q.amount % 900), tags: [r.scope] }); }));
-    p.invoicesIn.forEach(i => { if (i.status !== 'draft' || i.contactId === 'southcoastcivil') auto.push({ id: uid('f'), type: 'InvoiceIn', party: partyKey(contactById(i.contactId, SEED_CONTACTS)), date: i.date, title: 'Invoice ' + i.number, size: 90 + (Math.round(lineTotalSum(i.lines)) % 400), tags: [i.category] }); });
-    p.invoicesOut.forEach(o => auto.push({ id: uid('f'), type: 'InvoiceOut', party: partyKey({ company: o.to.replace(' (buyer)', '') }), date: o.date, title: o.desc, size: 120, tags: ['Sales'] }));
+    p.rfqs.forEach(r => r.quotes.forEach(q => { if (q.received) auto.push({ id: uid('f'), type: 'Quote', party: partyKey(contactById(q.contactId, SEED_CONTACTS)), date: q.received, title: 'Quote: ' + r.scope, size: 240 + (q.amount % 900), tags: [r.scope], ext: 'pdf', stage: r.stage }); }));
+    p.invoicesIn.forEach(i => { if (i.status !== 'draft' || i.contactId === 'southcoastcivil') auto.push({ id: uid('f'), type: 'InvoiceIn', party: partyKey(contactById(i.contactId, SEED_CONTACTS)), date: i.date, title: 'Invoice ' + i.number, size: 90 + (Math.round(lineTotalSum(i.lines)) % 400), tags: billCats(i), ext: 'pdf', stage: i.category === 'Sales' ? salesStage(p) : stageAtDate(p, i.date) }); });
+    p.invoicesOut.forEach(o => auto.push({ id: uid('f'), type: 'InvoiceOut', party: partyKey({ company: o.to.replace(' (buyer)', '') }), date: o.date, title: o.desc, size: 120, tags: ['Sales'], ext: 'pdf', stage: salesStage(p) }));
     p.docs = manual.concat(auto);
+    (p.funds || []).forEach(f => { if (f.billRef) { const b = p.invoicesIn.find(i => i.number === f.billRef); f.billId = b ? b.id : null; } delete f.billRef; });
   });
 
+  const DD = (type, party, date, title, ext, size, note = '') => ({ id: uid('dd'), type, party, date, title, ext, size, note });
   const deals = [
-    { id: 'D1', address: 'Woollamia Rd, Woollamia NSW', source: "Ray Taylor (buyer's agent), off-market", asking: 2350000, yield: '18 lots', zoning: 'R2 Low Density Residential', feaso: 'go', margin: 22, logged: '2026-09-02', notes: 'Feaso done in Feasely. Vendor wants 9-month settlement. Sewer available at boundary.', lotPlan: 'Lot 5 DP 1203381', council: 'Shoalhaven City Council' },
-    { id: 'D2', address: 'Island Point Rd, St Georges Basin NSW', source: 'realestate.com.au listing', asking: 1450000, yield: '9 lots', zoning: 'R2 Low Density Residential', feaso: 'pending', margin: null, logged: '2026-10-14', notes: 'Check flood mapping in Stash. Possible koala habitat on eastern boundary.', lotPlan: 'Lot 18 DP 30144' },
-    { id: 'D3', address: 'Mount Lindesay Hwy, Park Ridge QLD', source: "Off-market via Ray Taylor", asking: 4800000, yield: '6 factory units', zoning: 'Low impact industry', feaso: 'pending', margin: null, logged: '2026-10-27', notes: 'Need Logan infrastructure charges estimate before feaso.', lotPlan: 'Lot 9 RP 89122' },
-    { id: 'D4', address: 'Bishop Dr, Mollymook NSW', source: 'Domain listing', asking: 980000, yield: '4 lots', zoning: 'R2 Low Density Residential', feaso: 'nogo', margin: 9, logged: '2026-08-19', notes: 'BAL-40 on two lots and flood affectation. Margin 9% after APZ. No-go.', lotPlan: 'Lot 3 DP 26677' },
+    { id: 'D1', address: 'Woollamia Rd, Woollamia NSW', source: "Ray Taylor (buyer's agent), off-market", asking: 2350000, yield: '18 lots', zoning: 'R2 Low Density Residential', feaso: 'go', margin: 22, logged: '2026-09-02', notes: 'Feaso done in Feasely. Vendor wants 9-month settlement. Sewer available at boundary.', lotPlan: 'Lot 5 DP 1203381', council: 'Shoalhaven City Council', type: 'Land subdivision',
+      docs: [DD('Contract', 'TaylorPropertyAdvisory', '2026-09-02', 'Draft contract for sale, Lot 5 DP 1203381', 'pdf', 1840, 'Sent by Ray. Check the water main easement on title.'),
+        DD('Planning', 'ShoalhavenCityCouncil', '2026-09-03', 'Zoning and minimum lot size map extract', 'pdf', 640),
+        DD('SalesEvidence', 'CoastAndCoRealEstate', '2026-09-05', 'Comparable lot sales: Woollamia and Huskisson', 'pdf', 920, 'Jess: 600 to 700 m² lots selling $480k to $560k.'),
+        DD('Report', 'WellcoDevelopments', '2026-09-12', 'Feaso v2: 18 lots (Feasely export)', 'xlsx', 214, '22% margin at $505k average lot price.')] },
+    { id: 'D2', address: 'Island Point Rd, St Georges Basin NSW', source: 'realestate.com.au listing', asking: 1450000, yield: '9 lots', zoning: 'R2 Low Density Residential', feaso: 'pending', margin: null, logged: '2026-10-14', notes: 'Check flood mapping in Stash. Possible koala habitat on eastern boundary.', lotPlan: 'Lot 18 DP 30144', type: 'Land subdivision',
+      docs: [DD('Contract', 'Agent', '2026-10-14', 'Contract for sale, Lot 18 DP 30144', 'pdf', 1520),
+        DD('Plans', 'Agent', '2026-10-14', 'Deposited plan and title search', 'pdf', 380),
+        DD('Correspondence', 'Agent', '2026-10-16', 'Agent email: vendor terms and flood report', 'docx', 46, 'Vendor will consider a 6-month settlement.')] },
+    { id: 'D3', address: 'Mount Lindesay Hwy, Park Ridge QLD', source: "Off-market via Ray Taylor", asking: 4800000, yield: '6 factory units', zoning: 'Low impact industry', feaso: 'pending', margin: null, logged: '2026-10-27', notes: 'Need Logan infrastructure charges estimate before feaso.', lotPlan: 'Lot 9 RP 89122', type: 'Commercial / industrial', docs: [] },
+    { id: 'D4', address: 'Bishop Dr, Mollymook NSW', source: 'Domain listing', asking: 980000, yield: '4 lots', zoning: 'R2 Low Density Residential', feaso: 'nogo', margin: 9, logged: '2026-08-19', notes: 'BAL-40 on two lots and flood affectation. Margin 9% after APZ. No-go.', lotPlan: 'Lot 3 DP 26677', type: 'Land subdivision', docs: [] },
   ];
 
   const settings = {
@@ -1219,7 +1381,11 @@ function buildSeed() {
     lastBackup: '2026-11-01T23:40',
   };
 
-  return { version: 1, projects, contacts: SEED_CONTACTS.map(c => ({ ...c })), deals, settings, welcomed: false };
+  // Stage templates (editable copy of DEFAULT_TEMPLATES) with stable ids
+  const templates = {};
+  PROJECT_TYPES.forEach(t => { templates[t] = DEFAULT_TEMPLATES[t].map(st => ({ id: uid('s'), name: st.name, ...(st.key ? { key: st.key } : {}), tasks: st.tasks.map(([title, off, lead]) => ({ title, off, lead: lead || null })) })); });
+
+  return { version: 2, projects, contacts: SEED_CONTACTS.map(c => ({ ...c, roles: c.roles.slice(), categories: c.categories.slice() })), deals, settings, categories: DEFAULT_CATEGORIES.slice(), roles: { ...DEFAULT_ROLES }, templates, log: [], welcomed: false };
 }
 /* ===== Utilities ===== */
 const h = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -1265,6 +1431,10 @@ const CURRENT_Q = quarterOf(TODAY);
 function initials(name) { return String(name).replace(/[^A-Za-z ]/g, ' ').split(/\s+/).filter(Boolean).slice(0, 2).map(w => w[0].toUpperCase()).join('') || '?'; }
 function partyKey(c) { if (!c) return 'Party'; return String(c.company || c.name).replace(/\bPty\.? Ltd\.?\b/gi, '').replace(/\(.*?\)/g, '').replace(/&/g, 'And').split(/[^A-Za-z0-9]+/).filter(Boolean).map(w => w[0].toUpperCase() + w.slice(1)).join('') || 'Party'; }
 function docName(p, doc) { const ext = (doc.ext || 'pdf'); return `${p.id}_${doc.type}_${doc.party}_${doc.date}.${ext}`; }
+function fileExt(name) { const m = String(name || '').match(/\.([A-Za-z0-9]{1,8})$/); return m ? m[1].toLowerCase() : 'pdf'; }
+// Deals have no project ID yet, so their files use the suburb, e.g. WOOLLAMIA_Contract_Agent_2026-09-02.pdf
+function dealSlug(dl) { const rest = (dl.address.split(',')[1] || dl.address).replace(/\s+(NSW|QLD|VIC)$/, '').trim(); return rest.toUpperCase().replace(/[^A-Z0-9]/g, '') || 'DEAL'; }
+function dealDocName(dl, doc) { return `${dealSlug(dl)}_${doc.type}_${doc.party}_${doc.date}.${doc.ext || 'pdf'}`; }
 
 /* ===== Icons ===== */
 const ICONS = {
@@ -1331,12 +1501,20 @@ function invGstFree(i) { return round2(sum(i.lines.filter(l => l.gst === 'gst_fr
 function totalText(i) { return fmtMoney(invTotal(i)) + (invGst(i) ? ' inc GST' : ' (no GST)'); }
 function invTreatments(i) { return [...new Set(i.lines.map(l => l.gst))]; }
 function gstChip(t, dir = 'in') { return `<span class="taxrate">${h(taxRateName(t, dir))}</span>`; }
+/* Cost categories by bill line. A bill's own category is only the default for its lines; "Split" when lines differ. */
+function lineCat(i, l) { return l.category || i.category; }
+function billCats(i) { return [...new Set(i.lines.map(l => lineCat(i, l)))]; }
+function billCatLabel(i) { const c = billCats(i); return c.length > 1 ? 'Split' : (c[0] || ''); }
+function catEx(i, cat) { return round2(sum(i.lines.filter(l => lineCat(i, l) === cat), lineEx)); }
 
 /* ===== State ===== */
 const SEED = buildSeed();
 const clone = (o) => JSON.parse(JSON.stringify(o));
 function loadState() {
-  try { const raw = localStorage.getItem(STORE_KEY); if (raw) { const s = JSON.parse(raw); if (s && s.version === SEED.version && Array.isArray(s.projects)) return s; } } catch (e) { /* storage blocked */ }
+  try {
+    const raw = localStorage.getItem(STORE_KEY);
+    if (raw) { const s = JSON.parse(raw); if (s && s.version === SEED.version && Array.isArray(s.projects) && Array.isArray(s.categories) && s.roles && s.templates && s.projects.every(p => Array.isArray(p.stages))) { s.log = s.log || []; return s; } }
+  } catch (e) { /* storage blocked or unreadable: start from the demo data */ }
   return clone(SEED);
 }
 let state = loadState();
@@ -1348,21 +1526,48 @@ function contactLabel(id) { const c = contactById(id); return c ? c.company : 'U
 function contactPerson(id) { const c = contactById(id); return c ? c.name : ''; }
 function firstName(id) { const c = contactById(id); if (!c) return 'there'; const n = c.name.split(' ')[0]; return /^(Development|Revenue|NSW|P|ASIC)$/.test(n) ? 'team' : n; }
 function addLog(p, text, kind = 'note', who = 'Dan') { p.log.push({ id: newId('l'), ts: nowTs(), who, text, kind }); }
-function stageInfo(n) { return STAGES[n - 1]; }
-function stageChip(n, label) { const s = stageInfo(n); return badge(label || ('Stage ' + n + ': ' + s.name), 'info'); }
+// Changes that belong to no single project (roles, categories, templates, deals) go in the shared change history
+function addGlobalLog(text, kind = 'note', who = 'Dan') { state.log = state.log || []; state.log.push({ id: newId('l'), ts: nowTs(), who, text, kind }); }
+/* Stages live on each project (p.stages); numbers come from position. */
+function stagesOf(p) { return (p && p.stages) || []; }
+function stageCount(p) { return stagesOf(p).length; }
+function stageName(p, n) { const s = stagesOf(p)[n - 1]; return s ? s.name : 'Stage ' + n; }
+function stageLabel(p, n = p.stage) { return `Stage ${n}: ${stageName(p, n)}`; }
+function stageChip(p, n = p.stage, label) { return badge(label || stageLabel(p, n), 'info'); }
+function certStageNo(p) { return stagesOf(p).findIndex(s => s.key === 'cert') + 1; }
+function tplFor(type) { return (state.templates || {})[type] || (state.templates || {})['Land subdivision'] || []; }
+/* Contacts: several roles each; categories come from the roles plus any extra ones picked on the contact. */
+function cRoles(c) { return Array.isArray(c.roles) ? c.roles : (c.role ? [c.role] : []); }
+function roleText(c) { return cRoles(c).join(', ') || 'No role'; }
+function roleCategory(r) { return (state.roles || {})[r] || 'Other'; }
+function allRoles() { return Object.keys(state.roles || {}); }
+function contactCategories(c) { const set = new Set([...cRoles(c).map(roleCategory), ...(c.categories || [])]); return [...state.categories, 'Other'].filter(x => set.has(x)); }
+function hasRole(c, list) { return cRoles(c).some(r => list.includes(r)); }
+function onlyRoles(c, list) { const rs = cRoles(c); return rs.length > 0 && rs.every(r => list.includes(r)); }
+/* Funds needed before sign-off. A line linked to a bill takes its paid status from that bill. */
+function fundsSummary(p) {
+  const lines = (p.funds || []).map(f => { const bill = f.billId ? p.invoicesIn.find(i => i.id === f.billId) : null; return { f, bill, total: lineTotal(f), paid: bill ? bill.status === 'paid' : !!f.paid }; });
+  const total = round2(sum(lines, x => x.total)); const paid = round2(sum(lines.filter(x => x.paid), x => x.total));
+  return { lines, total, paid, toFind: round2(total - paid) };
+}
 
 /* ===== Derived data ===== */
 function projectMoney(p) {
   const cats = {}; CATEGORIES.forEach(c => { cats[c] = { budget: (p.budget || {})[c] || 0, committed: 0, paid: 0 }; });
   const ensure = (c) => cats[c] || (cats[c] = { budget: 0, committed: 0, paid: 0 });
+  // An engagement commits its value (or more, if claims run over) in its own category.
+  // Bill lines count by their own category; only lines in the engagement's category are covered by it.
   (p.engagements || []).forEach(e => {
-    const linked = sum(p.invoicesIn.filter(i => i.engagementId === e.id), invEx);
+    const linked = sum(p.invoicesIn.filter(i => i.engagementId === e.id), i => catEx(i, e.category));
     ensure(e.category).committed += Math.max(e.value || 0, linked);
   });
   (p.invoicesIn || []).forEach(i => {
-    const ex = invEx(i);
-    if (!i.engagementId || !(p.engagements || []).some(e => e.id === i.engagementId)) ensure(i.category).committed += ex;
-    if (i.status === 'paid') ensure(i.category).paid += ex;
+    const eng = i.engagementId ? (p.engagements || []).find(e => e.id === i.engagementId) : null;
+    i.lines.forEach(l => {
+      const c = lineCat(i, l); const ex = lineEx(l);
+      if (!eng || c !== eng.category) ensure(c).committed += ex;
+      if (i.status === 'paid') ensure(c).paid += ex;
+    });
   });
   const tot = { budget: 0, committed: 0, paid: 0 };
   Object.values(cats).forEach(c => { c.committed = round2(c.committed); c.paid = round2(c.paid); tot.budget += c.budget; tot.committed += c.committed; tot.paid += c.paid; });
@@ -1372,6 +1577,7 @@ function projectMoney(p) {
 function openTasks(p) { return p.tasks.filter(t => !t.done); }
 function overdueTasks(p) { return openTasks(p).filter(t => t.due && t.due < TODAY); }
 function nextDeadline(p) { return openTasks(p).filter(t => t.due >= TODAY).sort((a, b) => a.due.localeCompare(b.due))[0]; }
+function engClaimed(p, e, filter = () => true) { return round2(sum(p.invoicesIn.filter(i => i.engagementId === e.id && filter(i)), i => catEx(i, e.category))); }
 function stageProgress(p, n = p.stage) { const ts = p.tasks.filter(t => t.stage === n); const done = ts.filter(t => t.done).length; return { done, total: ts.length, pct: ts.length ? done / ts.length : 0 }; }
 function quoteAge(q) { return q.requestedAt ? daysBetween(q.requestedAt, TODAY) : 0; }
 function liveProjects() { return state.projects.filter(p => p.status === 'live'); }
@@ -1386,10 +1592,17 @@ function needsToday() {
     p.rfqs.forEach(r => r.quotes.filter(q => q.status === 'requested' && quoteAge(q) > 7).forEach(q => items.push({ type: 'quote', p, sort: 2, icon: 'mail', tone: 'warn', title: `Chase ${contactLabel(q.contactId)}: ${r.scope}`, meta: `Requested ${quoteAge(q)} days ago, no quote yet`, href: `#/project/${p.id}/rfqs?f=${q.id}` })));
     p.invoicesIn.filter(i => i.status === 'approved' && i.due && daysBetween(TODAY, i.due) <= 7).forEach(i => items.push({ type: 'due', p, sort: 3, icon: 'dollar', tone: 'warn', title: `Pay ${contactLabel(i.contactId)}: ${i.number}`, meta: `${totalText(i)} · ${relDue(i.due).text}`, href: `#/project/${p.id}/money/in?f=${i.id}` }));
     openTasks(p).filter(t => t.lead && t.due >= TODAY && daysBetween(TODAY, t.due) <= 30).forEach(t => items.push({ type: 'lead', p, sort: 4, icon: 'warning', tone: 'warn', title: t.title, meta: `${relDue(t.due).text} · ${t.lead}`, href: `#/project/${p.id}/stage/${t.stage}?f=${t.id}` }));
+    // Money that must be found before the sign-off stage: shown from about 60 days out
+    const cn = certStageNo(p);
+    if (cn && p.stage <= cn) {
+      const fs = fundsSummary(p);
+      const start = p.stage === cn ? TODAY : openTasks(p).filter(t => t.stage === cn && t.due).map(t => t.due).sort()[0];
+      if (fs.toFind > 0 && start && daysBetween(TODAY, start) <= 60) items.push({ type: 'funds', p, sort: 3, icon: 'dollar', tone: 'warn', title: `Funds needed: ${fmtMoney(fs.toFind)} still to find`, meta: `${fmtMoney(fs.toFind)} · ${stageLabel(p, cn)} ${p.stage === cn ? 'is under way' : 'work starts ' + fmtDateShort(start)} · ${plural(fs.lines.filter(x => !x.paid).length, 'payment')} before sign-off`, href: `#/project/${p.id}/stage/${cn}?f=funds` });
+    }
   });
   return items.sort((a, b) => a.sort - b.sort);
 }
-const NEED_GROUPS = { approval: 'Approvals waiting', overdue: 'Overdue', quote: 'Quotes outstanding over 7 days', due: 'Invoices due this week', lead: 'Lead-time warnings' };
+const NEED_GROUPS = { approval: 'Approvals waiting', overdue: 'Overdue', quote: 'Quotes outstanding over 7 days', due: 'Invoices due this week', funds: 'Funds to find before sign-off', lead: 'Lead-time warnings' };
 
 function basQuarter(p, fy, q) {
   const r = quarterRange(fy, q);
@@ -1492,8 +1705,8 @@ function statusChip(s, kind = 'bill') {
 }
 
 /* ===== View: Home ===== */
-const NEED_TYPES = { approval: ['Approval', 'attention'], overdue: ['Overdue', 'critical'], quote: ['Quote', 'info'], due: ['Bill due', 'warning'], lead: ['Lead time', 'neutral'] };
-const NEED_ACTION = { approval: 'Review', overdue: 'Open', quote: 'Chase', due: 'Pay', lead: 'View' };
+const NEED_TYPES = { approval: ['Approval', 'attention'], overdue: ['Overdue', 'critical'], quote: ['Quote', 'info'], due: ['Bill due', 'warning'], funds: ['Funds', 'warning'], lead: ['Lead time', 'neutral'] };
+const NEED_ACTION = { approval: 'Review', overdue: 'Open', quote: 'Chase', due: 'Pay', funds: 'View', lead: 'View' };
 function viewHome() {
   const live = liveProjects(); const closed = state.projects.filter(p => p.status === 'closed');
   const items = needsToday();
@@ -1540,7 +1753,7 @@ function projectsTable(list, opts = {}) {
     return `<tr class="clickable">
       <td class="m-title"><a class="row-link" href="#/project/${p.id}">${h(p.name)}</a><div class="sub">${h(p.id)}</div></td>
       <td class="m-sub">${h(p.company.name)}${opts.abn ? `<div class="sub d-only">ABN ${h(p.company.abn)}</div>` : ''}</td>
-      <td class="m-meta m-lead nowrap">${closedP ? badge('Closed', 'neutral') : stageChip(p.stage)}</td>
+      <td class="m-meta m-lead nowrap">${closedP ? badge('Closed', 'neutral') : stageChip(p)}</td>
       <td class="m-meta tight-wrap">${next}</td>
       <td class="num m-amt" data-label="Paid">${fmtMoney(m.paid)}</td>
       <td class="num m-hide">${fmtMoney(m.committed)}</td>
@@ -1574,7 +1787,7 @@ function viewProject() {
   const p = getProject(route.parts[0]);
   if (!p) return `<div class="page">${pageHeader({ title: 'Project not found', back: '#/projects', backLabel: 'Projects' })}<div class="card">${emptyState('folder', 'Project not found', 'It may have been removed when the demo data was reset.', '<a class="btn" href="#/projects">All projects</a>')}</div></div>`;
   const tab = PROJECT_TABS.some(t => t[0] === route.parts[1]) ? route.parts[1] : 'stage';
-  const selStage = tab === 'stage' ? Math.min(8, Math.max(1, +route.parts[2] || p.stage)) : p.stage;
+  const selStage = tab === 'stage' ? Math.min(stageCount(p), Math.max(1, +route.parts[2] || p.stage)) : p.stage;
   const approvals = p.invoicesIn.filter(i => i.status === 'draft').length + (p.invoicesOut || []).filter(o => o.status === 'draft').length;
   const awaitingEng = p.engagements.filter(e => e.status === 'awaiting' || e.status === 'draft').length;
   const outstandingQ = p.rfqs.reduce((a, r) => a + r.quotes.filter(q => q.status === 'requested').length, 0);
@@ -1582,43 +1795,72 @@ function viewProject() {
   const body = { stage: () => tabStage(p, selStage), rfqs: () => tabRfqs(p), engagements: () => tabEngagements(p), money: () => tabMoney(p), documents: () => tabDocuments(p), log: () => tabLog(p) }[tab]();
   const sub = `${h(p.company.name)}<span class="d-only"> · ${[`ABN ${p.company.abn}`, p.company.gst ? 'GST registered' : 'Not GST registered', `${p.lotPlan}, ${p.suburb} ${p.state}`].map(h).join(' · ')}</span>`;
   return `<div class="page page-full">
-    ${pageHeader({ title: p.name, back: '#/projects', backLabel: 'Projects', badges: p.status === 'closed' ? badge('Closed', 'neutral') : stageChip(p.stage), sub, actions: `<button class="btn d-only" data-action="export" data-kind="full" data-p="${p.id}">Export workbook</button>` })}
+    ${pageHeader({ title: p.name, back: '#/projects', backLabel: 'Projects', badges: p.status === 'closed' ? badge('Closed', 'neutral') : stageChip(p), sub, actions: `<button class="btn d-only" data-action="export" data-kind="full" data-p="${p.id}">Export workbook</button>` })}
     <nav class="ptabs page-tabs proj-tabs" aria-label="Project sections">${tabs}</nav>
     ${body}
   </div>`;
 }
 
 function tabStage(p, n) {
-  const s = stageInfo(n); const sp = stageProgress(p, n);
+  const N = stageCount(p); const sname = stageName(p, n); const sp = stageProgress(p, n);
   const tasks = p.tasks.filter(t => t.stage === n).sort((a, b) => (a.done - b.done) || (a.due || '').localeCompare(b.due || ''));
   const isCur = p.status !== 'closed' && n === p.stage; const isDone = p.status === 'closed' || n < p.stage;
   const status = isCur ? badge('In progress', 'attention', 'partial') : isDone ? badge('Complete', 'neutral', 'complete') : badge('Not started', 'neutral', 'incomplete');
   const list = tasks.map(t => {
-    const rd = relDue(t.due, t.done);
+    const rd = relDue(t.due, t.done); const editing = ui.editTask === t.id;
+    const title = editing
+      ? `<form class="t-edit" data-form="rename-task" data-p="${p.id}" data-id="${t.id}"><label class="sr-only" for="rt-${t.id}">Task name</label><input class="input" id="rt-${t.id}" name="title" required value="${h(t.title)}" autocomplete="off"><span class="btn-group"><button class="btn btn-micro btn-primary" type="submit">Save</button><button class="btn btn-micro" type="button" data-action="set-ui" data-k="editTask" data-v="">Cancel</button></span></form>`
+      : `<div class="t-title">${h(t.title)}</div>`;
     return `<div class="task ${t.done ? 'done' : ''}" data-id="${t.id}">
       <button class="check" role="checkbox" aria-checked="${t.done}" data-action="toggle-task" data-p="${p.id}" data-id="${t.id}" aria-label="${t.done ? 'Mark not done' : 'Mark done'}: ${h(t.title)}">${icon('check')}</button>
-      <div class="t-body"><div class="t-title">${h(t.title)}</div>
-        <div class="t-meta"><span class="due ${rd.cls}">${h(rd.text)}</span>${t.lead && !t.done ? badge('Lead time', 'warning') : ''}<button class="link-btn" data-action="add-note" data-p="${p.id}" data-id="${t.id}">Add note</button></div>
+      <div class="t-body">${title}
+        <div class="t-meta"><span class="due ${rd.cls}">${h(rd.text)}</span>${t.lead && !t.done ? badge('Lead time', 'warning') : ''}<button class="link-btn" data-action="add-note" data-p="${p.id}" data-id="${t.id}">Add note</button>${editing ? '' : `<button class="link-btn" data-action="rename-task" data-p="${p.id}" data-id="${t.id}">Rename</button>`}</div>
         ${t.lead && !t.done ? `<div class="note lead">${h(t.lead)}</div>` : ''}
         ${(t.notes || []).map(nt => `<div class="note"><span class="when">${h(fmtDateTime(nt.ts))}</span>${h(nt.text)}</div>`).join('')}
       </div></div>`;
   }).join('');
-  const stages = STAGES.map(x => {
-    const xp = stageProgress(p, x.n); const done = p.status === 'closed' || x.n < p.stage; const cur = p.status !== 'closed' && x.n === p.stage;
-    return `<a class="stage-item ${done ? 'done' : ''} ${cur ? 'current' : ''}" href="#/project/${p.id}/stage/${x.n}" ${x.n === n ? 'aria-current="step"' : ''} aria-label="Stage ${x.n}: ${h(x.name)}${done ? ', complete' : cur ? ', current' : ''}"><span class="pi pi-${done ? 'complete' : cur ? 'partial' : 'incomplete'}" aria-hidden="true"></span><span class="si-name">${x.n}. ${h(x.name)}</span><span class="si-n">${xp.done}/${xp.total}</span></a>`;
+  const stages = stagesOf(p).map((x, i) => {
+    const xn = i + 1; const xp = stageProgress(p, xn); const done = p.status === 'closed' || xn < p.stage; const cur = p.status !== 'closed' && xn === p.stage;
+    return `<a class="stage-item ${done ? 'done' : ''} ${cur ? 'current' : ''}" href="#/project/${p.id}/stage/${xn}" ${xn === n ? 'aria-current="step"' : ''} aria-label="Stage ${xn}: ${h(x.name)}${done ? ', complete' : cur ? ', current' : ''}"><span class="pi pi-${done ? 'complete' : cur ? 'partial' : 'incomplete'}" aria-hidden="true"></span><span class="si-name">${xn}. ${h(x.name)}</span><span class="si-n">${xp.done}/${xp.total}</span></a>`;
   }).join('');
+  const isCert = n === certStageNo(p);
   return `<div class="layout"><div>
     <section class="card">
-      <div class="card-head"><div class="ch-titles"><h2 class="card-title">${h(s.name)}</h2>${status}</div>
-        <div class="ch-actions"><button class="btn" data-action="add-task" data-p="${p.id}" data-stage="${n}">Add task</button>${isCur && n < 8 ? `<button class="btn" data-action="advance-stage" data-p="${p.id}">Move to stage ${n + 1}</button>` : ''}</div>
-        <p class="card-sub">Stage ${n} of 8 · ${sp.done} of ${sp.total} tasks done${isCur && p.stageNote ? ` · ${h(p.stageNote)}` : ''}</p></div>
-      <div class="task-list" style="border-top:1px solid var(--border-secondary)">${list || emptyState('list', 'No tasks in this stage', 'Add the first task for ' + s.name + '.')}</div>
-    </section></div>
+      <div class="card-head"><div class="ch-titles"><h2 class="card-title">${h(sname)}</h2>${status}</div>
+        <div class="ch-actions"><button class="btn" data-action="add-task" data-p="${p.id}" data-stage="${n}">Add task</button>${isCur && n < N ? `<button class="btn" data-action="advance-stage" data-p="${p.id}">Move to stage ${n + 1}</button>` : ''}</div>
+        <p class="card-sub">Stage ${n} of ${N} · ${sp.done} of ${sp.total} tasks done${isCur && p.stageNote ? ` · ${h(p.stageNote)}` : ''}</p></div>
+      <div class="task-list" style="border-top:1px solid var(--border-secondary)">${list || emptyState('list', 'No tasks in this stage', 'Add the first task for ' + sname + '.')}</div>
+    </section>
+    ${isCert ? fundsCard(p) : ''}</div>
     <div>
-      <section class="card"><div class="card-head"><h2 class="card-title">Stages</h2></div><nav class="stage-list" aria-label="Project stages">${stages}</nav></section>
+      <section class="card"><div class="card-head"><div class="ch-titles"><h2 class="card-title">Stages</h2></div><div class="ch-actions"><button class="btn btn-micro" data-action="edit-stages" data-p="${p.id}">Edit stages</button></div></div><nav class="stage-list" aria-label="Project stages">${stages}</nav></section>
       <section class="card"><div class="card-head"><h2 class="card-title">Project company</h2></div>
         <div class="card-section" style="padding-top:4px"><dl class="kv"><dt>Company</dt><dd>${h(p.company.name)}</dd><dt>ABN</dt><dd>${h(p.company.abn)}</dd>${p.company.acn ? `<dt>ACN</dt><dd>${h(p.company.acn)}</dd>` : ''}<dt>GST</dt><dd>${p.company.gst ? 'Registered' : 'Not registered'}</dd><dt>Site</dt><dd>${h(p.lotPlan)}, ${h(p.street)}, ${h(p.suburb)} ${h(p.state)}</dd><dt>Project</dt><dd>${h(p.type)} · ${h(p.yield)}</dd></dl></div></section>
     </div></div>`;
+}
+// Funds needed before sign-off (the certification stage). Amounts include GST: the cash that has to be found.
+function fundsCard(p) {
+  const fs = fundsSummary(p);
+  const byCat = {}; fs.lines.forEach(x => { byCat[x.f.category] = (byCat[x.f.category] || 0) + x.total; });
+  const rows = fs.lines.map(({ f, bill, total, paid }) => `<tr data-id="${f.id}">
+      <td class="m-title"><span style="font-weight:var(--fw-medium)">${h(f.desc)}</span><div class="sub">${h(contactLabel(f.contactId))}${bill ? ' · Bill ' + h(bill.number) : ''}${f.note ? ' · ' + h(f.note) : ''}</div></td>
+      <td class="m-meta">${h(f.category)}</td>
+      <td class="m-meta">${gstChip(f.gst)}</td>
+      <td class="num m-amt">${fmtMoney(total)}</td>
+      <td class="m-meta m-lead nowrap">${paid ? badge('Paid', 'success') : bill ? statusChip(bill.status, 'bill') : badge('To pay', 'attention')}</td>
+      <td class="act m-act">${!bill && !paid ? `<button class="btn btn-micro" data-action="fund-paid" data-p="${p.id}" data-id="${f.id}">Mark paid</button>` : ''}<button class="link-btn" data-action="edit-fund" data-p="${p.id}" data-id="${f.id}">Edit</button></td></tr>`).join('');
+  return `<section class="card" data-id="funds" id="funds">
+    <div class="card-head"><div class="ch-titles"><h2 class="card-title">Funds needed before sign-off</h2></div><div class="ch-actions"><button class="btn" data-action="add-fund" data-p="${p.id}">Add line</button></div>
+      <p class="card-sub">What council, the water authority, the certifier and the land registry need paid before they sign, so settlements can go ahead. Amounts include GST.</p></div>
+    <div class="card-section" style="padding-top:4px"><div class="summary">
+      <div><div class="k">Total to pay</div><div class="v">${fmtMoney(fs.total)}</div></div>
+      <div><div class="k">Paid</div><div class="v">${fmtMoney(fs.paid)}</div></div>
+      <div><div class="k">Still to find</div><div class="v">${fmtMoney(fs.toFind)}</div></div></div></div>
+    <div class="itable-wrap stack" style="border-top:1px solid var(--border-secondary)"><table class="itable">
+      <thead><tr><th scope="col">Payment</th><th scope="col">Category</th><th scope="col">Tax rate</th><th scope="col" class="num">Amount</th><th scope="col">Status</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+      <tbody>${rows || emptyRow(6, 'No payments listed yet', 'Add the contributions, headworks charges and fees due before sign-off.')}</tbody></table></div>
+    ${fs.lines.length ? `<div class="card-footer">By category: ${Object.entries(byCat).map(([k, v]) => `${h(k)} <b>${fmtMoney(v)}</b>`).join(' · ')}. Lines linked to a bill follow that bill's status.</div>` : ''}
+  </section>`;
 }
 
 function tabRfqs(p) {
@@ -1653,7 +1895,7 @@ function scopeCard(p, r) {
   const declinedN = r.quotes.filter(q => q.status === 'declined').length;
   const banner = missing > 0 && !appointedQ ? `<div class="banner in-card">${icon('info')}<span class="grow">${r.quotes.length ? `${plural(missing, 'more quote')} needed to reach 3.` : 'No quotes yet. Three are needed before appointing.'}</span><button class="link-btn" data-action="request-quote" data-p="${p.id}" data-r="${r.id}">Request quote${missing > 1 ? 's' : ''}</button></div>` : '';
   return `<article class="card scope ${appointedQ ? 'done' : ''}" data-id="${r.id}">
-    <div class="scope-head"><div class="sh-titles"><div class="sh-title-row"><h3 class="card-title">${h(r.scope)}</h3>${statusB}</div><p class="card-sub">Stage ${r.stage}: ${h(stageInfo(r.stage).name)} · ${h(r.category)}${appointedQ ? ` · ${h(contactLabel(appointedQ.contactId))} appointed` : ''}</p></div>
+    <div class="scope-head"><div class="sh-titles"><div class="sh-title-row"><h3 class="card-title">${h(r.scope)}</h3>${statusB}</div><p class="card-sub">${h(stageLabel(p, r.stage))} · ${h(r.category)}${appointedQ ? ` · ${h(contactLabel(appointedQ.contactId))} appointed` : ''}</p></div>
       <div class="sh-actions"><button class="btn" data-action="add-quote" data-p="${p.id}" data-r="${r.id}">Add quote</button>${appointedQ ? '' : `<button class="btn" data-action="request-quote" data-p="${p.id}" data-r="${r.id}">Request quote</button>`}</div></div>
     ${rows ? `<div class="itable-wrap stack"><table class="itable"><thead><tr><th scope="col">Party</th><th scope="col">Status</th><th scope="col" class="num">Ex GST</th><th scope="col" class="num">Inc GST</th><th scope="col">Received</th><th scope="col">Includes</th><th scope="col">Excludes</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead><tbody>${rows}</tbody></table></div>` : ''}
     ${banner}
@@ -1666,7 +1908,7 @@ function tabEngagements(p) {
   const es = p.engagements.slice().sort((a, b) => (a.status === 'complete') - (b.status === 'complete') || (b.issued || '9').localeCompare(a.issued || '9'));
   const total = sum(es, e => e.value);
   const rows = es.map(e => {
-    const claimed = sum(p.invoicesIn.filter(i => i.engagementId === e.id && i.status !== 'draft'), invEx);
+    const claimed = engClaimed(p, e, i => i.status !== 'draft');
     const pct = e.value ? Math.min(100, (claimed / e.value) * 100) : 0;
     const act = e.status === 'awaiting' || e.status === 'draft' ? `<button class="btn btn-micro" data-action="issue-po" data-p="${p.id}" data-id="${e.id}">Review and issue</button>` : e.status === 'issued' ? `<button class="link-btn" data-action="complete-eng" data-p="${p.id}" data-id="${e.id}">Mark complete</button>` : '';
     return `<tr data-id="${e.id}">
@@ -1719,7 +1961,7 @@ function invRow(p, i, dir) {
   const party = dir === 'in' ? contactLabel(i.contactId) : i.to;
   const dueCell = `<span class="${overdue ? 'crit' : ''}">${dateCell(i.due)}</span>${overdue ? '<div class="sub crit d-only">Overdue</div>' : ''}`;
   const first = dir === 'in'
-    ? `<td class="m-title from-cell"><span style="font-weight:var(--fw-medium)">${h(party)}</span><div class="sub clamp" title="${h(i.desc)}">${h(i.desc)}${notes ? ' · ' + h(notes) : ''}</div></td><td class="m-meta nowrap">${h(i.number)}${eng ? `<div class="sub d-only">PO: ${h(eng.scope)}</div>` : ''}</td>`
+    ? `<td class="m-title from-cell"><span style="font-weight:var(--fw-medium)">${h(party)}</span><div class="sub clamp" title="${h(i.desc)}">${h(i.desc)}${notes ? ' · ' + h(notes) : ''}</div></td><td class="m-meta nowrap">${h(i.number)}${eng ? `<div class="sub d-only">PO: ${h(eng.scope)}</div>` : ''}</td><td class="m-meta bill-cat">${billCats(i).length > 1 ? `${badge('Split', 'neutral')}<div class="sub d-only">${h(billCats(i).join(', '))}</div>` : h(billCatLabel(i))}</td>`
     : `<td class="m-title nowrap" style="font-weight:var(--fw-medium)">${h(i.number)}</td><td class="m-sub">${h(i.desc)}${notes ? `<div class="sub">${h(notes)}</div>` : ''}</td><td class="m-meta">${h(party)}</td>`;
   return `<tr class="inv" data-id="${i.id}">${first}
     <td class="date m-hide">${fmtDate(i.date)}</td>
@@ -1752,8 +1994,8 @@ function moneyIn(p) {
   <section class="card">${t.nav}
     <div class="filterbar">${fyFilter(p, 'fyIn')}<span class="grow"></span><span class="count-text">${plural(list.length, 'bill')} · amounts in AUD</span></div>
     <div class="itable-wrap stack"><table class="itable">
-      <thead><tr><th scope="col">From</th><th scope="col">Ref</th><th scope="col">Date</th><th scope="col">Due date</th><th scope="col">Tax rate</th><th scope="col" class="num">Ex GST</th><th scope="col" class="num">Inc GST</th><th scope="col">Status</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
-      <tbody>${list.length ? list.map(i => invRow(p, i, 'in')).join('') : emptyRow(9, t.tab === 'all' ? 'No bills found' : 'No bills in this view', t.tab === 'all' ? 'Try another financial year, or add a bill.' : 'Try another tab or financial year.')}</tbody>
+      <thead><tr><th scope="col">From</th><th scope="col">Ref</th><th scope="col">Category</th><th scope="col">Date</th><th scope="col">Due date</th><th scope="col">Tax rate</th><th scope="col" class="num">Ex GST</th><th scope="col" class="num">Inc GST</th><th scope="col">Status</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+      <tbody>${list.length ? list.map(i => invRow(p, i, 'in')).join('') : emptyRow(10, t.tab === 'all' ? 'No bills found' : 'No bills in this view', t.tab === 'all' ? 'Try another financial year, or add a bill.' : 'Try another tab or financial year.')}</tbody>
     </table></div></section>`;
 }
 function moneyOut(p) {
@@ -1803,7 +2045,7 @@ function moneyBudget(p) {
       <div><div class="k">${uncommitted < 0 ? 'Over budget' : 'Uncommitted'}</div><div class="v ${uncommitted < 0 ? 'crit' : ''}">${fmtMoney(Math.abs(uncommitted))}</div></div>
     </div><button class="btn" data-action="edit-budget" data-p="${p.id}">Edit budget</button></div>
   <div class="stack-cards"><section class="card">
-    <div class="card-head"><div class="ch-titles"><h2 class="card-title">Budget vs actual</h2></div><p class="card-sub">All figures ex GST. Committed is engagement values plus bills with no engagement.</p></div>
+    <div class="card-head"><div class="ch-titles"><h2 class="card-title">Budget vs actual</h2></div><p class="card-sub">All figures ex GST, counted by bill line, so a split bill lands in each of its categories. Committed is engagement values plus bill lines no engagement covers.</p></div>
     <div class="itable-wrap stack" style="border-top:1px solid var(--border-secondary)"><table class="itable">
       <thead><tr><th scope="col">Category</th><th scope="col" class="num">Budget</th><th scope="col" class="num">Committed</th><th scope="col" class="num">Paid</th><th scope="col" class="num">Remaining</th><th scope="col" class="num">Committed %</th><th scope="col" class="w-bar" style="width:22%"><span class="sr-only">Spend bar</span></th></tr></thead>
       <tbody>${rows}</tbody>
@@ -1844,16 +2086,21 @@ function moneyGst(p) {
     <div class="card-section" style="padding-top:0;color:var(--text-secondary)">GST on Expenses lines carry 10% GST. Council contributions, government fees, transfer duty, LRS fees and land from vendors who aren't GST registered are GST Free Expenses, so no credit is claimed. Bank interest is Input Taxed. Lot sales use the margin scheme: GST is one-eleventh of the margin, and deposits are attributed at settlement. Bills count on their invoice date once approved.</div></section></div>`;
 }
 
+function docExt(d0) { return String(d0.ext || 'pdf').toUpperCase(); }
+function docStageFilter(p) { const v = ui.docStage; return v !== 'all' && +v >= 1 && +v <= stageCount(p) ? +v : 'all'; }
 function tabDocuments(p) {
-  const counts = {}; p.docs.forEach(d0 => { counts[d0.type] = (counts[d0.type] || 0) + 1; });
+  const stageF = docStageFilter(p);
+  const inStage = p.docs.filter(d0 => stageF === 'all' || d0.stage === stageF);
+  const counts = {}; inStage.forEach(d0 => { counts[d0.type] = (counts[d0.type] || 0) + 1; });
   const folder = ui.docFolder === 'all' || DOC_TYPES.includes(ui.docFolder) ? ui.docFolder : 'all';
-  const docs = p.docs.filter(d0 => folder === 'all' || d0.type === folder).sort((a, b) => b.date.localeCompare(a.date));
+  const docs = inStage.filter(d0 => folder === 'all' || d0.type === folder).sort((a, b) => b.date.localeCompare(a.date));
   const fbtn = (k, label, n) => `<button type="button" class="folder" data-action="set-ui" data-k="docFolder" data-v="${k}" aria-pressed="${folder === k}">${h(label)}<span class="n">${n}</span></button>`;
-  return `<div class="section-bar"><p class="help grow">Files are named <span class="mono">${h(p.id)}_DocType_Party_Date</span> automatically. OneDrive keeps a nightly backup.</p><button class="btn btn-primary" data-action="upload" data-p="${p.id}">Upload</button></div>
-  <div class="docs"><nav class="card folders" aria-label="Document folders">${fbtn('all', 'All documents', p.docs.length)}${DOC_TYPES.map(k => fbtn(k, DOC_LABELS[k], counts[k] || 0)).join('')}</nav>
+  const stageOpts = [['all', `All stages (${p.docs.length})`], ...stagesOf(p).map((s0, i) => [String(i + 1), `${i + 1}. ${s0.name} (${p.docs.filter(d0 => d0.stage === i + 1).length})`])];
+  return `<div class="section-bar">${uiSelect({ k: 'docStage', value: String(stageF), options: stageOpts, label: 'Stage', id: 'doc-stage' })}<p class="help grow">Files are named <span class="mono">${h(p.id)}_DocType_Party_Date</span> automatically, any file type. OneDrive keeps a nightly backup.</p><button class="btn btn-primary" data-action="upload" data-p="${p.id}">Upload</button></div>
+  <div class="docs"><nav class="card folders" aria-label="Document folders">${fbtn('all', stageF === 'all' ? 'All documents' : 'All in stage ' + stageF, inStage.length)}${DOC_TYPES.map(k => fbtn(k, DOC_LABELS[k], counts[k] || 0)).join('')}</nav>
     <section class="card"><div class="itable-wrap stack"><table class="itable">
-      <thead><tr><th scope="col">File name</th><th scope="col">Folder</th><th scope="col">Date</th><th scope="col" class="num">Size</th></tr></thead>
-      <tbody>${docs.length ? docs.map(d0 => `<tr class="file" data-id="${d0.id}"><td class="m-title"><div class="fn">${h(docName(p, d0)).replace(/_/g, '_<wbr>')}</div><div class="sub">${h(d0.title)}${(d0.tags || []).length ? ' · ' + h(d0.tags.join(', ')) : ''}</div></td><td class="m-meta">${h(DOC_LABELS[d0.type] || d0.type)}</td><td class="date m-meta">${dateCell(d0.date)}</td><td class="num m-amt" style="font-weight:var(--fw-regular)">${d0.size} KB</td></tr>`).join('') : emptyRow(4, 'Nothing in this folder', 'Upload a PDF and it will be named and filed for you.')}</tbody>
+      <thead><tr><th scope="col">File name</th><th scope="col">Stage</th><th scope="col">Folder</th><th scope="col">Date</th><th scope="col" class="num">Size</th></tr></thead>
+      <tbody>${docs.length ? docs.map(d0 => `<tr class="file" data-id="${d0.id}"><td class="m-title"><div class="file-cell"><span class="badge tone-neutral ftype">${h(docExt(d0))}</span><div style="min-width:0"><div class="fn">${h(docName(p, d0)).replace(/_/g, '_<wbr>')}</div><div class="sub">${h(d0.title)}${(d0.tags || []).length ? ' · ' + h(d0.tags.join(', ')) : ''}</div></div></div></td><td class="m-meta"><span class="d-only">${d0.stage}. ${h(stageName(p, d0.stage))}</span><span class="m-only">Stage ${d0.stage}</span></td><td class="m-meta">${h(DOC_LABELS[d0.type] || d0.type)}</td><td class="date m-meta">${dateCell(d0.date)}</td><td class="num m-amt" style="font-weight:var(--fw-regular)">${d0.size} KB</td></tr>`).join('') : emptyRow(5, 'Nothing filed here', stageF === 'all' ? 'Upload a file and it will be named and filed for you.' : 'Nothing in this folder for stage ' + stageF + '. Try All stages.')}</tbody>
     </table></div></section></div>`;
 }
 const LOG_ICONS = { send: 'send', appoint: 'check', money: 'dollar', stage: 'layers', deal: 'pin', company: 'building', note: 'note', task: 'check', doc: 'upload' };
@@ -1869,43 +2116,93 @@ function tabLog(p) {
 }
 
 /* ===== View: Contacts ===== */
-const ROLE_GROUPS = [
-  ['Consultants', ['Town planner', 'Surveyor', 'Civil engineer', 'Geotech', 'Ecology', 'Bushfire', 'Traffic engineer']],
-  ['Contractors', ['Civil contractor', 'Electrical', 'NBN', 'Landscaping', 'Builder']],
-  ['Agents & advisers', ["Buyer's agent", 'Solicitor', 'Real estate agent', 'Accountant', 'Project manager']],
-  ['Council & government', ['Council', 'Government']],
-  ['Banks & vendors', ['Bank', 'Vendor']],
-];
-function roleGroup(role) { const g = ROLE_GROUPS.find(([, rs]) => rs.includes(role)); return g ? g[0] : 'Other'; }
+// Categories and the roles in them live in state (state.categories, state.roles), so Dan can change them himself.
 function viewContacts() {
   const q = ui.contactQ.trim().toLowerCase();
-  const groups = ['All', ...ROLE_GROUPS.map(g => g[0]).filter(g => state.contacts.some(c => roleGroup(c.role) === g)), ...(state.contacts.some(c => roleGroup(c.role) === 'Other') ? ['Other'] : [])];
+  const inCat = (c, g) => contactCategories(c).includes(g);
+  const hasOther = state.contacts.some(c => inCat(c, 'Other'));
+  const groups = ['All', ...state.categories, ...(hasOther ? ['Other'] : [])];
   const group = groups.includes(ui.contactRole) ? ui.contactRole : 'All';
-  const list = state.contacts.slice().sort((a, b) => (a.id === 'wellco') - (b.id === 'wellco')).filter(c => (group === 'All' || roleGroup(c.role) === group) && (!q || [c.name, c.company, c.role, c.abn, c.notes].join(' ').toLowerCase().includes(q)));
+  const list = state.contacts.slice().sort((a, b) => (a.id === 'wellco') - (b.id === 'wellco')).filter(c => (group === 'All' || inCat(c, group)) && (!q || [c.name, c.company, roleText(c), contactCategories(c).join(' '), c.abn, c.notes].join(' ').toLowerCase().includes(q)));
   const warnings = state.contacts.filter(c => expiryStatus(c)).length;
   const rows = list.map(c => {
-    const projs = contactProjects(c.id); const ex = expiryChip(c);
+    const projs = contactProjects(c.id); const ex = expiryChip(c); const cats = contactCategories(c);
     return `<tr class="contact clickable" data-action="contact-detail" data-id="${c.id}">
-      <td class="m-title"><button type="button" class="row-link" data-action="contact-detail" data-id="${c.id}" aria-label="${h(c.company)}, ${h(c.role)}">${h(c.company)}</button></td>
-      <td class="m-sub">${h(c.name)}<span class="m-only"> · ${h(c.role)}</span></td>
-      <td class="m-hide">${h(c.role)}</td>
+      <td class="m-title"><button type="button" class="row-link" data-action="contact-detail" data-id="${c.id}" aria-label="${h(c.company)}, ${h(roleText(c))}">${h(c.company)}</button></td>
+      <td class="m-sub">${h(c.name)}<span class="m-only"> · ${h(roleText(c))}</span></td>
+      <td class="m-hide">${h(roleText(c))}<div class="sub">${h(cats.join(', '))}</div></td>
       <td class="m-hide nowrap num" style="text-align:left">${h(c.abn || '–')}</td>
       <td class="${ex ? 'm-meta m-lead' : 'm-hide'} nowrap">${ex || ((c.licenceExpiry || c.insuranceExpiry) ? '<span class="muted">Current</span>' : '<span class="muted">–</span>')}</td>
       <td class="${projs.length ? 'm-meta' : 'm-hide'}">${projs.length ? h(projs.map(p => p.id).join(', ')) : '<span class="muted">–</span>'}</td></tr>`;
   }).join('');
   return `<div class="page page-full">
-    ${pageHeader({ title: 'Contacts', sub: `${state.contacts.length} contacts used across all projects${warnings ? ` · ${plural(warnings, 'licence or insurance', 'licences or insurances')} to check` : ''}`, actions: `<button class="btn btn-primary" data-action="add-contact">Add contact</button>` })}
+    ${pageHeader({ title: 'Contacts', sub: `${state.contacts.length} contacts used across all projects${warnings ? ` · ${plural(warnings, 'licence or insurance', 'licences or insurances')} to check` : ''}`, actions: `<button class="btn" data-action="manage-cats"><span class="d-only">Manage&nbsp;</span>categories</button><button class="btn btn-primary" data-action="add-contact">Add contact</button>` })}
     <section class="card">
-      <nav class="ptabs" aria-label="Filter by role">${groups.map(g => ptab({ label: g, n: g === 'All' ? state.contacts.length : state.contacts.filter(c => roleGroup(c.role) === g).length, current: g === group, k: 'contactRole', v: g })).join('')}</nav>
-      <div class="filterbar"><div class="search grow">${icon('search')}<label class="sr-only" for="contact-search">Search contacts</label><input class="input" id="contact-search" type="search" placeholder="Search by name, company or ABN" value="${h(ui.contactQ)}" data-input="contact-search" autocomplete="off"></div></div>
+      <nav class="ptabs" aria-label="Filter by category">${groups.map(g => ptab({ label: g, n: g === 'All' ? state.contacts.length : state.contacts.filter(c => inCat(c, g)).length, current: g === group, k: 'contactRole', v: g })).join('')}</nav>
+      <div class="filterbar"><div class="search grow">${icon('search')}<label class="sr-only" for="contact-search">Search contacts</label><input class="input" id="contact-search" type="search" placeholder="Search by name, company, role or ABN" value="${h(ui.contactQ)}" data-input="contact-search" autocomplete="off"></div></div>
       <div class="itable-wrap stack" id="contact-grid">${list.length ? `<table class="itable">
-        <thead><tr><th scope="col">Company</th><th scope="col">Contact</th><th scope="col">Role</th><th scope="col">ABN</th><th scope="col">Licence / insurance</th><th scope="col">Projects</th></tr></thead>
-        <tbody>${rows}</tbody></table>` : emptyState('users', 'No contacts found', 'Try changing the search term or role tab.')}</div>
+        <thead><tr><th scope="col">Company</th><th scope="col">Contact</th><th scope="col">Roles and categories</th><th scope="col">ABN</th><th scope="col">Licence / insurance</th><th scope="col">Projects</th></tr></thead>
+        <tbody>${rows}</tbody></table>` : emptyState('users', 'No contacts found', group !== 'All' && !q ? 'Nobody is in ' + group + ' yet. Tick a role in it on a contact, or add it under "Also show under".' : 'Try changing the search term or category tab.')}</div>
     </section>
   </div>`;
 }
 function contactCard(c) {
-  return `<button type="button" class="row contact" data-action="contact-detail" data-id="${c.id}"><span class="body"><span class="title">${h(c.company)}</span><span class="meta">${h(c.name)} · ${h(c.role)}</span></span></button>`;
+  return `<button type="button" class="row contact" data-action="contact-detail" data-id="${c.id}"><span class="body"><span class="title">${h(c.company)}</span><span class="meta">${h(c.name)} · ${h(roleText(c))}</span></span></button>`;
+}
+// Add / edit contact: roles (several), a "+ New role" inline control, and extra categories
+function rolesChoiceHTML(selected) {
+  const sel = new Set(selected);
+  const groups = [...state.categories, 'Other'].map(cat => [cat, allRoles().filter(r => roleCategory(r) === cat)]).filter(([, rs]) => rs.length);
+  return groups.map(([cat, rs]) => `<div class="choice-group" data-cat="${h(cat)}"><div class="choice-h">${h(cat)}</div><div class="choice-grid">${rs.map(r => `<label class="toggle"><input type="checkbox" name="roles" value="${h(r)}" ${sel.has(r) ? 'checked' : ''} data-input="contact-roles"><span>${h(r)}</span></label>`).join('')}</div></div>`).join('');
+}
+function catsChoiceHTML(roles, extra) {
+  const implied = new Set(roles.map(roleCategory)); const ex = new Set(extra);
+  return state.categories.map(cat => implied.has(cat)
+    ? `<label class="toggle"><input type="checkbox" checked disabled value="${h(cat)}"><span>${h(cat)} <span class="small">(from role)</span></span></label>`
+    : `<label class="toggle"><input type="checkbox" name="cats" value="${h(cat)}" ${ex.has(cat) ? 'checked' : ''}><span>${h(cat)}</span></label>`).join('');
+}
+function contactFormHTML(c) {
+  const v = (k) => h(c ? (c[k] || '') : '');
+  return `<form id="f-contact" data-form="save-contact" data-id="${c ? c.id : ''}" class="form-grid">
+    <div class="field full"><label for="c-company">Company</label><input class="input" id="c-company" name="company" required value="${v('company')}"></div>
+    <div class="field full"><label for="c-name">Contact name</label><input class="input" id="c-name" name="name" required value="${v('name')}"></div>
+    <fieldset class="field full" style="border:0;padding:0;margin:0;min-width:0"><legend class="label" style="margin-bottom:4px">Roles</legend>
+      <div class="choice-box" id="c-roles">${rolesChoiceHTML(c ? cRoles(c) : [])}</div>
+      <div class="new-role" id="c-newrole" hidden>
+        <div class="field"><label for="nr-name">New role</label><input class="input" id="nr-name" placeholder="e.g. Hydraulic engineer" autocomplete="off"></div>
+        <div class="field"><label for="nr-cat">Sits in</label><select class="input" id="nr-cat">${state.categories.map(x => `<option>${h(x)}</option>`).join('')}</select></div>
+        <button type="button" class="btn" data-action="role-add-inline">Add role</button>
+      </div>
+      <span class="hint" style="display:flex;gap:12px;align-items:center;margin-top:4px"><button type="button" class="link-btn" data-action="role-new-toggle" aria-controls="c-newrole" aria-expanded="false">+ New role</button><span>Tick as many as apply.</span></span></fieldset>
+    <fieldset class="field full" style="border:0;padding:0;margin:0;min-width:0"><legend class="label" style="margin-bottom:4px">Also show under</legend>
+      <div class="choice-box choice-grid" id="c-cats" style="max-height:none">${catsChoiceHTML(c ? cRoles(c) : [], c ? c.categories || [] : [])}</div>
+      <span class="hint">Categories from the ticked roles are included automatically. Tick others to list this contact there too.</span></fieldset>
+    <div class="field"><label for="c-abn">ABN</label><input class="input" id="c-abn" name="abn" inputmode="numeric" value="${v('abn')}"></div>
+    <div class="field"><label for="c-phone">Phone</label><input class="input" id="c-phone" name="phone" type="tel" value="${v('phone')}"></div>
+    <div class="field full"><label for="c-email">Email</label><input class="input" id="c-email" name="email" type="email" value="${v('email')}"></div>
+    <div class="field"><label for="c-lic">Licence expiry</label><input class="input" id="c-lic" name="licenceExpiry" type="date" value="${v('licenceExpiry')}"></div>
+    <div class="field"><label for="c-ins">Insurance expiry</label><input class="input" id="c-ins" name="insuranceExpiry" type="date" value="${v('insuranceExpiry')}"></div>
+    <div class="field full"><label for="c-notes">Notes</label><textarea class="input" id="c-notes" name="notes" rows="3" placeholder="How they performed, who to ask for">${v('notes')}</textarea></div></form>`;
+}
+function refreshContactCats() {
+  const box = $('#c-cats'); if (!box) return;
+  const roles = [...document.querySelectorAll('#c-roles input[name=roles]:checked')].map(x => x.value);
+  const extra = [...box.querySelectorAll('input[name=cats]:checked')].map(x => x.value);
+  box.innerHTML = catsChoiceHTML(roles, extra);
+}
+// Manage categories drawer: a working copy, applied on Save
+function catDraftHTML(draft) {
+  const opts = (sel) => draft.cats.map((c, i) => `<option value="${i}" ${i === sel ? 'selected' : ''}>${h(c.name || 'New category')}</option>`).join('');
+  return `<form id="f-cats" data-form="manage-cats" class="stack" style="gap:0">
+    <p class="help" style="margin-bottom:16px">Rename a category, move a role to another category, or add a new one. Contacts follow their roles.</p>
+    ${draft.cats.map((c, i) => { const rs = draft.roles.filter(r => r.cat === i); const extraN = c.orig ? state.contacts.filter(x => (x.categories || []).includes(c.orig)).length : 0; return `<div class="cat-block" data-cat-row data-i="${i}">
+      <div class="field"><label for="cn-${i}">Category ${i + 1}</label><div class="hstack" style="flex-wrap:nowrap"><input class="input" id="cn-${i}" name="catname" required value="${h(c.name)}" placeholder="Category name" data-input="cat-name" data-i="${i}">${!rs.length && !extraN ? `<button type="button" class="btn btn-micro btn-danger" data-action="cat-remove" data-i="${i}">Remove</button>` : ''}</div></div>
+      ${rs.length ? `<div class="rows">${rs.map(r => `<div class="role-row"><span class="body">${h(r.name)}<span class="small muted"> · ${plural(state.contacts.filter(x => cRoles(x).includes(r.name)).length, 'contact')}</span></span><label class="sr-only" for="rm-${h(r.key)}">Category for ${h(r.name)}</label><select class="input" id="rm-${h(r.key)}" data-role="${h(r.name)}" data-input="role-move">${opts(r.cat)}</select></div>`).join('')}</div>` : `<p class="small muted" style="margin-top:8px">No roles in this category yet${extraN ? `. ${plural(extraN, 'contact')} listed here directly` : ''}.</p>`}
+    </div>`; }).join('')}
+    <div class="cat-block"><div class="new-role" style="grid-template-columns:minmax(0,1fr) auto;margin-top:0">
+      <div class="field"><label for="cat-new">New category</label><input class="input" id="cat-new" placeholder="e.g. Building contractors" autocomplete="off"></div>
+      <button type="button" class="btn" data-action="cat-add">Add category</button></div></div>
+  </form>`;
 }
 
 /* ===== View: Money (across companies) ===== */
@@ -1956,21 +2253,37 @@ function viewDeals() {
     <td class="m-title"><span style="font-weight:var(--fw-medium)">${h(dl.address)}</span><div class="sub">${h(dl.lotPlan || 'Lot / plan not recorded')}</div>${dl.notes ? `<div class="sub clamp d-only">${h(dl.notes)}</div>` : ''}</td>
     <td class="m-sub">${h(dl.source)}</td>
     <td class="num m-amt">${fmtMoney(dl.asking)}</td>
-    <td class="m-meta">${h(dl.yield)}</td>
+    <td class="m-meta">${h(dl.yield)}<div class="sub d-only">${h(dl.type || 'Land subdivision')}</div></td>
     <td class="m-hide">${h(dl.zoning)}</td>
+    <td class="m-meta"><button type="button" class="link-btn" data-action="deal-docs" data-id="${dl.id}">${(dl.docs || []).length ? plural(dl.docs.length, 'file') : 'Add files'}</button></td>
     <td class="num m-meta" data-label="Margin">${dl.margin != null ? dl.margin + '%' : '–'}</td>
     <td class="m-meta m-lead nowrap">${fb(dl.feaso)}</td>
     <td class="date m-hide">${fmtDate(dl.logged)}</td>
     <td class="act m-act">${dl.feaso === 'go' ? (dl.projectId ? `<a class="btn btn-micro" href="#/project/${h(dl.projectId)}">Open project</a>` : `<a class="btn btn-micro" href="#/new/${dl.id}">Create project</a>`) : dl.feaso === 'pending' ? `<button class="btn btn-micro" data-action="feaso" data-id="${dl.id}" data-v="go">Mark Go</button><button class="btn btn-micro" data-action="feaso" data-id="${dl.id}" data-v="nogo">Mark No-go</button>` : `<button class="link-btn" data-action="feaso" data-id="${dl.id}" data-v="pending">Reopen</button>`}</td></tr>`).join('');
   return `<div class="page page-full">
-    ${pageHeader({ title: 'Deals', sub: "Sites logged from listings and buyer's agents, with the feaso result. Stage 1: Sourcing.", actions: `<button class="btn btn-primary" data-action="add-deal">Log a site</button>` })}
+    ${pageHeader({ title: 'Deals', sub: "Sites logged from listings and buyer's agents, with the feaso result and the agent's files. Stage 1: Sourcing.", actions: `<button class="btn btn-primary" data-action="add-deal">Log a site</button>` })}
     <section class="card">
       <nav class="ptabs" aria-label="Feaso result">${tabs.map(([k, l]) => ptab({ label: l, n: k === 'all' ? all.length : all.filter(dl => dl.feaso === k).length, current: k === tab, k: 'dealTab', v: k })).join('')}</nav>
       <div class="itable-wrap stack"><table class="itable">
-        <thead><tr><th scope="col">Site</th><th scope="col">Source</th><th scope="col" class="num">Asking</th><th scope="col">Yield</th><th scope="col">Zoning</th><th scope="col" class="num">Margin</th><th scope="col">Feaso</th><th scope="col">Logged</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
-        <tbody>${rows || emptyRow(9, 'No deals in this view', 'Try another tab, or log a site.')}</tbody></table></div>
+        <thead><tr><th scope="col">Site</th><th scope="col">Source</th><th scope="col" class="num">Asking</th><th scope="col">Yield</th><th scope="col">Zoning</th><th scope="col">Documents</th><th scope="col" class="num">Margin</th><th scope="col">Feaso</th><th scope="col">Logged</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+        <tbody>${rows || emptyRow(10, 'No deals in this view', 'Try another tab, or log a site.')}</tbody></table></div>
     </section>
   </div>`;
+}
+
+function dealDocsHTML(dl) {
+  const docs = (dl.docs || []).slice().sort((a, b) => b.date.localeCompare(a.date));
+  const parties = state.contacts.slice().sort((a, b) => a.company.localeCompare(b.company));
+  return `<div class="stack" style="gap:20px">
+    <div><div class="eyebrow">On this deal</div>${docs.length ? `<div class="list">${docs.map(d0 => `<div class="row" data-id="${d0.id}"><span class="badge tone-neutral ftype">${h(docExt(d0))}</span><span class="body"><span class="title">${h(d0.title)}</span><span class="meta">${h(DEAL_DOC_TYPES[d0.type] || d0.type)} · ${fmtDate(d0.date)} · ${d0.size} KB${d0.note ? ' · ' + h(d0.note) : ''}</span><span class="meta fn" style="margin-top:2px">${h(dealDocName(dl, d0)).replace(/_/g, '_<wbr>')}</span></span></div>`).join('')}</div>` : '<p class="small muted">No files yet. Drop the contract, plans and sales stats here as the agent sends them.</p>'}</div>
+    <form id="f-dealdoc" data-form="deal-doc" data-id="${dl.id}" class="stack" style="gap:16px">
+      <h3 class="eyebrow" style="margin:0">Add files</h3>
+      <div class="form-grid"><div class="field"><label for="dd-type">Document type</label><select class="input" id="dd-type" name="type" data-input="dealdoc-preview">${Object.entries(DEAL_DOC_TYPES).map(([k, l]) => `<option value="${k}">${h(l)}</option>`).join('')}</select></div>
+      <div class="field"><label for="dd-party">From</label><select class="input" id="dd-party" name="party" data-input="dealdoc-preview"><option value="">Agent or vendor (not in contacts)</option>${parties.map(c => `<option value="${c.id}">${h(c.company)}</option>`).join('')}</select></div></div>
+      <div class="field"><label for="dd-note">Note (optional)</label><input class="input" id="dd-note" name="note" placeholder="e.g. Agent's sales stats for 5-acre lots" autocomplete="off"></div>
+      <div class="field"><span class="label">Files</span><button type="button" class="btn" data-action="pick-file" style="justify-content:flex-start">${icon('upload')}<span id="u-file">Choose files</span></button><span class="hint">Any file type: PDF, Excel, Word, photos. Pick several at once.</span></div>
+      <div class="field"><span class="label">Will be saved as</span><div class="card" style="padding:12px;box-shadow:none;border:1px solid var(--border)"><span class="mono" id="u-name" style="font-size:12px;overflow-wrap:anywhere"></span></div><span class="hint">When this deal becomes a project, its files move across under stages 1 and 2.</span></div>
+    </form></div>`;
 }
 
 /* ===== View: Exports ===== */

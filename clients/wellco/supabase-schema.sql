@@ -1,5 +1,5 @@
 -- =============================================================================
---  WELLCO PROJECT BRAIN  -  Supabase database schema  (v1)
+--  WELLCO PROJECT BRAIN  -  Supabase database schema  (v2, 16 Nov 2026)
 --  Client : Wellco Developments Pty Ltd (Dan Wellman), Milton NSW
 --  Built by: Joe Ingram, LeadHive
 -- =============================================================================
@@ -12,31 +12,63 @@
 --       nothing is half-applied: PART 1 and PART 2 each run as one transaction
 --       and roll back on error.  Copy the error to Claude and fix, then re-run
 --       on a fresh project (this script is written to run ONCE per project).
+--    5. Create Dan's login (README step A5).  His default stage templates,
+--       contact categories / roles, project types and document types are
+--       created for him automatically at that moment (see seed_owner_defaults).
 --
 --  WHAT'S IN HERE:
---    PART 1  Database: helpers, enums, tables, triggers, views, security (RLS)
+--    PART 1  Database: helpers, enums, lookups, tables, triggers, functions,
+--            views, security (RLS)
 --    PART 2  Storage: the private "project-documents" bucket + its access rules
 --
 --  THE BIG RULES THIS SCHEMA ENFORCES (so the app can't get them wrong):
 --    * One owner (Dan).  Every row carries owner_id; Row Level Security means a
 --      logged-in user only ever sees rows where owner_id = their user id.
---    * Projects never mix.  Quotes, engagements, invoices, budget lines and
---      documents are tied to ONE project, and links between them are checked so
---      a Croobyar invoice can never point at an Ulladulla engagement.
---      Only Projects and Contacts are shared registers.
---    * Every money row has a GST treatment: taxable / gst_free / input_taxed /
---      margin_scheme (sales only).  GST-free and input-taxed rows must carry $0 GST.
+--    * Projects never mix.  Stages, tasks, quotes, engagements, invoices, bill
+--      lines, budget lines, funds needed and documents are tied to ONE project,
+--      and links between them are checked so a Croobyar invoice can never point
+--      at an Ulladulla engagement or stage.
+--      Only Projects, Contacts, Deals and Dan's own lists (templates, roles,
+--      categories, types) are shared registers.
+--    * Every money LINE has a GST treatment: taxable / gst_free / input_taxed /
+--      margin_scheme (sales only).  GST-free and input-taxed lines must carry $0 GST.
+--    * Every bill line has its own cost category ("a bit like Xero").  Budget vs
+--      actual, BAS, funds needed and the home screen all add up by LINE.  The
+--      bill header totals are worked out from its lines automatically.
 --    * Financial year and BAS quarter are worked out automatically from the
 --      invoice date (AU FY = 1 Jul - 30 Jun, e.g. 'FY2025-26', quarters Q1-Q4).
 --    * Nothing is sent, issued or paid without Dan's approval: moving an RFQ to
 --      'sent', an engagement to 'issued', an invoice-in to 'approved'/'paid', or
 --      an invoice-out to 'issued' is blocked unless an approved approval exists.
+--      Once a bill is approved its lines are locked, so the amount Dan approved
+--      can't change underneath him.
 --    * Every insert / change / delete on the main tables is written to
 --      activity_log automatically (the per-project "Log" tab).
 --
 --  MONEY CONVENTION: all budget / committed / paid figures are EX GST (each
 --  project company is GST registered, so GST is not a cost).  GST sits in its
---  own column and only matters for BAS.
+--  own column and only matters for BAS.  Funds needed before sign-off is the
+--  one exception: it shows cash (incl GST) as well, because it's money to find.
+--
+--  CHANGES IN v2 (setup call with Dan, 16 Nov 2026, see changes-2026-11-16.md):
+--    1. Stages are data, not a fixed 1-8 list.  stage_templates (per project
+--       type, editable by Dan) + stage_template_tasks are copied into
+--       project_stages + tasks when a project is created.  New default stage 7
+--       "Certification & Registration" (9 stages for land and commercial).
+--    2. project_type is a lookup table (project_types) and gains Residential
+--       build (8 stages, its own template).
+--    3. Contact roles and categories are data: contact_categories,
+--       contact_roles, contact_role_links, contact_extra_categories.  The old
+--       contacts.roles enum array is gone.
+--    4. Bills and sales invoices have lines (invoice_in_lines, invoice_out_lines)
+--       with their own GST treatment AND cost category.  Headers keep a default.
+--    5. funds_needed: the end-of-job money that must be paid before sign-off,
+--       tied to the Certification stage, with v_funds_needed (total / paid /
+--       still to find).
+--    6. Documents can belong to a deal OR a project; convert_deal_to_project()
+--       brings them across.  Document types are a lookup; any file type allowed.
+--  This v2 file replaces v1 outright: nothing had been loaded into Dan's
+--  Supabase yet, so there is no data migration, just run this on a fresh project.
 -- =============================================================================
 
 
@@ -99,20 +131,14 @@ $$;
 
 
 -- -----------------------------------------------------------------------------
--- 1.2  Enums (fixed pick-lists).  To add a value later:
---        alter type public.contact_role add value 'heritage';
+-- 1.2  Enums (fixed pick-lists that only change with the law or the accountant).
+--      To add a value later:   alter type public.au_state add value 'VIC';
+--      Anything Dan should be able to change himself (project types, stages,
+--      contact roles and categories, document types) is a TABLE instead (1.3).
 -- -----------------------------------------------------------------------------
 create type public.au_state          as enum ('NSW', 'QLD');   -- add more states with ALTER TYPE if Wellco goes further afield
-create type public.project_type      as enum ('land_subdivision', 'commercial_industrial');
 create type public.project_status    as enum ('live', 'closed');
 create type public.feaso_result      as enum ('pending', 'go', 'no_go');
-
-create type public.contact_role as enum (
-  'buyers_agent', 'solicitor', 'town_planner', 'surveyor', 'civil_engineer',
-  'geotech', 'ecology', 'bushfire', 'flooding', 'traffic', 'civil_contractor',
-  'electrical', 'nbn', 'builder', 'landscaping', 'real_estate_agent',
-  'accountant', 'council', 'state_government', 'utility', 'bank', 'lender', 'other'
-);
 
 create type public.gst_treatment as enum (
   'taxable',        -- standard 10% GST (most consultants and contractors)
@@ -142,12 +168,6 @@ create type public.invoice_out_kind  as enum ('lot_deposit', 'lot_settlement', '
 
 -- Flags the accountant needs at year end (shown on the Tax Summary tab).
 create type public.money_flag as enum ('intercompany_loan', 'distribution_to_trust', 'management_fee');
-
-create type public.doc_type as enum (
-  'contract', 'due_diligence', 'planning_report', 'da', 'consultant_report',
-  'quote', 'engagement', 'invoice_in', 'invoice_out', 'receipt', 'certificate',
-  'plans', 'correspondence', 'sales', 'finance', 'council', 'other'
-);
 
 create type public.approval_status as enum ('pending', 'approved', 'rejected');
 create type public.approval_kind as enum (
@@ -182,31 +202,117 @@ create table public.wellco_settings (
 );
 comment on table public.wellco_settings is 'Wellco Developments details, trust, fee basis, email signature and backup status. One row.';
 
--- The 8 lifecycle stages. Same list for every project (land or commercial).
-create table public.stages (
-  stage_no     smallint primary key check (stage_no between 1 and 8),
-  name         text not null unique,
-  description  text not null
+-- ---- Dan's own lists (editable from Settings, seeded at sign-up) -----------
+
+-- PROJECT TYPES.  A lookup table, not an enum, on purpose: with an enum, adding
+-- "Residential build" meant Joe running ALTER TYPE in the SQL editor (and enum
+-- values can't be renamed or removed cleanly).  As a table, Dan adds a type in
+-- Settings, names it how he likes, and gives it its own default stage template.
+-- Projects store the short code (e.g. 'residential_build'); the name can change.
+create table public.project_types (
+  owner_id    uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  code        text not null check (code ~ '^[a-z][a-z0-9_]{1,39}$'),   -- app makes it from the name
+  name        text not null check (trim(name) <> ''),                  -- 'Residential build'
+  sort_order  integer not null default 0,
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now(),
+  primary key (owner_id, code),
+  unique (owner_id, name)
 );
-comment on table public.stages is 'Fixed list of the 8 project stages. Shared, read-only.';
+comment on table public.project_types is 'Project types (Land subdivision, Commercial / industrial, Residential build...). Dan can add more.';
 
-insert into public.stages (stage_no, name, description) values
-  (1, 'Sourcing',               'Site found via listing or buyer''s agent; log the site.'),
-  (2, 'Feasibility',            'Feaso (Feasely); go / no-go.'),
-  (3, 'Acquisition & DD',       'Offer, deposit, solicitor, due diligence; register project company (ABN, GST, bank); exchange; settlement.'),
-  (4, 'Consultants',            'Planner, surveyor, civil engineer, geotech, ecology, bushfire, flooding. 3 quotes each.'),
-  (5, 'Development Approval',   'Lodge DA, respond to RFIs, pay council fees, DA conditions.'),
-  (6, 'Construction',           'Tender civils, electrical, NBN, landscaping (3 quotes each); monthly claims; contributions; WAE; subdivision certificate; plan registration.'),
-  (7, 'Sales & Settlements',    'Appoint agent(s), sell lots / units, bundle settlements, discharge loans, GST margin scheme.'),
-  (8, 'Bonds & Wind-up',        'Maintenance bonds (~12 months), council inspection, bond return, final accounts, distribution to trust, deregister company.');
+-- STAGE TEMPLATES: the default stage list for each project type, in order.
+-- Dan can rename, add (add_template_stage) or reorder stages here.  Changes
+-- apply to NEW projects; existing projects keep their own copy (project_stages).
+-- stage_key is a fixed tag ('certification', 'acquisition'...) that survives a
+-- rename, so the app can still find "the Certification stage" if Dan calls it
+-- something else.  Stages Dan adds himself have no key.
+create table public.stage_templates (
+  id            uuid primary key default gen_random_uuid(),
+  owner_id      uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  project_type  text not null,
+  position      smallint not null check (position >= 1),
+  name          text not null check (trim(name) <> ''),
+  description   text,
+  stage_key     text check (stage_key ~ '^[a-z_]{2,40}$'),
+  created_at    timestamptz not null default now(),
+  updated_at    timestamptz not null default now(),
+  foreign key (owner_id, project_type) references public.project_types (owner_id, code)
+    on update cascade on delete cascade,
+  -- deferrable so "insert a stage at 4" can shift 4..9 up by one in one go
+  constraint stage_templates_position_uq unique (owner_id, project_type, position) deferrable initially immediate
+);
+comment on table public.stage_templates is 'Default stage list per project type, copied into project_stages when a project is created. Editable by Dan.';
 
--- Shared CONTACTS register (one of only two registers shared across projects).
+-- The default checklist for each template stage (copied into tasks).
+create table public.stage_template_tasks (
+  id                 uuid primary key default gen_random_uuid(),
+  owner_id           uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  stage_template_id  uuid not null references public.stage_templates (id) on delete cascade,
+  title              text not null check (trim(title) <> ''),
+  notes              text,
+  lead_time_days     integer check (lead_time_days >= 0),
+  warning            text,
+  sort_order         integer not null default 0,
+  created_at         timestamptz not null default now(),
+  updated_at         timestamptz not null default now()
+);
+comment on table public.stage_template_tasks is 'Default checklist items per template stage. Dan can add or reword them.';
+
+-- CONTACT CATEGORIES (the "branches" on the Contacts screen): Consultants,
+-- Civil contractors, Building contractors, Agents & advisers...
+create table public.contact_categories (
+  id          uuid primary key default gen_random_uuid(),
+  owner_id    uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  name        text not null check (trim(name) <> ''),
+  sort_order  integer not null default 0,
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now(),
+  unique (owner_id, name),
+  unique (id, owner_id)
+);
+comment on table public.contact_categories is 'Contact groups, ordered and renamable. A contact shows under the category of each of its roles, plus any extra categories.';
+
+-- CONTACT ROLES: each sits in one category; Dan can add, rename or move them.
+create table public.contact_roles (
+  id           uuid primary key default gen_random_uuid(),
+  owner_id     uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  category_id  uuid not null,
+  name         text not null check (trim(name) <> ''),
+  sort_order   integer not null default 0,
+  created_at   timestamptz not null default now(),
+  updated_at   timestamptz not null default now(),
+  unique (category_id, name),
+  unique (id, owner_id),
+  -- a category with roles in it can't be deleted: move the roles first
+  foreign key (category_id, owner_id) references public.contact_categories (id, owner_id)
+);
+comment on table public.contact_roles is 'Contact roles (Town planner, Civil contractor, Bank...). Each belongs to one category.';
+
+-- DOCUMENT TYPES: Contract, Plans, Sales evidence...  file_code is the bit used
+-- in the standard file name (made from the name: 'Sales evidence' -> 'SalesEvidence').
+create table public.document_types (
+  owner_id    uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  code        text not null check (code ~ '^[a-z][a-z0-9_]{1,39}$'),   -- also the storage folder name
+  name        text not null check (trim(name) <> ''),
+  file_code   text generated always as (left(regexp_replace(initcap(name), '[^A-Za-z0-9]+', '', 'g'), 30)) stored,
+  sort_order  integer not null default 0,
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now(),
+  primary key (owner_id, code),
+  unique (owner_id, name)
+);
+comment on table public.document_types is 'Document types for filing (Contract, Plans, Sales evidence, Bill...). Dan can add more.';
+
+-- ---- Registers -------------------------------------------------------------
+
+-- Shared CONTACTS register (shared across projects).  Roles and categories are
+-- in contact_role_links / contact_extra_categories (many to many).
 create table public.contacts (
   id                uuid primary key default gen_random_uuid(),
   owner_id          uuid not null default auth.uid() references auth.users (id) on delete cascade,
   name              text not null,                     -- person
   company           text,                              -- business name
-  roles             public.contact_role[] not null default '{}',
   email             text,
   phone             text,
   abn               text check (abn is null or regexp_replace(abn, '\s', '', 'g') ~ '^\d{11}$'),
@@ -216,11 +322,39 @@ create table public.contacts (
   rating            smallint check (rating between 1 and 5),
   notes             text,                              -- performance notes: "good on price, slow on paperwork"
   created_at        timestamptz not null default now(),
-  updated_at        timestamptz not null default now()
+  updated_at        timestamptz not null default now(),
+  unique (id, owner_id)
 );
 comment on table public.contacts is 'Shared register of every party: consultants, contractors, agents, solicitors, council, banks.';
 
+-- A contact can have any number of roles (e.g. Civil engineer AND Civil contractor).
+create table public.contact_role_links (
+  contact_id  uuid not null,
+  role_id     uuid not null,
+  owner_id    uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  created_at  timestamptz not null default now(),
+  primary key (contact_id, role_id),
+  foreign key (contact_id, owner_id) references public.contacts (id, owner_id) on delete cascade,
+  foreign key (role_id, owner_id)    references public.contact_roles (id, owner_id)   -- delete a role only once no contact uses it
+);
+comment on table public.contact_role_links is 'Contact <-> role (many to many).';
+
+-- Put a contact in a category without giving it a role there
+-- ("sometimes I have consultants that sit in two categories").
+create table public.contact_extra_categories (
+  contact_id   uuid not null,
+  category_id  uuid not null,
+  owner_id     uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  created_at   timestamptz not null default now(),
+  primary key (contact_id, category_id),
+  foreign key (contact_id, owner_id)  references public.contacts (id, owner_id) on delete cascade,
+  foreign key (category_id, owner_id) references public.contact_categories (id, owner_id) on delete cascade
+);
+comment on table public.contact_extra_categories is 'Contact <-> extra category (many to many), on top of the categories its roles give it.';
+
 -- The PROJECTS register. One row = one project company.
+-- Creating a project copies its type's stage template into project_stages and
+-- tasks automatically (trigger projects_copy_stage_template, section 1.5 h).
 create table public.projects (
   project_id           text primary key
                        check (project_id ~ '^[A-Z0-9][A-Z0-9-]{1,39}$'),  -- e.g. 'CROOBYAR', 'ULLADULLA-IND'
@@ -229,7 +363,7 @@ create table public.projects (
   address              text,
   lot_plan             text not null,                  -- 'Lot 12 DP 1187234' (NSW) or 'Lot 2 SP 301887' (QLD)
   state                public.au_state not null default 'NSW',
-  project_type         public.project_type not null default 'land_subdivision',
+  project_type         text not null default 'land_subdivision',
   lots_or_units        integer check (lots_or_units >= 0),
   description          text,                           -- '14-lot residential subdivision'
   -- the project company (each one standalone: own ABN, GST, bank, books)
@@ -242,25 +376,53 @@ create table public.projects (
   bank_bsb             text,
   bank_account         text,                           -- tip: store last 4 digits only if you prefer
   trust_name           text,                           -- shareholder (the trust)
-  -- where it's at
-  stage                smallint not null default 1 references public.stages (stage_no),
+  -- where it's at (current_stage_id -> project_stages; foreign key added below)
+  current_stage_id     uuid,
   status               public.project_status not null default 'live',
   budget               numeric(14,2) check (budget >= 0),  -- headline feaso budget, ex GST (detail in budget_lines)
   opened_on            date not null default public.today_syd(),
   closed_on            date,
   notes                text,
   created_at           timestamptz not null default now(),
-  updated_at           timestamptz not null default now()
+  updated_at           timestamptz not null default now(),
+  foreign key (owner_id, project_type) references public.project_types (owner_id, code) on update cascade
 );
 comment on table public.projects is 'Master project register. One row per project company. Project ID = location ref (lot/plan held separately).';
 
+-- PROJECT STAGES: this project's own stage list, copied from the template when
+-- the project is created.  Dan can rename a stage, insert one (add_project_stage)
+-- or reorder them, on this project only.  Stage number on screen = order of
+-- position (see v_project_stages.stage_no), so gaps in position don't matter.
+create table public.project_stages (
+  id                 uuid primary key default gen_random_uuid(),
+  owner_id           uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  project_id         text not null references public.projects (project_id) on delete cascade,
+  position           smallint not null check (position >= 1),
+  name               text not null check (trim(name) <> ''),
+  description        text,
+  stage_key          text check (stage_key ~ '^[a-z_]{2,40}$'),
+  template_stage_id  uuid references public.stage_templates (id) on delete set null,
+  created_at         timestamptz not null default now(),
+  updated_at         timestamptz not null default now(),
+  unique (id, project_id),                             -- lets other tables check "same project"
+  constraint project_stages_position_uq unique (project_id, position) deferrable initially immediate
+);
+comment on table public.project_stages is 'Stages for one project (copied from the template, renamable, insertable). Tasks, RFQs and documents hang off these.';
+
+alter table public.projects
+  add constraint projects_current_stage_fk
+  foreign key (current_stage_id, project_id) references public.project_stages (id, project_id);
+
 -- DEALS: the sourcing pipeline (sites before they become projects).
+-- Documents can be filed on a deal straight away (documents.deal_id) and come
+-- across when it becomes a project (convert_deal_to_project).
 create table public.deals (
   id                 uuid primary key default gen_random_uuid(),
   owner_id           uuid not null default auth.uid() references auth.users (id) on delete cascade,
   address            text not null,
   state              public.au_state not null default 'NSW',
   lot_plan           text,
+  project_type       text,                             -- what it would be; used when converting
   source             text,                             -- 'realestate.com.au', 'Ray White Commercial', 'off-market'
   source_contact_id  uuid references public.contacts (id) on delete set null,  -- buyer's agent / listing agent
   asking_price       numeric(14,2),
@@ -271,18 +433,19 @@ create table public.deals (
   feaso_link         text,                             -- link to the Feasely study
   notes              text,
   logged_on          date not null default public.today_syd(),
-  project_id         text references public.projects (project_id) on delete set null,  -- set when "Create project" is used
+  project_id         text references public.projects (project_id) on delete set null,  -- set by convert_deal_to_project
   created_at         timestamptz not null default now(),
-  updated_at         timestamptz not null default now()
+  updated_at         timestamptz not null default now(),
+  foreign key (owner_id, project_type) references public.project_types (owner_id, code) on update cascade
 );
-comment on table public.deals is 'Sourcing pipeline: every site looked at, with feaso result. A Go site becomes a project.';
+comment on table public.deals is 'Sourcing pipeline: every site looked at, with feaso result and its documents. A Go site becomes a project.';
 
 -- TASKS: the per-stage checklist for each project ("have I chased that up?").
 create table public.tasks (
   id              uuid primary key default gen_random_uuid(),
   owner_id        uuid not null default auth.uid() references auth.users (id) on delete cascade,
   project_id      text not null references public.projects (project_id) on delete cascade,
-  stage_no        smallint not null references public.stages (stage_no),
+  stage_id        uuid not null,
   title           text not null,
   notes           text,
   due_date        date,
@@ -292,7 +455,9 @@ create table public.tasks (
   warning         text,                                 -- e.g. '3-month lead time: apply as soon as DA lands'
   sort_order      integer not null default 0,
   created_at      timestamptz not null default now(),
-  updated_at      timestamptz not null default now()
+  updated_at      timestamptz not null default now(),
+  -- the stage must be one of THIS project's stages; a stage with tasks can't be deleted
+  foreign key (stage_id, project_id) references public.project_stages (id, project_id)
 );
 comment on table public.tasks is 'Stage checklist per project with due dates, lead-time warnings and done ticks.';
 
@@ -313,41 +478,54 @@ create table public.budget_lines (
 );
 comment on table public.budget_lines is 'Feaso budget per project by category. Committed and paid are calculated in v_budget_vs_actual.';
 
--- DOCUMENTS: every PDF, stored in the project-documents bucket.
+-- DOCUMENTS: every file (PDF, Excel, Word, photos...), stored in the
+-- project-documents bucket.  A document belongs to EXACTLY ONE of a deal or a
+-- project.  Inside a project it is filed by stage and by document type.
 -- Naming convention (set automatically): [ProjectID]_[DocType]_[Party]_[Date]
 --   e.g. CROOBYAR_Quote_SouthcoastCivil_2026-10-14
--- Storage path (set automatically if the app doesn't send one):
+--   On a deal: Deal-<Address>_[DocType]_[Party]_[Date], renamed to the project
+--   form when the deal is converted.
+-- Storage path (set automatically if the app doesn't send one, then fixed):
 --   project-documents/<ProjectID>/<doc_type>/<standard_name>.<ext>
+--   project-documents/deals/<deal_id>/<doc_type>/<standard_name>.<ext>
 create table public.documents (
   id              uuid primary key default gen_random_uuid(),
   owner_id        uuid not null default auth.uid() references auth.users (id) on delete cascade,
-  project_id      text not null references public.projects (project_id) on delete cascade,
-  doc_type        public.doc_type not null,
+  project_id      text references public.projects (project_id) on delete cascade,
+  deal_id         uuid references public.deals (id) on delete cascade,
+  stage_id        uuid,                                -- which stage of the project it's filed under
+  doc_type        text not null,                       -- document_types.code
   party           text,                                -- who it's from/to; falls back to the contact's company
   contact_id      uuid references public.contacts (id) on delete set null,
   doc_date        date not null default public.today_syd(),
-  original_name   text,                                -- filename as uploaded
-  file_ext        text default 'pdf',
+  original_name   text,                                -- filename as uploaded, e.g. 'Area sales Oct.xlsx'
+  file_ext        text,                                -- 'pdf', 'xlsx', 'docx'... taken from original_name if blank
   standard_name   text not null default '',            -- filled by trigger
   storage_bucket  text not null default 'project-documents',
   storage_path    text,                                -- filled by trigger if blank
-  mime_type       text default 'application/pdf',
+  mime_type       text,                                -- any file type is allowed
   size_bytes      bigint,
   tags            text[] not null default '{}',
   notes           text,
+  source_deal_id  uuid references public.deals (id) on delete set null,  -- the deal it came from, if any
   backed_up_at    timestamptz,                         -- last copied to OneDrive
   created_at      timestamptz not null default now(),
   updated_at      timestamptz not null default now(),
-  unique (id, project_id)
+  unique (id, project_id),
+  foreign key (stage_id, project_id)  references public.project_stages (id, project_id),
+  foreign key (owner_id, doc_type)    references public.document_types (owner_id, code) on update cascade,
+  constraint documents_one_parent        check (num_nonnulls(project_id, deal_id) = 1),
+  constraint documents_deal_has_no_stage check (deal_id is null or stage_id is null),
+  constraint documents_file_ext_ok       check (file_ext is null or file_ext ~ '^[a-z0-9]{1,10}$')
 );
-comment on table public.documents is 'File register for the project-documents storage bucket. Name = [ProjectID]_[DocType]_[Party]_[Date].';
+comment on table public.documents is 'File register for the project-documents bucket. On a deal or a project (exactly one). Name = [ProjectID]_[DocType]_[Party]_[Date].';
 
 -- RFQ SCOPES: one per thing being priced ('Civil works', 'Town planning').
 create table public.rfq_scopes (
   id             uuid primary key default gen_random_uuid(),
   owner_id       uuid not null default auth.uid() references auth.users (id) on delete cascade,
   project_id     text not null references public.projects (project_id) on delete cascade,
-  stage_no       smallint references public.stages (stage_no),
+  stage_id       uuid,
   name           text not null,
   category       public.budget_category,
   template_body  text,                                 -- the standard RFQ email / scope text
@@ -358,7 +536,8 @@ create table public.rfq_scopes (
   notes          text,
   created_at     timestamptz not null default now(),
   updated_at     timestamptz not null default now(),
-  unique (id, project_id)
+  unique (id, project_id),
+  foreign key (stage_id, project_id) references public.project_stages (id, project_id)
 );
 comment on table public.rfq_scopes is 'Quote requests per scope. Wellco rule: minimum 3 quotes (see v_rfq_status.meets_minimum).';
 
@@ -429,82 +608,178 @@ create table public.engagements (
 );
 comment on table public.engagements is 'Engagement letters and POs issued in the project company name. % claimed is in v_engagement_progress.';
 
--- INVOICES IN (bills to the project company).
--- One row = one GST line.  If a single invoice mixes taxable and GST-free
--- amounts (common on council invoices), enter it as two rows with the same
--- supplier_invoice_no.
+-- INVOICES IN (bills to the project company): the HEADER.  The money is in
+-- invoice_in_lines; amount_ex_gst / gst_amount here are the sum of the lines,
+-- kept up to date automatically (anything the app writes to them is overwritten).
+--   * default_category / budget_line_id / default_gst_treatment are only the
+--     starting values for new lines.
+--   * Quick single-line bill: insert the header WITH amount_ex_gst (and
+--     gst_amount) filled and one line is created from it for you.
+--   * Split bill (e.g. council: GST-free contributions + taxable works): insert
+--     the header with no amounts, then one invoice_in_lines row per line.
 -- Wellco's management fee is a COST to the project company, so it goes here
 -- (category management_fee, flag 'management_fee').  Wellco raises the matching
 -- invoice in its own Xero.
 -- Land bought where the vendor used the margin scheme: record as gst_free (no
 -- GST credit to claim) and note it.  Confirm treatment with the accountant.
 create table public.invoices_in (
-  id                   uuid primary key default gen_random_uuid(),
-  owner_id             uuid not null default auth.uid() references auth.users (id) on delete cascade,
-  project_id           text not null references public.projects (project_id) on delete cascade,
-  contact_id           uuid references public.contacts (id),   -- supplier (council, contractor, OSR...)
-  engagement_id        uuid,
-  budget_line_id       uuid,
-  supplier_invoice_no  text,
-  invoice_date         date not null,
-  due_date             date,
-  description          text not null,
-  gst_treatment        public.gst_treatment not null default 'taxable',
-  amount_ex_gst        numeric(14,2) not null,
-  gst_amount           numeric(14,2) not null default 0,
-  total                numeric(14,2) generated always as (amount_ex_gst + gst_amount) stored,
-  status               public.invoice_in_status not null default 'draft',
-  paid_on              date,
-  flag                 public.money_flag,               -- intercompany loan / distribution / mgmt fee
-  document_id          uuid,
-  notes                text,
-  fy                   text generated always as (public.au_fy(invoice_date)) stored,          -- 'FY2025-26'
-  bas_quarter          text generated always as (public.au_bas_quarter(invoice_date)) stored, -- 'Q2'
-  created_at           timestamptz not null default now(),
-  updated_at           timestamptz not null default now(),
+  id                     uuid primary key default gen_random_uuid(),
+  owner_id               uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  project_id             text not null references public.projects (project_id) on delete cascade,
+  contact_id             uuid references public.contacts (id),   -- supplier (council, contractor, OSR...)
+  engagement_id          uuid,
+  budget_line_id         uuid,                          -- default budget line for new lines
+  default_category       public.budget_category,        -- default cost category for new lines
+  supplier_invoice_no    text,
+  invoice_date           date not null,
+  due_date               date,
+  description            text not null,
+  default_gst_treatment  public.gst_treatment not null default 'taxable',
+  amount_ex_gst          numeric(14,2) not null default 0,   -- = sum of lines (automatic)
+  gst_amount             numeric(14,2) not null default 0,   -- = sum of lines (automatic)
+  total                  numeric(14,2) generated always as (amount_ex_gst + gst_amount) stored,
+  status                 public.invoice_in_status not null default 'draft',
+  paid_on                date,
+  flag                   public.money_flag,               -- intercompany loan / distribution / mgmt fee
+  document_id            uuid,
+  notes                  text,
+  fy                     text generated always as (public.au_fy(invoice_date)) stored,          -- 'FY2025-26'
+  bas_quarter            text generated always as (public.au_bas_quarter(invoice_date)) stored, -- 'Q2'
+  created_at             timestamptz not null default now(),
+  updated_at             timestamptz not null default now(),
+  unique (id, project_id),
   foreign key (engagement_id, project_id)  references public.engagements (id, project_id),
   foreign key (budget_line_id, project_id) references public.budget_lines (id, project_id),
   foreign key (document_id, project_id)    references public.documents (id, project_id),
-  constraint invoices_in_no_gst_when_free check (gst_treatment = 'taxable' or gst_amount = 0),
-  constraint invoices_in_no_margin_scheme check (gst_treatment <> 'margin_scheme'),
+  constraint invoices_in_no_margin_scheme check (default_gst_treatment <> 'margin_scheme'),
   constraint invoices_in_paid_has_date    check (status <> 'paid' or paid_on is not null)
 );
-comment on table public.invoices_in is 'Bills to the project company. Every line flagged taxable / gst_free / input_taxed. fy and bas_quarter are automatic.';
+comment on table public.invoices_in is 'Bills to the project company (header). Lines are in invoice_in_lines; totals here are their sum. fy and bas_quarter are automatic.';
 
--- INVOICES OUT (from the project company): lot deposits, settlements, unit sales.
--- Margin scheme sales: gst_amount = 1/11 of the margin (enter it; the
--- accountant confirms the margin).  margin_amount is kept for the workbook.
-create table public.invoices_out (
+-- BILL LINES: one row per line on the bill, each with its own GST treatment and
+-- cost category.  Blank fields are filled from the header:
+--   description <- header description;  gst_treatment <- header default;
+--   category    <- the line's budget line, else header default_category, else the
+--                  header's budget line, else the engagement's budget line
+--                  (null = "Unallocated");
+--   gst_amount  <- 10% for taxable lines (rounded to the cent), else $0.
+create table public.invoice_in_lines (
   id              uuid primary key default gen_random_uuid(),
   owner_id        uuid not null default auth.uid() references auth.users (id) on delete cascade,
-  project_id      text not null references public.projects (project_id) on delete cascade,
-  contact_id      uuid references public.contacts (id),       -- buyer / their solicitor
-  kind            public.invoice_out_kind not null default 'lot_settlement',
-  invoice_no      text,                                       -- e.g. 'CROOBYAR-INV-003'
-  lot_number      text,
-  invoice_date    date not null,
-  due_date        date,
+  project_id      text not null,                       -- copied from the bill automatically
+  invoice_id      uuid not null,
+  line_no         integer not null default 0,          -- display order
   description     text not null,
-  gst_treatment   public.gst_treatment not null default 'margin_scheme',
-  amount_ex_gst   numeric(14,2) not null,
-  gst_amount      numeric(14,2) not null default 0,
+  category        public.budget_category,
+  budget_line_id  uuid,
+  gst_treatment   public.gst_treatment not null,
+  amount_ex_gst   numeric(14,2) not null,              -- negative allowed (credits / adjustments)
+  gst_amount      numeric(14,2) not null,
   total           numeric(14,2) generated always as (amount_ex_gst + gst_amount) stored,
-  margin_amount   numeric(14,2),                              -- margin scheme only
-  status          public.invoice_out_status not null default 'draft',
-  paid_on         date,
-  flag            public.money_flag,
-  document_id     uuid,
-  notes           text,
-  fy              text generated always as (public.au_fy(invoice_date)) stored,
-  bas_quarter     text generated always as (public.au_bas_quarter(invoice_date)) stored,
   created_at      timestamptz not null default now(),
   updated_at      timestamptz not null default now(),
+  unique (id, project_id),
+  foreign key (invoice_id, project_id)     references public.invoices_in (id, project_id) on delete cascade,
+  foreign key (budget_line_id, project_id) references public.budget_lines (id, project_id),
+  constraint invoice_in_lines_no_gst_when_free check (gst_treatment = 'taxable' or gst_amount = 0),
+  constraint invoice_in_lines_no_margin_scheme check (gst_treatment <> 'margin_scheme')
+);
+comment on table public.invoice_in_lines is 'Bill lines: own GST treatment and cost category per line. Budget, BAS and funds needed add up from here.';
+
+-- INVOICES OUT (from the project company): lot deposits, settlements, unit sales.
+-- Header + lines, same pattern as invoices in (quick single-line insert works too).
+create table public.invoices_out (
+  id                     uuid primary key default gen_random_uuid(),
+  owner_id               uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  project_id             text not null references public.projects (project_id) on delete cascade,
+  contact_id             uuid references public.contacts (id),       -- buyer / their solicitor
+  kind                   public.invoice_out_kind not null default 'lot_settlement',
+  invoice_no             text,                                       -- e.g. 'CROOBYAR-INV-003'
+  lot_number             text,
+  invoice_date           date not null,
+  due_date               date,
+  description            text not null,
+  default_gst_treatment  public.gst_treatment not null default 'margin_scheme',
+  amount_ex_gst          numeric(14,2) not null default 0,           -- = sum of lines (automatic)
+  gst_amount             numeric(14,2) not null default 0,           -- = sum of lines (automatic)
+  total                  numeric(14,2) generated always as (amount_ex_gst + gst_amount) stored,
+  margin_amount          numeric(14,2),                              -- = sum of lines' margins (automatic)
+  status                 public.invoice_out_status not null default 'draft',
+  paid_on                date,
+  flag                   public.money_flag,
+  document_id            uuid,
+  notes                  text,
+  fy                     text generated always as (public.au_fy(invoice_date)) stored,
+  bas_quarter            text generated always as (public.au_bas_quarter(invoice_date)) stored,
+  created_at             timestamptz not null default now(),
+  updated_at             timestamptz not null default now(),
+  unique (id, project_id),
   unique (project_id, invoice_no),
   foreign key (document_id, project_id) references public.documents (id, project_id),
-  constraint invoices_out_no_gst_when_free check (gst_treatment in ('taxable', 'margin_scheme') or gst_amount = 0),
-  constraint invoices_out_paid_has_date    check (status <> 'paid' or paid_on is not null)
+  constraint invoices_out_paid_has_date check (status <> 'paid' or paid_on is not null)
 );
-comment on table public.invoices_out is 'Invoices from the project company (sales, deposits, settlements). fy and bas_quarter are automatic.';
+comment on table public.invoices_out is 'Invoices from the project company (header). Lines in invoice_out_lines. fy and bas_quarter are automatic.';
+
+-- SALES INVOICE LINES.  Margin scheme: gst_amount = 1/11 of the margin (filled
+-- from margin_amount if left blank; the accountant confirms the margin).
+-- category is optional here (sales income isn't a cost); use it for recharges.
+create table public.invoice_out_lines (
+  id              uuid primary key default gen_random_uuid(),
+  owner_id        uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  project_id      text not null,                       -- copied from the invoice automatically
+  invoice_id      uuid not null,
+  line_no         integer not null default 0,
+  description     text not null,
+  lot_number      text,
+  category        public.budget_category,
+  gst_treatment   public.gst_treatment not null,
+  amount_ex_gst   numeric(14,2) not null,
+  gst_amount      numeric(14,2) not null,
+  total           numeric(14,2) generated always as (amount_ex_gst + gst_amount) stored,
+  margin_amount   numeric(14,2),                       -- margin scheme only
+  created_at      timestamptz not null default now(),
+  updated_at      timestamptz not null default now(),
+  unique (id, project_id),
+  foreign key (invoice_id, project_id) references public.invoices_out (id, project_id) on delete cascade,
+  constraint invoice_out_lines_no_gst_when_free check (gst_treatment in ('taxable', 'margin_scheme') or gst_amount = 0)
+);
+comment on table public.invoice_out_lines is 'Sales invoice lines with their own GST treatment (margin scheme per line).';
+
+-- FUNDS NEEDED BEFORE SIGN-OFF: the end-of-job money that has to be paid before
+-- council / the certifier will sign so settlements can happen (contributions,
+-- bonds, final inspection fees, LRS...).  "Council goes, yeah we're ready to
+-- sign so you can settle, but hey, we need 500 grand."
+--   * stage_id defaults to the project's Certification stage (stage_key 'certification').
+--   * Link the bill line when the actual bill arrives (invoice_in_line_id): from
+--     then on the actual line amount replaces the estimate, and the item counts
+--     as paid when that bill is paid.  Or just set paid_on.
+--   * These are forecasts: they do NOT feed budget vs actual (the bill line does).
+create table public.funds_needed (
+  id                  uuid primary key default gen_random_uuid(),
+  owner_id            uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  project_id          text not null references public.projects (project_id) on delete cascade,
+  stage_id            uuid not null,                   -- filled with the Certification stage if blank
+  description         text not null,                   -- 'Section 7.11 contributions', 'Maintenance bond'
+  contact_id          uuid references public.contacts (id) on delete set null,   -- who gets paid
+  category            public.budget_category not null default 'council_gov',
+  gst_treatment       public.gst_treatment not null default 'gst_free',
+  amount_ex_gst       numeric(14,2) not null check (amount_ex_gst >= 0),
+  gst_amount          numeric(14,2) not null,          -- filled: 10% if taxable, else $0
+  total               numeric(14,2) generated always as (amount_ex_gst + gst_amount) stored,
+  due_date            date,
+  invoice_in_line_id  uuid,
+  paid_on             date,
+  notes               text,
+  sort_order          integer not null default 0,
+  created_at          timestamptz not null default now(),
+  updated_at          timestamptz not null default now(),
+  unique (id, project_id),
+  foreign key (stage_id, project_id)           references public.project_stages (id, project_id),
+  foreign key (invoice_in_line_id, project_id) references public.invoice_in_lines (id, project_id),
+  constraint funds_needed_no_gst_when_free check (gst_treatment = 'taxable' or gst_amount = 0),
+  constraint funds_needed_no_margin_scheme check (gst_treatment <> 'margin_scheme')
+);
+comment on table public.funds_needed is 'Money that must be paid before sign-off (Certification stage). Totals in v_funds_needed: total, paid, still to find.';
 
 -- APPROVALS: anything that goes out waits here until Dan taps Approve.
 -- entity_type is the table name, entity_id is the row id.
@@ -538,7 +813,7 @@ create table public.activity_log (
   project_id   text,
   at           timestamptz not null default now(),
   actor        text not null default 'Dan',
-  action       text not null,                        -- 'insert' / 'update' / 'delete' / 'rfq.sent' ...
+  action       text not null,                        -- 'insert' / 'update' / 'delete' / 'deal.converted' ...
   entity_type  text,
   entity_id    text,
   summary      text not null,
@@ -553,18 +828,27 @@ comment on table public.activity_log is 'Append-only log of every action, per pr
 -- 1.4  Indexes (speed for the screens Dan uses most)
 -- -----------------------------------------------------------------------------
 create index projects_owner_status_idx     on public.projects (owner_id, status);
+create index projects_current_stage_idx    on public.projects (current_stage_id);
+create unique index stage_templates_key_uidx on public.stage_templates (owner_id, project_type, stage_key) where stage_key is not null;
+create index stage_template_tasks_stage_idx on public.stage_template_tasks (stage_template_id, sort_order);
+create unique index project_stages_key_uidx on public.project_stages (project_id, stage_key) where stage_key is not null;
 create index contacts_owner_idx            on public.contacts (owner_id);
-create index contacts_roles_idx            on public.contacts using gin (roles);
 create index contacts_name_idx             on public.contacts (lower(coalesce(company, name)));
+create index contact_roles_category_idx    on public.contact_roles (category_id, sort_order);
+create index contact_role_links_role_idx   on public.contact_role_links (role_id);
+create index contact_extra_cat_cat_idx     on public.contact_extra_categories (category_id);
 create index deals_owner_result_idx        on public.deals (owner_id, feaso_result);
 create index deals_project_idx             on public.deals (project_id);
 create index tasks_project_open_idx        on public.tasks (project_id, done, due_date);
+create index tasks_stage_idx               on public.tasks (stage_id, sort_order);
 create index tasks_open_due_idx            on public.tasks (due_date) where not done;
 create index budget_lines_project_idx      on public.budget_lines (project_id, category);
-create index documents_project_type_idx    on public.documents (project_id, doc_type);
+create index documents_project_stage_type_idx on public.documents (project_id, stage_id, doc_type);
+create index documents_deal_idx            on public.documents (deal_id) where deal_id is not null;
 create index documents_contact_idx         on public.documents (contact_id);
 create unique index documents_storage_path_uidx on public.documents (storage_bucket, storage_path);
 create index rfq_scopes_project_idx        on public.rfq_scopes (project_id, status);
+create index rfq_scopes_stage_idx          on public.rfq_scopes (stage_id);
 create index quotes_scope_idx              on public.quotes (rfq_scope_id);
 create index quotes_project_idx            on public.quotes (project_id);
 create index quotes_contact_idx            on public.quotes (contact_id);
@@ -578,8 +862,14 @@ create index invoices_in_status_due_idx    on public.invoices_in (status, due_da
 create index invoices_in_engagement_idx    on public.invoices_in (engagement_id);
 create index invoices_in_budget_line_idx   on public.invoices_in (budget_line_id);
 create index invoices_in_contact_idx       on public.invoices_in (contact_id);
+create index invoice_in_lines_invoice_idx  on public.invoice_in_lines (invoice_id, line_no);
+create index invoice_in_lines_project_cat_idx on public.invoice_in_lines (project_id, category);
+create index invoice_in_lines_budget_line_idx on public.invoice_in_lines (budget_line_id);
 create index invoices_out_project_fy_idx   on public.invoices_out (project_id, fy, bas_quarter);
 create index invoices_out_contact_idx      on public.invoices_out (contact_id);
+create index invoice_out_lines_invoice_idx on public.invoice_out_lines (invoice_id, line_no);
+create index funds_needed_project_idx      on public.funds_needed (project_id, stage_id);
+create index funds_needed_line_idx         on public.funds_needed (invoice_in_line_id);
 create index approvals_pending_idx         on public.approvals (owner_id, requested_at) where status = 'pending';
 create index approvals_entity_idx          on public.approvals (entity_type, entity_id);
 create index approvals_project_idx         on public.approvals (project_id);
@@ -588,7 +878,7 @@ create index activity_log_owner_at_idx     on public.activity_log (owner_id, at 
 
 
 -- -----------------------------------------------------------------------------
--- 1.5  Triggers (the automatic bits)
+-- 1.5  Triggers and functions (the automatic bits)
 -- -----------------------------------------------------------------------------
 
 -- (a) keep updated_at current
@@ -605,9 +895,11 @@ $$;
 do $$
 declare t text;
 begin
-  foreach t in array array['wellco_settings', 'contacts', 'projects', 'deals', 'tasks', 'budget_lines',
+  foreach t in array array['wellco_settings', 'project_types', 'stage_templates', 'stage_template_tasks',
+                           'contact_categories', 'contact_roles', 'document_types',
+                           'contacts', 'projects', 'project_stages', 'deals', 'tasks', 'budget_lines',
                            'documents', 'rfq_scopes', 'quotes', 'engagements', 'invoices_in',
-                           'invoices_out', 'approvals']
+                           'invoice_in_lines', 'invoices_out', 'invoice_out_lines', 'funds_needed', 'approvals']
   loop
     execute format('create trigger set_updated_at before update on public.%I
                     for each row execute function public.set_updated_at()', t);
@@ -651,43 +943,40 @@ $$;
 create trigger approvals_set_decided_at before insert or update of status on public.approvals
   for each row execute function public.approvals_set_decided_at();
 
--- (d) documents: build the standard file name and storage path
+-- (d) documents: file extension, standard file name and storage path
 --     [ProjectID]_[DocType]_[Party]_[YYYY-MM-DD]   (adds _2, _3 if it already exists)
-create or replace function public.doc_type_code(t public.doc_type)
-returns text
-language sql immutable parallel safe
-as $$
-  select case t
-    when 'contract'          then 'Contract'
-    when 'due_diligence'     then 'DD'
-    when 'planning_report'   then 'PlanningReport'
-    when 'da'                then 'DA'
-    when 'consultant_report' then 'Report'
-    when 'quote'             then 'Quote'
-    when 'engagement'        then 'Engagement'
-    when 'invoice_in'        then 'Invoice'
-    when 'invoice_out'       then 'TaxInvoice'
-    when 'receipt'           then 'Receipt'
-    when 'certificate'       then 'Certificate'
-    when 'plans'             then 'Plans'
-    when 'correspondence'    then 'Correspondence'
-    when 'sales'             then 'Sales'
-    when 'finance'           then 'Finance'
-    when 'council'           then 'Council'
-    else 'Other'
-  end
-$$;
-
+--     On a deal the prefix is Deal-<Address>; it is renamed when the deal
+--     becomes a project.  DocType comes from document_types.file_code.
 create or replace function public.documents_set_name()
 returns trigger
 language plpgsql
 as $$
 declare
-  v_party text;
-  v_base  text;
-  v_name  text;
-  v_n     integer := 1;
+  v_party  text;
+  v_code   text;
+  v_prefix text;
+  v_base   text;
+  v_name   text;
+  v_n      integer := 1;
 begin
+  -- any file type: take the extension from the uploaded file name if not given
+  if nullif(trim(new.file_ext), '') is null then
+    new.file_ext := lower(substring(new.original_name from '\.([A-Za-z0-9]{1,10})$'));
+  else
+    new.file_ext := lower(ltrim(trim(new.file_ext), '.'));
+  end if;
+
+  -- only rename when it's new or one of the naming inputs changed
+  if tg_op = 'UPDATE'
+     and new.project_id is not distinct from old.project_id
+     and new.deal_id is not distinct from old.deal_id
+     and new.doc_type = old.doc_type
+     and new.doc_date = old.doc_date
+     and new.party is not distinct from old.party
+     and new.contact_id is not distinct from old.contact_id then
+    return new;
+  end if;
+
   v_party := coalesce(
     nullif(trim(new.party), ''),
     (select coalesce(c.company, c.name) from public.contacts c where c.id = new.contact_id),
@@ -697,21 +986,24 @@ begin
   v_party := left(regexp_replace(v_party, '[^A-Za-z0-9]+', '', 'g'), 40);
   if v_party = '' then v_party := 'General'; end if;
 
-  v_base := new.project_id || '_' || public.doc_type_code(new.doc_type) || '_' || v_party || '_'
-            || to_char(new.doc_date, 'YYYY-MM-DD');
+  select nullif(dt.file_code, '') into v_code
+  from public.document_types dt where dt.owner_id = new.owner_id and dt.code = new.doc_type;
+  v_code := coalesce(v_code, 'Doc');
 
-  -- only rename when it's new or one of the naming inputs changed
-  if tg_op = 'UPDATE'
-     and new.project_id = old.project_id and new.doc_type = old.doc_type
-     and new.doc_date = old.doc_date
-     and new.party is not distinct from old.party
-     and new.contact_id is not distinct from old.contact_id then
-    return new;
+  if new.project_id is not null then
+    v_prefix := new.project_id;
+  else
+    select 'Deal-' || left(regexp_replace(d.address, '[^A-Za-z0-9]+', '', 'g'), 24) into v_prefix
+    from public.deals d where d.id = new.deal_id;
+    v_prefix := coalesce(nullif(v_prefix, 'Deal-'), 'Deal');
   end if;
+
+  v_base := v_prefix || '_' || v_code || '_' || v_party || '_' || to_char(new.doc_date, 'YYYY-MM-DD');
 
   v_name := v_base;
   while exists (select 1 from public.documents d
-                where d.project_id = new.project_id and d.standard_name = v_name and d.id <> new.id) loop
+                where d.standard_name = v_name and d.id <> new.id
+                  and (d.project_id = new.project_id or d.deal_id = new.deal_id)) loop
     v_n := v_n + 1;
     v_name := v_base || '_' || v_n;
   end loop;
@@ -720,8 +1012,9 @@ begin
   -- The storage path is fixed once set (renaming it here would not move the
   -- actual file).  standard_name is the display / download name.
   if new.storage_path is null then
-    new.storage_path := new.project_id || '/' || new.doc_type::text || '/' || v_name
-                        || coalesce('.' || lower(nullif(trim(new.file_ext), '')), '');
+    new.storage_path := coalesce(new.project_id, 'deals/' || new.deal_id::text)
+                        || '/' || new.doc_type || '/' || v_name
+                        || coalesce('.' || new.file_ext, '');
   end if;
   return new;
 end;
@@ -766,6 +1059,10 @@ create trigger invoices_out_need_approval before update of status on public.invo
 
 -- (f) ACTIVITY LOG: write a log row for every insert / update / delete.
 --     Updates record only the fields that changed: {"status": {"from": "draft", "to": "issued"}}
+--     Bulk jobs (copying a stage template, converting a deal, seeding Dan's
+--     lists) switch the per-row log off with the 'wellco.quiet' setting for
+--     that transaction and write ONE summary row instead, so the Log tab
+--     doesn't fill with 45 "Tasks added" lines.
 create or replace function public.log_activity()
 returns trigger
 language plpgsql
@@ -777,6 +1074,10 @@ declare
   v_label   text;
   v_summary text;
 begin
+  if coalesce(current_setting('wellco.quiet', true), '') = 'on' then
+    return null;
+  end if;
+
   if tg_op = 'DELETE' then v_rec := to_jsonb(old); else v_rec := to_jsonb(new); end if;
 
   if tg_op = 'UPDATE' then
@@ -784,7 +1085,7 @@ begin
     select coalesce(jsonb_object_agg(n.key, jsonb_build_object('from', v_old -> n.key, 'to', n.value)), '{}'::jsonb)
       into v_changed
       from jsonb_each(v_rec) as n
-     where n.key not in ('updated_at', 'done_at', 'decided_at')
+     where n.key not in ('updated_at', 'done_at', 'decided_at', 'total')
        and (v_old -> n.key) is distinct from n.value;
     if v_changed = '{}'::jsonb then
       return new;   -- nothing meaningful changed
@@ -806,7 +1107,7 @@ begin
           v_rec ->> 'project_id',
           lower(tg_op),
           tg_table_name,
-          coalesce(v_rec ->> 'id', v_rec ->> 'project_id'),
+          coalesce(v_rec ->> 'id', v_rec ->> 'project_id', v_rec ->> 'code'),
           v_summary,
           case when tg_op = 'UPDATE' then v_changed else v_rec end,
           'auto');
@@ -817,8 +1118,11 @@ $$;
 do $$
 declare t text;
 begin
-  foreach t in array array['projects', 'contacts', 'deals', 'tasks', 'budget_lines', 'documents',
-                           'rfq_scopes', 'quotes', 'engagements', 'invoices_in', 'invoices_out', 'approvals']
+  foreach t in array array['project_types', 'stage_templates', 'stage_template_tasks', 'contact_categories',
+                           'contact_roles', 'document_types',
+                           'projects', 'project_stages', 'contacts', 'deals', 'tasks', 'budget_lines', 'documents',
+                           'rfq_scopes', 'quotes', 'engagements', 'invoices_in', 'invoice_in_lines',
+                           'invoices_out', 'invoice_out_lines', 'funds_needed', 'approvals']
   loop
     execute format('create trigger log_activity after insert or update or delete on public.%I
                     for each row execute function public.log_activity()', t);
@@ -826,7 +1130,674 @@ begin
 end;
 $$;
 
--- (g) New login => create Wellco settings row automatically
+-- Small helper for the bulk jobs below: switch the per-row log off / back on.
+create or replace function public.set_quiet_log(p_on boolean)
+returns void
+language sql
+as $$ select set_config('wellco.quiet', case when p_on then 'on' else 'off' end, true); $$;
+
+-- (g) BILL LINES: fill blanks from the header, lock lines once approved, and
+--     keep the header totals equal to the sum of its lines.
+
+-- Lock: once Dan has approved a bill (or a sales invoice has been issued) its
+-- lines can't be added, changed or removed, because that would change what he
+-- approved.  Bills imported as already paid (no approval row) stay editable.
+-- Trigger args: header table, then the statuses that lock it.
+create or replace function public.invoice_lines_guard()
+returns trigger
+language plpgsql
+as $$
+declare
+  v_status text;
+  v_id     uuid;
+begin
+  foreach v_id in array (case tg_op when 'INSERT' then array[new.invoice_id]
+                                    when 'DELETE' then array[old.invoice_id]
+                                    else array[new.invoice_id, old.invoice_id] end)
+  loop
+    execute format('select status::text from public.%I where id = $1', tg_argv[0]) into v_status using v_id;
+    if v_status = any (tg_argv[1:]) and exists (
+         select 1 from public.approvals a
+         where a.entity_type = tg_argv[0] and a.entity_id = v_id and a.status = 'approved') then
+      raise exception 'This % is % and approved, so its lines are locked. Move it back to draft (and re-approve) to change them.',
+        case tg_argv[0] when 'invoices_in' then 'bill' else 'invoice' end, v_status
+        using errcode = 'check_violation';
+    end if;
+  end loop;
+  return case tg_op when 'DELETE' then old else new end;
+end;
+$$;
+
+create or replace function public.invoice_in_lines_defaults()
+returns trigger
+language plpgsql
+as $$
+declare
+  h public.invoices_in%rowtype;
+begin
+  select * into h from public.invoices_in where id = new.invoice_id;
+  if not found then
+    raise exception 'Bill % not found', new.invoice_id using errcode = 'foreign_key_violation';
+  end if;
+  new.project_id    := h.project_id;                       -- a line always sits in its bill's project
+  new.owner_id      := coalesce(new.owner_id, h.owner_id);
+  new.description   := coalesce(nullif(trim(new.description), ''), h.description);
+  new.gst_treatment := coalesce(new.gst_treatment, h.default_gst_treatment);
+  if new.budget_line_id is not null then
+    new.category := (select bl.category from public.budget_lines bl where bl.id = new.budget_line_id);
+  elsif new.category is null then
+    new.category := coalesce(
+      h.default_category,
+      (select bl.category from public.budget_lines bl where bl.id = h.budget_line_id),
+      (select bl.category from public.engagements en
+         join public.budget_lines bl on bl.id = en.budget_line_id
+        where en.id = h.engagement_id));
+  end if;
+  if new.gst_amount is null then
+    new.gst_amount := case when new.gst_treatment = 'taxable' then round(new.amount_ex_gst * 0.10, 2) else 0 end;
+  end if;
+  return new;
+end;
+$$;
+
+create or replace function public.invoice_out_lines_defaults()
+returns trigger
+language plpgsql
+as $$
+declare
+  h public.invoices_out%rowtype;
+begin
+  select * into h from public.invoices_out where id = new.invoice_id;
+  if not found then
+    raise exception 'Sales invoice % not found', new.invoice_id using errcode = 'foreign_key_violation';
+  end if;
+  new.project_id    := h.project_id;
+  new.owner_id      := coalesce(new.owner_id, h.owner_id);
+  new.description   := coalesce(nullif(trim(new.description), ''), h.description);
+  new.lot_number    := coalesce(new.lot_number, h.lot_number);
+  new.gst_treatment := coalesce(new.gst_treatment, h.default_gst_treatment);
+  if new.gst_amount is null then
+    new.gst_amount := case
+      when new.gst_treatment = 'taxable' then round(new.amount_ex_gst * 0.10, 2)
+      when new.gst_treatment = 'margin_scheme' and new.margin_amount is not null then round(new.margin_amount / 11, 2)
+      else 0 end;
+  end if;
+  return new;
+end;
+$$;
+
+-- After a line changes, touch its header so the header recalculates its totals.
+create or replace function public.invoice_lines_touch_header()
+returns trigger
+language plpgsql
+as $$
+begin
+  execute format('update public.%I set updated_at = now() where id = any ($1)', tg_argv[0])
+    using case tg_op when 'INSERT' then array[new.invoice_id]
+                     when 'DELETE' then array[old.invoice_id]
+                     else array[new.invoice_id, old.invoice_id] end;
+  return null;
+end;
+$$;
+
+-- Header totals = sum of lines (on every update; on insert the given amounts
+-- are kept just long enough to create the quick single line, see below).
+create or replace function public.invoices_in_totals()
+returns trigger
+language plpgsql
+as $$
+begin
+  select coalesce(sum(l.amount_ex_gst), 0), coalesce(sum(l.gst_amount), 0)
+    into new.amount_ex_gst, new.gst_amount
+    from public.invoice_in_lines l where l.invoice_id = new.id;
+  return new;
+end;
+$$;
+
+create or replace function public.invoices_out_totals()
+returns trigger
+language plpgsql
+as $$
+begin
+  select coalesce(sum(l.amount_ex_gst), 0), coalesce(sum(l.gst_amount), 0), sum(l.margin_amount)
+    into new.amount_ex_gst, new.gst_amount, new.margin_amount
+    from public.invoice_out_lines l where l.invoice_id = new.id;
+  return new;
+end;
+$$;
+
+-- Quick single-line bill: header inserted with amounts -> one line made from it.
+create or replace function public.invoices_in_quick_line()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.amount_ex_gst <> 0 or new.gst_amount <> 0 then
+    insert into public.invoice_in_lines (owner_id, project_id, invoice_id, description, category, budget_line_id,
+                                         gst_treatment, amount_ex_gst, gst_amount)
+    values (new.owner_id, new.project_id, new.id, new.description, new.default_category, new.budget_line_id,
+            new.default_gst_treatment, new.amount_ex_gst, new.gst_amount);
+  end if;
+  return null;
+end;
+$$;
+
+create or replace function public.invoices_out_quick_line()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.amount_ex_gst <> 0 or new.gst_amount <> 0 then
+    insert into public.invoice_out_lines (owner_id, project_id, invoice_id, description, lot_number,
+                                          gst_treatment, amount_ex_gst, gst_amount, margin_amount)
+    values (new.owner_id, new.project_id, new.id, new.description, new.lot_number,
+            new.default_gst_treatment, new.amount_ex_gst, new.gst_amount, new.margin_amount);
+  end if;
+  return null;
+end;
+$$;
+
+create trigger invoice_in_lines_defaults before insert or update on public.invoice_in_lines
+  for each row execute function public.invoice_in_lines_defaults();
+create trigger invoice_lines_guard before insert or update or delete on public.invoice_in_lines
+  for each row execute function public.invoice_lines_guard('invoices_in', 'approved', 'paid');
+create trigger invoice_lines_touch_header after insert or update or delete on public.invoice_in_lines
+  for each row execute function public.invoice_lines_touch_header('invoices_in');
+create trigger invoices_in_totals before update on public.invoices_in
+  for each row execute function public.invoices_in_totals();
+create trigger invoices_in_quick_line after insert on public.invoices_in
+  for each row execute function public.invoices_in_quick_line();
+
+create trigger invoice_out_lines_defaults before insert or update on public.invoice_out_lines
+  for each row execute function public.invoice_out_lines_defaults();
+create trigger invoice_lines_guard before insert or update or delete on public.invoice_out_lines
+  for each row execute function public.invoice_lines_guard('invoices_out', 'issued', 'paid');
+create trigger invoice_lines_touch_header after insert or update or delete on public.invoice_out_lines
+  for each row execute function public.invoice_lines_touch_header('invoices_out');
+create trigger invoices_out_totals before update on public.invoices_out
+  for each row execute function public.invoices_out_totals();
+create trigger invoices_out_quick_line after insert on public.invoices_out
+  for each row execute function public.invoices_out_quick_line();
+
+-- (h) STAGES: copy the template into a new project, insert stages, convert deals.
+
+-- Copy the project type's stage template (stages + tasks) into a project and
+-- set its current stage to the first one.  Runs automatically when a project
+-- row is inserted (trigger below), so the app can just insert into projects.
+-- Returns the number of stages copied.
+create or replace function public.copy_template_to_project(p_project_id text)
+returns integer
+language plpgsql
+as $$
+declare
+  p          public.projects%rowtype;
+  v_type     text;
+  v_stages   integer;
+  v_tasks    integer;
+  v_first    uuid;
+begin
+  select * into p from public.projects where project_id = p_project_id;
+  if not found then
+    raise exception 'Project % not found', p_project_id;
+  end if;
+  if exists (select 1 from public.project_stages ps where ps.project_id = p_project_id) then
+    raise exception 'Project % already has stages; add more with add_project_stage()', p_project_id;
+  end if;
+
+  perform public.set_quiet_log(true);
+
+  with src as (
+    select st.id, st.name, st.description, st.stage_key,
+           row_number() over (order by st.position) as pos
+    from public.stage_templates st
+    where st.owner_id = p.owner_id and st.project_type = p.project_type
+  ),
+  ins as (
+    insert into public.project_stages (owner_id, project_id, position, name, description, stage_key, template_stage_id)
+    select p.owner_id, p.project_id, src.pos, src.name, src.description, src.stage_key, src.id
+    from src
+    returning id, template_stage_id
+  )
+  insert into public.tasks (owner_id, project_id, stage_id, title, notes, lead_time_days, warning, sort_order)
+  select p.owner_id, p.project_id, ins.id, tt.title, tt.notes, tt.lead_time_days, tt.warning, tt.sort_order
+  from ins
+  join public.stage_template_tasks tt on tt.stage_template_id = ins.template_stage_id;
+  get diagnostics v_tasks = row_count;
+
+  select count(*) into v_stages from public.project_stages ps where ps.project_id = p.project_id;
+  select ps.id into v_first from public.project_stages ps where ps.project_id = p.project_id order by ps.position limit 1;
+  update public.projects set current_stage_id = v_first
+   where project_id = p.project_id and current_stage_id is null;
+
+  perform public.set_quiet_log(false);
+
+  select pt.name into v_type from public.project_types pt where pt.owner_id = p.owner_id and pt.code = p.project_type;
+  insert into public.activity_log (owner_id, project_id, action, entity_type, entity_id, summary, details, source)
+  values (p.owner_id, p.project_id, 'project.stages_copied', 'projects', p.project_id,
+          format('Stage checklist set up from the %s template: %s stages, %s tasks', coalesce(v_type, p.project_type), v_stages, v_tasks),
+          jsonb_build_object('project_type', p.project_type, 'stages', v_stages, 'tasks', v_tasks),
+          'auto');
+  return v_stages;
+end;
+$$;
+
+create or replace function public.projects_copy_stage_template()
+returns trigger
+language plpgsql
+as $$
+begin
+  perform public.copy_template_to_project(new.project_id);
+  return null;
+end;
+$$;
+
+create trigger projects_copy_stage_template after insert on public.projects
+  for each row execute function public.projects_copy_stage_template();
+
+-- Create a project from its type's template in one call.  Returns the project ID.
+--   select public.create_project_from_template('CROOBYAR', 'Croobyar Rd, Milton',
+--          'Lot 12 DP 1187234', 'Croobyar Developments Pty Ltd', 'land_subdivision');
+-- (Inserting into projects directly does the same; this is the tidy way.)
+create or replace function public.create_project_from_template(
+  p_project_id    text,
+  p_name          text,
+  p_lot_plan      text,
+  p_company_name  text,
+  p_project_type  text             default 'land_subdivision',
+  p_state         public.au_state  default 'NSW',
+  p_address       text             default null,
+  p_abn           text             default null,
+  p_owner_id      uuid             default null      -- only needed in the SQL editor (not logged in)
+)
+returns text
+language plpgsql
+as $$
+declare
+  v_owner uuid := coalesce(p_owner_id, auth.uid());
+  v_id    text := upper(trim(p_project_id));
+begin
+  if not exists (select 1 from public.project_types pt where pt.owner_id = v_owner and pt.code = p_project_type) then
+    raise exception 'Unknown project type "%". Add it in Settings first.', p_project_type;
+  end if;
+  insert into public.projects (project_id, owner_id, name, lot_plan, company_name, project_type, state, address, abn)
+  values (v_id, v_owner, p_name, p_lot_plan, p_company_name, p_project_type, p_state, p_address, p_abn);
+  return v_id;
+end;
+$$;
+
+-- Insert a stage into a project at a position (1 = first).  Stages from that
+-- position on move down one.  Renaming a stage is a plain UPDATE of name.
+--   select public.add_project_stage('CROOBYAR', 5, 'Pre-DA meeting');
+create or replace function public.add_project_stage(
+  p_project_id   text,
+  p_position     integer,
+  p_name         text,
+  p_description  text default null
+)
+returns uuid
+language plpgsql
+as $$
+declare
+  v_owner uuid;
+  v_max   integer;
+  v_pos   integer;
+  v_id    uuid;
+begin
+  select owner_id into v_owner from public.projects where project_id = p_project_id;
+  if not found then raise exception 'Project % not found', p_project_id; end if;
+  select coalesce(max(position), 0) into v_max from public.project_stages where project_id = p_project_id;
+  v_pos := least(greatest(coalesce(p_position, v_max + 1), 1), v_max + 1);
+  update public.project_stages set position = position + 1
+   where project_id = p_project_id and position >= v_pos;
+  insert into public.project_stages (owner_id, project_id, position, name, description)
+  values (v_owner, p_project_id, v_pos, p_name, p_description)
+  returning id into v_id;
+  return v_id;
+end;
+$$;
+
+-- Same for a template (affects projects created from now on).
+--   select public.add_template_stage('residential_build', 4, 'Pre-lodgement meeting');
+create or replace function public.add_template_stage(
+  p_project_type text,
+  p_position     integer,
+  p_name         text,
+  p_description  text default null,
+  p_owner_id     uuid default null
+)
+returns uuid
+language plpgsql
+as $$
+declare
+  v_owner uuid := coalesce(p_owner_id, auth.uid());
+  v_max   integer;
+  v_pos   integer;
+  v_id    uuid;
+begin
+  select coalesce(max(position), 0) into v_max from public.stage_templates
+   where owner_id = v_owner and project_type = p_project_type;
+  v_pos := least(greatest(coalesce(p_position, v_max + 1), 1), v_max + 1);
+  update public.stage_templates set position = position + 1
+   where owner_id = v_owner and project_type = p_project_type and position >= v_pos;
+  insert into public.stage_templates (owner_id, project_type, position, name, description)
+  values (v_owner, p_project_type, v_pos, p_name, p_description)
+  returning id into v_id;
+  return v_id;
+end;
+$$;
+
+-- CONVERT A DEAL INTO A PROJECT.
+--   * Creates the project from its type's template (deal.project_type, or the
+--     one passed in, else land subdivision).  Name / address / lot-plan / state
+--     come from the deal unless given.
+--   * Moves every document on the deal to the new project, filed under stage
+--     p_docs_stage (1 = Sourcing, the default, or 2 = Feasibility), and renames
+--     them to the project's naming.  The files stay where they are in storage
+--     (deals/<deal_id>/...), which the storage rules still allow.
+--   * A Go deal starts at the Acquisition stage with the Sourcing and
+--     Feasibility checklists ticked off (same as the demo).
+--   * Writes one "Project created from deal" row to the log.
+--   select public.convert_deal_to_project('<deal uuid>', 'BELLS-RD', 'Bells Rd Developments Pty Ltd');
+create or replace function public.convert_deal_to_project(
+  p_deal_id       uuid,
+  p_project_id    text,
+  p_company_name  text,
+  p_project_type  text     default null,
+  p_lot_plan      text     default null,
+  p_name          text     default null,
+  p_docs_stage    integer  default 1
+)
+returns text
+language plpgsql
+as $$
+declare
+  d            public.deals%rowtype;
+  v_pid        text;
+  v_stage_id   uuid;
+  v_stage_name text;
+  v_start      public.project_stages%rowtype;
+  v_docs       integer;
+  v_doc_list   jsonb;
+begin
+  select * into d from public.deals where id = p_deal_id for update;
+  if not found then raise exception 'Deal % not found', p_deal_id; end if;
+  if d.project_id is not null then
+    raise exception 'Deal % has already been converted to project %', p_deal_id, d.project_id;
+  end if;
+  if p_docs_stage not in (1, 2) then
+    raise exception 'Deal documents go to stage 1 (Sourcing) or 2 (Feasibility), not %', p_docs_stage;
+  end if;
+  if coalesce(p_lot_plan, d.lot_plan) is null then
+    raise exception 'The deal has no lot / plan yet; pass p_lot_plan';
+  end if;
+
+  v_pid := public.create_project_from_template(
+             p_project_id, coalesce(p_name, d.address), coalesce(p_lot_plan, d.lot_plan), p_company_name,
+             coalesce(p_project_type, d.project_type, 'land_subdivision'), d.state, d.address, null, d.owner_id);
+
+  select ps.id, ps.name into v_stage_id, v_stage_name
+  from public.project_stages ps where ps.project_id = v_pid
+  order by ps.position offset p_docs_stage - 1 limit 1;
+
+  perform public.set_quiet_log(true);
+
+  with moved as (
+    update public.documents
+       set project_id = v_pid, deal_id = null, stage_id = v_stage_id, source_deal_id = p_deal_id
+     where deal_id = p_deal_id
+    returning id, standard_name
+  )
+  select count(*), coalesce(jsonb_agg(jsonb_build_object('id', id, 'name', standard_name)), '[]'::jsonb)
+    into v_docs, v_doc_list
+    from moved;
+
+  update public.deals set project_id = v_pid where id = p_deal_id;
+
+  if d.feaso_result = 'go' then
+    select * into v_start from public.project_stages ps where ps.project_id = v_pid and ps.stage_key = 'acquisition';
+    if found then
+      update public.projects set current_stage_id = v_start.id where project_id = v_pid;
+      update public.tasks t set done = true
+        from public.project_stages ps
+       where ps.id = t.stage_id and t.project_id = v_pid and ps.position < v_start.position;
+    end if;
+  end if;
+
+  perform public.set_quiet_log(false);
+
+  insert into public.activity_log (owner_id, project_id, action, entity_type, entity_id, summary, details, source)
+  values (d.owner_id, v_pid, 'deal.converted', 'deals', p_deal_id::text,
+          format('Project created from deal: %s. %s document(s) moved to stage %s (%s)',
+                 d.address, v_docs, p_docs_stage, v_stage_name),
+          jsonb_build_object('deal_id', p_deal_id, 'documents', v_doc_list, 'stage_id', v_stage_id),
+          'auto');
+  return v_pid;
+end;
+$$;
+
+-- (i) FUNDS NEEDED: default to the Certification stage, fill GST.
+create or replace function public.funds_needed_defaults()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.stage_id is null then
+    select ps.id into new.stage_id
+    from public.project_stages ps where ps.project_id = new.project_id and ps.stage_key = 'certification';
+    if new.stage_id is null then
+      raise exception 'Project % has no Certification stage; choose the stage (stage_id) for this item', new.project_id;
+    end if;
+  end if;
+  if new.gst_amount is null then
+    new.gst_amount := case when new.gst_treatment = 'taxable' then round(new.amount_ex_gst * 0.10, 2) else 0 end;
+  end if;
+  return new;
+end;
+$$;
+
+create trigger funds_needed_defaults before insert or update on public.funds_needed
+  for each row execute function public.funds_needed_defaults();
+
+-- (j) DAN'S DEFAULT LISTS.  Run once per user at sign-up (and below for any
+--     user that already exists).  Only fills what's missing, so it never
+--     overwrites Dan's own edits.  Edit the lists here before go-live if Dan
+--     wants different defaults.
+create or replace function public.seed_owner_defaults(p_owner uuid)
+returns void
+language plpgsql
+set search_path = ''
+as $$
+begin
+  if p_owner is null then raise exception 'seed_owner_defaults: owner id is required'; end if;
+  perform public.set_quiet_log(true);
+
+  -- project types
+  insert into public.project_types (owner_id, code, name, sort_order) values
+    (p_owner, 'land_subdivision',      'Land subdivision',        1),
+    (p_owner, 'commercial_industrial', 'Commercial / industrial', 2),
+    (p_owner, 'residential_build',     'Residential build',       3)
+  on conflict do nothing;
+
+  -- stage templates: land subdivision and commercial / industrial share the
+  -- 9-stage list; residential build has 8.  Only for types with no stages yet.
+  insert into public.stage_templates (owner_id, project_type, position, stage_key, name, description)
+  select p_owner, s.project_type, s.position, s.stage_key, s.name, s.description
+  from (
+    select t.project_type, n.*
+    from (values ('land_subdivision'), ('commercial_industrial')) t(project_type)
+    cross join (values
+      (1, 'sourcing',      'Sourcing',                     'Site found via listing or buyer''s agent; log the site and drop the agent''s contract, plans and sales evidence on the deal.'),
+      (2, 'feasibility',   'Feasibility',                  'Feaso (Feasely); go / no-go.'),
+      (3, 'acquisition',   'Acquisition & DD',             'Offer, deposit, solicitor, due diligence; register project company (ABN, GST, bank); exchange; settlement.'),
+      (4, 'consultants',   'Consultants',                  'Planner, surveyor, civil engineer, geotech, ecology, bushfire, flooding. 3 quotes each.'),
+      (5, 'approval',      'Development Approval',         'Lodge DA, respond to RFIs, pay council fees, DA conditions.'),
+      (6, 'construction',  'Construction',                 'Tender civils, electrical, NBN, landscaping (3 quotes each); monthly claims; WAE.'),
+      (7, 'certification', 'Certification & Registration', 'Sign-offs before settlement: certifier, surveyor, town planner, NBN, bank consent / discharge, council final sign-off and subdivision certificate, plan registration (NSW LRS / Titles Queensland). Contributions and bonds: see Funds needed.'),
+      (8, 'sales',         'Sales & Settlements',          'Appoint agent(s), sell lots / units, bundle settlements, discharge loans, GST margin scheme.'),
+      (9, 'windup',        'Bonds & Wind-up',              'Maintenance bonds (~12 months), council inspection, bond return, final accounts, distribution to trust, deregister company.')
+    ) n(position, stage_key, name, description)
+    union all
+    select 'residential_build', r.*
+    from (values
+      (1, 'sourcing',      'Sourcing',                     'Site found via listing or buyer''s agent; log the site and drop the agent''s contract, plans and sales evidence on the deal.'),
+      (2, 'feasibility',   'Feasibility',                  'Feaso (Feasely); go / no-go.'),
+      (3, 'acquisition',   'Acquisition & DD',             'Offer, deposit, solicitor, due diligence; register project company (ABN, GST, bank); exchange; settlement.'),
+      (4, 'approval',      'Design & approvals',           'Architect / building designer, engineering, energy rating; DA or CDC; construction certificate.'),
+      (5, 'construction',  'Construction',                 'Builder or trades (3 quotes each), home warranty insurance, progress claims, practical completion.'),
+      (6, 'certification', 'Certification & Occupation',   'Final inspections and occupation certificate; certifier, utilities, bank consent; strata or subdivision registration if selling separately. Outstanding fees: see Funds needed.'),
+      (7, 'sales',         'Sales & Settlements',          'Appoint agent, exchange, settle, discharge loans.'),
+      (8, 'windup',        'Wind-up',                      'Defects period, final accounts, distribution to trust, deregister company.')
+    ) r(position, stage_key, name, description)
+  ) s
+  where exists (select 1 from public.project_types pt where pt.owner_id = p_owner and pt.code = s.project_type)
+    and not exists (select 1 from public.stage_templates x where x.owner_id = p_owner and x.project_type = s.project_type);
+
+  -- template tasks.  applies_to: L = land + commercial, R = residential build, A = all three.
+  insert into public.stage_template_tasks (owner_id, stage_template_id, title, lead_time_days, warning, sort_order)
+  select p_owner, st.id, k.title, k.lead_time_days, k.warning, k.sort_order
+  from (values
+    ('A', 'sourcing',      1, 'Log the site: address, lot / plan, zoning, asking price, source', null::integer, null::text),
+    ('A', 'sourcing',      2, 'Drop the agent''s contract, plans and area sales evidence on the deal', null, null),
+    ('A', 'sourcing',      3, 'Check title for easements and services (e.g. a water main through the site)', null, null),
+    ('A', 'feasibility',   1, 'Run the feaso (Feasely) and record the result', null, null),
+    ('A', 'feasibility',   2, 'Check end values and likely yield with an agent', null, null),
+    ('A', 'feasibility',   3, 'Go / no-go decision', null, null),
+    ('A', 'acquisition',   1, 'Offer and deposit', null, null),
+    ('A', 'acquisition',   2, 'Engage solicitor', null, null),
+    ('A', 'acquisition',   3, 'Due diligence: title, contamination, services, flooding, bushfire', null, null),
+    ('A', 'acquisition',   4, 'Register project company: ABN, GST, bank account', null, null),
+    ('A', 'acquisition',   5, 'Exchange contracts', null, null),
+    ('A', 'acquisition',   6, 'Settlement', null, null),
+    ('L', 'consultants',   1, 'RFQ town planner (3 quotes)', null, null),
+    ('L', 'consultants',   2, 'RFQ surveyor (3 quotes)', null, null),
+    ('L', 'consultants',   3, 'RFQ civil engineer (3 quotes)', null, null),
+    ('L', 'consultants',   4, 'RFQ geotech, ecology, bushfire, flooding and traffic as needed', null, null),
+    ('L', 'consultants',   5, 'Engage consultants in the project company name', null, null),
+    ('L', 'approval',      1, 'Lodge DA', null, null),
+    ('L', 'approval',      2, 'Respond to council RFIs', null, null),
+    ('L', 'approval',      3, 'Pay DA fees (GST-free)', null, null),
+    ('L', 'approval',      4, 'Review DA conditions and add tasks for them', null, null),
+    ('L', 'approval',      5, 'Apply for electricity connection', 90, '3-month lead time: apply as soon as DA lands'),
+    ('L', 'construction',  1, 'Tender civil works (3 quotes)', null, null),
+    ('L', 'construction',  2, 'Tender electrical reticulation (3 quotes)', null, null),
+    ('L', 'construction',  3, 'NBN pit and pipe application', null, null),
+    ('L', 'construction',  4, 'Tender landscaping and street trees (3 quotes)', null, null),
+    ('L', 'construction',  5, 'Check monthly progress claims against engagements', null, null),
+    ('L', 'construction',  6, 'Work-as-executed (WAE) survey and drawings', null, null),
+    ('L', 'certification', 1, 'Total up funds needed before sign-off (contributions, bonds, fees)', null, null),
+    ('L', 'certification', 2, 'Pay council contributions', null, null),
+    ('L', 'certification', 3, 'Certifier sign-off', null, null),
+    ('L', 'certification', 4, 'Surveyor and town planner sign-off', null, null),
+    ('L', 'certification', 5, 'NBN and utility clearances', null, null),
+    ('L', 'certification', 6, 'Bank consent / mortgage discharge arranged', null, null),
+    ('L', 'certification', 7, 'Council final sign-off and subdivision certificate', null, null),
+    ('L', 'certification', 8, 'Lodge plan for registration (NSW LRS / Titles Queensland)', null, null),
+    ('A', 'sales',         1, 'Appoint agent(s)', null, null),
+    ('A', 'sales',         2, 'Exchange contracts', null, null),
+    ('A', 'sales',         3, 'Bundle settlements and discharge loans', null, null),
+    ('A', 'sales',         4, 'GST on sales (margin scheme?): confirm with accountant', null, null),
+    ('L', 'windup',        1, 'Maintenance bond lodged (about 12 months)', null, null),
+    ('L', 'windup',        2, 'Council inspection and bond return', null, null),
+    ('L', 'windup',        3, 'Final accounts to accountant', null, null),
+    ('L', 'windup',        4, 'Distribution to trust', null, null),
+    ('L', 'windup',        5, 'Deregister project company', null, null),
+    ('R', 'approval',      1, 'Brief architect / building designer', null, null),
+    ('R', 'approval',      2, 'Engineering and energy rating (BASIX / NatHERS)', null, null),
+    ('R', 'approval',      3, 'Lodge DA or CDC', null, null),
+    ('R', 'approval',      4, 'Construction certificate', null, null),
+    ('R', 'approval',      5, 'Apply for electricity and water connections', 90, '3-month lead time: apply as soon as approval lands'),
+    ('R', 'construction',  1, 'Tender builder or trades (3 quotes)', null, null),
+    ('R', 'construction',  2, 'Home warranty insurance (icare HBCF / QBCC)', null, null),
+    ('R', 'construction',  3, 'Check progress claims against the contract', null, null),
+    ('R', 'construction',  4, 'Practical completion inspection', null, null),
+    ('R', 'certification', 1, 'Total up funds needed before sign-off', null, null),
+    ('R', 'certification', 2, 'Final inspections', null, null),
+    ('R', 'certification', 3, 'Occupation certificate', null, null),
+    ('R', 'certification', 4, 'Utility connections signed off', null, null),
+    ('R', 'certification', 5, 'Bank consent / mortgage discharge arranged', null, null),
+    ('R', 'certification', 6, 'Strata or subdivision registration (if selling separately)', null, null),
+    ('R', 'windup',        1, 'Defects period', null, null),
+    ('R', 'windup',        2, 'Final accounts to accountant', null, null),
+    ('R', 'windup',        3, 'Distribution to trust', null, null),
+    ('R', 'windup',        4, 'Deregister project company', null, null)
+  ) k(applies_to, stage_key, sort_order, title, lead_time_days, warning)
+  join public.stage_templates st
+    on st.owner_id = p_owner and st.stage_key = k.stage_key
+   and (k.applies_to = 'A'
+        or (k.applies_to = 'L' and st.project_type in ('land_subdivision', 'commercial_industrial'))
+        or (k.applies_to = 'R' and st.project_type = 'residential_build'))
+  where not exists (select 1 from public.stage_template_tasks x where x.stage_template_id = st.id);
+
+  -- contact categories and roles (only if Dan has none yet)
+  if not exists (select 1 from public.contact_categories c where c.owner_id = p_owner) then
+    insert into public.contact_categories (owner_id, name, sort_order) values
+      (p_owner, 'Consultants',           1),
+      (p_owner, 'Civil contractors',     2),
+      (p_owner, 'Building contractors',  3),
+      (p_owner, 'Agents & advisers',     4),
+      (p_owner, 'Council & government',  5),
+      (p_owner, 'Banks & vendors',       6);
+
+    insert into public.contact_roles (owner_id, category_id, name, sort_order)
+    select p_owner, c.id, r.role_name, r.sort_order
+    from (values
+      ('Consultants',          1, 'Town planner'),
+      ('Consultants',          2, 'Surveyor'),
+      ('Consultants',          3, 'Civil engineer'),
+      ('Consultants',          4, 'Geotechnical engineer'),
+      ('Consultants',          5, 'Ecologist'),
+      ('Consultants',          6, 'Bushfire consultant'),
+      ('Consultants',          7, 'Flooding / stormwater engineer'),
+      ('Consultants',          8, 'Traffic engineer'),
+      ('Consultants',          9, 'Architect / building designer'),
+      ('Consultants',         10, 'Certifier'),
+      ('Civil contractors',    1, 'Civil contractor'),
+      ('Civil contractors',    2, 'Electrical contractor'),
+      ('Civil contractors',    3, 'NBN / telecoms'),
+      ('Civil contractors',    4, 'Landscaping'),
+      ('Civil contractors',    5, 'Water and sewer'),
+      ('Building contractors', 1, 'Builder'),
+      ('Building contractors', 2, 'Trades / subcontractor'),
+      ('Agents & advisers',    1, 'Buyer''s agent'),
+      ('Agents & advisers',    2, 'Real estate agent'),
+      ('Agents & advisers',    3, 'Solicitor / conveyancer'),
+      ('Agents & advisers',    4, 'Accountant'),
+      ('Agents & advisers',    5, 'Valuer'),
+      ('Council & government', 1, 'Council'),
+      ('Council & government', 2, 'State government'),
+      ('Council & government', 3, 'Utility authority'),
+      ('Council & government', 4, 'Land registry (LRS / Titles Qld)'),
+      ('Banks & vendors',      1, 'Bank'),
+      ('Banks & vendors',      2, 'Lender'),
+      ('Banks & vendors',      3, 'Vendor')
+    ) r(category_name, sort_order, role_name)
+    join public.contact_categories c on c.owner_id = p_owner and c.name = r.category_name;
+  end if;
+
+  -- document types
+  insert into public.document_types (owner_id, code, name, sort_order) values
+    (p_owner, 'contract',        'Contract',           1),
+    (p_owner, 'plans',           'Plans',              2),
+    (p_owner, 'sales_evidence',  'Sales evidence',     3),
+    (p_owner, 'planning_zoning', 'Planning / zoning',  4),
+    (p_owner, 'report',          'Report',             5),
+    (p_owner, 'quote',           'Quote',              6),
+    (p_owner, 'engagement',      'Engagement',         7),
+    (p_owner, 'bill',            'Bill',               8),
+    (p_owner, 'sales_invoice',   'Sales invoice',      9),
+    (p_owner, 'survey',          'Survey',            10),
+    (p_owner, 'company',         'Company',           11),
+    (p_owner, 'correspondence',  'Correspondence',    12)
+  on conflict do nothing;
+
+  perform public.set_quiet_log(false);
+end;
+$$;
+
+-- Not callable from the app (it runs at sign-up and from the SQL editor only).
+revoke execute on function public.seed_owner_defaults(uuid) from public, anon, authenticated;
+
+-- (k) New login => create Wellco settings row and default lists automatically
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
@@ -836,6 +1807,7 @@ as $$
 begin
   insert into public.wellco_settings (owner_id) values (new.id)
   on conflict (owner_id) do nothing;
+  perform public.seed_owner_defaults(new.id);
   return new;
 end;
 $$;
@@ -849,17 +1821,106 @@ insert into public.wellco_settings (owner_id)
 select id from auth.users
 on conflict (owner_id) do nothing;
 
+select public.seed_owner_defaults(u.id) from auth.users u;
+
 
 -- -----------------------------------------------------------------------------
 -- 1.6  Views (ready-made answers for the screens and the Excel exports)
 --      security_invoker = true means the view obeys the same RLS rules as the
 --      tables underneath, so it only ever shows the logged-in owner's rows.
+--      Every money view adds up BILL LINES, not bill headers.
 -- -----------------------------------------------------------------------------
 
+-- STAGE STEPPER: a project's stages in order, numbered 1..n, with progress.
+create view public.v_project_stages
+with (security_invoker = true) as
+select
+  ps.id                                                             as stage_id,
+  ps.project_id,
+  row_number() over (partition by ps.project_id order by ps.position) as stage_no,
+  ps.position,
+  ps.name,
+  ps.description,
+  ps.stage_key,
+  ps.id = p.current_stage_id                                        as is_current,
+  coalesce(t.tasks, 0)                                              as tasks,
+  coalesce(t.tasks_done, 0)                                         as tasks_done,
+  coalesce(dc.documents, 0)                                         as documents
+from public.project_stages ps
+join public.projects p on p.project_id = ps.project_id
+left join lateral (
+  select count(*) as tasks, count(*) filter (where tk.done) as tasks_done
+  from public.tasks tk where tk.stage_id = ps.id
+) t on true
+left join lateral (
+  select count(*) as documents from public.documents d where d.stage_id = ps.id
+) dc on true;
+
+-- DOCUMENTS: with type name and stage, for "by stage" and "by type" folders.
+create view public.v_documents
+with (security_invoker = true) as
+select
+  d.*,
+  dt.name           as doc_type_name,
+  ps.name           as stage_name,
+  ps.position       as stage_position,
+  case when d.deal_id is not null then 'deal' else 'project' end as belongs_to
+from public.documents d
+left join public.document_types dt on dt.owner_id = d.owner_id and dt.code = d.doc_type
+left join public.project_stages ps on ps.id = d.stage_id;
+
+-- FUNDS NEEDED, item by item.  needed = the linked bill line's total once the
+-- bill is in (the actual), else the estimate.  Paid = paid_on set, or the
+-- linked bill is paid.  Amounts incl GST (cash to find) and ex GST.
+create view public.v_funds_needed_items
+with (security_invoker = true) as
+select
+  f.id,
+  f.project_id,
+  f.stage_id,
+  ps.name                                                           as stage_name,
+  f.description,
+  f.contact_id,
+  f.category,
+  f.due_date,
+  f.invoice_in_line_id,
+  coalesce(l.total, f.total)                                        as needed_incl_gst,
+  coalesce(l.amount_ex_gst, f.amount_ex_gst)                        as needed_ex_gst,
+  (f.paid_on is not null or ii.status = 'paid')                     as is_paid,
+  coalesce(f.paid_on, case when ii.status = 'paid' then ii.paid_on end) as paid_on
+from public.funds_needed f
+join public.project_stages ps on ps.id = f.stage_id
+left join public.invoice_in_lines l on l.id = f.invoice_in_line_id
+left join public.invoices_in ii on ii.id = l.invoice_id;
+
+-- FUNDS NEEDED BEFORE SIGN-OFF: one row per project: total, paid, still to find.
+create view public.v_funds_needed
+with (security_invoker = true) as
+select
+  p.project_id,
+  p.name,
+  cert.id                                                                   as stage_id,
+  cert.name                                                                 as stage_name,
+  cert.position                                                             as stage_position,
+  cur.position                                                              as current_stage_position,
+  count(i.id)                                                               as items,
+  count(i.id) filter (where not i.is_paid)                                  as items_unpaid,
+  coalesce(sum(i.needed_incl_gst), 0)                                       as total_needed,
+  coalesce(sum(i.needed_incl_gst) filter (where i.is_paid), 0)              as paid,
+  coalesce(sum(i.needed_incl_gst) filter (where not i.is_paid), 0)          as still_to_find,
+  coalesce(sum(i.needed_ex_gst), 0)                                         as total_needed_ex_gst,
+  coalesce(sum(i.needed_ex_gst) filter (where not i.is_paid), 0)            as still_to_find_ex_gst,
+  min(i.due_date) filter (where not i.is_paid)                              as next_due
+from public.projects p
+left join public.project_stages cert on cert.project_id = p.project_id and cert.stage_key = 'certification'
+left join public.project_stages cur  on cur.id = p.current_stage_id
+left join public.v_funds_needed_items i on i.project_id = p.project_id
+group by p.project_id, p.name, cert.id, cert.name, cert.position, cur.position;
+
 -- HOME SCREEN: one row per project: stage, next deadline, budget vs committed vs paid, overdue tasks.
---   committed = engagements issued/complete  +  approved/paid invoices with no engagement
+--   committed = engagements issued/complete  +  approved/paid bill LINES with no engagement
 --               (council fees, stamp duty and other one-off costs)
---   paid      = invoices in marked paid
+--   paid      = bill lines on bills marked paid
 create view public.v_project_summary
 with (security_invoker = true) as
 select
@@ -869,14 +1930,18 @@ select
   p.abn,
   p.state,
   p.project_type,
+  pt.name                                                         as project_type_name,
   p.status,
-  p.stage,
-  s.name                                                          as stage_name,
+  p.current_stage_id,
+  cs.stage_no,
+  cs.name                                                         as stage_name,
+  coalesce(sc.stage_count, 0)                                     as stage_count,
   coalesce(nullif(b.budget_ex_gst, 0), p.budget, 0)               as budget_ex_gst,
   coalesce(e.engaged_ex_gst, 0) + coalesce(i.direct_ex_gst, 0)    as committed_ex_gst,
   coalesce(i.paid_ex_gst, 0)                                      as paid_ex_gst,
   coalesce(nullif(b.budget_ex_gst, 0), p.budget, 0)
     - (coalesce(e.engaged_ex_gst, 0) + coalesce(i.direct_ex_gst, 0)) as uncommitted_ex_gst,
+  coalesce(fn.still_to_find, 0)                                   as funds_still_to_find,
   nt.due_date                                                     as next_deadline,
   nt.title                                                        as next_task,
   coalesce(t.open_tasks, 0)                                       as open_tasks,
@@ -884,7 +1949,16 @@ select
   coalesce(t.lead_time_alerts, 0)                                 as lead_time_alerts,
   coalesce(a.pending_approvals, 0)                                as pending_approvals
 from public.projects p
-join public.stages s on s.stage_no = p.stage
+left join public.project_types pt on pt.owner_id = p.owner_id and pt.code = p.project_type
+left join lateral (
+  select ps.name,
+         (select count(*) from public.project_stages x
+           where x.project_id = ps.project_id and x.position <= ps.position) as stage_no
+  from public.project_stages ps where ps.id = p.current_stage_id
+) cs on true
+left join lateral (
+  select count(*) as stage_count from public.project_stages ps where ps.project_id = p.project_id
+) sc on true
 left join lateral (
   select sum(bl.budget_ex_gst) as budget_ex_gst
   from public.budget_lines bl where bl.project_id = p.project_id
@@ -895,10 +1969,13 @@ left join lateral (
   where en.project_id = p.project_id and en.status in ('issued', 'complete')
 ) e on true
 left join lateral (
-  select sum(ii.amount_ex_gst) filter (where ii.engagement_id is null and ii.status in ('approved', 'paid')) as direct_ex_gst,
-         sum(ii.amount_ex_gst) filter (where ii.status = 'paid')                                             as paid_ex_gst
-  from public.invoices_in ii where ii.project_id = p.project_id
+  select sum(l.amount_ex_gst) filter (where ii.engagement_id is null and ii.status in ('approved', 'paid')) as direct_ex_gst,
+         sum(l.amount_ex_gst) filter (where ii.status = 'paid')                                             as paid_ex_gst
+  from public.invoices_in ii
+  join public.invoice_in_lines l on l.invoice_id = ii.id
+  where ii.project_id = p.project_id
 ) i on true
+left join public.v_funds_needed fn on fn.project_id = p.project_id
 left join lateral (
   select count(*) filter (where not tk.done)                                                          as open_tasks,
          count(*) filter (where not tk.done and tk.due_date < public.today_syd())                     as overdue_tasks,
@@ -918,7 +1995,7 @@ left join lateral (
   from public.approvals ap where ap.project_id = p.project_id and ap.status = 'pending'
 ) a on true;
 
--- GST / BAS: one row per project per BAS quarter.
+-- GST / BAS: one row per project per BAS quarter, added up by LINE.
 -- Uses invoice date (accruals basis).  If the accountant lodges on a CASH
 -- basis, swap invoice_date for paid_on below.
 --   ATO labels:  G1 = total sales (incl GST)   1A = GST on sales (collected)
@@ -931,20 +2008,22 @@ with lines as (
          0::numeric        as gst_collected,
          0::numeric        as margin_scheme_sales,
          0::numeric        as gst_free_sales,
-         ii.total          as purchases_incl_gst,
-         ii.gst_amount     as gst_paid,
-         case when ii.gst_treatment = 'gst_free'    then ii.amount_ex_gst else 0 end as gst_free_spend,
-         case when ii.gst_treatment = 'input_taxed' then ii.amount_ex_gst else 0 end as input_taxed_spend
+         l.total           as purchases_incl_gst,
+         l.gst_amount      as gst_paid,
+         case when l.gst_treatment = 'gst_free'    then l.amount_ex_gst else 0 end as gst_free_spend,
+         case when l.gst_treatment = 'input_taxed' then l.amount_ex_gst else 0 end as input_taxed_spend
   from public.invoices_in ii
+  join public.invoice_in_lines l on l.invoice_id = ii.id
   where ii.status in ('approved', 'paid')
   union all
   select io.project_id, io.fy, io.bas_quarter, public.au_quarter_start(io.invoice_date),
-         io.total,
-         io.gst_amount,
-         case when io.gst_treatment = 'margin_scheme' then io.total else 0 end,
-         case when io.gst_treatment in ('gst_free', 'input_taxed') then io.total else 0 end,
+         l.total,
+         l.gst_amount,
+         case when l.gst_treatment = 'margin_scheme' then l.total else 0 end,
+         case when l.gst_treatment in ('gst_free', 'input_taxed') then l.total else 0 end,
          0, 0, 0, 0
   from public.invoices_out io
+  join public.invoice_out_lines l on l.invoice_id = io.id
   where io.status in ('issued', 'paid')
 )
 select
@@ -969,8 +2048,8 @@ from lines l
 join public.projects p on p.project_id = l.project_id
 group by l.project_id, p.company_name, p.abn, l.fy, l.bas_quarter, l.quarter_start;
 
--- MONEY TAB: budget vs committed vs paid by cost category.
--- category is null for costs not yet allocated to a budget line ("Unallocated").
+-- MONEY TAB: budget vs committed vs paid by cost category, from bill LINES.
+-- category is null for costs not yet allocated ("Unallocated").
 create view public.v_budget_vs_actual
 with (security_invoker = true) as
 with b as (
@@ -985,21 +2064,20 @@ c as (
     left join public.budget_lines bl on bl.id = en.budget_line_id
     where en.status in ('issued', 'complete')
     union all
-    select ii.project_id, bl.category, ii.amount_ex_gst
+    select l.project_id, l.category, l.amount_ex_gst
     from public.invoices_in ii
-    left join public.budget_lines bl on bl.id = ii.budget_line_id
+    join public.invoice_in_lines l on l.invoice_id = ii.id
     where ii.engagement_id is null and ii.status in ('approved', 'paid')
   ) x
   group by x.project_id, x.category
 ),
 pd as (
-  -- a progress claim with no budget line of its own uses its engagement's budget line
-  select ii.project_id, bl.category, sum(ii.amount_ex_gst) as paid_ex_gst
+  -- a progress claim's lines take its engagement's budget category unless given one
+  select l.project_id, l.category, sum(l.amount_ex_gst) as paid_ex_gst
   from public.invoices_in ii
-  left join public.engagements en on en.id = ii.engagement_id
-  left join public.budget_lines bl on bl.id = coalesce(ii.budget_line_id, en.budget_line_id)
+  join public.invoice_in_lines l on l.invoice_id = ii.id
   where ii.status = 'paid'
-  group by ii.project_id, bl.category
+  group by l.project_id, l.category
 ),
 k as (
   select project_id, category from b
@@ -1024,6 +2102,7 @@ with (security_invoker = true) as
 select
   r.id                                                        as rfq_scope_id,
   r.project_id,
+  r.stage_id,
   r.name,
   r.status,
   r.min_quotes,
@@ -1037,9 +2116,9 @@ select
   (array_agg(q.chosen_reason) filter (where q.chosen))[1]     as chosen_reason
 from public.rfq_scopes r
 left join public.quotes q on q.rfq_scope_id = r.id
-group by r.id, r.project_id, r.name, r.status, r.min_quotes;
+group by r.id, r.project_id, r.stage_id, r.name, r.status, r.min_quotes;
 
--- ENGAGEMENTS: % claimed against each engagement.
+-- ENGAGEMENTS: % claimed against each engagement (from bill lines).
 create view public.v_engagement_progress
 with (security_invoker = true) as
 select
@@ -1050,20 +2129,47 @@ select
   en.scope,
   en.status,
   en.value_ex_gst,
-  coalesce(sum(ii.amount_ex_gst) filter (where ii.status in ('approved', 'paid')), 0) as claimed_ex_gst,
-  coalesce(sum(ii.amount_ex_gst) filter (where ii.status = 'paid'), 0)               as paid_ex_gst,
+  coalesce(x.claimed_ex_gst, 0)                             as claimed_ex_gst,
+  coalesce(x.paid_ex_gst, 0)                                as paid_ex_gst,
   case when en.value_ex_gst > 0
-       then round(100 * coalesce(sum(ii.amount_ex_gst) filter (where ii.status in ('approved', 'paid')), 0) / en.value_ex_gst, 1)
+       then round(100 * coalesce(x.claimed_ex_gst, 0) / en.value_ex_gst, 1)
   end                                                       as pct_claimed
 from public.engagements en
-left join public.invoices_in ii on ii.engagement_id = en.id
-group by en.id;
+left join lateral (
+  select sum(l.amount_ex_gst) filter (where ii.status in ('approved', 'paid')) as claimed_ex_gst,
+         sum(l.amount_ex_gst) filter (where ii.status = 'paid')               as paid_ex_gst
+  from public.invoices_in ii
+  join public.invoice_in_lines l on l.invoice_id = ii.id
+  where ii.engagement_id = en.id
+) x on true;
 
--- CONTACTS: projects worked on + licence / insurance expiring within 60 days.
+-- CONTACTS: roles, categories, projects worked on + licence / insurance expiring within 60 days.
 create view public.v_contacts
 with (security_invoker = true) as
 select
   c.*,
+  coalesce((
+    select array_agg(r.name order by cc.sort_order, r.sort_order)
+    from public.contact_role_links crl
+    join public.contact_roles r       on r.id = crl.role_id
+    join public.contact_categories cc on cc.id = r.category_id
+    where crl.contact_id = c.id
+  ), '{}')                                                            as role_names,
+  coalesce((
+    select array_agg(x.name order by x.sort_order)
+    from (
+      select cc.name, cc.sort_order
+      from public.contact_role_links crl
+      join public.contact_roles r       on r.id = crl.role_id
+      join public.contact_categories cc on cc.id = r.category_id
+      where crl.contact_id = c.id
+      union
+      select cc.name, cc.sort_order
+      from public.contact_extra_categories ce
+      join public.contact_categories cc on cc.id = ce.category_id
+      where ce.contact_id = c.id
+    ) x
+  ), '{}')                                                            as category_names,
   coalesce((
     select array_agg(distinct x.project_id order by x.project_id)
     from (
@@ -1075,6 +2181,31 @@ select
   c.licence_expiry   is not null and c.licence_expiry   < public.today_syd() + 60 as licence_expiring,
   c.insurance_expiry is not null and c.insurance_expiry < public.today_syd() + 60 as insurance_expiring
 from public.contacts c;
+
+-- CONTACTS BY CATEGORY (the Contacts screen's branches).  A contact appears
+-- under the category of each of its roles, and under any extra category.
+create view public.v_contacts_by_category
+with (security_invoker = true) as
+select
+  cc.id                                                        as category_id,
+  cc.name                                                      as category_name,
+  cc.sort_order                                                as category_sort,
+  c.id                                                         as contact_id,
+  c.name,
+  c.company,
+  coalesce(array_agg(distinct r.name) filter (where r.id is not null), '{}') as roles_in_category,
+  bool_or(x.via_extra)                                         as added_directly
+from (
+  select crl.contact_id, r.category_id, r.id as role_id, false as via_extra
+  from public.contact_role_links crl join public.contact_roles r on r.id = crl.role_id
+  union all
+  select ce.contact_id, ce.category_id, null::uuid, true
+  from public.contact_extra_categories ce
+) x
+join public.contact_categories cc on cc.id = x.category_id
+join public.contacts c            on c.id = x.contact_id
+left join public.contact_roles r  on r.id = x.role_id
+group by cc.id, cc.name, cc.sort_order, c.id, c.name, c.company;
 
 -- HOME "NEEDS YOU TODAY": everything that needs a decision or a chase, in one list.
 create view public.v_needs_attention
@@ -1113,14 +2244,25 @@ where q.status = 'requested'
   and q.requested_at < public.today_syd() - 7
   and coalesce(q.last_chased_at, q.requested_at) < public.today_syd() - 7
 union all
--- bills due in the next 7 days (or overdue) and not paid
+-- bills due in the next 7 days (or overdue) and not paid; amount = sum of its lines
 select 6, 'invoice_due', ii.project_id,
-       'Pay: ' || ii.description, '$' || to_char(ii.total, 'FM999,999,990.00'), ii.due_date, 'invoices_in', ii.id
+       'Pay: ' || ii.description,
+       '$' || to_char(coalesce((select sum(l.total) from public.invoice_in_lines l where l.invoice_id = ii.id), 0),
+                      'FM999,999,990.00'),
+       ii.due_date, 'invoices_in', ii.id
 from public.invoices_in ii
 where ii.status <> 'paid' and ii.due_date <= public.today_syd() + 7
 union all
+-- money still to find before sign-off, once the project is at Construction or later
+select 7, 'funds_needed', fn.project_id,
+       'Funds needed before sign-off: $' || to_char(fn.still_to_find, 'FM999,999,990.00') || ' still to find',
+       fn.items_unpaid || ' item(s) unpaid of $' || to_char(fn.total_needed, 'FM999,999,990.00'),
+       fn.next_due, 'funds_needed', null::uuid
+from public.v_funds_needed fn
+where fn.still_to_find > 0 and fn.current_stage_position >= fn.stage_position - 1
+union all
 -- contractor licence / insurance expiring in 60 days
-select 7, 'contact_expiry', null, coalesce(c.company, c.name) || ': licence or insurance expiring',
+select 8, 'contact_expiry', null, coalesce(c.company, c.name) || ': licence or insurance expiring',
        'Licence ' || coalesce(to_char(c.licence_expiry, 'DD Mon YYYY'), 'n/a')
          || ', insurance ' || coalesce(to_char(c.insurance_expiry, 'DD Mon YYYY'), 'n/a'),
        least(c.licence_expiry, c.insurance_expiry), 'contacts', c.id
@@ -1134,31 +2276,19 @@ where c.licence_expiry < public.today_syd() + 60 or c.insurance_expiry < public.
 --      key alone can read nothing.  Sign-ups must be switched OFF in Supabase
 --      after Dan's user is created (README step A5).
 -- -----------------------------------------------------------------------------
-alter table public.wellco_settings enable row level security;
-alter table public.stages          enable row level security;
-alter table public.contacts        enable row level security;
-alter table public.projects        enable row level security;
-alter table public.deals           enable row level security;
-alter table public.tasks           enable row level security;
-alter table public.budget_lines    enable row level security;
-alter table public.documents       enable row level security;
-alter table public.rfq_scopes      enable row level security;
-alter table public.quotes          enable row level security;
-alter table public.engagements     enable row level security;
-alter table public.invoices_in     enable row level security;
-alter table public.invoices_out    enable row level security;
-alter table public.approvals       enable row level security;
-alter table public.activity_log    enable row level security;
-
 -- Owner can do everything on their own rows (same policy on every main table).
 -- (select auth.uid()) is wrapped in a sub-select so Postgres works it out once per query, not per row.
 do $$
 declare t text;
 begin
-  foreach t in array array['wellco_settings', 'contacts', 'projects', 'deals', 'tasks', 'budget_lines',
+  foreach t in array array['wellco_settings', 'project_types', 'stage_templates', 'stage_template_tasks',
+                           'contact_categories', 'contact_roles', 'document_types',
+                           'contacts', 'contact_role_links', 'contact_extra_categories',
+                           'projects', 'project_stages', 'deals', 'tasks', 'budget_lines',
                            'documents', 'rfq_scopes', 'quotes', 'engagements', 'invoices_in',
-                           'invoices_out', 'approvals']
+                           'invoice_in_lines', 'invoices_out', 'invoice_out_lines', 'funds_needed', 'approvals']
   loop
+    execute format('alter table public.%I enable row level security', t);
     execute format(
       'create policy "Owner full access" on public.%I
          for all to authenticated
@@ -1168,11 +2298,8 @@ begin
 end;
 $$;
 
--- Stages: any logged-in user can read the 8 stage names; nobody edits them from the app.
-create policy "Read stages" on public.stages
-  for select to authenticated using (true);
-
 -- Activity log: read and add only.  No update or delete policy = log can't be altered.
+alter table public.activity_log enable row level security;
 create policy "Owner reads log" on public.activity_log
   for select to authenticated using (owner_id = (select auth.uid()));
 create policy "Owner adds to log" on public.activity_log
@@ -1182,49 +2309,74 @@ commit;
 
 
 -- #############################################################################
--- PART 2  -  FILE STORAGE (PDFs)
---   Bucket : project-documents   (PRIVATE: files are opened with signed links)
---   Path   : <ProjectID>/<doc_type>/<ProjectID>_<DocType>_<Party>_<YYYY-MM-DD>.pdf
---            e.g. CROOBYAR/quote/CROOBYAR_Quote_SouthcoastCivil_2026-10-14.pdf
---   Rule   : you can only read / upload / delete files inside a folder named
---            after one of YOUR projects (checked against the projects table).
+-- PART 2  -  FILE STORAGE (any file type: PDF, Excel, Word, photos...)
+--   Bucket : project-documents   (PRIVATE: files are opened with signed links;
+--            no file-type restriction)
+--   Paths  : <ProjectID>/<doc_type>/<ProjectID>_<DocType>_<Party>_<YYYY-MM-DD>.<ext>
+--              e.g. CROOBYAR/quote/CROOBYAR_Quote_SouthcoastCivil_2026-10-14.pdf
+--            deals/<deal_id>/<doc_type>/Deal-<Address>_<DocType>_<Party>_<YYYY-MM-DD>.<ext>
+--              (files dropped on a deal; they stay at this path after the deal
+--               becomes a project)
+--   Rule   : you can only read / upload / change / delete a file inside a folder
+--            named after one of YOUR projects, under deals/<one of YOUR deals>/,
+--            or one that a document of yours points at.  Project IDs are upper
+--            case, so the lower-case "deals" folder can't clash with a project.
 --   Note   : deleting a project row does NOT delete its files.  Delete the
 --            folder in Storage too if you really mean it (back it up first).
 --   If this part errors (e.g. bucket already exists from the dashboard), the
---   database from PART 1 is already saved; fix and run just this part again.
+--   database from PART 1 is already saved; fix and run just this part again
+--   (it is safe to re-run).
 -- #############################################################################
 begin;
 
-insert into storage.buckets (id, name, public)
-values ('project-documents', 'project-documents', false)
-on conflict (id) do nothing;
+insert into storage.buckets (id, name, public, allowed_mime_types)
+values ('project-documents', 'project-documents', false, null)
+on conflict (id) do update set public = false, allowed_mime_types = null;
+
+-- Who may touch a file at this path.  Runs as the logged-in user, so the
+-- projects / deals / documents lookups only see their own rows (RLS).
+create or replace function public.can_access_document_path(p_name text)
+returns boolean
+language sql stable
+as $$
+  select case
+    when (storage.foldername(p_name))[1] = 'deals'
+      then exists (select 1 from public.deals d where d.id::text = (storage.foldername(p_name))[2])
+    else exists (select 1 from public.projects p where p.project_id = (storage.foldername(p_name))[1])
+  end
+  or exists (select 1 from public.documents d
+             where d.storage_bucket = 'project-documents' and d.storage_path = p_name)
+$$;
+
+drop policy if exists "Owner reads project documents"   on storage.objects;
+drop policy if exists "Owner uploads project documents" on storage.objects;
+drop policy if exists "Owner updates project documents" on storage.objects;
+drop policy if exists "Owner deletes project documents" on storage.objects;
 
 create policy "Owner reads project documents" on storage.objects
   for select to authenticated
-  using (bucket_id = 'project-documents'
-         and (storage.foldername(name))[1] in (select p.project_id from public.projects p));
+  using (bucket_id = 'project-documents' and public.can_access_document_path(name));
 
 create policy "Owner uploads project documents" on storage.objects
   for insert to authenticated
-  with check (bucket_id = 'project-documents'
-              and (storage.foldername(name))[1] in (select p.project_id from public.projects p));
+  with check (bucket_id = 'project-documents' and public.can_access_document_path(name));
 
 create policy "Owner updates project documents" on storage.objects
   for update to authenticated
-  using (bucket_id = 'project-documents'
-         and (storage.foldername(name))[1] in (select p.project_id from public.projects p))
-  with check (bucket_id = 'project-documents'
-              and (storage.foldername(name))[1] in (select p.project_id from public.projects p));
+  using (bucket_id = 'project-documents' and public.can_access_document_path(name))
+  with check (bucket_id = 'project-documents' and public.can_access_document_path(name));
 
 create policy "Owner deletes project documents" on storage.objects
   for delete to authenticated
-  using (bucket_id = 'project-documents'
-         and (storage.foldername(name))[1] in (select p.project_id from public.projects p));
+  using (bucket_id = 'project-documents' and public.can_access_document_path(name));
 
 commit;
 
 -- =============================================================================
---  DONE.  Quick check (run separately):
---    select * from public.stages order by stage_no;          -- 8 rows
+--  DONE.  Quick checks (run separately, AFTER Dan's login exists):
+--    select project_type, count(*) from stage_templates group by 1 order by 1;
+--        -- commercial_industrial 9 | land_subdivision 9 | residential_build 8
+--    select name from contact_categories order by sort_order;     -- 6 rows
 --    select public.au_fy('2026-11-02'), public.au_bas_quarter('2026-11-02');  -- FY2026-27 | Q2
+--  Tests: supabase-tests.sql (local Postgres only, not on Dan's live project).
 -- =============================================================================
