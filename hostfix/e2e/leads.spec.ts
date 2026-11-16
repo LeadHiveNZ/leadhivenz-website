@@ -101,6 +101,8 @@ test.describe("owner landing page on a phone", () => {
     await page.goto("/owners");
     await expect(page.getByRole("button", { name: /founding spot/i })).toHaveCount(0);
     await submitOwnerLead(page, BASE, ownerDetails());
+    // The form is far down a long page. The thank-you page must open at the top, not at its footer.
+    await expect(page.getByRole("heading", { name: "You're on the list." })).toBeInViewport();
 
     const prices = page.getByRole("region", { name: "The Queenstown price list" });
     await expect(prices).toContainText("Blocked toilet, sink or shower drain");

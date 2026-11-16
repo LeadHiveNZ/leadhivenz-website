@@ -19,7 +19,12 @@ export function LeadFormHiddenFields() {
     // page has loaded. Held in state so they survive a failed submit.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setAttribution(captureAttribution());
-    setStartedAt(String(Date.now()));
+    // When the page started loading, not when it finished. On a slow phone a
+    // person can fill the form in while the page is still loading and press
+    // the button the moment it is ready: timed from the end of loading, that
+    // looks like a robot and the lead would be thrown away.
+    const origin = typeof performance !== "undefined" && performance.timeOrigin > 0 ? performance.timeOrigin : Date.now();
+    setStartedAt(String(Math.round(origin)));
   }, []);
 
   return (

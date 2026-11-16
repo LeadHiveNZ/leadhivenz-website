@@ -25,6 +25,10 @@ are built and tested.
    with your own domain (below). Without it the owner still sees the list on the page.
 4. **After paying**: a confirmation page, Stripe's receipt by email, and you get an alert.
 
+| The form | The prices | After the form | Your scorecard |
+| --- | --- | --- | --- |
+| ![The owner form with the founding spot](screens/demand-test/1-owner-form.png) | ![Fixed prices on the owner page](screens/demand-test/2-price-preview.png) | ![The thank-you page with the founding offer](screens/demand-test/3-thank-you-page.png) | ![The demand test scorecard on the leads page](screens/demand-test/4-scorecard.png) |
+
 The founding offer, as shown everywhere (change it on **More > Markets > Queenstown**):
 
 - 25 founding properties. When they are gone the page stops taking cards by itself.
