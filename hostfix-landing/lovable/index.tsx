@@ -1,9 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { supabase } from "@/integrations/supabase/client";
 import { HostFixLanding, type Lead } from "@/components/HostFixLanding";
 
 // The page itself is src/components/HostFixLanding.tsx (built outside Lovable, see the leadhivenz-website repo,
-// folder hostfix-landing). This file only connects its form to the leads table.
+// folder hostfix-landing). This file only connects its form to /api/public/leads, which saves the lead
+// and emails it to Joe.
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
@@ -18,9 +18,13 @@ export const Route = createFileRoute("/")({
 });
 
 async function saveLead(lead: Lead) {
-  const { error } = await supabase.from("leads").insert(lead);
-  if (error) console.error("Could not save lead", error.message);
-  return { ok: !error };
+  const response = await fetch("/api/public/leads", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(lead),
+  });
+  if (!response.ok) console.error("Could not save lead", response.status);
+  return { ok: response.ok };
 }
 
 function Index() {
