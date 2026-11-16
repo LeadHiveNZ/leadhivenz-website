@@ -14,7 +14,7 @@ BEFORE SENDING
 
 PRICING RATIONALE
 - Build fee range: AU$5,500 to 8,500. Recommend AU$6,500.
-  - About 15 build days (see README phase table). AU$6.5k is ~AU$430/day, fair for a Lovable +
+  - About 17 build days after the 16 Nov changes (see README phase table). AU$6.5k is ~AU$380/day, fair for a Lovable +
     Supabase build where you reuse the demo and schema already done.
   - Go to 7,500 to 8,500 if Dan wants real Gmail sending + Calendar sync + email-in inbox in v1,
     or if data load from his old spreadsheets is messy (several live companies).
@@ -62,12 +62,15 @@ Prepared by Joe Ingram, LeadHive · hello@leadhivenz.com · November 2026
 **Have a click around the demo first: https://claude.ai/artifact/PLBSD85NfHUDxkKS8Z3tiB**
 It works on your phone, iPad and laptop. Nothing you do in it gets sent anywhere.
 
+*Updated after our setup call on 16 November with the changes you asked for: the new Certification & Registration stage, stages and contact roles you can change yourself, a cost category on every bill line, documents on deals, and a register of your companies.*
+
 ---
 
 ## What you told me
 
 - **One place.** You don't want a million subscriptions to a million platforms. Nothing fancy, no KPIs or performance dashboards. You know your numbers.
-- **Each company stands alone.** Every project is its own registered company with its own ABN, GST, bank and books. Trying to run that through one Xero file and tally it out into jobs isn't clean.
+- **Each company stands alone.** Every project is its own registered company with its own ABN, GST, bank and books. Trying to run that through one Xero file and tally it out into jobs isn't clean. At quarter end you might have three companies lodging and want three BAS workbooks, one each.
+- **Certification is where people fall over.** The sign-offs before settlement, and the big end-of-job payments council wants before it will sign.
 - **The GST traps.** Council fees, contributions, stamp duty, lands department registration and some land purchases carry no GST, and governments don't label it. You can have a million dollars of costs in a project with no GST in it, and that's where people get caught out. Then there's the margin scheme on sales.
 - **"Have I chased that up?"** The process is the same every time, but it lives in your head. Miss the electricity connection application and that's three months gone. Money's time.
 - **Three quotes for everything,** same request every time, and the ability to see who you picked and why.
@@ -77,16 +80,28 @@ It works on your phone, iPad and laptop. Nothing you do in it gets sent anywhere
 
 ## What I'll build
 
-One app with all your project companies in it, each kept completely separate. Every project runs through the same 8 stages:
+One app with all your project companies in it, each kept completely separate. Land subdivisions and commercial / industrial projects run through 9 stages by default:
 
-**1** Sourcing · **2** Feasibility · **3** Acquisition & DD · **4** Consultants · **5** Development Approval · **6** Construction · **7** Sales & Settlements · **8** Bonds & Wind-up
+**1** Sourcing · **2** Feasibility · **3** Acquisition & DD · **4** Consultants · **5** Development Approval · **6** Construction · **7** Certification & Registration · **8** Sales & Settlements · **9** Bonds & Wind-up
+
+Residential builds get their own list: Sourcing, Feasibility, Acquisition & DD, Design & approvals, Construction, Certification & Occupation, Sales & Settlements, Wind-up.
+
+The stages and checklists are yours to change. Rename a stage, add one, or add and reword checklist items, either on one project or on your default list for new projects. No need to ask me.
 
 **Projects & stages**
 - Home screen with "Needs you today" first: approvals waiting, overdue tasks, quotes to chase, bills due, lead-time warnings.
 - One card per live project: stage, next deadline, budget vs committed vs paid.
 - Checklist for every stage with due dates and lead-time warnings (e.g. "apply for the Endeavour Energy connection now, 3-month lead time").
-- New project in 3 steps: site and lot/plan, company details (ABN, GST, bank), confirm. It sets up the checklist, budget and folders for you.
-- Deal log for sites from agents and listings, with the feaso result. A "go" site becomes a project in one tap.
+- New project in 3 steps: site and lot/plan, project type (land subdivision, commercial / industrial or residential build), confirm. It sets up the stages, checklist, budget and folders for you.
+- Deal log for sites from agents and listings, with the feaso result. Drop the agent's contract, plans and sales evidence straight onto the deal. A "go" site becomes a project in one tap and its documents come with it.
+- Certification & Registration stage covers the certifier, surveyor, town planner, NBN, the bank, council's final sign-off and subdivision certificate, and plan registration.
+- **Funds needed before sign-off:** list the contributions, bonds and fees that must be paid before council or the certifier will sign. You see the total, what's paid and what's still to find, and it shows on your home screen as the job gets close.
+
+**Your companies**
+- A register of your companies: legal name, ABN, ACN, address, GST registration, bank details, and whether it's active, dormant or closed. Wellco Developments sits in there as the project manager.
+- Each project is owned by one company. While the offer is in "Dan Wellman and/or nominee" the project just carries on; once the company is registered you select it and everything moves across, with the change noted in the log.
+- Quote requests, engagements, purchase orders and invoices all go out in the owning company's name, with its ABN and bank details.
+- Close a company once the bonds are back. Its records and BAS history stay.
 
 **Quotes & engagements**
 - Quote requests drafted from your own templates. Minimum 3 per scope, with a flag if you're short.
@@ -95,22 +110,25 @@ One app with all your project companies in it, each kept completely separate. Ev
 
 **Money & GST**
 - Every invoice line marked taxable, GST-free, input taxed or margin scheme. GST-free lines can't carry GST by mistake.
+- Split bills, a bit like Xero: each line on a bill has its own cost category as well as its own GST treatment. A council bill with GST-free contributions and taxed works on their infrastructure lands in the right categories.
 - Invoices in (bills, progress claims, council fees) and invoices out (lot deposits, settlements).
-- Budget vs actual by category: acquisition, holding, consultants, council and government, construction, sales, management fee.
-- Quarterly BAS summary per company: GST collected, GST paid, GST-free spend, net.
+- Budget vs actual by category, added up line by line: acquisition, holding, consultants, council and government, construction, sales, management fee.
+- Quarterly BAS per company, across all of that company's projects: GST collected, GST paid, GST-free spend, net. At quarter end you see which companies need to lodge and which have nothing to lodge (say one sitting dormant through a long approval).
 - Financial years worked out automatically (1 July to 30 June), so a project running over 3 or 4 years rolls over cleanly.
 - Wellco's management fee tracked as its own line. Intercompany loans and distributions to the trust flagged for year end.
 
 **Documents**
-- Upload PDFs from your phone, iPad or laptop, filed under the project.
+- Upload any file from your phone, iPad or laptop: PDFs, Excel, Word, photos.
+- Filed under the project by stage and by type (contract, plans, sales evidence, planning / zoning, report, quote, engagement, bill, survey, company, correspondence and more), or on a deal before it becomes a project.
 - Named automatically: `CROOBYAR_Quote_SouthcoastCivil_2026-10-14`.
 
 **Contacts**
-- One shared list of consultants, contractors, agents, solicitors and council contacts, reusable on every project.
+- One shared list, reusable on every project, grouped into Consultants, Civil contractors, Building contractors, Agents & advisers, Council & government, and Banks & vendors.
+- Add your own roles and groups as you go, choose which group a role sits in, and put a contact in more than one group.
 - ABN, licence and insurance expiry (warns you 60 days out), which projects they've worked on, your notes on them.
 
 **Exports**
-- Year-end workbook per company per financial year, BAS summary, and a full project workbook. Real Excel files with tabs for Summary, Budget, Quotes, Engagements, Invoices In, Invoices Out, Sales, GST/BAS and Tax Summary.
+- One BAS workbook per company per quarter, a year-end workbook per company per financial year, and a full project workbook. Real Excel files with tabs for Summary, Budget, Quotes, Engagements, Invoices In, Invoices Out, Sales, GST/BAS and Tax Summary.
 
 **Approvals & log**
 - Nothing gets sent, issued or paid until you tap Approve. You see exactly what's going out first.

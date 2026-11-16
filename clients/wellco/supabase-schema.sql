@@ -30,6 +30,9 @@
 --      at an Ulladulla engagement or stage.
 --      Only Projects, Contacts, Deals and Dan's own lists (templates, roles,
 --      categories, types) are shared registers.
+--    * Every project is owned by its own company (companies register).  Quote
+--      requests, engagements and invoices are issued in that company's name
+--      (v_project_issuer) and BAS is worked out per company per quarter.
 --    * Every money LINE has a GST treatment: taxable / gst_free / input_taxed /
 --      margin_scheme (sales only).  GST-free and input-taxed lines must carry $0 GST.
 --    * Every bill line has its own cost category ("a bit like Xero").  Budget vs
@@ -67,6 +70,12 @@
 --       still to find).
 --    6. Documents can belong to a deal OR a project; convert_deal_to_project()
 --       brings them across.  Document types are a lookup; any file type allowed.
+--    7. companies register (end of the call): each project company with its
+--       ABN, ACN, address, GST, BAS cycle, bank and lifecycle (to be formed ->
+--       active -> dormant -> closed).  The company columns moved off projects;
+--       projects.owner_company_id is blank while the offer is in "Dan Wellman
+--       and/or nominee".  v_bas_summary is now per company per quarter, and
+--       v_bas_company_quarters lists companies with nothing to lodge.
 --  This v2 file replaces v1 outright: nothing had been loaded into Dan's
 --  Supabase yet, so there is no data migration, just run this on a fresh project.
 -- =============================================================================
@@ -139,6 +148,8 @@ $$;
 create type public.au_state          as enum ('NSW', 'QLD');   -- add more states with ALTER TYPE if Wellco goes further afield
 create type public.project_status    as enum ('live', 'closed');
 create type public.feaso_result      as enum ('pending', 'go', 'no_go');
+create type public.company_status    as enum ('to_be_formed', 'active', 'dormant', 'closed');
+create type public.bas_cycle         as enum ('quarterly', 'not_lodging');   -- add 'monthly' with ALTER TYPE if ever needed
 
 create type public.gst_treatment as enum (
   'taxable',        -- standard 10% GST (most consultants and contractors)
@@ -352,7 +363,47 @@ create table public.contact_extra_categories (
 );
 comment on table public.contact_extra_categories is 'Contact <-> extra category (many to many), on top of the categories its roles give it.';
 
--- The PROJECTS register. One row = one project company.
+-- COMPANIES: Dan's own companies ("the principals").  Each project is owned by
+-- a company registered for it (often named after the site, e.g. '22 Peel Street
+-- Pty Ltd'); a company normally owns one project but can own more.  Wellco
+-- Developments Pty Ltd itself is in here too, flagged is_project_manager (it
+-- charges the management fee; it doesn't own projects and stays on Xero).
+-- Lifecycle: offer goes in "Dan Wellman and/or nominee" (project has no company
+-- yet) -> company registered, status to_be_formed / active, assigned to the
+-- project (logged) -> dormant while nothing is happening (no BAS) -> closed
+-- once the bonds come back (close_company()).
+-- Everything issued for a project (RFQs, engagements, POs, invoices) reads its
+-- name, ABN, address and bank from here via v_project_issuer.
+create table public.companies (
+  id                   uuid primary key default gen_random_uuid(),
+  owner_id             uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  legal_name           text not null check (trim(legal_name) <> ''),   -- '22 Peel Street Pty Ltd'
+  short_name           text,                                           -- 'Peel St'
+  abn                  text check (abn is null or regexp_replace(abn, '\s', '', 'g') ~ '^\d{11}$'),
+  acn                  text check (acn is null or regexp_replace(acn, '\s', '', 'g') ~ '^\d{9}$'),
+  registered_address   text,
+  gst_registered       boolean not null default false,
+  gst_registered_from  date,
+  bas_cycle            public.bas_cycle not null default 'not_lodging',  -- 'quarterly' once it starts lodging
+  bank_name            text,
+  bank_bsb             text,
+  bank_account         text,                                           -- tip: store last 4 digits only if you prefer
+  trust_name           text,                                           -- shareholder (the trust)
+  status               public.company_status not null default 'to_be_formed',
+  formed_on            date,
+  closed_on            date,
+  is_project_manager   boolean not null default false,                 -- true for Wellco Developments Pty Ltd only
+  notes                text,
+  created_at           timestamptz not null default now(),
+  updated_at           timestamptz not null default now(),
+  unique (owner_id, legal_name),
+  unique (id, owner_id),
+  constraint companies_closed_has_date check (status <> 'closed' or closed_on is not null),
+  constraint companies_gst_date        check (gst_registered or gst_registered_from is null)
+);
+comment on table public.companies is 'Register of Dan''s companies: one per project (plus Wellco itself). Issued documents and BAS read the owner from here.';
+
+-- The PROJECTS register. One row = one project, owned by one company.
 -- Creating a project copies its type's stage template into project_stages and
 -- tasks automatically (trigger projects_copy_stage_template, section 1.5 h).
 create table public.projects (
@@ -366,16 +417,11 @@ create table public.projects (
   project_type         text not null default 'land_subdivision',
   lots_or_units        integer check (lots_or_units >= 0),
   description          text,                           -- '14-lot residential subdivision'
-  -- the project company (each one standalone: own ABN, GST, bank, books)
-  company_name         text not null,
-  abn                  text check (abn is null or regexp_replace(abn, '\s', '', 'g') ~ '^\d{11}$'),
-  acn                  text,
-  gst_registered       boolean not null default true,
-  gst_registered_from  date,
-  bank_name            text,
-  bank_bsb             text,
-  bank_account         text,                           -- tip: store last 4 digits only if you prefer
-  trust_name           text,                           -- shareholder (the trust)
+  -- who owns it: the project company (own ABN, GST, bank, books; see companies).
+  -- Blank while the offer is in Dan's name "and/or nominee"; set it once the
+  -- company is registered and every transaction moves to it (logged).
+  owner_company_id     uuid,
+  interim_owner_name   text not null default 'Dan Wellman and/or nominee',
   -- where it's at (current_stage_id -> project_stages; foreign key added below)
   current_stage_id     uuid,
   status               public.project_status not null default 'live',
@@ -385,9 +431,10 @@ create table public.projects (
   notes                text,
   created_at           timestamptz not null default now(),
   updated_at           timestamptz not null default now(),
-  foreign key (owner_id, project_type) references public.project_types (owner_id, code) on update cascade
+  foreign key (owner_id, project_type) references public.project_types (owner_id, code) on update cascade,
+  foreign key (owner_company_id, owner_id) references public.companies (id, owner_id)
 );
-comment on table public.projects is 'Master project register. One row per project company. Project ID = location ref (lot/plan held separately).';
+comment on table public.projects is 'Master project register. Owned by one company (owner_company_id). Project ID = location ref (lot/plan held separately).';
 
 -- PROJECT STAGES: this project's own stage list, copied from the template when
 -- the project is created.  Dan can rename a stage, insert one (add_project_stage)
@@ -829,6 +876,9 @@ comment on table public.activity_log is 'Append-only log of every action, per pr
 -- -----------------------------------------------------------------------------
 create index projects_owner_status_idx     on public.projects (owner_id, status);
 create index projects_current_stage_idx    on public.projects (current_stage_id);
+create index projects_company_idx          on public.projects (owner_company_id);
+create index companies_owner_status_idx    on public.companies (owner_id, status);
+create unique index companies_one_pm_uidx  on public.companies (owner_id) where is_project_manager;   -- only one Wellco
 create unique index stage_templates_key_uidx on public.stage_templates (owner_id, project_type, stage_key) where stage_key is not null;
 create index stage_template_tasks_stage_idx on public.stage_template_tasks (stage_template_id, sort_order);
 create unique index project_stages_key_uidx on public.project_stages (project_id, stage_key) where stage_key is not null;
@@ -896,7 +946,7 @@ do $$
 declare t text;
 begin
   foreach t in array array['wellco_settings', 'project_types', 'stage_templates', 'stage_template_tasks',
-                           'contact_categories', 'contact_roles', 'document_types',
+                           'contact_categories', 'contact_roles', 'document_types', 'companies',
                            'contacts', 'projects', 'project_stages', 'deals', 'tasks', 'budget_lines',
                            'documents', 'rfq_scopes', 'quotes', 'engagements', 'invoices_in',
                            'invoice_in_lines', 'invoices_out', 'invoice_out_lines', 'funds_needed', 'approvals']
@@ -1119,7 +1169,7 @@ do $$
 declare t text;
 begin
   foreach t in array array['project_types', 'stage_templates', 'stage_template_tasks', 'contact_categories',
-                           'contact_roles', 'document_types',
+                           'contact_roles', 'document_types', 'companies',
                            'projects', 'project_stages', 'contacts', 'deals', 'tasks', 'budget_lines', 'documents',
                            'rfq_scopes', 'quotes', 'engagements', 'invoices_in', 'invoice_in_lines',
                            'invoices_out', 'invoice_out_lines', 'funds_needed', 'approvals']
@@ -1396,18 +1446,19 @@ create trigger projects_copy_stage_template after insert on public.projects
 
 -- Create a project from its type's template in one call.  Returns the project ID.
 --   select public.create_project_from_template('CROOBYAR', 'Croobyar Rd, Milton',
---          'Lot 12 DP 1187234', 'Croobyar Developments Pty Ltd', 'land_subdivision');
+--          'Lot 12 DP 1187234', 'land_subdivision');
+-- p_owner_company_id is usually left blank at first (offer in "Dan Wellman
+-- and/or nominee") and set once the company is registered.
 -- (Inserting into projects directly does the same; this is the tidy way.)
 create or replace function public.create_project_from_template(
-  p_project_id    text,
-  p_name          text,
-  p_lot_plan      text,
-  p_company_name  text,
-  p_project_type  text             default 'land_subdivision',
-  p_state         public.au_state  default 'NSW',
-  p_address       text             default null,
-  p_abn           text             default null,
-  p_owner_id      uuid             default null      -- only needed in the SQL editor (not logged in)
+  p_project_id        text,
+  p_name              text,
+  p_lot_plan          text,
+  p_project_type      text             default 'land_subdivision',
+  p_state             public.au_state  default 'NSW',
+  p_address           text             default null,
+  p_owner_company_id  uuid             default null,
+  p_owner_id          uuid             default null      -- only needed in the SQL editor (not logged in)
 )
 returns text
 language plpgsql
@@ -1419,8 +1470,8 @@ begin
   if not exists (select 1 from public.project_types pt where pt.owner_id = v_owner and pt.code = p_project_type) then
     raise exception 'Unknown project type "%". Add it in Settings first.', p_project_type;
   end if;
-  insert into public.projects (project_id, owner_id, name, lot_plan, company_name, project_type, state, address, abn)
-  values (v_id, v_owner, p_name, p_lot_plan, p_company_name, p_project_type, p_state, p_address, p_abn);
+  insert into public.projects (project_id, owner_id, name, lot_plan, project_type, state, address, owner_company_id)
+  values (v_id, v_owner, p_name, p_lot_plan, p_project_type, p_state, p_address, p_owner_company_id);
   return v_id;
 end;
 $$;
@@ -1497,15 +1548,17 @@ $$;
 --   * A Go deal starts at the Acquisition stage with the Sourcing and
 --     Feasibility checklists ticked off (same as the demo).
 --   * Writes one "Project created from deal" row to the log.
---   select public.convert_deal_to_project('<deal uuid>', 'BELLS-RD', 'Bells Rd Developments Pty Ltd');
+--   * The owning company can be given now or assigned later (offer still in
+--     "Dan Wellman and/or nominee").
+--   select public.convert_deal_to_project('<deal uuid>', 'BELLS-RD');
 create or replace function public.convert_deal_to_project(
-  p_deal_id       uuid,
-  p_project_id    text,
-  p_company_name  text,
-  p_project_type  text     default null,
-  p_lot_plan      text     default null,
-  p_name          text     default null,
-  p_docs_stage    integer  default 1
+  p_deal_id           uuid,
+  p_project_id        text,
+  p_owner_company_id  uuid     default null,
+  p_project_type      text     default null,
+  p_lot_plan          text     default null,
+  p_name              text     default null,
+  p_docs_stage        integer  default 1
 )
 returns text
 language plpgsql
@@ -1532,8 +1585,9 @@ begin
   end if;
 
   v_pid := public.create_project_from_template(
-             p_project_id, coalesce(p_name, d.address), coalesce(p_lot_plan, d.lot_plan), p_company_name,
-             coalesce(p_project_type, d.project_type, 'land_subdivision'), d.state, d.address, null, d.owner_id);
+             p_project_id, coalesce(p_name, d.address), coalesce(p_lot_plan, d.lot_plan),
+             coalesce(p_project_type, d.project_type, 'land_subdivision'), d.state, d.address,
+             p_owner_company_id, d.owner_id);
 
   select ps.id, ps.name into v_stage_id, v_stage_name
   from public.project_stages ps where ps.project_id = v_pid
@@ -1598,7 +1652,82 @@ $$;
 create trigger funds_needed_defaults before insert or update on public.funds_needed
   for each row execute function public.funds_needed_defaults();
 
--- (j) DAN'S DEFAULT LISTS.  Run once per user at sign-up (and below for any
+-- (j) COMPANIES: who owns a project, and closing a company.
+
+-- A closed company can't take on a project; Wellco itself (the project
+-- manager) can't own one.  When the owner changes, write a plain-English log
+-- line: "Owner assigned: Dan Wellman and/or nominee -> 22 Peel Street Pty Ltd".
+create or replace function public.projects_check_company()
+returns trigger
+language plpgsql
+as $$
+declare c public.companies%rowtype;
+begin
+  if new.owner_company_id is not null
+     and (tg_op = 'INSERT' or new.owner_company_id is distinct from old.owner_company_id) then
+    select * into c from public.companies where id = new.owner_company_id;
+    if c.status = 'closed' then
+      raise exception '% is closed and can''t own project %', c.legal_name, new.project_id using errcode = 'check_violation';
+    end if;
+    if c.is_project_manager then
+      raise exception '% is the project manager, not a project company. Register a company for %.', c.legal_name, new.project_id
+        using errcode = 'check_violation';
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+create trigger projects_check_company before insert or update of owner_company_id on public.projects
+  for each row execute function public.projects_check_company();
+
+create or replace function public.projects_log_company_change()
+returns trigger
+language plpgsql
+as $$
+declare
+  v_from text;
+  v_to   text;
+begin
+  select legal_name into v_from from public.companies where id = old.owner_company_id;
+  select legal_name into v_to   from public.companies where id = new.owner_company_id;
+  insert into public.activity_log (owner_id, project_id, action, entity_type, entity_id, summary, details, source)
+  values (new.owner_id, new.project_id, 'project.company_assigned', 'projects', new.project_id,
+          format('Owner assigned: %s -> %s. Transactions now sit with %s.',
+                 coalesce(v_from, old.interim_owner_name), coalesce(v_to, new.interim_owner_name),
+                 coalesce(v_to, new.interim_owner_name)),
+          jsonb_build_object('from_company_id', old.owner_company_id, 'to_company_id', new.owner_company_id),
+          'auto');
+  return null;
+end;
+$$;
+
+create trigger projects_log_company_change after update of owner_company_id on public.projects
+  for each row when (old.owner_company_id is distinct from new.owner_company_id)
+  execute function public.projects_log_company_change();
+
+-- Close a company once its bonds are back.  Refuses while it still owns a live
+-- project (close the project first).  The status change is logged.
+--   select public.close_company('<company uuid>', '2027-03-31');
+create or replace function public.close_company(p_company_id uuid, p_closed_on date default null)
+returns void
+language plpgsql
+as $$
+declare v_live text;
+begin
+  select string_agg(p.project_id, ', ') into v_live
+  from public.projects p where p.owner_company_id = p_company_id and p.status = 'live';
+  if v_live is not null then
+    raise exception 'Company still owns live project(s): %. Close them first.', v_live using errcode = 'check_violation';
+  end if;
+  update public.companies
+     set status = 'closed', closed_on = coalesce(p_closed_on, closed_on, public.today_syd()), bas_cycle = 'not_lodging'
+   where id = p_company_id;
+  if not found then raise exception 'Company % not found', p_company_id; end if;
+end;
+$$;
+
+-- (k) DAN'S DEFAULT LISTS.  Run once per user at sign-up (and below for any
 --     user that already exists).  Only fills what's missing, so it never
 --     overwrites Dan's own edits.  Edit the lists here before go-live if Dan
 --     wants different defaults.
@@ -1774,6 +1903,13 @@ begin
     join public.contact_categories c on c.owner_id = p_owner and c.name = r.category_name;
   end if;
 
+  -- Wellco Developments itself, as the project manager (fill in ABN etc. in Settings)
+  if not exists (select 1 from public.companies c where c.owner_id = p_owner and c.is_project_manager) then
+    insert into public.companies (owner_id, legal_name, short_name, status, gst_registered, is_project_manager, notes)
+    values (p_owner, 'Wellco Developments Pty Ltd', 'Wellco', 'active', true, true,
+            'Project manager. Stays on Xero; charges each project company the management fee.');
+  end if;
+
   -- document types
   insert into public.document_types (owner_id, code, name, sort_order) values
     (p_owner, 'contract',        'Contract',           1),
@@ -1797,7 +1933,7 @@ $$;
 -- Not callable from the app (it runs at sign-up and from the SQL editor only).
 revoke execute on function public.seed_owner_defaults(uuid) from public, anon, authenticated;
 
--- (k) New login => create Wellco settings row and default lists automatically
+-- (l) New login => create Wellco settings row and default lists automatically
 create or replace function public.handle_new_user()
 returns trigger
 language plpgsql
@@ -1886,7 +2022,7 @@ select
   f.invoice_in_line_id,
   coalesce(l.total, f.total)                                        as needed_incl_gst,
   coalesce(l.amount_ex_gst, f.amount_ex_gst)                        as needed_ex_gst,
-  (f.paid_on is not null or ii.status = 'paid')                     as is_paid,
+  (f.paid_on is not null or coalesce(ii.status = 'paid', false))   as is_paid,
   coalesce(f.paid_on, case when ii.status = 'paid' then ii.paid_on end) as paid_on
 from public.funds_needed f
 join public.project_stages ps on ps.id = f.stage_id
@@ -1926,8 +2062,10 @@ with (security_invoker = true) as
 select
   p.project_id,
   p.name,
-  p.company_name,
-  p.abn,
+  p.owner_company_id,
+  coalesce(co.legal_name, p.interim_owner_name)                   as company_name,
+  co.abn,
+  co.status                                                       as company_status,
   p.state,
   p.project_type,
   pt.name                                                         as project_type_name,
@@ -1949,6 +2087,7 @@ select
   coalesce(t.lead_time_alerts, 0)                                 as lead_time_alerts,
   coalesce(a.pending_approvals, 0)                                as pending_approvals
 from public.projects p
+left join public.companies co on co.id = p.owner_company_id
 left join public.project_types pt on pt.owner_id = p.owner_id and pt.code = p.project_type
 left join lateral (
   select ps.name,
@@ -1995,12 +2134,35 @@ left join lateral (
   from public.approvals ap where ap.project_id = p.project_id and ap.status = 'pending'
 ) a on true;
 
--- GST / BAS: one row per project per BAS quarter, added up by LINE.
--- Uses invoice date (accruals basis).  If the accountant lodges on a CASH
--- basis, swap invoice_date for paid_on below.
+-- WHO ISSUES IT: the name, ABN, address and bank every issued document for a
+-- project uses (RFQs, engagement letters, POs, sales invoices, bills addressed
+-- to).  Before a company is assigned it reads "Dan Wellman and/or nominee".
+create view public.v_project_issuer
+with (security_invoker = true) as
+select
+  p.project_id,
+  p.owner_company_id                                    as company_id,
+  coalesce(c.legal_name, p.interim_owner_name)          as issuer_name,
+  c.short_name,
+  c.abn,
+  c.acn,
+  c.registered_address,
+  c.gst_registered,
+  c.bank_name,
+  c.bank_bsb,
+  c.bank_account,
+  c.status                                              as company_status,
+  p.owner_company_id is null                            as is_interim
+from public.projects p
+left join public.companies c on c.id = p.owner_company_id;
+
+-- GST / BAS building block: every approved / issued money LINE with its BAS
+-- period and the company that owns the project.  Uses invoice date (accruals
+-- basis).  If the accountant lodges on a CASH basis, swap invoice_date for
+-- paid_on below.
 --   ATO labels:  G1 = total sales (incl GST)   1A = GST on sales (collected)
 --                G11 = purchases (incl GST)    1B = GST on purchases (credits)
-create view public.v_bas_summary
+create view public.v_bas_lines
 with (security_invoker = true) as
 with lines as (
   select ii.project_id, ii.fy, ii.bas_quarter, public.au_quarter_start(ii.invoice_date) as quarter_start,
@@ -2026,15 +2188,26 @@ with lines as (
   join public.invoice_out_lines l on l.invoice_id = io.id
   where io.status in ('issued', 'paid')
 )
+select l.*, p.owner_company_id as company_id
+from lines l
+join public.projects p on p.project_id = l.project_id;
+
+-- BAS PER COMPANY PER QUARTER (one BAS workbook each): across all of that
+-- company's projects.  A project with no company yet shows under company_id
+-- null, "Dan Wellman and/or nominee": assign the company before lodging.
+create view public.v_bas_summary
+with (security_invoker = true) as
 select
-  l.project_id,
-  p.company_name,
-  p.abn,
+  l.company_id,
+  coalesce(c.legal_name, 'Dan Wellman and/or nominee (no company assigned)') as company_name,
+  c.abn,
+  c.bas_cycle,
   l.fy,
   l.bas_quarter,
   l.fy || ' ' || l.bas_quarter                       as period,       -- 'FY2025-26 Q2'
   l.quarter_start,
   (l.quarter_start + interval '3 months - 1 day')::date as quarter_end,
+  array_agg(distinct l.project_id order by l.project_id) as projects,
   sum(l.sales_incl_gst)                              as sales_incl_gst_g1,
   sum(l.gst_collected)                               as gst_collected_1a,
   sum(l.margin_scheme_sales)                         as margin_scheme_sales,
@@ -2044,9 +2217,64 @@ select
   sum(l.gst_free_spend)                              as gst_free_spend,
   sum(l.input_taxed_spend)                           as input_taxed_spend,
   sum(l.gst_collected) - sum(l.gst_paid)             as net_gst           -- positive = pay ATO, negative = refund
-from lines l
-join public.projects p on p.project_id = l.project_id
-group by l.project_id, p.company_name, p.abn, l.fy, l.bas_quarter, l.quarter_start;
+from public.v_bas_lines l
+left join public.companies c on c.id = l.company_id
+group by l.company_id, c.legal_name, c.abn, c.bas_cycle, l.fy, l.bas_quarter, l.quarter_start;
+
+-- The same figures split by project (for the project workbook's GST-BAS tab).
+create view public.v_bas_by_project
+with (security_invoker = true) as
+select
+  l.project_id,
+  l.company_id,
+  l.fy,
+  l.bas_quarter,
+  l.fy || ' ' || l.bas_quarter                       as period,
+  l.quarter_start,
+  sum(l.sales_incl_gst)                              as sales_incl_gst_g1,
+  sum(l.gst_collected)                               as gst_collected_1a,
+  sum(l.margin_scheme_sales)                         as margin_scheme_sales,
+  sum(l.gst_free_sales)                              as gst_free_sales,
+  sum(l.purchases_incl_gst)                          as purchases_incl_gst_g11,
+  sum(l.gst_paid)                                    as gst_paid_1b,
+  sum(l.gst_free_spend)                              as gst_free_spend,
+  sum(l.input_taxed_spend)                           as input_taxed_spend,
+  sum(l.gst_collected) - sum(l.gst_paid)             as net_gst
+from public.v_bas_lines l
+group by l.project_id, l.company_id, l.fy, l.bas_quarter, l.quarter_start;
+
+-- QUARTER END CHECKLIST: every project company for every quarter it existed
+-- (formed / first transaction -> closed or today), with what to do:
+--   lodge             there's activity: lodge a BAS from v_bas_summary
+--   nil_bas           registered for GST and lodging quarterly, but no activity
+--   nothing_to_lodge  dormant / not lodging yet / not GST registered, and no activity
+-- e.g.  select * from v_bas_company_quarters where period = 'FY2026-27 Q2';
+create view public.v_bas_company_quarters
+with (security_invoker = true) as
+select
+  c.id                                               as company_id,
+  c.legal_name                                       as company_name,
+  c.status,
+  c.bas_cycle,
+  c.gst_registered,
+  public.au_fy(q.quarter_start::date) || ' ' || public.au_bas_quarter(q.quarter_start::date) as period,
+  q.quarter_start::date                              as quarter_start,
+  b.period is not null                               as has_activity,
+  case
+    when b.period is not null then 'lodge'
+    when c.gst_registered and c.bas_cycle = 'quarterly' and c.status <> 'dormant' then 'nil_bas'
+    else 'nothing_to_lodge'
+  end                                                as to_do,
+  coalesce(b.net_gst, 0)                             as net_gst
+from public.companies c
+cross join lateral generate_series(
+  public.au_quarter_start(least(coalesce(c.formed_on, c.created_at::date),
+                                coalesce((select min(l.quarter_start) from public.v_bas_lines l where l.company_id = c.id),
+                                         'infinity'::date))),
+  public.au_quarter_start(coalesce(c.closed_on, public.today_syd())),
+  interval '3 months') as q(quarter_start)
+left join public.v_bas_summary b on b.company_id = c.id and b.quarter_start = q.quarter_start::date
+where not c.is_project_manager;
 
 -- MONEY TAB: budget vs committed vs paid by cost category, from bill LINES.
 -- category is null for costs not yet allocated ("Unallocated").
@@ -2282,7 +2510,7 @@ do $$
 declare t text;
 begin
   foreach t in array array['wellco_settings', 'project_types', 'stage_templates', 'stage_template_tasks',
-                           'contact_categories', 'contact_roles', 'document_types',
+                           'contact_categories', 'contact_roles', 'document_types', 'companies',
                            'contacts', 'contact_role_links', 'contact_extra_categories',
                            'projects', 'project_stages', 'deals', 'tasks', 'budget_lines',
                            'documents', 'rfq_scopes', 'quotes', 'engagements', 'invoices_in',
