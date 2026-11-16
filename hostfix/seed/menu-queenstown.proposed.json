@@ -1,0 +1,635 @@
+{
+  "_readme": [
+    "PROPOSED REPLACEMENT FOR menu-queenstown.json. NOTHING LOADS THIS FILE YET.",
+    "Swapping it in is a task in DECISIONS.md, because it breaks 27 money tests that must be re-derived.",
+    "These are researched prices from Queenstown call-out and first-hour rates, November 2026.",
+    "Prices are in whole dollars and include GST.",
+    "ownerPriceDollars is what the owner's card is charged. tradiePayoutDollars is what the tradie receives.",
+    "The gap is what the platform keeps, at a 15% fee on the owner price. Every owner price is payout / 0.85 rounded to the nearest $5.",
+    "licenceRequired is true for any plumbing, gas or electrical work.",
+    "The five items marked \"needsLocalQuote\" are priced off national averages, not Queenstown quotes.",
+    "Ring a local and confirm those five before an owner can book one."
+  ],
+  "market": "queenstown",
+  "currency": "NZD",
+  "pricesIncludeGst": true,
+  "placeholderPrices": false,
+  "surcharges": {
+    "urgentDollars": 90,
+    "afterHoursDollars": 140
+  },
+  "offMenu": {
+    "diagnosisFeeDollars": 225,
+    "diagnosisTradiePayoutDollars": 190,
+    "ownerApprovalAboveDollars": 600
+  },
+  "items": [
+    {
+      "code": "HM-01",
+      "trade": "handyman",
+      "name": "Shelf, hook or mirror hanging",
+      "ownerPriceDollars": 155,
+      "tradiePayoutDollars": 130,
+      "licenceRequired": false
+    },
+    {
+      "code": "HM-02",
+      "trade": "handyman",
+      "name": "Wi-Fi router reset and smart TV setup",
+      "ownerPriceDollars": 155,
+      "tradiePayoutDollars": 130,
+      "licenceRequired": false,
+      "tags": [
+        "top-complaint"
+      ]
+    },
+    {
+      "code": "HM-03",
+      "trade": "handyman",
+      "name": "Light bulbs or a light fitting, up to 5",
+      "ownerPriceDollars": 165,
+      "tradiePayoutDollars": 140,
+      "licenceRequired": false
+    },
+    {
+      "code": "HM-04",
+      "trade": "handyman",
+      "name": "Smoke alarm replace or battery, up to 3",
+      "ownerPriceDollars": 165,
+      "tradiePayoutDollars": 140,
+      "licenceRequired": false,
+      "notes": "NZ requires photoelectric alarms with 8-year battery, within 3m of each bedroom door, one per storey. Parts at cost."
+    },
+    {
+      "code": "HM-05",
+      "trade": "handyman",
+      "name": "Door handle, latch or lock adjust",
+      "ownerPriceDollars": 165,
+      "tradiePayoutDollars": 140,
+      "licenceRequired": false
+    },
+    {
+      "code": "HM-06",
+      "trade": "handyman",
+      "name": "Blind or curtain rail repair",
+      "ownerPriceDollars": 165,
+      "tradiePayoutDollars": 140,
+      "licenceRequired": false
+    },
+    {
+      "code": "HM-07",
+      "trade": "handyman",
+      "name": "Rubbish or broken item removal",
+      "ownerPriceDollars": 165,
+      "tradiePayoutDollars": 140,
+      "licenceRequired": false
+    },
+    {
+      "code": "HM-08",
+      "trade": "handyman",
+      "name": "Sticking door or sliding door track",
+      "ownerPriceDollars": 175,
+      "tradiePayoutDollars": 150,
+      "licenceRequired": false
+    },
+    {
+      "code": "HM-09",
+      "trade": "handyman",
+      "name": "Furniture or bed repair",
+      "ownerPriceDollars": 175,
+      "tradiePayoutDollars": 150,
+      "licenceRequired": false
+    },
+    {
+      "code": "HM-10",
+      "trade": "handyman",
+      "name": "Flyscreen repair or replace",
+      "ownerPriceDollars": 175,
+      "tradiePayoutDollars": 150,
+      "licenceRequired": false
+    },
+    {
+      "code": "HM-11",
+      "trade": "handyman",
+      "name": "Lockbox or smart lock install",
+      "ownerPriceDollars": 200,
+      "tradiePayoutDollars": 170,
+      "licenceRequired": false,
+      "tags": [
+        "top-complaint"
+      ]
+    },
+    {
+      "code": "HM-12",
+      "trade": "handyman",
+      "name": "TV wall mount or re-secure",
+      "ownerPriceDollars": 210,
+      "tradiePayoutDollars": 180,
+      "licenceRequired": false
+    },
+    {
+      "code": "HM-13",
+      "trade": "handyman",
+      "name": "Patch and paint small wall damage",
+      "ownerPriceDollars": 235,
+      "tradiePayoutDollars": 200,
+      "licenceRequired": false
+    },
+    {
+      "code": "HM-14",
+      "trade": "handyman",
+      "name": "Reseal a shower or bath",
+      "ownerPriceDollars": 270,
+      "tradiePayoutDollars": 230,
+      "licenceRequired": false
+    },
+    {
+      "code": "HM-15",
+      "trade": "handyman",
+      "name": "Gutter clean, single storey",
+      "ownerPriceDollars": 280,
+      "tradiePayoutDollars": 240,
+      "licenceRequired": false
+    },
+    {
+      "code": "PL-01",
+      "trade": "plumber",
+      "name": "Toilet seat or cistern parts",
+      "ownerPriceDollars": 225,
+      "tradiePayoutDollars": 190,
+      "licenceRequired": true
+    },
+    {
+      "code": "PL-02",
+      "trade": "plumber",
+      "name": "Outside tap or hose fitting",
+      "ownerPriceDollars": 225,
+      "tradiePayoutDollars": 190,
+      "licenceRequired": true
+    },
+    {
+      "code": "PL-03",
+      "trade": "plumber",
+      "name": "Dripping tap or tap washer",
+      "ownerPriceDollars": 235,
+      "tradiePayoutDollars": 200,
+      "licenceRequired": true
+    },
+    {
+      "code": "PL-04",
+      "trade": "plumber",
+      "name": "Running toilet or cistern repair",
+      "ownerPriceDollars": 235,
+      "tradiePayoutDollars": 200,
+      "licenceRequired": true,
+      "tags": [
+        "top-complaint"
+      ]
+    },
+    {
+      "code": "PL-05",
+      "trade": "plumber",
+      "name": "Shower head or mixer replace",
+      "ownerPriceDollars": 235,
+      "tradiePayoutDollars": 200,
+      "licenceRequired": true
+    },
+    {
+      "code": "PL-06",
+      "trade": "plumber",
+      "name": "No hot water, first-hour diagnosis",
+      "ownerPriceDollars": 235,
+      "tradiePayoutDollars": 200,
+      "licenceRequired": true,
+      "isDiagnosis": true,
+      "tags": [
+        "top-complaint"
+      ]
+    },
+    {
+      "code": "PL-07",
+      "trade": "plumber",
+      "name": "Washing machine or dishwasher connection",
+      "ownerPriceDollars": 235,
+      "tradiePayoutDollars": 200,
+      "licenceRequired": true
+    },
+    {
+      "code": "PL-08",
+      "trade": "plumber",
+      "name": "Blocked toilet, sink or shower drain",
+      "ownerPriceDollars": 245,
+      "tradiePayoutDollars": 210,
+      "licenceRequired": true,
+      "tags": [
+        "top-complaint"
+      ]
+    },
+    {
+      "code": "EL-01",
+      "trade": "electrician",
+      "name": "Power point or light switch replace",
+      "ownerPriceDollars": 225,
+      "tradiePayoutDollars": 190,
+      "licenceRequired": true
+    },
+    {
+      "code": "EL-02",
+      "trade": "electrician",
+      "name": "Tripping circuit, first-hour diagnosis",
+      "ownerPriceDollars": 225,
+      "tradiePayoutDollars": 190,
+      "licenceRequired": true,
+      "isDiagnosis": true
+    },
+    {
+      "code": "EL-03",
+      "trade": "electrician",
+      "name": "Oven or cooktop fault, first-hour diagnosis",
+      "ownerPriceDollars": 225,
+      "tradiePayoutDollars": 190,
+      "licenceRequired": true,
+      "isDiagnosis": true
+    },
+    {
+      "code": "EL-04",
+      "trade": "electrician",
+      "name": "Extractor fan replace",
+      "ownerPriceDollars": 260,
+      "tradiePayoutDollars": 220,
+      "licenceRequired": true
+    },
+    {
+      "code": "EL-05",
+      "trade": "electrician",
+      "name": "Heated towel rail replace",
+      "ownerPriceDollars": 270,
+      "tradiePayoutDollars": 230,
+      "licenceRequired": true
+    },
+    {
+      "code": "HP-01",
+      "trade": "heat_pump_tech",
+      "name": "Each extra unit, same visit",
+      "ownerPriceDollars": 105,
+      "tradiePayoutDollars": 90,
+      "licenceRequired": true,
+      "isAddOn": true
+    },
+    {
+      "code": "HP-02",
+      "trade": "heat_pump_tech",
+      "name": "Heat pump service and clean",
+      "ownerPriceDollars": 210,
+      "tradiePayoutDollars": 180,
+      "licenceRequired": true
+    },
+    {
+      "code": "HP-03",
+      "trade": "heat_pump_tech",
+      "name": "Heat pump fault diagnosis",
+      "ownerPriceDollars": 245,
+      "tradiePayoutDollars": 210,
+      "licenceRequired": true,
+      "isDiagnosis": true
+    },
+    {
+      "code": "AP-01",
+      "trade": "appliance_tech",
+      "name": "Appliance fault diagnosis: washer, dryer, dishwasher, fridge",
+      "ownerPriceDollars": 225,
+      "tradiePayoutDollars": 190,
+      "licenceRequired": true,
+      "isDiagnosis": true,
+      "tags": [
+        "top-complaint"
+      ]
+    },
+    {
+      "code": "LS-01",
+      "trade": "locksmith",
+      "name": "Lockout, business hours",
+      "ownerPriceDollars": 175,
+      "tradiePayoutDollars": 150,
+      "licenceRequired": false,
+      "tags": [
+        "top-complaint"
+      ]
+    },
+    {
+      "code": "LS-02",
+      "trade": "locksmith",
+      "name": "Lock re-key or replace",
+      "ownerPriceDollars": 210,
+      "tradiePayoutDollars": 180,
+      "licenceRequired": false
+    },
+    {
+      "code": "SP-01",
+      "trade": "handyman",
+      "name": "Spa water balance and filter clean",
+      "ownerPriceDollars": 175,
+      "tradiePayoutDollars": 150,
+      "licenceRequired": false
+    },
+    {
+      "code": "WI-01",
+      "trade": "plumber",
+      "name": "Frozen pipe thaw and check",
+      "ownerPriceDollars": 280,
+      "tradiePayoutDollars": 240,
+      "licenceRequired": true,
+      "seasonal": {
+        "months": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ]
+      }
+    },
+    {
+      "code": "WI-02",
+      "trade": "plumber",
+      "name": "Pre-winter check: pipe lagging, outside taps, heat pump, alarms",
+      "ownerPriceDollars": 330,
+      "tradiePayoutDollars": 280,
+      "licenceRequired": true,
+      "seasonal": {
+        "months": [
+          3,
+          4,
+          5
+        ]
+      },
+      "tags": [
+        "lead-product"
+      ]
+    },
+    {
+      "code": "WI-03",
+      "trade": "plumber",
+      "name": "Drain-down for a property sitting empty",
+      "ownerPriceDollars": 330,
+      "tradiePayoutDollars": 280,
+      "licenceRequired": true,
+      "seasonal": {
+        "months": [
+          4,
+          5,
+          6
+        ]
+      }
+    },
+    {
+      "code": "WI-04",
+      "trade": "plumber",
+      "name": "Burst pipe, emergency make-safe, first hour",
+      "ownerPriceDollars": 375,
+      "tradiePayoutDollars": 320,
+      "licenceRequired": true,
+      "seasonal": {
+        "months": [
+          5,
+          6,
+          7,
+          8,
+          9
+        ]
+      }
+    },
+    {
+      "code": "CP-01",
+      "trade": "handyman",
+      "name": "Smoke alarm compliance check, whole property, photo certificate",
+      "ownerPriceDollars": 175,
+      "tradiePayoutDollars": 150,
+      "licenceRequired": false,
+      "tags": [
+        "compliance",
+        "recurring"
+      ],
+      "notes": "NZ: photoelectric, 8-year battery, within 3m of each bedroom door, one per storey."
+    },
+    {
+      "code": "CP-02",
+      "trade": "handyman",
+      "name": "Fire extinguisher and blanket check or replace",
+      "ownerPriceDollars": 165,
+      "tradiePayoutDollars": 140,
+      "licenceRequired": false,
+      "tags": [
+        "compliance",
+        "recurring"
+      ]
+    },
+    {
+      "code": "CP-03",
+      "trade": "electrician",
+      "name": "Switchboard and RCD safety test",
+      "ownerPriceDollars": 225,
+      "tradiePayoutDollars": 190,
+      "licenceRequired": true,
+      "tags": [
+        "compliance",
+        "recurring"
+      ]
+    },
+    {
+      "code": "GD-01",
+      "trade": "handyman",
+      "name": "Broken window or shower glass, make safe and measure",
+      "ownerPriceDollars": 280,
+      "tradiePayoutDollars": 240,
+      "licenceRequired": false,
+      "needsLocalQuote": true
+    },
+    {
+      "code": "GD-02",
+      "trade": "handyman",
+      "name": "Crockery, glassware and linen replacement run",
+      "ownerPriceDollars": 155,
+      "tradiePayoutDollars": 130,
+      "licenceRequired": false,
+      "notes": "Items at cost on top."
+    },
+    {
+      "code": "GD-03",
+      "trade": "handyman",
+      "name": "Carpet or upholstery stain treatment",
+      "ownerPriceDollars": 210,
+      "tradiePayoutDollars": 180,
+      "licenceRequired": false
+    },
+    {
+      "code": "GD-04",
+      "trade": "locksmith",
+      "name": "Lost key or remote replacement",
+      "ownerPriceDollars": 165,
+      "tradiePayoutDollars": 140,
+      "licenceRequired": false
+    },
+    {
+      "code": "GD-05",
+      "trade": "handyman",
+      "name": "Bed base or slat repair",
+      "ownerPriceDollars": 165,
+      "tradiePayoutDollars": 140,
+      "licenceRequired": false
+    },
+    {
+      "code": "PV-01",
+      "trade": "handyman",
+      "name": "Log burner or chimney sweep",
+      "ownerPriceDollars": 295,
+      "tradiePayoutDollars": 250,
+      "licenceRequired": false,
+      "needsLocalQuote": true,
+      "seasonal": {
+        "months": [
+          3,
+          4,
+          5
+        ]
+      },
+      "tags": [
+        "recurring"
+      ],
+      "notes": "Often an insurance condition. Check local rates."
+    },
+    {
+      "code": "PV-02",
+      "trade": "handyman",
+      "name": "Moss and mould treatment, paths and decks",
+      "ownerPriceDollars": 280,
+      "tradiePayoutDollars": 240,
+      "licenceRequired": false,
+      "needsLocalQuote": true,
+      "seasonal": {
+        "months": [
+          9,
+          10,
+          11
+        ]
+      },
+      "tags": [
+        "recurring"
+      ]
+    },
+    {
+      "code": "PV-03",
+      "trade": "heat_pump_tech",
+      "name": "Heat pump filter clean between guests",
+      "ownerPriceDollars": 105,
+      "tradiePayoutDollars": 90,
+      "licenceRequired": true,
+      "isAddOn": true
+    },
+    {
+      "code": "PV-04",
+      "trade": "handyman",
+      "name": "Spa pool drain, clean and refill",
+      "ownerPriceDollars": 305,
+      "tradiePayoutDollars": 260,
+      "licenceRequired": false,
+      "needsLocalQuote": true
+    },
+    {
+      "code": "PV-05",
+      "trade": "handyman",
+      "name": "BBQ clean and gas bottle swap",
+      "ownerPriceDollars": 165,
+      "tradiePayoutDollars": 140,
+      "licenceRequired": false
+    },
+    {
+      "code": "PV-06",
+      "trade": "handyman",
+      "name": "Water filter replacement",
+      "ownerPriceDollars": 155,
+      "tradiePayoutDollars": 130,
+      "licenceRequired": false,
+      "tags": [
+        "recurring"
+      ]
+    },
+    {
+      "code": "OD-01",
+      "trade": "handyman",
+      "name": "Lawn mow and edges",
+      "ownerPriceDollars": 120,
+      "tradiePayoutDollars": 100,
+      "licenceRequired": false,
+      "tags": [
+        "recurring"
+      ]
+    },
+    {
+      "code": "OD-02",
+      "trade": "handyman",
+      "name": "Garden tidy, seasonal",
+      "ownerPriceDollars": 260,
+      "tradiePayoutDollars": 220,
+      "licenceRequired": false,
+      "tags": [
+        "recurring"
+      ]
+    },
+    {
+      "code": "OD-03",
+      "trade": "handyman",
+      "name": "Path and deck water blast",
+      "ownerPriceDollars": 305,
+      "tradiePayoutDollars": 260,
+      "licenceRequired": false,
+      "needsLocalQuote": true
+    },
+    {
+      "code": "OD-04",
+      "trade": "handyman",
+      "name": "Snow clearing, paths and driveway",
+      "ownerPriceDollars": 210,
+      "tradiePayoutDollars": 180,
+      "licenceRequired": false,
+      "seasonal": {
+        "months": [
+          6,
+          7,
+          8
+        ]
+      },
+      "tags": [
+        "queenstown-only"
+      ]
+    },
+    {
+      "code": "OD-05",
+      "trade": "handyman",
+      "name": "Window clean, inside and out",
+      "ownerPriceDollars": 190,
+      "tradiePayoutDollars": 160,
+      "licenceRequired": false,
+      "tags": [
+        "recurring"
+      ]
+    },
+    {
+      "code": "OD-06",
+      "trade": "handyman",
+      "name": "Firewood delivery and stack",
+      "ownerPriceDollars": 155,
+      "tradiePayoutDollars": 130,
+      "licenceRequired": false,
+      "seasonal": {
+        "months": [
+          4,
+          5,
+          6,
+          7
+        ]
+      },
+      "notes": "Wood at cost on top."
+    }
+  ]
+}

@@ -1,0 +1,217 @@
+# DECISIONS
+
+What was decided outside the code, and what the code still has to catch up on.
+Newest at the top. When a decision here contradicts a comment in the code, this
+file wins and the code is wrong.
+
+Written for whoever picks the work up next, human or agent. If you change a
+price, a fee or a promise, add a line here saying what and why.
+
+---
+
+## 2026-11-16 — Real prices researched, staged, not yet loaded
+
+`seed/menu-queenstown.proposed.json` holds 59 researched jobs and is meant to
+replace `seed/menu-queenstown.json`. **Nothing loads it yet.** The live menu is
+still placeholders, so no price may be shown to a real owner until the swap is
+done.
+
+Where the prices came from: Queenstown call-out plus first-hour rates as
+advertised in November 2026. A local plumber or electrician charges a $90-130
+call-out and $90-150 for the first hour, excluding GST. That is $207-322
+including GST for an hour on site. The menu's typical $235 job sits in the lower
+middle of that band.
+
+That matters for the sales story. An earlier draft claimed the menu was priced
+about 18% above market. It is not. That 18% was against the *national* average.
+Against Queenstown the menu is at market. Nothing on a page or in an email
+should say owners pay a premium for price certainty, because they don't.
+
+Five items are priced off national averages rather than Queenstown quotes and
+carry `needsLocalQuote: true`: `GD-01`, `PV-01`, `PV-02`, `PV-04`, `OD-03`.
+Ring a local and confirm each one before an owner can book it.
+
+### What the proposed file changes
+
+| What | Live now | Proposed | Why |
+| --- | --- | --- | --- |
+| Jobs on the menu | 25 | 59 | The 25 missed most of what actually goes wrong in a short-stay house: winter work, compliance checks, outdoor and preventative jobs. |
+| `urgentDollars` | 80 | 90 | A tradie dropping a booked job for a same-day call-out needs more than $80 to make it worth doing. |
+| `afterHoursDollars` | 120 | 140 | Same reasoning, after 4:30pm and Saturdays. |
+| `diagnosisFeeDollars` | 120 | 225 | $120 did not cover an hour on site at Queenstown rates. It was a loss on every off-menu job. |
+| `diagnosisTradiePayoutDollars` | 102 | 190 | Holds the 15% fee on the new number. |
+| `ownerApprovalAboveDollars` | 400 | 600 | At $400 the owner was being woken for ordinary jobs. $600 sits above almost every line on the menu, so an approval request means something unusual has been found. |
+| `placeholderPrices` | `true` | `false` | |
+
+The platform fee is unchanged: 15% of the owner price. Every owner price in the
+proposed file is `payout / 0.85` rounded to the nearest $5, and the file's own
+checks confirm no mismatches, no duplicate codes, and payout always below owner
+price.
+
+### The swap is a job, not a file copy — read this before doing it
+
+`tests/global-setup.ts` seeds the test database from the live menu through
+`seedMarkets`, so the money tests are built on the real prices. Overwriting the
+menu turns 27 tests red in three files:
+
+- `tests/unit/money-flow.test.ts` — 22 tests
+- `tests/unit/cascade.test.ts` — 4 tests
+- `tests/unit/demo-sample.test.ts` — 1 test
+
+They fail for honest reasons. `HM-01`, which several fixtures log, goes from
+$130 to $155. The $220 / $187 item the surcharge tests are built on
+(`PL-01` today) is not $220 in the proposed menu. The surcharge and threshold
+numbers are written into test *titles* as well as assertions — "the owner pays
+NZ$80 more", "a quote over NZ$400 stops everything".
+
+**Re-derive every number from the new prices. Do not paste in whatever the code
+now returns.** These tests are the only independent check on the money path. A
+test updated to match the output it is supposed to be checking is worse than no
+test, and this is the one place in the app where that costs real money. The
+arithmetic in them is written to be readable for exactly this reason
+(`ownerTotalCents: 22000 + 8000 + 12000`) — keep that style, change the parts.
+
+Also in the same commit:
+
+- `tests/unit/config.test.ts` — the job-count range (20-30), the surcharge
+  equality at line 99 and the $400 threshold at line 100 all pin the old values
+- delete `seed/menu-queenstown.proposed.json` once it is the live file, so there
+  is only ever one menu
+
+`config/markets.ts` holds the same numbers as template defaults for a new
+market. `seedMarkets` merges the seed file over the top, so Queenstown is
+correct either way, but update the defaults too or the next market starts wrong.
+
+---
+
+## 2026-11-16 — The Priority tier is dead
+
+There is one membership: Essential, $99 per property per month, 24-hour
+response. Urgent response is an add-on the owner pays for, never an inclusion.
+
+Priority was $149 for a 4-hour response, four urgent call-outs and four
+quarterly checks. Delivering that costs about $68 a month against a $50
+premium. It lost money on every customer who used what they paid for, and the
+customers most likely to buy it are the ones most likely to use it.
+
+**Code still to change.** The tier is live in:
+
+- `config/markets.ts` — the `priority` tier in `launchMarket.tiers`
+- `src/lib/content.ts:26,66,69` — the `tier: "essential" | "priority"` union and the copy
+- `src/lib/demo/sample.ts:68,199,210` — two demo properties on `tier: "priority"`
+- `tests/unit/config.test.ts:23-41` — two tests require a Priority tier to exist and to cost more than Essential
+
+Removing it means deleting the tier, narrowing the union, moving the demo
+properties to `essential`, and replacing those two tests with ones that assert a
+single tier.
+
+A second tier may come back later. If it does it is priced off what it costs to
+deliver, not off what looks good next to $99.
+
+---
+
+## Open specs — code changes the decisions need
+
+These were decided but not built. Each one needs code, not a seed edit.
+
+### 1. A third surcharge tier for Sundays and public holidays
+
+$220, four-hour window, the whole surcharge to the tradie. Saturdays stay on
+the after-hours rate.
+
+No key exists for it. It needs:
+
+- a field in the seed schema and in `src/lib/db/seed-core.ts` (see the
+  `surcharges` block it reads around line 34 and merges around line 59)
+- a column and a `Market` field alongside `afterHoursSurchargeCents` in
+  `config/markets.ts`
+- the window itself in whatever decides after-hours, so a Sunday is told apart
+  from a Saturday
+- a public holiday list per market. NZ holidays move. Southland and Otago
+  anniversary days are regional and Queenstown observes Otago.
+
+### 2. Urgent allowance per plan
+
+`config/markets.ts:38-40` already has `urgentIncluded` and
+`urgentIncludedPerMonth`, which is the right shape. Nothing sets them to
+anything but off, which is correct for a single-tier Essential.
+
+Keep the fields. If a tier ever includes urgent call-outs, the allowance is
+four a *year*, not one a month. One a month costs about $30 a month to deliver
+and would need a $50 premium to clear.
+
+### 3. Two rates per job: routine and card
+
+A tradie who books a job 24 hours ahead or more is paid the `routineRate`,
+15-20% below the card rate. Same-day, urgent and after-hours work is always
+paid the full `cardRate`.
+
+The hard rule: **urgent work is never discounted.** A tradie on a discounted
+urgent rate puts you last on a cold snap morning, which is exactly when the
+response guarantee is being tested.
+
+This is the lever that buys exclusivity. A $40 routine discount across 20 jobs
+a month is $9,600 a year from one tradie. A $300 a month slot fee is $3,600.
+The discount is worth 2.7 times the fee and is easier to sell, because the
+tradie pays nothing up front and carries no ad spend. Pick one. Never both.
+
+**Not ready to build.** It only pays off above roughly 60 properties. At 25
+properties the network generates about 37 jobs a month spread across five
+trades, so no single tradie sees enough volume for a discount to be worth
+giving. Build the schema when the volume is in sight, not before.
+
+### 4. Tradie volume floor
+
+A tradie who takes fewer than 15 jobs a month reverts to the card rate. Same
+timing as item 3 — it is meaningless until the volume exists.
+
+### 5. Pre-authorise on accept, capture on close
+
+This answers "who carries the risk when the owner's card fails after the tradie
+has done the work". Nobody should. Pre-authorise the owner's card at the moment
+the tradie accepts the offer, and capture when the job closes. A card that
+cannot be pre-authorised means the job never gets offered.
+
+---
+
+## Owner decisions still outstanding
+
+Not mine to make and not the code's.
+
+- **GST: principal or agent.** Whether the platform charges owners $235 and
+  pays a tradie $200 as a principal, or collects $235 on the tradie's behalf
+  and keeps $35 as commission. It changes what goes on every invoice and what
+  gets returned to IRD. Joe's accountant decides. Until then
+  `pricesIncludeGst: true` means the owner price is GST-inclusive and nothing
+  more is claimed.
+- **Legal documents.** Terms, the privacy statement, the tradie agreement and
+  the insurance position stay placeholders until a lawyer writes them. See
+  `docs/LEGAL-TODO.md`. The access-release design matters here: the platform
+  hands out street addresses and door codes to houses that may have guests
+  inside. Police vetting of tradies is not optional.
+
+---
+
+## Facts that must not drift
+
+Things that have already been got wrong once.
+
+- **Tradie payment timing.** Stripe holds New Zealand card money about four
+  working days, and a payout takes another one or two. Money lands five to
+  eight days out. Never promise 48 hours. The cycle is weekly: everything
+  closed Monday to Sunday lands the following Tuesday. Predictable beats fast
+  when the alternative is a 30-day invoice.
+  `payoutArrival` in `config/markets.ts` is the single source of truth, and a
+  test fails if "48 hours" reappears on the tradie page.
+- **The competitor is scope, not price.** AA Home Response Plus is $209 a year
+  against $1,188 for Essential. The answer is never that AA is worse value. It
+  is that AA covers an emergency at your own home during business hours and
+  does not send a tradie to a house with a guest in it on a Sunday. If an
+  owner only wants emergency cover, AA is the better buy and the page says so.
+- **SMS.** New Zealand has no alphanumeric sender IDs. A short code takes five
+  to six weeks to provision with any provider, URL whitelisting is mandatory,
+  and Twilio requires "Reply to this SMS will be charged" in every message.
+  None of that blocks the first 20-30 jobs a month, which can run on a personal
+  phone and web push.
+- **Nothing is proven yet.** There are no paying owners. Every number in this
+  file is a cost or a rate, not a demand signal. The demand test comes first.

@@ -10,9 +10,14 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## HostFix project notes
 
-Read `README.md` first, then `docs/PLAN.md` (the status block at the top lists where the build differs
-from the original plan). The owner of this project is a non-technical founder: explain choices in plain
-words, and keep everything simple enough for one virtual assistant to run.
+Read `README.md` first, then `DECISIONS.md`, then `docs/PLAN.md` (the status block at the top lists
+where the build differs from the original plan). The owner of this project is a non-technical founder:
+explain choices in plain words, and keep everything simple enough for one virtual assistant to run.
+
+`DECISIONS.md` is where decisions made outside the code are written down, newest first, with the code
+changes each one still needs. When it contradicts a comment in the code, it wins and the code is wrong.
+Read it before changing a price, a fee, a surcharge or anything the business promises, and add a line to
+it when you change one.
 
 ### Where the rules live
 
@@ -43,6 +48,17 @@ words, and keep everything simple enough for one virtual assistant to run.
 - **All times come from the app's clock** (`now()` in `src/lib/clock.ts`), never `new Date()` or the
   database's `now()`. The tests and the demo move that clock.
 - **Nothing tied to one town, currency or tax rate.** Those live on the market row in the database.
+- **The real prices are researched but not loaded yet.** `seed/menu-queenstown.proposed.json` holds 59
+  researched Queenstown jobs and is the file that should replace the live menu. Swapping it in breaks 27
+  money tests on purpose and is a task in `DECISIONS.md`. Until then `seed/menu-queenstown.json` is still
+  placeholders and nothing may be shown to a real owner as a price. The researched prices sit at local
+  market rate, not above it, so nothing may tell an owner they pay a premium for price certainty.
+- **There is one membership.** Essential, 24-hour response. Urgent response is an add-on the owner pays
+  for, never an inclusion. Priority was removed because delivering it cost more than it charged
+  (`DECISIONS.md`). A surcharge always goes to the tradie in full.
+- **Urgent work is never discounted.** Whatever rate a tradie is on for booked work, same-day, urgent
+  and after-hours jobs pay the full card rate. A discounted urgent rate puts the network last in a cold
+  snap, which is when the response guarantee is actually tested.
   `config/markets.ts` only seeds a market that does not exist yet.
 - **Licensed work is only offered to a tradie with a licence on file that has not expired.** Checked when
   offering and again when accepting or assigning.
