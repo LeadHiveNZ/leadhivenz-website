@@ -1381,11 +1381,24 @@ function buildSeed() {
     lastBackup: '2026-11-01T23:40',
   };
 
+  // Our companies: Wellco (project manager) plus one company per project, built from each project's company details
+  const FORMED = { CROOBYAR: '2024-03-08', 'ULLADULLA-IND': '2025-01-10', JIMBOOMBA: '2026-08-28', VINCENTIA: '2023-06-01', WANDANDIAN: '2022-03-21' };
+  const ADDR = 'c/- Wellco Developments, Milton NSW 2538';
+  const companies = [
+    { id: 'co-wellco', name: 'Wellco Developments Pty Ltd', short: 'Wellco', abn: '81 096 401 400', acn: '096 401 400', address: 'Milton NSW 2538', gst: true, gstFrom: '2001-07-01', basCycle: 'quarterly', bank: 'Coastal Mutual Bank', bsb: '633-000', acc: '1860 0012', status: 'Active', formed: '2001-03-14', closed: null, manager: true, notes: 'Project manager for every project company and invoices each a management fee. Lodges its own BAS outside this app.' },
+  ];
+  projects.forEach(p => {
+    const c = p.company; const id = 'co-' + p.id.toLowerCase();
+    companies.push({ id, name: c.name, short: p.name.split(',')[0], abn: c.abn, acn: c.acn || '', address: ADDR, gst: c.gst, gstFrom: c.gstFrom, basCycle: c.gst ? 'quarterly' : 'none', bank: c.bank, bsb: c.bsb, acc: c.acc, status: p.status === 'closed' ? 'Closed' : 'Active', formed: FORMED[p.id] || p.started, closed: p.closed || null, notes: p.status === 'closed' ? 'Closed once the bond came back and the final distribution was made.' : '' });
+    p.companyId = id; delete p.company;
+  });
+  companies.push({ id: 'co-basinview', name: 'Basin View Land Pty Ltd', short: 'Basin View', abn: '37 812 554 019', acn: '812 554 019', address: ADDR, gst: true, gstFrom: '2025-06-01', basCycle: 'quarterly', bank: 'Coastal Mutual Bank', bsb: '633-000', acc: '1873 4410', status: 'Dormant', formed: '2025-05-20', closed: null, notes: 'Registered for a Basin View site that fell over in DD. Kept on the shelf for the next site. No trading, nothing to lodge.' });
+
   // Stage templates (editable copy of DEFAULT_TEMPLATES) with stable ids
   const templates = {};
   PROJECT_TYPES.forEach(t => { templates[t] = DEFAULT_TEMPLATES[t].map(st => ({ id: uid('s'), name: st.name, ...(st.key ? { key: st.key } : {}), tasks: st.tasks.map(([title, off, lead]) => ({ title, off, lead: lead || null })) })); });
 
-  return { version: 2, projects, contacts: SEED_CONTACTS.map(c => ({ ...c, roles: c.roles.slice(), categories: c.categories.slice() })), deals, settings, categories: DEFAULT_CATEGORIES.slice(), roles: { ...DEFAULT_ROLES }, templates, log: [], welcomed: false };
+  return { version: 2, projects, contacts: SEED_CONTACTS.map(c => ({ ...c, roles: c.roles.slice(), categories: c.categories.slice() })), deals, settings, companies, categories: DEFAULT_CATEGORIES.slice(), roles: { ...DEFAULT_ROLES }, templates, log: [], welcomed: false };
 }
 /* ===== Utilities ===== */
 const h = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -1449,6 +1462,7 @@ const ICONS = {
   'chevron-left': '<path d="m15 5-7 7 7 7"/>',
   'arrow-left': '<path d="M19 12H5"/><path d="m11 6-6 6 6 6"/>',
   'chevron-down': '<path d="m5 9 7 7 7-7"/>',
+  'chevron-up': '<path d="m5 15 7-7 7 7"/>',
   plus: '<path d="M12 5v14M5 12h14"/>',
   bell: '<path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15z"/><path d="M10 20.5a2 2 0 0 0 4 0"/>',
   upload: '<path d="M12 16V4"/><path d="m7 9 5-5 5 5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/>',
@@ -1513,7 +1527,7 @@ const clone = (o) => JSON.parse(JSON.stringify(o));
 function loadState() {
   try {
     const raw = localStorage.getItem(STORE_KEY);
-    if (raw) { const s = JSON.parse(raw); if (s && s.version === SEED.version && Array.isArray(s.projects) && Array.isArray(s.categories) && s.roles && s.templates && s.projects.every(p => Array.isArray(p.stages))) { s.log = s.log || []; return s; } }
+    if (raw) { const s = JSON.parse(raw); if (s && s.version === SEED.version && Array.isArray(s.projects) && Array.isArray(s.categories) && s.roles && s.templates && Array.isArray(s.companies) && s.projects.every(p => Array.isArray(p.stages))) { s.log = s.log || []; return s; } }
   } catch (e) { /* storage blocked or unreadable: start from the demo data */ }
   return clone(SEED);
 }
@@ -1529,6 +1543,14 @@ function addLog(p, text, kind = 'note', who = 'Dan') { p.log.push({ id: newId('l
 // Changes that belong to no single project (roles, categories, templates, deals) go in the shared change history
 function addGlobalLog(text, kind = 'note', who = 'Dan') { state.log = state.log || []; state.log.push({ id: newId('l'), ts: nowTs(), who, text, kind }); }
 /* Stages live on each project (p.stages); numbers come from position. */
+/* Our companies. A project's owner is p.companyId; until a company is registered it is Dan Wellman and/or nominee. */
+const COMPANY_STATUSES = ['To be formed', 'Active', 'Dormant', 'Closed'];
+function nominee() { return { id: null, name: 'Dan Wellman and/or nominee', short: 'Nominee', abn: 'Company to be formed', acn: '', address: state.settings.address, gst: false, gstFrom: null, basCycle: 'none', bank: '', bsb: '', acc: '', status: 'To be formed', nominee: true }; }
+function companyById(id) { return (state.companies || []).find(c => c.id === id); }
+function co(p) { if (p && p.__co) return p.__co; return (p && p.companyId && companyById(p.companyId)) || nominee(); }
+function companyProjects(c) { return state.projects.filter(p => p.companyId === c.id); }
+function ownCompanies() { return (state.companies || []).filter(c => !c.manager); }
+function companyStatusChip(c) { const tone = { Active: 'success', Dormant: 'attention', 'To be formed': 'info', Closed: 'neutral' }[c.status] || 'neutral'; return badge(c.status, tone); }
 function stagesOf(p) { return (p && p.stages) || []; }
 function stageCount(p) { return stagesOf(p).length; }
 function stageName(p, n) { const s = stagesOf(p)[n - 1]; return s ? s.name : 'Stage ' + n; }
@@ -1752,7 +1774,7 @@ function projectsTable(list, opts = {}) {
     const next = closedP ? `<span class="nowrap">Closed ${fmtDate(p.closed)}</span>` : nd ? `<span class="nowrap">${fmtDate(nd.due)}</span>${od ? ` <span class="crit nowrap">· ${od} overdue</span>` : ''}<div class="sub clamp d-only">${h(nd.title)}</div>` : (od ? `<span class="crit">${od} overdue</span>` : '<span class="muted">None</span>');
     return `<tr class="clickable">
       <td class="m-title"><a class="row-link" href="#/project/${p.id}">${h(p.name)}</a><div class="sub">${h(p.id)}</div></td>
-      <td class="m-sub">${h(p.company.name)}${opts.abn ? `<div class="sub d-only">ABN ${h(p.company.abn)}</div>` : ''}</td>
+      <td class="m-sub">${h(co(p).name)}${opts.abn ? `<div class="sub d-only">ABN ${h(co(p).abn)}</div>` : ''}</td>
       <td class="m-meta m-lead nowrap">${closedP ? badge('Closed', 'neutral') : stageChip(p)}</td>
       <td class="m-meta tight-wrap">${next}</td>
       <td class="num m-amt" data-label="Paid">${fmtMoney(m.paid)}</td>
@@ -1793,7 +1815,8 @@ function viewProject() {
   const outstandingQ = p.rfqs.reduce((a, r) => a + r.quotes.filter(q => q.status === 'requested').length, 0);
   const tabs = PROJECT_TABS.map(([k, label]) => ptab({ href: `#/project/${p.id}/${k}`, label, current: k === tab, n: k === 'money' ? (approvals || '') : k === 'engagements' ? (awaitingEng || '') : k === 'rfqs' ? (outstandingQ || '') : '', crit: k === 'stage' ? overdueTasks(p).length : 0 })).join('');
   const body = { stage: () => tabStage(p, selStage), rfqs: () => tabRfqs(p), engagements: () => tabEngagements(p), money: () => tabMoney(p), documents: () => tabDocuments(p), log: () => tabLog(p) }[tab]();
-  const sub = `${h(p.company.name)}<span class="d-only"> · ${[`ABN ${p.company.abn}`, p.company.gst ? 'GST registered' : 'Not GST registered', `${p.lotPlan}, ${p.suburb} ${p.state}`].map(h).join(' · ')}</span>`;
+  const oc = co(p);
+  const sub = `${oc.nominee ? 'Owner: ' : ''}${h(oc.name)}<span class="d-only"> · ${[oc.nominee ? 'Company to be formed' : `ABN ${oc.abn}`, oc.nominee ? '' : oc.gst ? 'GST registered' : 'Not GST registered', `${p.lotPlan}, ${p.suburb} ${p.state}`].filter(Boolean).map(h).join(' · ')}</span>`;
   return `<div class="page page-full">
     ${pageHeader({ title: p.name, back: '#/projects', backLabel: 'Projects', badges: p.status === 'closed' ? badge('Closed', 'neutral') : stageChip(p), sub, actions: `<button class="btn d-only" data-action="export" data-kind="full" data-p="${p.id}">Export workbook</button>` })}
     <nav class="ptabs page-tabs proj-tabs" aria-label="Project sections">${tabs}</nav>
@@ -1834,9 +1857,20 @@ function tabStage(p, n) {
     ${isCert ? fundsCard(p) : ''}</div>
     <div>
       <section class="card"><div class="card-head"><div class="ch-titles"><h2 class="card-title">Stages</h2></div><div class="ch-actions"><button class="btn btn-micro" data-action="edit-stages" data-p="${p.id}">Edit stages</button></div></div><nav class="stage-list" aria-label="Project stages">${stages}</nav></section>
-      <section class="card"><div class="card-head"><h2 class="card-title">Project company</h2></div>
-        <div class="card-section" style="padding-top:4px"><dl class="kv"><dt>Company</dt><dd>${h(p.company.name)}</dd><dt>ABN</dt><dd>${h(p.company.abn)}</dd>${p.company.acn ? `<dt>ACN</dt><dd>${h(p.company.acn)}</dd>` : ''}<dt>GST</dt><dd>${p.company.gst ? 'Registered' : 'Not registered'}</dd><dt>Site</dt><dd>${h(p.lotPlan)}, ${h(p.street)}, ${h(p.suburb)} ${h(p.state)}</dd><dt>Project</dt><dd>${h(p.type)} · ${h(p.yield)}</dd></dl></div></section>
+      ${projectCompanyCard(p, n)}
     </div></div>`;
+}
+// Owner of the project: the company record (or Dan Wellman and/or nominee until it is registered)
+function projectCompanyCard(p, n) {
+  const c = co(p); const lastStage = n === stageCount(p);
+  const act = c.nominee ? `<button class="btn btn-micro" data-action="assign-company" data-p="${p.id}">Assign company</button>`
+    : `<button class="btn btn-micro" data-action="company-detail" data-id="${c.id}">Details</button>`;
+  const body = c.nominee
+    ? `<p class="small" style="margin-bottom:8px">Offers and contracts go in Dan's name <b>and/or nominee</b> until the project company is registered. Tick <b>Register project company</b> in Acquisition & DD, or assign one now.</p><dl class="kv"><dt>Site</dt><dd>${h(p.lotPlan)}, ${h(p.street)}, ${h(p.suburb)} ${h(p.state)}</dd><dt>Project</dt><dd>${h(p.type)} · ${h(p.yield)}</dd></dl>`
+    : `<dl class="kv"><dt>Company</dt><dd>${h(c.name)} ${companyStatusChip(c)}</dd><dt>ABN</dt><dd>${h(c.abn)}</dd>${c.acn ? `<dt>ACN</dt><dd>${h(c.acn)}</dd>` : ''}<dt>GST</dt><dd>${c.gst ? 'Registered' + (c.gstFrom ? ' from ' + fmtDate(c.gstFrom) : '') : 'Not registered'}</dd><dt>Bank</dt><dd>${h(c.bank)} · BSB ${h(c.bsb)} · Acc ${h(c.acc)}</dd><dt>Site</dt><dd>${h(p.lotPlan)}, ${h(p.street)}, ${h(p.suburb)} ${h(p.state)}</dd><dt>Project</dt><dd>${h(p.type)} · ${h(p.yield)}</dd></dl>
+      ${lastStage && c.status !== 'Closed' ? `<div class="btn-group" style="margin-top:12px"><button class="btn" data-action="close-company" data-p="${p.id}">Close company</button></div><p class="help help-below">Once the bond is back and the trust has its distribution.</p>` : ''}`;
+  return `<section class="card"><div class="card-head"><div class="ch-titles"><h2 class="card-title">${c.nominee ? 'Owner' : 'Project company'}</h2>${c.nominee ? badge('To be formed', 'info') : ''}</div><div class="ch-actions">${act}</div></div>
+        <div class="card-section" style="padding-top:4px">${body}</div></section>`;
 }
 // Funds needed before sign-off (the certification stage). Amounts include GST: the cash that has to be found.
 function fundsCard(p) {
@@ -1866,7 +1900,7 @@ function fundsCard(p) {
 function tabRfqs(p) {
   const isOpen = (r) => !r.quotes.some(q => q.status === 'appointed');
   const scopes = p.rfqs.slice().sort((a, b) => (isOpen(b) - isOpen(a)) || (b.stage - a.stage));
-  return `<div class="section-bar"><p class="help grow">Three quotes per scope from the same template. Contracts are with ${h(p.company.name)}.</p>
+  return `<div class="section-bar"><p class="help grow">Three quotes per scope from the same template. Contracts are with ${h(co(p).name)}.</p>
     <button class="btn" data-action="new-scope" data-p="${p.id}">New scope</button></div>
     <div class="stack-cards">${scopes.length ? scopes.map(r => scopeCard(p, r)).join('') : `<div class="card">${emptyState('mail', 'No scopes yet', 'Create a scope, then request three quotes from the contacts register.')}</div>`}</div>`;
 }
@@ -1922,7 +1956,7 @@ function tabEngagements(p) {
       <td class="act m-act">${act}</td></tr>`;
   }).join('');
   return `<section class="card">
-    <div class="card-head"><div class="ch-titles"><h2 class="card-title">Engagements and purchase orders</h2></div><p class="card-sub">Issued in the name of ${h(p.company.name)} · ${fmtMoney(total)} ex GST engaged</p></div>
+    <div class="card-head"><div class="ch-titles"><h2 class="card-title">Engagements and purchase orders</h2></div><p class="card-sub">Issued in the name of ${h(co(p).name)} · ${fmtMoney(total)} ex GST engaged</p></div>
     <div class="itable-wrap stack" style="border-top:1px solid var(--border-secondary)"><table class="itable">
       <thead><tr><th scope="col">Party</th><th scope="col">Category</th><th scope="col">Issued</th><th scope="col">Status</th><th scope="col" class="num">Value ex GST</th><th scope="col" class="num">Claimed</th><th scope="col" class="w-bar"><span class="sr-only">Claimed bar</span></th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
       <tbody>${rows || emptyRow(8, 'No engagements yet', 'Appoint a quote in Quotes to create one.')}</tbody></table></div></section>`;
@@ -1936,7 +1970,8 @@ function tabMoney(p) {
   const nav = `<nav class="ptabs page-tabs money-tabs" aria-label="Money sections">${MONEY_TABS.map(([k, l]) => ptab({ href: `#/project/${p.id}/money/${k}`, label: l, current: k === sub, n: waiting[k] || '' })).join('')}</nav>`;
   return nav + ({ in: moneyIn, out: moneyOut, budget: moneyBudget, gst: moneyGst }[sub])(p);
 }
-let ui = { fyIn: 'all', fyGst: null, docFolder: 'all', contactRole: 'All', contactQ: '', expFY: {} };
+function freshUi() { return { fyIn: 'all', fyGst: null, docFolder: 'all', docStage: 'all', contactRole: 'All', contactQ: '', expFY: {}, tplType: 'Land subdivision', editTask: '', basAllFY: null, basAllQ: null }; }
+let ui = freshUi();
 const XERO_TABS = [['all', 'All'], ['draft', 'Draft'], ['awaiting_approval', 'Awaiting approval'], ['awaiting_payment', 'Awaiting payment'], ['paid', 'Paid']];
 const BILL_STATE = { draft: 'awaiting_approval', approved: 'awaiting_payment', paid: 'paid' };
 const INV_STATE = { draft: 'draft', issued: 'awaiting_payment', received: 'paid' };
@@ -2013,7 +2048,7 @@ function moneyOut(p) {
   <div class="stack-cards"><section class="card">${t.nav}
     <div class="itable-wrap stack"><table class="itable">
       <thead><tr><th scope="col">Number</th><th scope="col">Ref</th><th scope="col">To</th><th scope="col">Date</th><th scope="col">Due date</th><th scope="col">Tax rate</th><th scope="col" class="num">Ex GST</th><th scope="col" class="num">Inc GST</th><th scope="col">Status</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
-      <tbody>${list.length ? list.map(i => invRow(p, i, 'out')).join('') : emptyRow(10, t.tab === 'all' ? 'No invoices yet' : 'No invoices in this view', t.tab === 'all' ? 'Lot sales, settlements and recharges issued by ' + p.company.name + ' show here.' : 'Try another tab.')}</tbody>
+      <tbody>${list.length ? list.map(i => invRow(p, i, 'out')).join('') : emptyRow(10, t.tab === 'all' ? 'No invoices yet' : 'No invoices in this view', t.tab === 'all' ? 'Lot sales, settlements and recharges issued by ' + co(p).name + ' show here.' : 'Try another tab.')}</tbody>
     </table></div></section>
   ${sales.length ? `<section class="card"><div class="card-head"><div class="ch-titles"><h2 class="card-title">Sales register</h2></div><p class="card-sub">${sold.length} of ${sales.length} lots exchanged or settled · margin scheme on lot sales</p></div>
     <div class="itable-wrap stack" style="border-top:1px solid var(--border-secondary)"><table class="itable"><thead><tr><th scope="col">Lot</th><th scope="col" class="num">Price</th><th scope="col">Status</th><th scope="col">Buyer</th><th scope="col">Exchanged</th><th scope="col">Settled</th></tr></thead><tbody>
@@ -2070,9 +2105,9 @@ function moneyGst(p) {
   const period = (q) => { const [a, b] = q.range; const s = (iso) => `${+iso.slice(8, 10)} ${MONTHS[+iso.slice(5, 7) - 1]}`; return `${s(a)} – ${s(b)} ${b.slice(0, 4)}`; };
   return `<div class="stack-cards"><section class="card">
     <div class="card-head"><div class="ch-titles"><h2 class="card-title">Activity statements</h2></div><div class="ch-actions"><button class="btn" data-action="export" data-kind="bas" data-p="${p.id}" data-fy="${fy}" data-q="all">Export ${fy} to Excel</button></div>
-      <p class="card-sub">${h(p.company.name)} · ABN ${h(p.company.abn)} · quarterly, accruals basis</p></div>
+      <p class="card-sub">${h(co(p).name)} · ABN ${h(co(p).abn)} · quarterly, accruals basis</p></div>
     <div class="filterbar" style="border-top:1px solid var(--border-secondary)">${uiSelect({ k: 'fyGst', value: fy, options: fys.slice().reverse().map(f => [f, f]), label: 'Financial year', id: 'fy-gst' })}</div>
-    <div class="itable-wrap stack"><table class="itable"><caption class="sr-only">BAS summary by quarter, ${h(p.company.name)}, ${fy}</caption>
+    <div class="itable-wrap stack"><table class="itable"><caption class="sr-only">BAS summary by quarter, ${h(co(p).name)}, ${fy}</caption>
       <thead><tr><th scope="col">Period</th><th scope="col" class="num">G1 Total sales</th><th scope="col" class="num">1A GST on sales</th><th scope="col" class="num">G11 Purchases</th><th scope="col" class="num">1B GST on purchases</th><th scope="col" class="num">GST-free</th><th scope="col" class="num">Net</th><th scope="col">Due date</th><th scope="col"><span class="sr-only">Export</span></th></tr></thead>
       <tbody>${qs.map(q => { const cur = fy === CURRENT_FY && q.q === CURRENT_Q; return `<tr>
         <td class="m-title"><span style="font-weight:var(--fw-medium)">Q${q.q}</span> <span class="nowrap">${period(q)}</span>${cur ? ` ${badge('Current', 'info')}` : ''}</td>
@@ -2236,7 +2271,7 @@ function viewMoney() {
     <section class="card"><div class="card-head"><div class="ch-titles"><h2 class="card-title">GST this quarter</h2></div><p class="card-sub">${QUARTERS[CURRENT_Q - 1].label} ${CURRENT_FY}, ${fmtDate(qr[0])} to ${fmtDate(TODAY)}. Each company lodges its own BAS.</p></div>
       <div class="itable-wrap stack" style="border-top:1px solid var(--border-secondary)"><table class="itable">
         <thead><tr><th scope="col">Company</th><th scope="col" class="num">1A GST on sales</th><th scope="col" class="num">1B GST on purchases</th><th scope="col" class="num">GST-free</th><th scope="col" class="num">Net</th></tr></thead>
-        <tbody>${live.map(p => { const b = basQuarter(p, CURRENT_FY, CURRENT_Q); return `<tr class="clickable"><td class="m-title"><a class="row-link" href="#/project/${p.id}/money/gst">${h(p.company.name)}</a><div class="sub">${h(p.name)}</div></td><td class="num m-meta" data-label="1A">${fmtMoney(b.gstSales)}</td><td class="num m-meta" data-label="1B">${fmtMoney(b.credits)}</td><td class="num m-hide">${fmtMoney(b.gstFree)}</td><td class="num m-amt">${b.net < 0 ? `<span class="pos-refund">${fmtMoney(-b.net)} refund</span>` : fmtMoney(b.net) + (b.net ? ' payable' : '')}</td></tr>`; }).join('')}</tbody></table></div></section>
+        <tbody>${live.map(p => { const b = basQuarter(p, CURRENT_FY, CURRENT_Q); return `<tr class="clickable"><td class="m-title"><a class="row-link" href="#/project/${p.id}/money/gst">${h(co(p).name)}</a><div class="sub">${h(p.name)}</div></td><td class="num m-meta" data-label="1A">${fmtMoney(b.gstSales)}</td><td class="num m-meta" data-label="1B">${fmtMoney(b.credits)}</td><td class="num m-hide">${fmtMoney(b.gstFree)}</td><td class="num m-amt">${b.net < 0 ? `<span class="pos-refund">${fmtMoney(-b.net)} refund</span>` : fmtMoney(b.net) + (b.net ? ' payable' : '')}</td></tr>`; }).join('')}</tbody></table></div></section>
     </div>
   </div>`;
 }
@@ -2287,34 +2322,62 @@ function dealDocsHTML(dl) {
 }
 
 /* ===== View: Exports ===== */
+// A company lodges one BAS whatever it owns, so BAS runs on the company's combined books.
+function companyBook(c) { const ps = companyProjects(c); return { __co: c, id: ps.length === 1 ? ps[0].id : partyKey(c).toUpperCase(), projects: ps, invoicesIn: ps.flatMap(p => p.invoicesIn), invoicesOut: ps.flatMap(p => p.invoicesOut || []) }; }
+function companyFYs(c) { const set = new Set(); companyProjects(c).forEach(p => projectFYs(p).forEach(f => set.add(f))); return [...set].sort(); }
+function companyQuarter(c, fy, q) {
+  if (c.status === 'Closed') return { lodge: false, text: 'Closed' + (c.closed ? ' ' + fmtDateShort(c.closed) : '') };
+  if (c.status === 'To be formed') return { lodge: false, text: 'Not registered yet' };
+  if (!c.gst || c.basCycle === 'none') return { lodge: false, text: 'Not lodging BAS' };
+  const b = basQuarter(companyBook(c), fy, q); const n = b.ins.length + b.outs.length;
+  if (c.status === 'Dormant' && !n) return { lodge: false, text: 'Nothing to lodge', b };
+  return { lodge: true, text: n ? plural(n, 'transaction') : 'Nil BAS', b };
+}
 function viewExports() {
   const xl = typeof XLSX !== 'undefined';
   const today = TODAY;
-  const card = (p) => {
-    const fys = projectFYs(p); const fy = ui.expFY[p.id] && fys.includes(ui.expFY[p.id]) ? ui.expFY[p.id] : (fys.includes('FY2025-26') ? 'FY2025-26' : fys[fys.length - 1]);
+  const allFys = [...new Set(ownCompanies().flatMap(companyFYs))].sort();
+  const bfy = allFys.includes(ui.basAllFY) ? ui.basAllFY : CURRENT_FY; const bq = [1, 2, 3, 4].includes(+ui.basAllQ) ? +ui.basAllQ : CURRENT_Q;
+  const rowsAll = ownCompanies().map(c => ({ c, r: companyQuarter(c, bfy, bq) }));
+  const lodgeN = rowsAll.filter(x => x.r.lodge).length;
+  const card = (c) => {
+    const ps = companyProjects(c); const fys = companyFYs(c);
+    if (!ps.length || !fys.length) return '';
+    const fy = ui.expFY[c.id] && fys.includes(ui.expFY[c.id]) ? ui.expFY[c.id] : (fys.includes('FY2025-26') ? 'FY2025-26' : fys[fys.length - 1]);
     return `<article class="card">
-      <div class="card-head"><div class="ch-titles"><h2 class="card-title">${h(p.company.name)}</h2></div><p class="card-sub">${h(p.id)} · ABN ${h(p.company.abn)} · ${h(p.name)}</p></div>
+      <div class="card-head"><div class="ch-titles"><h2 class="card-title">${h(c.name)}</h2>${companyStatusChip(c)}</div><p class="card-sub">ABN ${h(c.abn)} · ${ps.map(p => h(p.id) + ': ' + h(p.name)).join(' · ')}</p></div>
       <div class="card-section export-row" style="padding-top:8px">
-        <span class="select-inline"><label for="fy-${p.id}">Financial year</label><select class="input input-inline" id="fy-${p.id}" data-input="exp-fy" data-p="${p.id}">${fys.slice().reverse().map(f => `<option value="${f}" ${f === fy ? 'selected' : ''}>${f}</option>`).join('')}</select></span>
+        <span class="select-inline"><label for="fy-${c.id}">Financial year</label><select class="input input-inline" id="fy-${c.id}" data-input="exp-fy" data-p="${c.id}">${fys.slice().reverse().map(f => `<option value="${f}" ${f === fy ? 'selected' : ''}>${f}</option>`).join('')}</select></span>
         <div class="btn-group">
-          <button class="btn" data-action="export" data-kind="yearend" data-p="${p.id}" data-fy="${fy}">Year-end workbook</button>
-          <span class="bas-pair"><label class="sr-only" for="q-${p.id}">BAS quarter</label><select class="input" id="q-${p.id}">${QUARTERS.map(q => `<option value="${q.q}" ${fy === CURRENT_FY && q.q === CURRENT_Q ? 'selected' : ''}>${q.label}</option>`).join('')}</select><button class="btn" data-action="export" data-kind="bas" data-p="${p.id}" data-fy="${fy}" data-qsel="q-${p.id}">BAS</button></span>
-          <button class="btn" data-action="export" data-kind="full" data-p="${p.id}">Full project workbook</button>
+          ${ps.map(p => `<button class="btn" data-action="export" data-kind="yearend" data-p="${p.id}" data-fy="${fy}">Year-end workbook${ps.length > 1 ? ': ' + h(p.id) : ''}</button>`).join('')}
+          <span class="bas-pair"><label class="sr-only" for="q-${c.id}">BAS quarter</label><select class="input" id="q-${c.id}">${QUARTERS.map(q => `<option value="${q.q}" ${fy === CURRENT_FY && q.q === CURRENT_Q ? 'selected' : ''}>${q.label}</option>`).join('')}</select><button class="btn" data-action="export" data-kind="bas" data-co="${c.id}" data-fy="${fy}" data-qsel="q-${c.id}">BAS</button></span>
+          ${ps.map(p => `<button class="btn" data-action="export" data-kind="full" data-p="${p.id}">Full project workbook${ps.length > 1 ? ': ' + h(p.id) : ''}</button>`).join('')}
         </div>
       </div>
-      <div class="card-footer"><span class="mono" style="overflow-wrap:anywhere">${h(p.id)}_YearEnd-${fy}_${today}.xlsx</span> · 1 Jul ${fy.slice(2, 6)} to 30 Jun ${+fy.slice(2, 6) + 1}</div>
+      <div class="card-footer"><span class="mono" style="overflow-wrap:anywhere">${h(ps[0].id)}_YearEnd-${fy}_${today}.xlsx</span> · 1 Jul ${fy.slice(2, 6)} to 30 Jun ${+fy.slice(2, 6) + 1}</div>
     </article>`;
   };
+  const net = (n) => n === 0 ? '$0' : n < 0 ? `<span class="pos-refund">${fmtMoney(-n)} refund</span>` : `${fmtMoney(n)} payable`;
   return `<div class="page">
-    ${pageHeader({ title: 'Exports', sub: 'One Excel workbook per project company per financial year, for the accountant.' })}
+    ${pageHeader({ title: 'Exports', sub: 'One Excel workbook per company per financial year, for the accountant. Each company lodges its own BAS.' })}
     ${xl ? '' : `<div class="banner banner-warning">${icon('warning')}<span>The Excel library hasn't loaded (offline?). Exports will download as CSV instead.</span></div>`}
-    <div class="stack-cards">${state.projects.filter(p => p.status === 'live').map(card).join('')}
+    <div class="stack-cards">
+    <section class="card" id="bas-all">
+      <div class="card-head"><div class="ch-titles"><h2 class="card-title">BAS for all active companies</h2></div><p class="card-sub">One workbook per company for the quarter. Dormant companies with nothing in the quarter have nothing to lodge.</p></div>
+      <div class="filterbar" style="border-top:1px solid var(--border-secondary)">${uiSelect({ k: 'basAllFY', value: bfy, options: allFys.slice().reverse().map(f => [f, f]), label: 'Financial year', id: 'bas-all-fy' })}${uiSelect({ k: 'basAllQ', value: String(bq), options: QUARTERS.map(q => [String(q.q), q.label]), label: 'Quarter', id: 'bas-all-q', hideLabel: true })}</div>
+      <div class="itable-wrap stack"><table class="itable">
+        <thead><tr><th scope="col">Company</th><th scope="col">Status</th><th scope="col">This quarter</th><th scope="col" class="num">Net GST</th></tr></thead>
+        <tbody>${rowsAll.map(({ c, r }) => `<tr><td class="m-title"><span style="font-weight:var(--fw-medium)">${h(c.name)}</span><div class="sub">${companyProjects(c).map(p => h(p.id)).join(', ') || 'No projects'}</div></td><td class="m-meta m-lead nowrap">${companyStatusChip(c)}</td><td class="m-meta">${r.lodge ? h(r.text) : `<span class="muted">${h(r.text)}</span>`}</td><td class="num m-amt">${r.lodge ? net(r.b.net) : '<span class="muted">–</span>'}</td></tr>`).join('')}</tbody></table></div>
+      <div class="card-footer" style="display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between"><span>${plural(lodgeN, 'BAS workbook')} for ${QUARTERS[bq - 1].label} ${bfy}</span><button class="btn btn-primary" data-action="export" data-kind="bas-all" data-fy="${bfy}" data-q="${bq}" ${lodgeN ? '' : 'disabled'}>Export ${plural(lodgeN, 'BAS workbook')}</button></div>
+    </section>
+    ${ownCompanies().map(card).join('')}
     <section class="card"><div class="card-head"><h2 class="card-title">Shared registers</h2></div>
       <div class="itable-wrap stack" style="border-top:1px solid var(--border-secondary)"><table class="itable"><tbody>
-        <tr><td class="m-title"><span style="font-weight:var(--fw-medium)">Projects register</span><div class="sub">ID, lot and plan, company, ABN, stage, status</div></td><td class="act m-act"><button class="btn btn-micro" data-action="export" data-kind="projects">Export</button></td></tr>
-        <tr><td class="m-title"><span style="font-weight:var(--fw-medium)">Contacts register</span><div class="sub">Every party, role, ABN, licence and insurance expiry, projects worked on</div></td><td class="act m-act"><button class="btn btn-micro" data-action="export" data-kind="contacts">Export</button></td></tr>
+        <tr><td class="m-title"><span style="font-weight:var(--fw-medium)">Projects register</span><div class="sub">ID, lot and plan, owning company, ABN, stage, status</div></td><td class="act m-act"><button class="btn btn-micro" data-action="export" data-kind="projects">Export</button></td></tr>
+        <tr><td class="m-title"><span style="font-weight:var(--fw-medium)">Companies register</span><div class="sub">Every company, ABN, ACN, GST, bank, status and the projects it owns</div></td><td class="act m-act"><button class="btn btn-micro" data-action="export" data-kind="companies">Export</button></td></tr>
+        <tr><td class="m-title"><span style="font-weight:var(--fw-medium)">Contacts register</span><div class="sub">Every party, roles, categories, ABN, licence and insurance expiry, projects worked on</div></td><td class="act m-act"><button class="btn btn-micro" data-action="export" data-kind="contacts">Export</button></td></tr>
       </tbody></table></div></section></div>
-    <p class="help help-below">Year-end tabs: Summary, Budget, RFQs & Quotes, Engagements, Invoices In, Invoices Out, Sales, GST-BAS, Tax Summary. Intercompany loans, management fees and distributions to the trust are flagged on Summary and Tax Summary.</p>
+    <p class="help help-below">Year-end tabs: Summary, Budget, RFQs & Quotes, Engagements, Invoices In (a category on every line), Invoices Out, Sales, GST-BAS, Tax Summary. Intercompany loans, management fees and distributions to the trust are flagged on Summary and Tax Summary.</p>
   </div>`;
 }
 
@@ -2322,6 +2385,7 @@ function viewExports() {
 function viewSettings() {
   const s = state.settings;
   const section = (title, desc, body) => `<div class="annotated"><div class="an-text"><h2 class="an-title">${title}</h2>${desc ? `<p class="an-desc">${desc}</p>` : ''}</div><div class="card card-pad">${body}</div></div>`;
+  const sectionRaw = (title, desc, body) => `<div class="annotated"><div class="an-text"><h2 class="an-title">${title}</h2>${desc ? `<p class="an-desc">${h(desc)}</p>` : ''}</div>${body}</div>`;
   return `<div class="page">
     ${pageHeader({ title: 'Settings' })}
     <form data-form="settings" id="f-settings">
@@ -2342,6 +2406,8 @@ function viewSettings() {
       ${section('Email signature', 'Added to every RFQ, purchase order and invoice email.', `<div class="field"><label for="s-sig">Signature</label><textarea class="input" id="s-sig" name="signature" rows="4">${h(s.signature)}</textarea></div>`)}
       <div class="form-actions"><button class="btn btn-primary" type="submit">Save</button></div>
     </form>
+    ${sectionRaw('Stage templates', 'New projects start from these stages and default tasks. Rename, add or reorder them here. Projects already set up keep their own stages: change those with Edit stages on the project.', templatesCard())}
+    ${sectionRaw('Change history', 'Changes to stage templates, roles, categories, companies and deal documents. Project changes are in each project\'s Log.', changeHistoryCard())}
     ${section('Hosting and backups', 'Demo values. In the live build these show real status.', `<div class="status-list">
         <div><span class="k">Database</span><span class="v">Supabase · wellco-brain (Sydney) ${badge('Connected', 'success')}</span></div>
         <div><span class="k">File storage</span><span class="v">Bucket: project-documents ${badge('Connected', 'success')}</span></div>
@@ -2353,6 +2419,21 @@ function viewSettings() {
   </div>`;
 }
 
+function templatesCard() {
+  const type = PROJECT_TYPES.includes(ui.tplType) ? ui.tplType : PROJECT_TYPES[0];
+  const st = tplFor(type);
+  const rows = st.map((x, i) => `<div class="row tpl-row" data-id="${x.id}"><span class="si-n">${i + 1}</span><span class="body"><span class="title">${h(x.name)}</span><span class="meta">${plural(x.tasks.length, 'default task')}${x.key === 'cert' ? ' · holds the funds-needed list' : ''}</span></span>
+    <span class="end"><button type="button" class="btn btn-micro icon-only" data-action="tpl-move" data-type="${h(type)}" data-i="${i}" data-dir="-1" aria-label="Move ${h(x.name)} up" title="Move up" ${i === 0 ? 'disabled' : ''}>${icon('chevron-up')}</button><button type="button" class="btn btn-micro icon-only" data-action="tpl-move" data-type="${h(type)}" data-i="${i}" data-dir="1" aria-label="Move ${h(x.name)} down" title="Move down" ${i === st.length - 1 ? 'disabled' : ''}>${icon('chevron-down')}</button><button type="button" class="btn btn-micro" data-action="tpl-edit" data-type="${h(type)}" data-i="${i}">Edit</button></span></div>`).join('');
+  return `<div class="card"><nav class="ptabs" aria-label="Project type">${PROJECT_TYPES.map(t => ptab({ label: t, n: tplFor(t).length, current: t === type, k: 'tplType', v: t })).join('')}</nav>
+    <div class="rows">${rows}</div>
+    <div class="card-footer" style="display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between"><span>New ${h(type.toLowerCase())} projects get these ${st.length} stages and ${sum(st, x => x.tasks.length)} tasks.</span><button type="button" class="btn" data-action="tpl-add-stage" data-type="${h(type)}">Add stage</button></div></div>`;
+}
+function changeHistoryCard() {
+  const items = (state.log || []).slice().sort((a, b) => b.ts.localeCompare(a.ts)).slice(0, 12);
+  return `<div class="card"><div class="itable-wrap stack"><table class="itable"><thead><tr><th scope="col">Date</th><th scope="col">Change</th><th scope="col">User</th></tr></thead>
+    <tbody>${items.length ? items.map(l => `<tr><td class="date m-meta">${h(fmtDateTime(l.ts))}</td><td class="m-title" style="font-weight:var(--fw-regular)">${h(l.text)}</td><td class="m-meta nowrap">${h(l.who)}</td></tr>`).join('') : emptyRow(3, 'No changes yet', 'Renaming a role, a category or a stage template is recorded here.')}</tbody></table></div></div>`;
+}
+
 /* ===== View: More ===== */
 function viewMore() {
   const link = (href, ic, t, m) => `<a class="row" href="${href}"><span class="row-icon">${icon(ic)}</span><span class="body"><span class="title">${t}</span><span class="meta">${m}</span></span></a>`;
@@ -2361,7 +2442,7 @@ function viewMore() {
       ${link('#/projects', 'layers', 'Projects', 'Register of every project company')}
       ${link('#/deals', 'pin', 'Deals', `${state.deals.length} sites in sourcing`)}
       ${link('#/exports', 'download', 'Exports', 'Year-end and BAS workbooks for the accountant')}
-      ${link('#/settings', 'gear', 'Settings', 'Wellco details, fees, hosting, demo reset')}
+      ${link('#/settings', 'gear', 'Settings', 'Wellco details, fees, stage templates, demo reset')}
       <button class="row" data-action="welcome"><span class="row-icon">${icon('info')}</span><span class="body"><span class="title">About this demo</span><span class="meta">What to try first</span></span></button>
     </div></div>`;
 }
@@ -2370,69 +2451,88 @@ function viewMore() {
 let wiz = null;
 function wizDefaults(dealId) {
   const dl = dealId ? state.deals.find(x => x.id === dealId) : null;
-  const base = { step: 1, dealId: dl ? dl.id : null, street: '', suburb: '', state: 'NSW', lot: '', planType: 'DP', planNo: '', type: 'Residential subdivision', yield: '', id: '', company: '', abn: '', acn: '', gst: true, bank: 'Coastal Mutual Bank', bsb: '', acc: '', price: '' };
+  const base = { step: 1, dealId: dl ? dl.id : null, street: '', suburb: '', state: 'NSW', lot: '', planType: 'DP', planNo: '', type: 'Land subdivision', yield: '', id: '', owner: 'new', existingId: '', company: '', abn: '', acn: '', gst: true, bank: 'Coastal Mutual Bank', bsb: '', acc: '', price: '', stages: null, stagesFor: null, start: dl ? 3 : 1 };
   if (dl) {
     const [streetPart, rest] = dl.address.split(',').map(x => x.trim());
     const sub = (rest || '').replace(/\s+(NSW|QLD|VIC)$/, '');
     const m = (dl.lotPlan || '').match(/Lot\s+(\S+)\s+(DP|SP|RP)\s+(\S+)/);
-    Object.assign(base, { street: streetPart, suburb: sub, state: /QLD/.test(dl.address) ? 'QLD' : 'NSW', lot: m ? m[1] : '', planType: m ? m[2] : 'DP', planNo: m ? m[3] : '', yield: dl.yield, type: /factory|industr/i.test(dl.yield + dl.zoning) ? 'Commercial / factory units' : 'Residential subdivision', id: sub.toUpperCase().replace(/[^A-Z]/g, ''), company: sub + ' Land Pty Ltd', price: dl.asking });
+    Object.assign(base, { street: streetPart, suburb: sub, state: /QLD/.test(dl.address) ? 'QLD' : 'NSW', lot: m ? m[1] : '', planType: m ? m[2] : 'DP', planNo: m ? m[3] : '', yield: dl.yield, type: PROJECT_TYPES.includes(dl.type) ? dl.type : (/factory|industr/i.test(dl.yield + dl.zoning) ? 'Commercial / industrial' : 'Land subdivision'), id: sub.toUpperCase().replace(/[^A-Z]/g, ''), company: sub + ' Land Pty Ltd', price: dl.asking });
   }
   return base;
 }
+// Stage list for this project, pre-filled from the chosen type's template (Settings)
+function wizEnsureStages(w) {
+  if (!w.stages || w.stagesFor !== w.type) { w.stages = tplFor(w.type).map(x => ({ name: x.name, key: x.key || null, tplId: x.id })); w.stagesFor = w.type; }
+  w.start = Math.min(Math.max(1, w.start || 1), w.stages.length);
+}
+function wizTasksFor(st) { const t = st.tplId ? Object.values(state.templates).flat().find(x => x.id === st.tplId) : null; return t ? t.tasks : []; }
+function wizStagesHTML(w) {
+  return `<div class="rows">${w.stages.map((st, i) => `<div class="stage-row" data-stage-row><div class="field"><label for="ws-${i}">Stage ${i + 1}${st.tplId ? ' · ' + plural(wizTasksFor(st).length, 'task') : ' · new, no tasks yet'}</label><input class="input" id="ws-${i}" name="sname" required value="${h(st.name)}" placeholder="Stage name" autocomplete="off"></div><span class="btn-group"><button type="button" class="btn btn-micro" data-action="wiz-add-stage" data-i="${i}">Add stage after</button>${st.tplId ? '' : `<button type="button" class="btn btn-micro btn-danger" data-action="wiz-remove-stage" data-i="${i}">Remove</button>`}</span></div>`).join('')}</div>`;
+}
+function wizSyncStages() { const ins = [...document.querySelectorAll('#f-wiz3 [name=sname]')]; if (wiz && wiz.stages && ins.length === wiz.stages.length) ins.forEach((el, i) => { wiz.stages[i].name = el.value; }); }
 function viewNew() {
   const dealId = route.parts[0] || null;
   if (!wiz || wiz.dealId !== dealId || wiz.done) wiz = wizDefaults(dealId);
   const w = wiz; const dl = w.dealId ? state.deals.find(x => x.id === w.dealId) : null;
-  const steps = ['Site', 'Company', 'Confirm'];
+  const steps = ['Site', 'Owner', 'Stages', 'Confirm'];
   const foot = (left, right) => `<div class="sheet-like-foot card-footer" style="display:flex;justify-content:flex-end;gap:8px;background:var(--surface-secondary)">${left}${right}</div>`;
+  const existing = ownCompanies().filter(c => c.status !== 'Closed');
   let body = '';
   if (w.step === 1) body = `<form class="card" data-form="wiz1" id="f-wiz1"><div class="card-head"><h2 class="card-title">Site and lot / plan</h2></div>
     <div class="card-section" style="padding-top:4px"><div class="form-grid">
       <div class="field"><label for="w-street">Street</label><input class="input" id="w-street" name="street" required value="${h(w.street)}" placeholder="e.g. Woollamia Rd"></div>
       <div class="field"><label for="w-suburb">Suburb</label><input class="input" id="w-suburb" name="suburb" required value="${h(w.suburb)}" data-input="wiz-suburb"></div>
-      <div class="field"><label for="w-state">State</label><select class="input" id="w-state" name="state">${['NSW', 'QLD', 'VIC'].map(s => `<option ${w.state === s ? 'selected' : ''}>${s}</option>`).join('')}</select></div>
-      <div class="field"><label for="w-type">Project type</label><select class="input" id="w-type" name="type">${['Residential subdivision', 'Commercial / factory units', 'Infill'].map(s => `<option ${w.type === s ? 'selected' : ''}>${s}</option>`).join('')}</select></div>
+      <div class="field"><label for="w-state">State</label><select class="input" id="w-state" name="state">${['NSW', 'QLD', 'VIC'].map(s0 => `<option ${w.state === s0 ? 'selected' : ''}>${s0}</option>`).join('')}</select></div>
+      <div class="field"><label for="w-type">Project type</label><select class="input" id="w-type" name="type">${PROJECT_TYPES.map(s0 => `<option ${w.type === s0 ? 'selected' : ''}>${s0}</option>`).join('')}</select><span class="hint">Sets the stage template. You can rename stages on the next steps.</span></div>
       <div class="field"><label for="w-lot">Lot</label><input class="input" id="w-lot" name="lot" required value="${h(w.lot)}" inputmode="numeric"></div>
-      <div class="field"><label for="w-plan">Plan</label><div class="hstack" style="flex-wrap:nowrap"><select class="input" id="w-plantype" name="planType" style="width:88px;flex:none" aria-label="Plan type">${['DP', 'SP', 'RP'].map(s => `<option ${w.planType === s ? 'selected' : ''}>${s}</option>`).join('')}</select><input class="input" id="w-plan" name="planNo" required value="${h(w.planNo)}" inputmode="numeric" placeholder="1203381"></div></div>
-      <div class="field"><label for="w-yield">Lot yield</label><input class="input" id="w-yield" name="yield" value="${h(w.yield)}" placeholder="e.g. 18 lots"></div>
+      <div class="field"><label for="w-plan">Plan</label><div class="hstack" style="flex-wrap:nowrap"><select class="input" id="w-plantype" name="planType" style="width:88px;flex:none" aria-label="Plan type">${['DP', 'SP', 'RP'].map(s0 => `<option ${w.planType === s0 ? 'selected' : ''}>${s0}</option>`).join('')}</select><input class="input" id="w-plan" name="planNo" required value="${h(w.planNo)}" inputmode="numeric" placeholder="1203381"></div></div>
+      <div class="field"><label for="w-yield">Yield</label><input class="input" id="w-yield" name="yield" value="${h(w.yield)}" placeholder="e.g. 18 lots or 1 house"></div>
       <div class="field"><label for="w-id">Project ID</label><input class="input" id="w-id" name="id" required value="${h(w.id)}" pattern="[A-Za-z0-9\\-]{3,20}" title="3 to 20 letters, numbers or hyphens" style="text-transform:uppercase"><span class="hint">Location reference used in every file name</span></div>
     </div></div>
     ${foot(`<a class="btn" href="${dl ? '#/deals' : '#/projects'}">Cancel</a>`, `<button class="btn btn-primary" type="submit">Next</button>`)}</form>`;
-  if (w.step === 2) body = `<form class="card" data-form="wiz2" id="f-wiz2"><div class="card-head"><h2 class="card-title">Project company</h2><p class="card-sub">A new company for this project, 100% held by ${h(state.settings.trust)}. Wellco is engaged as project manager.</p></div>
-    <div class="card-section" style="padding-top:4px"><div class="form-grid">
-      <div class="field full"><label for="w-co">Company name</label><input class="input" id="w-co" name="company" required value="${h(w.company)}"></div>
-      <div class="field"><label for="w-abn">ABN</label><input class="input" id="w-abn" name="abn" value="${h(w.abn)}" inputmode="numeric" placeholder="Applied for"></div>
-      <div class="field"><label for="w-acn">ACN</label><input class="input" id="w-acn" name="acn" value="${h(w.acn)}" inputmode="numeric"></div>
-      <div class="field full"><label class="toggle"><input type="checkbox" name="gst" ${w.gst ? 'checked' : ''}> Registered for GST</label></div>
-      <div class="field"><label for="w-bank">Bank</label><input class="input" id="w-bank" name="bank" value="${h(w.bank)}"></div>
-      <div class="field"><label for="w-bsb">BSB</label><input class="input" id="w-bsb" name="bsb" value="${h(w.bsb)}" inputmode="numeric" placeholder="633-000"></div>
-      <div class="field"><label for="w-acc">Account</label><input class="input" id="w-acc" name="acc" value="${h(w.acc)}" inputmode="numeric"></div>
-      <div class="field"><label for="w-price">Purchase price (for budget)</label><input class="input" id="w-price" name="price" type="number" min="0" step="1000" value="${h(w.price)}"></div>
-    </div></div>
+  if (w.step === 2) body = `<form class="card" data-form="wiz2" id="f-wiz2"><div class="card-head"><h2 class="card-title">Owner</h2><p class="card-sub">Who buys the site and signs the contracts. Quotes, purchase orders, invoices and BAS are then in that company's name. Wellco is engaged as project manager.</p></div>
+    <div class="card-section" style="padding-top:4px">
+      <fieldset style="border:0;padding:0;margin:0 0 16px;min-width:0"><legend class="sr-only">Owner</legend><div class="recips" style="margin:0">
+        <label class="recip"><input type="radio" name="owner" value="nominee" ${w.owner === 'nominee' ? 'checked' : ''} data-input="wiz-owner"><span class="body"><span class="strong" style="display:block">Dan Wellman and/or nominee</span><span class="small muted">Company to be formed. Register it in Acquisition & DD once you decide to proceed.</span></span></label>
+        <label class="recip"><input type="radio" name="owner" value="existing" ${w.owner === 'existing' ? 'checked' : ''} ${existing.length ? '' : 'disabled'} data-input="wiz-owner"><span class="body"><span class="strong" style="display:block">An existing company</span><span class="small muted">${plural(existing.length, 'company', 'companies')} in the register, including dormant ones.</span></span></label>
+        <label class="recip"><input type="radio" name="owner" value="new" ${w.owner === 'new' ? 'checked' : ''} data-input="wiz-owner"><span class="body"><span class="strong" style="display:block">Register a new company</span><span class="small muted">Usually named after the site. About a day with ASIC.</span></span></label>
+      </div></fieldset>
+      <div class="form-grid" id="wiz-existing" ${w.owner === 'existing' ? '' : 'hidden'}><div class="field full"><label for="w-exist">Company</label><select class="input" id="w-exist" name="existingId">${existing.map(c => `<option value="${c.id}" ${c.id === w.existingId ? 'selected' : ''}>${h(c.name)} (${h(c.status)})</option>`).join('')}</select></div></div>
+      <div class="form-grid" id="wiz-new" ${w.owner === 'new' ? '' : 'hidden'}>
+        <div class="field full"><label for="w-co">Company name</label><input class="input" id="w-co" name="company" value="${h(w.company)}"></div>
+        <div class="field"><label for="w-abn">ABN</label><input class="input" id="w-abn" name="abn" value="${h(w.abn)}" inputmode="numeric" placeholder="Applied for"></div>
+        <div class="field"><label for="w-acn">ACN</label><input class="input" id="w-acn" name="acn" value="${h(w.acn)}" inputmode="numeric"></div>
+        <div class="field full"><label class="toggle"><input type="checkbox" name="gst" ${w.gst ? 'checked' : ''}> Registered for GST</label></div>
+        <div class="field"><label for="w-bank">Bank</label><input class="input" id="w-bank" name="bank" value="${h(w.bank)}"></div>
+        <div class="field"><label for="w-bsb">BSB</label><input class="input" id="w-bsb" name="bsb" value="${h(w.bsb)}" inputmode="numeric" placeholder="633-000"></div>
+        <div class="field"><label for="w-acc">Account</label><input class="input" id="w-acc" name="acc" value="${h(w.acc)}" inputmode="numeric"></div>
+      </div>
+      <div class="form-grid" style="margin-top:16px"><div class="field"><label for="w-price">Purchase price (for budget)</label><input class="input" id="w-price" name="price" type="number" min="0" step="1000" value="${h(w.price)}"></div></div>
+    </div>
     ${foot(`<button class="btn" type="button" data-action="wiz-back">Back</button>`, `<button class="btn btn-primary" type="submit">Next</button>`)}</form>`;
   if (w.step === 3) {
-    const stage = w.dealId ? 3 : 1;
+    wizEnsureStages(w);
+    body = `<form class="card" data-form="wiz3" id="f-wiz3"><div class="card-head"><h2 class="card-title">Stages</h2><p class="card-sub">From the ${h(w.type)} template in Settings. Rename any stage for this project or add one. Tasks come from the template.</p></div>
+      <div class="card-section" style="padding-top:4px">${wizStagesHTML(w)}
+        <div class="field" style="margin-top:16px;max-width:360px"><label for="w-start">Starts at</label><select class="input" id="w-start" name="start">${w.stages.map((st, i) => `<option value="${i + 1}" ${i + 1 === w.start ? 'selected' : ''}>Stage ${i + 1}: ${h(st.name)}</option>`).join('')}</select><span class="hint">Tasks in earlier stages are marked done.</span></div></div>
+      ${foot(`<button class="btn" type="button" data-action="wiz-back">Back</button>`, `<button class="btn btn-primary" type="submit">Next</button>`)}</form>`;
+  }
+  if (w.step === 4) {
+    wizEnsureStages(w);
+    const nTasks = sum(w.stages, st => wizTasksFor(st).length);
+    const ownerName = w.owner === 'nominee' ? 'Dan Wellman and/or nominee' : w.owner === 'existing' ? (companyById(w.existingId) || {}).name : w.company;
+    const ddocs = dl ? (dl.docs || []) : [];
     body = `<div class="card"><div class="card-head"><h2 class="card-title">Confirm</h2></div>
-      <div class="card-section" style="padding-top:4px"><dl class="kv kv-inline"><dt>Project ID</dt><dd>${h(w.id)}</dd><dt>Site</dt><dd>${h(w.street)}, ${h(w.suburb)} ${h(w.state)}</dd><dt>Lot / plan</dt><dd>Lot ${h(w.lot)} ${h(w.planType)} ${h(w.planNo)}</dd><dt>Type</dt><dd>${h(w.type)}${w.yield ? ' · ' + h(w.yield) : ''}</dd><dt>Company</dt><dd>${h(w.company)}</dd><dt>ABN</dt><dd>${h(w.abn || 'Applied for')}</dd><dt>GST</dt><dd>${w.gst ? 'Registered' : 'Not registered'}</dd><dt>Starts at</dt><dd>Stage ${stage}: ${stageInfo(stage).name}</dd></dl></div>
+      <div class="card-section" style="padding-top:4px"><dl class="kv kv-inline"><dt>Project ID</dt><dd>${h(w.id)}</dd><dt>Site</dt><dd>${h(w.street)}, ${h(w.suburb)} ${h(w.state)}</dd><dt>Lot / plan</dt><dd>Lot ${h(w.lot)} ${h(w.planType)} ${h(w.planNo)}</dd><dt>Type</dt><dd>${h(w.type)}${w.yield ? ' · ' + h(w.yield) : ''}</dd><dt>Owner</dt><dd>${h(ownerName)}</dd>${w.owner === 'new' ? `<dt>ABN</dt><dd>${h(w.abn || 'Applied for')}</dd><dt>GST</dt><dd>${w.gst ? 'Registered' : 'Not registered'}</dd>` : ''}<dt>Starts at</dt><dd>Stage ${w.start}: ${h(w.stages[w.start - 1].name)}</dd></dl></div>
       <div class="card-section"><h3 class="eyebrow">This will create</h3>
-      <div class="create-list">${['8-stage checklist with ' + TEMPLATE_TASKS.length + ' tasks and due dates', 'Budget skeleton across 7 cost categories' + (w.price ? ' (land ' + fmtMoney(+w.price) + ')' : ''), '10 document folders named ' + w.id + '_DocType_Party_Date', 'Separate books for ' + w.company + ': bills, invoices, GST and year-end', 'An entry in the project log'].map(t => `<div>${icon('check')}<span>${h(t)}</span></div>`).join('')}</div></div>
+      <div class="create-list">${[`${w.stages.length}-stage checklist with ${nTasks} tasks and due dates`, 'Budget skeleton across 7 cost categories' + (w.price ? ' (land ' + fmtMoney(+w.price) + ')' : ''), `${DOC_TYPES.length} document folders named ${w.id}_DocType_Party_Date`, ...(ddocs.length ? [`${plural(ddocs.length, 'document')} from the deal, filed under stages 1 and 2`] : []), w.owner === 'nominee' ? 'Owner: Dan Wellman and/or nominee until the company is registered' : w.owner === 'new' ? `${w.company} in Our companies, with separate books: bills, invoices, GST and year-end` : `Books under ${ownerName}`, 'An entry in the project log'].map(t => `<div>${icon('check')}<span>${h(t)}</span></div>`).join('')}</div></div>
       ${foot(`<button class="btn" type="button" data-action="wiz-back">Back</button>`, `<button class="btn btn-primary" type="button" data-action="wiz-create">Create project</button>`)}</div>`;
   }
   return `<div class="page page-narrow">
-    ${pageHeader({ title: dl ? dl.address : 'New project', back: dl ? '#/deals' : '#/projects', backLabel: dl ? 'Deals' : 'Projects', sub: `Step ${w.step} of 3: ${steps[w.step - 1]}${dl ? ` · Feaso Go, ${h(dl.margin)}% margin · ${h(dl.yield)} · asking ${fmtMoney(dl.asking)}` : ''}` })}
+    ${pageHeader({ title: dl ? dl.address : 'New project', back: dl ? '#/deals' : '#/projects', backLabel: dl ? 'Deals' : 'Projects', sub: `Step ${w.step} of 4: ${steps[w.step - 1]}${dl ? ` · Feaso Go, ${h(dl.margin)}% margin · ${h(dl.yield)} · asking ${fmtMoney(dl.asking)}` : ''}` })}
     ${body}
   </div>`;
 }
-const TEMPLATE_TASKS = [
-  [1, 'Log site and source', 0], [1, 'Desktop zoning check (Stash / Mecone Mosaic)', 3],
-  [2, 'Run feaso in Feasely', 10], [2, 'Go / no-go decision', 14],
-  [3, 'Register project company (ABN, GST, bank)', 21], [3, 'Exchange contracts and pay deposit', 30], [3, 'Due diligence: title, contamination, flooding, bushfire', 45], [3, 'DD expiry: decide go / no-go', 50, 'Unconditional after this date.'], [3, 'Settlement', 365],
-  [4, 'Get 3 quotes: town planner', 60], [4, 'Get 3 quotes: surveyor', 60], [4, 'Get 3 quotes: civil engineer', 75], [4, 'Geotech, ecology and bushfire reports', 120],
-  [5, 'Lodge DA and pay fees', 200], [5, 'Request civil quotes during DA', 260, 'Quotes take 3 to 4 weeks. Execute the day DA lands.'], [5, 'Respond to RFIs', 280], [5, 'DA determination: review conditions', 380],
-  [6, 'Tender civil works: 3 quotes', 400], [6, 'Pay contributions and get CC', 430], [6, 'Endeavour / Energex connection application', 440, '3-month lead time.'], [6, 'Works-as-executed and subdivision certificate', 640], [6, 'Register plan (LRS / Titles)', 680],
-  [7, 'Appoint selling agent', 520], [7, 'Settle lots and discharge loan', 720],
-  [8, 'Lodge maintenance bond', 690], [8, 'Bond inspection and return', 1060], [8, 'Final accounts and distribution to trust', 1090], [8, 'Deregister company', 1120],
-];
 /* ===== Render dispatcher ===== */
 const $ = (sel, root = document) => root.querySelector(sel);
 const mainEl = $('#main');
@@ -2530,14 +2630,14 @@ function rfqBody(p, r, cid) {
   const items = SCOPE_ITEMS[r.scope] || [r.scope];
   return `Hi ${firstName(cid)},
 
-Wellco Developments is project manager for ${p.company.name}, which owns ${p.lotPlan}, ${p.street}, ${p.suburb} ${p.state}. We're asking three firms to quote on the scope below.
+Wellco Developments is project manager for ${co(p).name}, which owns ${p.lotPlan}, ${p.street}, ${p.suburb} ${p.state}. We're asking three firms to quote on the scope below.
 
 Scope: ${r.scope}
 ${items.map(i => '• ' + i).join('\n')}
 
 Please quote ex GST and show GST separately. List your inclusions, exclusions and program. Quotes are due by ${fmtDate(addDays(TODAY, 14))}.
 
-The contract will be with ${p.company.name} (ABN ${p.company.abn}), not Wellco. Drawings and reports are attached.
+The contract will be with ${co(p).name} (ABN ${co(p).abn}), not Wellco. Drawings and reports are attached.
 
 Thanks,
 ${state.settings.signature}`;
@@ -2551,12 +2651,13 @@ function rfqAttachments(p, r, cid) {
 function recipientLine(cid, extra) { const c = contactById(cid); return `${h(c.name)} &lt;${h(c.email || 'no email on file')}&gt;${extra ? ` <span class="muted">+ ${extra} more, sent separately</span>` : ''}`; }
 
 /* ===== Invoice form ===== */
-function lineRow(i, gstOptions, l = {}) {
-  return `<div class="line-item" data-line>
+function lineRow(i, gstOptions, l = {}, withCat = false) {
+  return `<div class="line-item ${withCat ? 'has-cat' : ''}" data-line>
     <div class="field li-desc"><label for="ld-${i}">Line description</label><input class="input" id="ld-${i}" name="ldesc" required value="${h(l.desc || '')}"></div>
-    <div class="field"><label for="la-${i}">Amount</label><input class="input" id="la-${i}" name="lamt" type="number" step="0.01" min="0" required value="${l.amount != null ? h(l.amount) : ''}" data-input="inv-calc"></div>
-    <div class="field"><label for="lg-${i}">Tax rate</label><select class="input" id="lg-${i}" name="lgst" data-input="inv-calc">${gstOptions.map(k => `<option value="${k}" ${l.gst === k ? 'selected' : ''}>${h(taxRateName(k, gstOptions.includes('margin_scheme') ? 'out' : 'in'))}</option>`).join('')}</select></div>
-    <button type="button" class="icon-btn" data-action="remove-line" aria-label="Remove line" style="align-self:end">${icon('x')}</button>
+    <button type="button" class="icon-btn li-x" data-action="remove-line" aria-label="Remove line">${icon('x')}</button>
+    <div class="field li-amt"><label for="la-${i}">Amount</label><input class="input" id="la-${i}" name="lamt" type="number" step="0.01" min="0" required value="${l.amount != null ? h(l.amount) : ''}" data-input="inv-calc"></div>
+    <div class="field li-gst"><label for="lg-${i}">Tax rate</label><select class="input" id="lg-${i}" name="lgst" data-input="inv-calc">${gstOptions.map(k => `<option value="${k}" ${l.gst === k ? 'selected' : ''}>${h(taxRateName(k, gstOptions.includes('margin_scheme') ? 'out' : 'in'))}</option>`).join('')}</select></div>
+    ${withCat ? `<div class="field li-cat"><label for="lc-${i}">Category</label><select class="input" id="lc-${i}" name="lcat" data-input="inv-calc">${CATEGORIES.map(c => `<option ${l.category === c ? 'selected' : ''}>${h(c)}</option>`).join('')}</select></div>` : ''}
   </div>`;
 }
 let lineSeq = 0;
@@ -2567,16 +2668,16 @@ function invoiceForm(p, dir) {
   lineSeq = 0;
   return `<form id="f-inv" data-form="add-invoice" data-p="${p.id}" data-dir="${dir}" class="stack" style="gap:16px">
     <div class="form-grid">
-      ${dir === 'in' ? `<div class="field full"><label for="i-party">From</label><select class="input" id="i-party" name="party" required><option value="">Choose a party</option>${parties.map(c => `<option value="${c.id}">${h(c.company)} (${h(c.role)})</option>`).join('')}</select></div>`
+      ${dir === 'in' ? `<div class="field full"><label for="i-party">From</label><select class="input" id="i-party" name="party" required><option value="">Choose a party</option>${parties.map(c => `<option value="${c.id}">${h(c.company)} (${h(roleText(c))})</option>`).join('')}</select></div>`
         : `<div class="field full"><label for="i-to">Bill to</label><input class="input" id="i-to" name="to" required placeholder="Buyer name or company"></div>`}
       <div class="field"><label for="i-no">${dir === 'in' ? 'Reference' : 'Invoice number'}</label><input class="input" id="i-no" name="number" required value="${h(nextNo)}"></div>
       <div class="field"><label for="i-date">Invoice date</label><input class="input" id="i-date" name="date" type="date" required value="${TODAY}"></div>
       <div class="field"><label for="i-due">Due date</label><input class="input" id="i-due" name="due" type="date" value="${addDays(TODAY, 14)}"></div>
-      ${dir === 'in' ? `<div class="field"><label for="i-cat">Cost category</label><select class="input" id="i-cat" name="category">${CATEGORIES.map(c => `<option>${c}</option>`).join('')}</select></div>
+      ${dir === 'in' ? `<div class="field"><label for="i-cat">Default category</label><select class="input" id="i-cat" name="category" data-input="def-cat" data-prev="${CATEGORIES[0]}">${CATEGORIES.map(c => `<option>${c}</option>`).join('')}</select><span class="hint">New lines use it. Change any line below for a split bill.</span></div>
       <div class="field full"><label for="i-eng">Engagement / PO (optional)</label><select class="input" id="i-eng" name="engagement"><option value="">Not linked</option>${p.engagements.map(e => `<option value="${e.id}">${h(contactLabel(e.contactId))}: ${h(e.scope)}</option>`).join('')}</select></div>` : ''}
       <div class="field full"><label for="i-desc">Description</label><input class="input" id="i-desc" name="desc" required placeholder="${dir === 'in' ? 'e.g. Progress claim #7' : 'e.g. Settlement: Lot 5'}"></div>
     </div>
-    <div class="stack" style="gap:8px" id="inv-lines">${lineRow(lineSeq++, gstOptions)}</div>
+    <div class="stack" style="gap:8px" id="inv-lines">${lineRow(lineSeq++, gstOptions, dir === 'in' ? { category: CATEGORIES[0] } : {}, dir === 'in')}</div>
     <div class="field" id="gst-help" hidden><span class="hint gst-help">${icon('info', 'icon-sm')}No GST: council contributions, government fees, stamp duty, lands registration, non-registered vendors</span></div>
     <div class="field" id="margin-help" hidden><span class="hint gst-help">${icon('info', 'icon-sm')}Margin scheme: GST is one-eleventh of the price less the lot's cost base (${fmtMoney((p.sales && p.sales[0] && p.sales[0].marginBase) || 0)} from the sales register).</span></div>
     <div class="hstack" style="justify-content:space-between"><button type="button" class="btn btn-sm" data-action="add-line" data-dir="${dir}">${icon('plus')}Add line</button><span class="num" style="font-weight:var(--fw-semibold)" id="inv-total">Total $0</span></div>
@@ -2589,7 +2690,8 @@ function updateInvoiceCalc() {
   const lines = [...f.querySelectorAll('[data-line]')].map(r => ({ amount: +r.querySelector('[name=lamt]').value || 0, gst: r.querySelector('[name=lgst]').value, marginBase: base }));
   $('#gst-help').hidden = !lines.some(l => l.gst === 'gst_free');
   $('#margin-help').hidden = !lines.some(l => l.gst === 'margin_scheme');
-  $('#inv-total').textContent = `Total ${fmtMoney(sum(lines, lineTotal))} · GST ${fmtMoney(sum(lines, lineGst))}`;
+  const cats = new Set([...f.querySelectorAll('[name=lcat]')].map(x => x.value));
+  $('#inv-total').textContent = `Total ${fmtMoney(sum(lines, lineTotal))} · GST ${fmtMoney(sum(lines, lineGst))}${cats.size > 1 ? ` · split across ${cats.size} categories` : ''}`;
 }
 
 /* ===== Exports ===== */
@@ -2599,7 +2701,7 @@ function bookFor(p, fy) {
   const ins = p.invoicesIn.filter(i => inRange(i.date, range)).sort((a, b) => a.date.localeCompare(b.date));
   const outs = (p.invoicesOut || []).filter(o => inRange(o.date, range)).sort((a, b) => a.date.localeCompare(b.date));
   const { cats } = projectMoney(p);
-  const paidFY = (c) => sum(ins.filter(i => i.category === c && i.status === 'paid'), invEx);
+  const paidFY = (c) => sum(ins.filter(i => i.status === 'paid'), i => catEx(i, c));
   const trustFY = (p.trust || []).filter(t => inRange(t.date, range));
   const mgmt = ins.filter(i => i.intercompany);
   const posted = ins.filter(i => i.status !== 'draft');
@@ -2610,9 +2712,9 @@ function bookFor(p, fy) {
   trustFY.forEach(t => flags.push([/Distribution/.test(t.type) ? 'Distribution to trust' : 'Intercompany loan', `${t.type}: ${t.party}. ${t.note}`, money$(t.amount), fmtDate(t.date)]));
   const summary = [
     ['Wellco Project Brain: ' + (fy ? 'year-end workbook' : 'full project workbook')], [],
-    ['Company', p.company.name], ['ABN', p.company.abn], ['ACN', p.company.acn || ''], ['GST registered', p.company.gst ? 'Yes' : 'No'],
+    ['Company', co(p).name], ['ABN', co(p).abn], ['ACN', co(p).acn || ''], ['GST registered', co(p).gst ? 'Yes' : 'No'],
     ['Project ID', p.id], ['Site', `${p.lotPlan}, ${p.street}, ${p.suburb} ${p.state}`], ['Project', `${p.type}, ${p.yield}`],
-    ['Period', fy ? `${fy} (1 Jul ${fy.slice(2, 6)} to 30 Jun ${+fy.slice(2, 6) + 1})` : 'Project to date'], ['Current stage', `Stage ${p.stage}: ${stageInfo(p.stage).name}`],
+    ['Period', fy ? `${fy} (1 Jul ${fy.slice(2, 6)} to 30 Jun ${+fy.slice(2, 6) + 1})` : 'Project to date'], ['Current stage', `${stageLabel(p)} (of ${stageCount(p)})`], ['Company status', co(p).status],
     ['Shareholder', `100% ${state.settings.trust}`], ['Project manager', `${state.settings.company} (ABN ${state.settings.abn})`], ['Prepared', fmtDate(TODAY)], [],
     ['Totals for period', 'Amount ($)'], ['Costs ex GST', money$(sum(posted, invEx))], ['GST credits claimed', money$(sum(posted, invGst))], ['GST-free costs', money$(sum(posted, invGstFree))],
     ['Sales and deposits inc GST', money$(sum(outs, invTotal))], ['GST on sales', money$(sum(outs, invGst))], [],
@@ -2622,11 +2724,13 @@ function bookFor(p, fy) {
     ...CATEGORIES.map(c => [c, money$(cats[c].budget), money$(cats[c].committed), money$(cats[c].paid), money$(paidFY(c)), money$(cats[c].budget - cats[c].committed)])];
   budget.push(['Total', ...[1, 2, 3, 4, 5].map(i => money$(sum(budget.slice(1), r => r[i])))]);
   const rfqs = [['Scope', 'Stage', 'Party', 'ABN', 'Status', 'Amount ex GST ($)', 'Requested', 'Received', 'Reason chosen']];
-  p.rfqs.forEach(r => r.quotes.forEach(q => { const c = contactById(q.contactId) || {}; rfqs.push([r.scope, r.stage, c.company || '', c.abn || '', q.status, q.amount != null ? q.amount : '', q.requestedAt || '', q.received || '', q.status === 'appointed' && r.appointed ? r.appointed.reason : '']); }));
+  p.rfqs.forEach(r => r.quotes.forEach(q => { const c = contactById(q.contactId) || {}; rfqs.push([r.scope, `${r.stage}. ${stageName(p, r.stage)}`, c.company || '', c.abn || '', q.status, q.amount != null ? q.amount : '', q.requestedAt || '', q.received || '', q.status === 'appointed' && r.appointed ? r.appointed.reason : '']); }));
   const engs = [['Party', 'ABN', 'Scope', 'Category', 'Value ex GST ($)', 'Status', 'Issued', 'Claimed to date ex GST ($)'],
-    ...p.engagements.map(e => { const c = contactById(e.contactId) || {}; return [c.company || '', c.abn || '', e.scope, e.category, e.value, e.status, e.issued || '', money$(sum(p.invoicesIn.filter(i => i.engagementId === e.id && i.status !== 'draft'), invEx))]; })];
-  const invIn = [['Date', 'Invoice', 'Party', 'ABN', 'Description', 'Category', 'Line', 'GST treatment', 'Ex GST ($)', 'GST ($)', 'Total ($)', 'Status', 'Paid', 'Intercompany']];
-  ins.forEach(i => { const c = contactById(i.contactId) || {}; i.lines.forEach(l => invIn.push([i.date, i.number, c.company || '', c.abn || '', i.desc, i.category, l.desc, GST_TYPES[l.gst].label, lineEx(l), lineGst(l), lineTotal(l), i.status, i.paidDate || '', i.intercompany ? 'Yes: Wellco' : ''])); });
+    ...p.engagements.map(e => { const c = contactById(e.contactId) || {}; return [c.company || '', c.abn || '', e.scope, e.category, e.value, e.status, e.issued || '', money$(engClaimed(p, e, i => i.status !== 'draft'))]; })];
+  // One row per bill line, each with its own cost category, so a split bill lands in each category
+  const invIn = [['Date', 'Invoice', 'Party', 'ABN', 'Description', 'Line', 'Category', 'GST treatment', 'Ex GST ($)', 'GST ($)', 'Total ($)', 'Status', 'Paid', 'Split bill', 'Intercompany']];
+  ins.forEach(i => { const c = contactById(i.contactId) || {}; const split = billCats(i).length > 1 ? 'Yes' : ''; i.lines.forEach(l => invIn.push([i.date, i.number, c.company || '', c.abn || '', i.desc, l.desc, lineCat(i, l), GST_TYPES[l.gst].label, lineEx(l), lineGst(l), lineTotal(l), i.status, i.paidDate || '', split, i.intercompany ? 'Yes: Wellco' : ''])); });
+  invIn.push(['Total', '', '', '', '', '', '', '', money$(sum(ins, invEx)), money$(sum(ins, invGst)), money$(sum(ins, invTotal)), '', '', '', '']);
   const invOut = [['Date', 'Invoice', 'To', 'Description', 'Line', 'GST treatment', 'Ex GST ($)', 'GST ($)', 'Total ($)', 'Status', 'Note']];
   outs.forEach(o => o.lines.forEach(l => invOut.push([o.date, o.number, o.to, o.desc, l.desc, GST_TYPES[l.gst].label, lineEx(l), lineGst(l), lineTotal(l), o.status, l.atSettlement ? 'Deposit: GST attributed at settlement' : ''])));
   const sales = [['Lot', 'Price ($)', 'Status', 'Buyer', 'Exchanged', 'Settled', 'Margin base ($)', 'Margin scheme GST ($)'],
@@ -2636,7 +2740,7 @@ function bookFor(p, fy) {
   bas.push(['Total', '', '', ...[3, 4, 5, 6, 7, 8, 9].map(i => round2(sum(bas.slice(1), r => r[i])))]);
   const taxable = sum(posted, i => sum(i.lines.filter(l => l.gst === 'taxable'), lineEx));
   const tax = [['Tax summary', fyLabelText], [], ['Cost base by category (ex GST)', 'This period ($)', 'Project to date ($)'],
-    ...CATEGORIES.map(c => [c, money$(sum(posted.filter(i => i.category === c), invEx)), money$(sum(p.invoicesIn.filter(i => i.category === c && i.status !== 'draft'), invEx))]), [],
+    ...CATEGORIES.map(c => [c, money$(sum(posted, i => catEx(i, c))), money$(sum(p.invoicesIn.filter(i => i.status !== 'draft'), i => catEx(i, c)))]), [],
     ['Costs by GST treatment', 'This period ($)'], ['Taxable (ex GST)', money$(taxable)], ['GST-free', money$(sum(posted, invGstFree))], ['Input taxed', money$(sum(posted, i => sum(i.lines.filter(l => l.gst === 'input_taxed'), lineTotal)))], ['GST credits', money$(sum(posted, invGst))], [],
     ['Sales', 'This period ($)'], ['Sales proceeds and deposits', money$(sum(outs, invTotal))], ['GST under margin scheme', money$(sum(outs, invGst))], [],
     ['Intercompany and trust', 'Amount ($)', 'Date'], ...(mgmt.map(i => ['Management fee: Wellco Developments', money$(invEx(i)), i.date])), ...(trustFY.map(t => [`${t.type}: ${t.party}`, money$(t.amount), t.date])),
@@ -2648,26 +2752,43 @@ function bookFor(p, fy) {
 }
 function basBook(p, fy, q) {
   const qs = q === 'all' ? [1, 2, 3, 4] : [+q];
-  const summary = [[`BAS summary: ${p.company.name} (ABN ${p.company.abn})`], [`${fy}${q === 'all' ? '' : ', ' + QUARTERS[q - 1].label}`], [],
+  const summary = [[`BAS summary: ${co(p).name} (ABN ${co(p).abn})`], [`${fy}${q === 'all' ? '' : ', ' + QUARTERS[q - 1].label}`], ...(p.projects ? [[`Projects: ${p.projects.map(x => x.id + ' ' + x.name).join('; ')}`]] : []), [],
     ['Quarter', 'Period', 'G1 Sales inc GST ($)', '1A GST on sales ($)', 'G11 Purchases inc GST ($)', '1B GST credits ($)', 'GST-free purchases ($)', 'Input taxed ($)', 'Net payable or (refund) ($)']];
-  const detail = [['Quarter', 'Date', 'Direction', 'Invoice', 'Party', 'Line', 'GST treatment', 'Ex GST ($)', 'GST ($)', 'Total ($)']];
+  const detail = [['Quarter', 'Date', 'Direction', 'Invoice', 'Party', 'Line', 'Category', 'GST treatment', 'Ex GST ($)', 'GST ($)', 'Total ($)']];
   qs.forEach(n => {
     const b = basQuarter(p, fy, n);
     summary.push([QUARTERS[n - 1].label, `${fmtDate(b.range[0])} to ${fmtDate(b.range[1])}`, b.sales, b.gstSales, b.purchases, b.credits, b.gstFree, b.inputTaxed, b.net]);
-    b.ins.forEach(i => i.lines.forEach(l => detail.push(['Q' + n, i.date, 'Purchase', i.number, contactLabel(i.contactId), l.desc, GST_TYPES[l.gst].label, lineEx(l), lineGst(l), lineTotal(l)])));
-    b.outs.forEach(o => o.lines.forEach(l => detail.push(['Q' + n, o.date, 'Sale', o.number, o.to, l.desc, GST_TYPES[l.gst].label, lineEx(l), lineGst(l), lineTotal(l)])));
+    b.ins.forEach(i => i.lines.forEach(l => detail.push(['Q' + n, i.date, 'Purchase', i.number, contactLabel(i.contactId), l.desc, lineCat(i, l), GST_TYPES[l.gst].label, lineEx(l), lineGst(l), lineTotal(l)])));
+    b.outs.forEach(o => o.lines.forEach(l => detail.push(['Q' + n, o.date, 'Sale', o.number, o.to, l.desc, 'Sales', GST_TYPES[l.gst].label, lineEx(l), lineGst(l), lineTotal(l)])));
   });
   summary.push([], ['Purchases are counted on invoice date once approved. Deposits under the margin scheme are attributed at settlement.']);
   return [{ name: 'BAS Summary', rows: summary }, { name: 'GST Detail', rows: detail }];
 }
 function colWidths(rows) { const w = []; rows.forEach(r => r.forEach((v, i) => { const l = String(v == null ? '' : v).length; w[i] = Math.min(60, Math.max(w[i] || 8, l + 2)); })); return w.map(wch => ({ wch })); }
-// Inside the claude.ai preview the page can't download on its own; it hands the file to the viewer's save prompt instead.
-async function artifactSave(filename, data) {
+// Inside the claude.ai preview the page can't download on its own. It hands the file to the viewer's save prompt;
+// if the viewer can't save (a shared link, say), it shows the workbook in a drawer to copy straight into Excel.
+async function artifactSave(filename, data, sheets) {
   let dl = null;
   try { dl = window.claude && typeof window.claude.use === 'function' ? await window.claude.use('downloads') : null; } catch (e) { dl = null; }
-  if (!dl) { toast(`This preview can't save files. The app saves ${filename} as a real Excel workbook.`, 'download'); return; }
+  if (!dl || typeof dl.save !== 'function') { showWorkbook(filename, sheets); return; }
   try { await dl.save({ filename, data }); toast('Saved ' + filename, 'download'); }
-  catch (err) { if (err && err.code === 'declined') return; toast(`Couldn't save ${filename} here. The installed app saves it directly.`, 'warning'); }
+  catch (err) { if (err && err.code === 'declined') return; showWorkbook(filename, sheets); }
+}
+let wbView = null;
+function cellText(v) { return v == null ? '' : typeof v === 'number' ? String(Math.round(v * 100) / 100) : String(v); }
+function sheetTSV(sh) { return sh.rows.map(r => r.map(v => cellText(v).replace(/[\t\n]/g, ' ')).join('\t')).join('\n'); }
+function workbookBody() {
+  const { sheets, idx } = wbView; const sh = sheets[idx]; const w = Math.max(1, ...sh.rows.map(r => r.length));
+  return `<p class="help" style="margin-bottom:12px">This preview link can't save files. In your own app this downloads as an Excel file. You can paste this straight into Excel now.</p>
+    <nav class="ptabs" aria-label="Sheets" style="margin-bottom:12px">${sheets.map((x, i) => `<button type="button" class="ptab" data-action="wb-sheet" data-i="${i}" aria-pressed="${i === idx}">${h(x.name)}</button>`).join('')}</nav>
+    <div class="table-wrap" style="max-height:52vh;overflow:auto"><table class="t wb-table"><tbody>${sh.rows.map((r, ri) => `<tr>${Array.from({ length: w }, (_, ci) => { const v = r[ci]; const tag = ri === 0 ? 'th' : 'td'; return `<${tag}${typeof v === 'number' ? '' : ' style="text-align:left"'}>${h(typeof v === 'number' ? (Math.abs(v) >= 1000 || v % 1 ? nf2.format(v) : String(v)) : cellText(v))}</${tag}>`; }).join('')}</tr>`).join('')}</tbody></table></div>
+    <textarea id="wb-tsv" class="sr-only" aria-hidden="true" tabindex="-1" readonly>${h(sheetTSV(sh))}</textarea>`;
+}
+function showWorkbook(filename, sheets) {
+  if (!sheets || !sheets.length) { toast(`This preview can't save ${filename}. The app saves it as a real Excel workbook.`, 'download'); return; }
+  wbView = { filename, sheets, idx: 0 };
+  openSheet({ title: 'Your workbook: ' + filename, sub: plural(sheets.length, 'sheet') + ' · copy a sheet and paste it into Excel', body: workbookBody(),
+    foot: `<button type="button" class="btn btn-ghost" data-action="close-sheet">Close</button><button type="button" class="btn btn-primary" data-action="copy-sheet">Copy sheet</button>`, ctx: { workbook: filename } });
 }
 function downloadBook(filename, sheets) {
   if (typeof XLSX !== 'undefined') {
@@ -2679,14 +2800,14 @@ function downloadBook(filename, sheets) {
       s.rows.forEach((r, ri) => r.forEach((v, ci) => { if (typeof v === 'string' && v.includes('($)')) { for (let rr = ri + 1; rr <= ref.e.r; rr++) { const cell = ws[XLSX.utils.encode_cell({ r: rr, c: ci })]; if (cell && cell.t === 'n') cell.z = '#,##0.00'; } } }));
       XLSX.utils.book_append_sheet(wb, ws, s.name.slice(0, 31));
     });
-    if (IN_ARTIFACT) { artifactSave(filename, XLSX.write(wb, { bookType: 'xlsx', type: 'array' })); return filename; }
+    if (IN_ARTIFACT) { artifactSave(filename, XLSX.write(wb, { bookType: 'xlsx', type: 'array' }), sheets); return filename; }
     XLSX.writeFile(wb, filename);
     return filename;
   }
   const csvCell = (v) => { const s = String(v == null ? '' : v); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
   const csv = sheets.map(s => `${s.name}\n` + s.rows.map(r => r.map(csvCell).join(',')).join('\n')).join('\n\n');
   const name = filename.replace(/\.xlsx$/, '.csv');
-  if (IN_ARTIFACT) { artifactSave(name, '﻿' + csv); return name; }
+  if (IN_ARTIFACT) { artifactSave(name, '﻿' + csv, sheets); return name; }
   const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click();
   setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
@@ -2694,16 +2815,45 @@ function downloadBook(filename, sheets) {
 }
 function runExport(el) {
   const kind = el.dataset.kind; const p = el.dataset.p ? getProject(el.dataset.p) : null;
-
-  let name; let label;
+  let name; let label; const logTo = p ? [p] : [];
   try {
     if (kind === 'yearend') { const fy = el.dataset.fy; name = downloadBook(`${p.id}_YearEnd-${fy}_${TODAY}.xlsx`, bookFor(p, fy)); label = `Year-end workbook ${fy}`; }
-    else if (kind === 'full') { const sheets = bookFor(p, null); sheets.push({ name: 'Tasks', rows: [['Stage', 'Task', 'Due', 'Done', 'Lead time'], ...p.tasks.map(t => [t.stage, t.title, t.due, t.done ? 'Yes' : 'No', t.lead || ''])] }, { name: 'Log', rows: [['When', 'Who', 'What'], ...p.log.slice().sort((a, b) => a.ts.localeCompare(b.ts)).map(l => [l.ts.replace('T', ' '), l.who, l.text])] }); name = downloadBook(`${p.id}_ProjectWorkbook_${TODAY}.xlsx`, sheets); label = 'Full project workbook'; }
-    else if (kind === 'bas') { const fy = el.dataset.fy; const q = el.dataset.qsel ? $('#' + el.dataset.qsel).value : el.dataset.q; name = downloadBook(`${p.id}_BAS-${fy}${q === 'all' ? '' : '-Q' + q}_${TODAY}.xlsx`, basBook(p, fy, q)); label = `BAS summary ${fy}${q === 'all' ? '' : ' Q' + q}`; }
-    else if (kind === 'projects') { name = downloadBook(`WELLCO_ProjectsRegister_${TODAY}.xlsx`, [{ name: 'Projects', rows: [['Project ID', 'Site', 'Lot / plan', 'Type', 'Yield', 'Company', 'ABN', 'Stage', 'Status', 'Budget ex GST ($)', 'Committed ($)', 'Paid ($)'], ...state.projects.map(x => { const m = projectMoney(x).tot; return [x.id, x.name, x.lotPlan, x.type, x.yield, x.company.name, x.company.abn, `${x.stage}. ${stageInfo(x.stage).name}`, x.status, m.budget, money$(m.committed), money$(m.paid)]; })] }]); }
-    else if (kind === 'contacts') { name = downloadBook(`WELLCO_ContactsRegister_${TODAY}.xlsx`, [{ name: 'Contacts', rows: [['Company', 'Contact', 'Role', 'ABN', 'Email', 'Phone', 'Licence expiry', 'Insurance expiry', 'Projects', 'Notes'], ...state.contacts.map(c => [c.company, c.name, c.role, c.abn, c.email, c.phone, c.licenceExpiry || '', c.insuranceExpiry || '', contactProjects(c.id).map(x => x.id).join(', '), c.notes])] }]); }
+    else if (kind === 'full') {
+      const sheets = bookFor(p, null);
+      sheets.push({ name: 'Tasks', rows: [['Stage', 'Task', 'Due', 'Done', 'Lead time'], ...p.tasks.slice().sort((a, b) => a.stage - b.stage).map(t => [`${t.stage}. ${stageName(p, t.stage)}`, t.title, t.due, t.done ? 'Yes' : 'No', t.lead || ''])] });
+      const fs = fundsSummary(p);
+      if (fs.lines.length) sheets.push({ name: 'Funds needed', rows: [['Payment', 'Party', 'Category', 'GST treatment', 'Amount inc GST ($)', 'Status', 'Linked bill'], ...fs.lines.map(x => [x.f.desc, contactLabel(x.f.contactId), x.f.category, GST_TYPES[x.f.gst].label, x.total, x.paid ? 'Paid' : 'To pay', x.bill ? x.bill.number : '']), [], ['Total to pay', '', '', '', fs.total], ['Paid', '', '', '', fs.paid], ['Still to find', '', '', '', fs.toFind]] });
+      sheets.push({ name: 'Documents', rows: [['Stage', 'Folder', 'File name', 'Title', 'Date', 'Size (KB)'], ...p.docs.slice().sort((a, b) => (a.stage - b.stage) || a.date.localeCompare(b.date)).map(d0 => [`${d0.stage}. ${stageName(p, d0.stage)}`, DOC_LABELS[d0.type] || d0.type, docName(p, d0), d0.title, d0.date, d0.size])] });
+      sheets.push({ name: 'Log', rows: [['When', 'Who', 'What'], ...p.log.slice().sort((a, b) => a.ts.localeCompare(b.ts)).map(l => [l.ts.replace('T', ' '), l.who, l.text])] });
+      name = downloadBook(`${p.id}_ProjectWorkbook_${TODAY}.xlsx`, sheets); label = 'Full project workbook';
+    }
+    else if (kind === 'bas') {
+      const fy = el.dataset.fy; const q = el.dataset.qsel ? $('#' + el.dataset.qsel).value : el.dataset.q;
+      const book = el.dataset.co ? companyBook(companyById(el.dataset.co)) : p;
+      if (el.dataset.co) logTo.push(...book.projects);
+      name = downloadBook(`${book.id}_BAS-${fy}${q === 'all' ? '' : '-Q' + q}_${TODAY}.xlsx`, basBook(book, fy, q)); label = `BAS summary ${fy}${q === 'all' ? '' : ' Q' + q}`;
+    }
+    else if (kind === 'bas-all') {
+      // One BAS workbook per company that has something to lodge. In the preview, one combined workbook instead of several save prompts.
+      const fy = el.dataset.fy; const q = el.dataset.q;
+      const list = ownCompanies().filter(c => companyQuarter(c, fy, +q).lodge);
+      if (!list.length) { toast('No company has a BAS to lodge for that quarter', 'info'); return; }
+      if (IN_ARTIFACT) {
+        const sheets = list.flatMap(c => { const b = companyBook(c); const [sm, dt] = basBook(b, fy, q); const tag = (c.short || b.id).slice(0, 18); return [{ name: `${tag} BAS`, rows: sm.rows }, { name: `${tag} detail`, rows: dt.rows }]; });
+        name = downloadBook(`WELLCO_BAS-${fy}-Q${q}_AllCompanies_${TODAY}.xlsx`, sheets);
+      } else {
+        list.forEach(c => { const b = companyBook(c); name = downloadBook(`${b.id}_BAS-${fy}-Q${q}_${TODAY}.xlsx`, basBook(b, fy, q)); });
+        name = plural(list.length, 'BAS workbook');
+      }
+      list.forEach(c => companyProjects(c).forEach(x => logTo.push(x)));
+      label = `BAS summary ${fy} Q${q} (with ${plural(list.length - 1, 'other company', 'other companies')})`;
+      addGlobalLog(`BAS exported for ${QUARTERS[q - 1].label} ${fy}: ${list.map(c => c.name).join(', ')}`, 'doc'); save();
+    }
+    else if (kind === 'projects') { name = downloadBook(`WELLCO_ProjectsRegister_${TODAY}.xlsx`, [{ name: 'Projects', rows: [['Project ID', 'Site', 'Lot / plan', 'Type', 'Yield', 'Owner', 'ABN', 'Stage', 'Stages', 'Status', 'Budget ex GST ($)', 'Committed ($)', 'Paid ($)'], ...state.projects.map(x => { const m = projectMoney(x).tot; return [x.id, x.name, x.lotPlan, x.type, x.yield, co(x).name, co(x).nominee ? '' : co(x).abn, `${x.stage}. ${stageName(x, x.stage)}`, stageCount(x), x.status, m.budget, money$(m.committed), money$(m.paid)]; })] }]); }
+    else if (kind === 'companies') { name = downloadBook(`WELLCO_CompaniesRegister_${TODAY}.xlsx`, [{ name: 'Companies', rows: [['Company', 'Short name', 'ABN', 'ACN', 'Registered address', 'GST registered', 'GST from', 'BAS', 'Bank', 'BSB', 'Account', 'Status', 'Formed', 'Closed', 'Projects', 'Notes'], ...state.companies.map(c => [c.name, c.short || '', c.abn, c.acn || '', c.address || '', c.gst ? 'Yes' : 'No', c.gstFrom || '', c.basCycle === 'quarterly' ? 'Quarterly' : 'Not lodging', c.bank || '', c.bsb || '', c.acc || '', c.manager ? 'Project manager' : c.status, c.formed || '', c.closed || '', companyProjects(c).map(p0 => p0.id).join(', '), c.notes || ''])] }]); }
+    else if (kind === 'contacts') { name = downloadBook(`WELLCO_ContactsRegister_${TODAY}.xlsx`, [{ name: 'Contacts', rows: [['Company', 'Contact', 'Roles', 'Categories', 'ABN', 'Email', 'Phone', 'Licence expiry', 'Insurance expiry', 'Projects', 'Notes'], ...state.contacts.map(c => [c.company, c.name, roleText(c), contactCategories(c).join(', '), c.abn, c.email, c.phone, c.licenceExpiry || '', c.insuranceExpiry || '', contactProjects(c.id).map(x => x.id).join(', '), c.notes])] }]); }
   } catch (err) { console.warn(err); toast('Export failed. Try again.', 'warning'); return; }
-  if (p && label) { addLog(p, `${label} exported for the accountant`, 'doc'); save(); }
+  if (label) { [...new Set(logTo)].forEach(x => addLog(x, `${label} exported for the accountant`, 'doc')); save(); }
   if (!IN_ARTIFACT) toast('Downloaded ' + name, 'download');
 }
 /* ===== Actions (event delegation on data-action) ===== */
@@ -2722,13 +2872,16 @@ const ACTIONS = {
 
   /* Tasks */
   'toggle-task': (el) => {
-    const p = P(el); const t = p.tasks.find(x => x.id === el.dataset.id); t.done = !t.done; t.doneAt = t.done ? TODAY : null;
+    const p = P(el); const t = p.tasks.find(x => x.id === el.dataset.id);
+    // Registering the project company: pick or create the company first, then the task is ticked
+    if (!t.done && isRegisterTask(t) && co(p).nominee) { openAssignCompany(p, t.id); return; }
+    t.done = !t.done; t.doneAt = t.done ? TODAY : null;
     addLog(p, (t.done ? 'Task done: ' : 'Task reopened: ') + t.title, 'task'); commit(); toast(t.done ? 'Marked done' : 'Reopened', t.done ? 'check' : 'refresh');
     const btn = mainEl.querySelector(`[data-action="toggle-task"][data-id="${t.id}"]`); if (btn) btn.focus({ preventScroll: true });
   },
   'add-task': (el) => {
     const p = P(el); const n = +el.dataset.stage;
-    openSheet({ title: 'Add task', sub: `${h(p.id)} · Stage ${n}: ${h(stageInfo(n).name)}`,
+    openSheet({ title: 'Add task', sub: `${h(p.id)} · ${h(stageLabel(p, n))}`,
       body: `<form id="f-task" data-form="add-task" data-p="${p.id}" data-stage="${n}" class="stack" style="gap:16px">
         <div class="field"><label for="t-title">Task</label><input class="input" id="t-title" name="title" required placeholder="e.g. Book council pre-start meeting"></div>
         <div class="field"><label for="t-due">Due date</label><input class="input" id="t-due" name="due" type="date" required value="${addDays(TODAY, 7)}"></div>
@@ -2742,11 +2895,11 @@ const ACTIONS = {
       foot: `<button type="button" class="btn btn-ghost" data-action="close-sheet">Cancel</button><button type="submit" form="f-note" class="btn btn-primary">Save note</button>` });
   },
   'advance-stage': (el) => {
-    const p = P(el); const open = p.tasks.filter(t => t.stage === p.stage && !t.done).length; const next = stageInfo(p.stage + 1);
-    openSheet({ title: `Move to stage ${next.n}?`, sub: `${h(p.name)}: ${h(stageInfo(p.stage).name)} to ${h(next.name)}`,
-      body: `<div class="is-modal">${open ? `<div class="banner banner-warning">${icon('warning')}<span>${plural(open, 'task is', 'tasks are')} still open in this stage. They stay on the list and keep their due dates.</span></div>` : ''}<p>Home, the project list and the stage badges will show <b>Stage ${next.n}: ${h(next.name)}</b>. This is logged.</p></div>`,
-      foot: `<button type="button" class="btn btn-ghost" data-action="close-sheet">Cancel</button><button type="button" class="btn btn-primary" data-action="sheet-approve">Move to stage ${next.n}</button>`,
-      ctx: { onApprove: () => { p.stage++; p.stageNote = ''; addLog(p, `Moved to stage ${p.stage}: ${stageInfo(p.stage).name}`, 'stage'); save(); toast(`${p.id} is now in ${stageInfo(p.stage).name}`); go(`#/project/${p.id}/stage/${p.stage}`); } } });
+    const p = P(el); const open = p.tasks.filter(t => t.stage === p.stage && !t.done).length; const nn = p.stage + 1; const next = stageName(p, nn);
+    openSheet({ title: `Move to stage ${nn}?`, sub: `${h(p.name)}: ${h(stageName(p, p.stage))} to ${h(next)}`,
+      body: `<div class="is-modal">${open ? `<div class="banner banner-warning">${icon('warning')}<span>${plural(open, 'task is', 'tasks are')} still open in this stage. They stay on the list and keep their due dates.</span></div>` : ''}<p>Home, the project list and the stage badges will show <b>Stage ${nn}: ${h(next)}</b>. This is logged.</p></div>`,
+      foot: `<button type="button" class="btn btn-ghost" data-action="close-sheet">Cancel</button><button type="button" class="btn btn-primary" data-action="sheet-approve">Move to stage ${nn}</button>`,
+      ctx: { onApprove: () => { p.stage++; p.stageNote = ''; addLog(p, `Moved to ${stageLabel(p)}`, 'stage'); save(); toast(`${p.id} is now in ${stageName(p, p.stage)}`); go(`#/project/${p.id}/stage/${p.stage}`); } } });
   },
 
   /* RFQs */
@@ -2756,15 +2909,15 @@ const ACTIONS = {
       body: `<form id="f-scope" data-form="new-scope" data-p="${p.id}" class="stack" style="gap:16px">
         <div class="field"><label for="sc-name">Scope</label><input class="input" id="sc-name" name="scope" required list="scope-list" placeholder="e.g. Landscaping & street trees"><datalist id="scope-list">${Object.keys(SCOPE_ITEMS).map(k => `<option value="${h(k)}"></option>`).join('')}</datalist></div>
         <div class="form-grid"><div class="field"><label for="sc-cat">Cost category</label><select class="input" id="sc-cat" name="category">${CATEGORIES.map(c => `<option ${c === 'Consultants' ? 'selected' : ''}>${c}</option>`).join('')}</select></div>
-        <div class="field"><label for="sc-stage">Stage</label><select class="input" id="sc-stage" name="stage">${STAGES.map(s => `<option value="${s.n}" ${s.n === p.stage ? 'selected' : ''}>${s.n}. ${s.name}</option>`).join('')}</select></div></div></form>`,
+        <div class="field"><label for="sc-stage">Stage</label><select class="input" id="sc-stage" name="stage">${stagesOf(p).map((s0, i) => `<option value="${i + 1}" ${i + 1 === p.stage ? 'selected' : ''}>${i + 1}. ${h(s0.name)}</option>`).join('')}</select></div></div></form>`,
       foot: `<button type="button" class="btn btn-ghost" data-action="close-sheet">Cancel</button><button type="submit" form="f-scope" class="btn btn-primary">${icon('plus')}Create scope</button>` });
   },
   'add-quote': (el) => {
     const p = P(el); const r = findRfq(p, el.dataset.r); const pre = el.dataset.c || '';
-    const cands = state.contacts.filter(c => !['Government', 'Bank', 'Vendor', 'Project manager'].includes(c.role)).sort((a, b) => a.company.localeCompare(b.company));
+    const cands = state.contacts.filter(c => !onlyRoles(c, ['Government', 'Bank', 'Vendor', 'Project manager'])).sort((a, b) => a.company.localeCompare(b.company));
     openSheet({ title: 'Log a quote', sub: `${h(r.scope)} · ${h(p.id)}`,
       body: `<form id="f-quote" data-form="add-quote" data-p="${p.id}" data-r="${r.id}" class="stack" style="gap:16px">
-        <div class="field"><label for="q-party">Party</label><select class="input" id="q-party" name="party" required><option value="">Choose from contacts</option>${cands.map(c => `<option value="${c.id}" ${c.id === pre ? 'selected' : ''}>${h(c.company)} (${h(c.role)})</option>`).join('')}</select></div>
+        <div class="field"><label for="q-party">Party</label><select class="input" id="q-party" name="party" required><option value="">Choose from contacts</option>${cands.map(c => `<option value="${c.id}" ${c.id === pre ? 'selected' : ''}>${h(c.company)} (${h(roleText(c))})</option>`).join('')}</select></div>
         <div class="form-grid"><div class="field"><label for="q-amt">Amount ex GST</label><input class="input" id="q-amt" name="amount" type="number" min="0" step="0.01" required inputmode="decimal"></div>
         <div class="field"><label for="q-gst">GST</label><select class="input" id="q-gst" name="gst"><option value="taxable">GST 10% on top</option><option value="gst_free">GST-free</option></select></div>
         <div class="field"><label for="q-date">Received</label><input class="input" id="q-date" name="received" type="date" value="${TODAY}" required></div>
@@ -2787,7 +2940,7 @@ const ACTIONS = {
         <div class="field"><label for="ap-reason">Why this party</label><textarea class="input" id="ap-reason" name="reason" required rows="3" placeholder="Recorded on the RFQ, the log and the year-end workbook"></textarea>
           <div class="reason-chips">${chips.map(c => `<button type="button" class="filter-chip" data-action="reason-chip" data-v="${h(c)}">${h(c)}</button>`).join('')}</div></div>
         <div class="field"><label for="ap-val">Engagement value ex GST</label><input class="input" id="ap-val" name="value" type="number" min="0" step="0.01" value="${q.amount}"></div>
-        <p class="small muted">This records the appointment and drafts a purchase order in ${h(p.company.name)}'s name. The PO waits for your approval before it's sent.</p></form>`,
+        <p class="small muted">This records the appointment and drafts a purchase order in ${h(co(p).name)}'s name. The PO waits for your approval before it's sent.</p></form>`,
       foot: `<button type="button" class="btn btn-ghost" data-action="close-sheet">Cancel</button><button type="submit" form="f-appoint" class="btn btn-accent">${icon('check')}Appoint and draft PO</button>` });
   },
   'toggle-compare': (el) => { const a = el.closest('.scope'); const sp = el.querySelector('span'); if (!el.dataset.label) el.dataset.label = sp.textContent; const on = a.classList.toggle('show-all'); el.setAttribute('aria-expanded', String(on)); sp.textContent = on ? 'Hide other quotes' : el.dataset.label; },
@@ -2797,7 +2950,7 @@ const ACTIONS = {
     const cands = rfqCandidates(r); const need = Math.max(1, 3 - r.quotes.length);
     if (!cands.length) { toast('Everyone in that role has already quoted. Add a contact first.', 'info'); return; }
     const first = cands[0];
-    const list = `<fieldset style="border:0;padding:0;margin:0"><legend class="eyebrow" style="margin-bottom:8px">Send to (one email each)</legend><div class="recips">${cands.map((c, i) => `<label class="recip"><input type="checkbox" name="rcpt" value="${c.id}" ${i < need ? 'checked' : ''} data-input="rfq-rcpt" data-p="${p.id}" data-r="${r.id}"><span class="body"><span class="strong" style="display:block">${h(c.company)}</span><span class="xs muted">${h(c.name)} · ${h(c.role)}${c.email ? ' · ' + h(c.email) : ''}</span>${expiryChip(c) ? '<br>' + expiryChip(c) : ''}</span></label>`).join('')}</div></fieldset>`;
+    const list = `<fieldset style="border:0;padding:0;margin:0"><legend class="eyebrow" style="margin-bottom:8px">Send to (one email each)</legend><div class="recips">${cands.map((c, i) => `<label class="recip"><input type="checkbox" name="rcpt" value="${c.id}" ${i < need ? 'checked' : ''} data-input="rfq-rcpt" data-p="${p.id}" data-r="${r.id}"><span class="body"><span class="strong" style="display:block">${h(c.company)}</span><span class="xs muted">${h(c.name)} · ${h(roleText(c))}${c.email ? ' · ' + h(c.email) : ''}</span>${expiryChip(c) ? '<br>' + expiryChip(c) : ''}</span></label>`).join('')}</div></fieldset>`;
     openApproval({ title: 'Request quotes', sub: `${h(r.scope)} · ${h(p.name)} · from your RFQ template`,
       intro: list,
       preview: emailHTML({ to: recipientLine(first.id, Math.min(need, cands.length) - 1), subject: rfqSubject(p, r), body: rfqBody(p, r, first.id), attachments: rfqAttachments(p, r, first.id) }),
@@ -2826,32 +2979,32 @@ const ACTIONS = {
     const r = p.rfqs.find(x => x.scope === e.scope && x.quotes.some(q => q.status === 'appointed' && q.contactId === e.contactId));
     const q = r ? r.quotes.find(x => x.status === 'appointed') : null;
     const ins = expiryStatus(c);
-    const po = `<div class="po"><div class="po-head"><div><div class="doc">Purchase order</div><div class="xs muted">${poNo} · ${fmtDate(TODAY)}</div></div><div class="small po-party"><b>${h(p.company.name)}</b><br>ABN ${h(p.company.abn)}<br>c/- ${h(state.settings.company)}, ${h(state.settings.address)}</div></div>
+    const po = `<div class="po"><div class="po-head"><div><div class="doc">Purchase order</div><div class="xs muted">${poNo} · ${fmtDate(TODAY)}</div></div><div class="small po-party"><b>${h(co(p).name)}</b><br>ABN ${h(co(p).abn)}<br>c/- ${h(state.settings.company)}, ${h(state.settings.address)}</div></div>
       <dl class="kv" style="margin:0"><dt>To</dt><dd>${h(c.company)}${c.abn ? '<br><span class="muted xs">ABN ' + h(c.abn) + '</span>' : ''}</dd><dt>Scope</dt><dd>${h(e.scope)}</dd><dt>Site</dt><dd>${h(p.lotPlan)}, ${h(p.suburb)}</dd><dt>Basis</dt><dd>${q ? 'Quote received ' + fmtDate(q.received) : 'Agreed scope'}</dd>
       <dt>Value ex GST</dt><dd>${fmtMoney(e.value)}</dd><dt>GST</dt><dd>${fmtMoney(e.value * 0.1)}</dd><dt><b>Total inc GST</b></dt><dd><b>${fmtMoney(e.value * 1.1)}</b></dd><dt>Claims</dt><dd>Monthly, 14-day terms</dd><dt>Insurance</dt><dd>${ins ? (ins.lvl === 2 ? '<span style="color:var(--bad)">Expired. Request certificate</span>' : 'Expires ' + fmtDate(ins.dt)) : 'Current'}</dd></dl></div>`;
-    const body = `Hi ${firstName(e.contactId)},\n\nPlease find attached purchase order ${poNo} from ${p.company.name} for ${e.scope} at ${p.name}.\n\nInvoices should be addressed to ${p.company.name} (ABN ${p.company.abn}), not Wellco. Please quote the PO number on every claim.\n\nThanks,\n${state.settings.signature}`;
+    const body = `Hi ${firstName(e.contactId)},\n\nPlease find attached purchase order ${poNo} from ${co(p).name} for ${e.scope} at ${p.name}.\n\nInvoices should be addressed to ${co(p).name} (ABN ${co(p).abn}), not Wellco. Please quote the PO number on every claim.\n\nThanks,\n${state.settings.signature}`;
     openApproval({ title: 'Issue purchase order', sub: `${h(c.company)} · ${fmtMoney(e.value)} ex GST`, intro: po + '<div style="height:16px"></div>',
       preview: emailHTML({ to: recipientLine(e.contactId), subject: `Purchase order ${poNo}: ${e.scope}, ${p.name}`, body, attachments: [`${p.id}_PurchaseOrder_${partyKey(c)}_${TODAY}.pdf`] }),
-      onApprove: () => { e.status = 'issued'; e.issued = TODAY; p.docs.push({ id: newId('f'), type: 'Engagement', party: partyKey(c), date: TODAY, title: 'Purchase order: ' + e.scope, size: 96, tags: [e.category] }); addLog(p, `Purchase order ${poNo} issued to ${c.company} (${fmtMoney(e.value)} ex GST). Approved by Dan`, 'send'); commit(); toast(`PO issued to ${c.company}. Demo: nothing actually sent`, 'send'); } });
+      onApprove: () => { e.status = 'issued'; e.issued = TODAY; p.docs.push({ id: newId('f'), type: 'Engagement', party: partyKey(c), date: TODAY, title: 'Purchase order: ' + e.scope, size: 96, tags: [e.category], ext: 'pdf', stage: r ? r.stage : p.stage }); addLog(p, `Purchase order ${poNo} issued to ${c.company} (${fmtMoney(e.value)} ex GST). Approved by Dan`, 'send'); commit(); toast(`PO issued to ${c.company}. Demo: nothing actually sent`, 'send'); } });
   },
   'complete-eng': (el) => { const p = P(el); const e = p.engagements.find(x => x.id === el.dataset.id); e.status = 'complete'; addLog(p, `Engagement complete: ${contactLabel(e.contactId)}, ${e.scope}`, 'task'); commit(); toast('Marked complete'); },
 
   /* Money */
   'add-invoice': (el) => {
     const p = P(el); const dir = el.dataset.dir;
-    openSheet({ title: dir === 'in' ? 'New bill' : 'New invoice', sub: `${h(p.company.name)} · ABN ${h(p.company.abn)}`, body: invoiceForm(p, dir),
+    openSheet({ title: dir === 'in' ? 'New bill' : 'New invoice', sub: `${h(co(p).name)} · ABN ${h(co(p).abn)}`, body: invoiceForm(p, dir),
       foot: `<button type="button" class="btn btn-ghost" data-action="close-sheet">Cancel</button><button type="submit" form="f-inv" class="btn btn-primary">${icon('check')}${dir === 'in' ? 'Save for approval' : 'Save draft'}</button>` });
     updateInvoiceCalc();
   },
-  'add-line': (el) => { const box = $('#inv-lines'); const opts = el.dataset.dir === 'in' ? ['taxable', 'gst_free', 'input_taxed'] : ['margin_scheme', 'taxable', 'gst_free']; box.insertAdjacentHTML('beforeend', lineRow(lineSeq++, opts)); box.lastElementChild.querySelector('input').focus(); updateInvoiceCalc(); },
+  'add-line': (el) => { const box = $('#inv-lines'); const dir = el.dataset.dir; const opts = dir === 'in' ? ['taxable', 'gst_free', 'input_taxed'] : ['margin_scheme', 'taxable', 'gst_free']; const def = $('#i-cat'); box.insertAdjacentHTML('beforeend', lineRow(lineSeq++, opts, dir === 'in' ? { category: def ? def.value : CATEGORIES[0] } : {}, dir === 'in')); box.lastElementChild.querySelector('input').focus(); updateInvoiceCalc(); },
   'remove-line': (el) => { const rows = document.querySelectorAll('#inv-lines [data-line]'); if (rows.length > 1) { el.closest('[data-line]').remove(); updateInvoiceCalc(); } else toast('An invoice needs at least one line', 'info'); },
   'approve-invoice': (el) => {
     const p = P(el); const i = p.invoicesIn.find(x => x.id === el.dataset.id); const c = contactById(i.contactId) || {}; const ex = expiryStatus(c);
     const preview = `<div class="po"><div class="po-head"><div><div class="doc">Bill ${h(i.number)}</div><div class="small muted">Dated ${fmtDate(i.date)} · due ${fmtDate(i.due)}</div></div><div class="small po-party"><b>${h(c.company)}</b>${c.abn ? '<br>ABN ' + h(c.abn) : ''}</div></div>
-      <div class="stack" style="gap:8px;margin-bottom:12px">${i.lines.map(l => `<div class="hstack" style="justify-content:space-between;flex-wrap:nowrap;align-items:flex-start"><span style="min-width:0">${h(l.desc)}<br><span class="small muted">${gstChip(l.gst)}</span></span><span class="num nowrap strong">${fmtMoney(lineTotal(l))}</span></div>`).join('')}</div>
+      <div class="stack" style="gap:8px;margin-bottom:12px">${i.lines.map(l => `<div class="hstack" style="justify-content:space-between;flex-wrap:nowrap;align-items:flex-start"><span style="min-width:0">${h(l.desc)}<br><span class="small muted">${gstChip(l.gst)}${billCats(i).length > 1 ? ' · ' + h(lineCat(i, l)) : ''}</span></span><span class="num nowrap strong">${fmtMoney(lineTotal(l))}</span></div>`).join('')}</div>
       <dl class="kv" style="margin:0;padding-top:12px;border-top:1px solid var(--line)"><dt>Subtotal</dt><dd>${fmtMoney(invEx(i))}</dd><dt>Total GST 10%</dt><dd>${fmtMoney(invGst(i))}</dd><dt>GST Free portion</dt><dd>${fmtMoney(invGstFree(i))}</dd><dt><b>Total</b></dt><dd><b>${fmtMoney(invTotal(i))}</b></dd>
-      <dt>Account</dt><dd>${h(i.category)}</dd>${i.engagementId ? `<dt>Against PO</dt><dd>${h((p.engagements.find(e => e.id === i.engagementId) || {}).scope || '')}</dd>` : ''}<dt>Pay from</dt><dd>${h(p.company.name)}<br><span class="xs muted">${h(p.company.bank)} · BSB ${h(p.company.bsb)} · Acc ${h(p.company.acc)}</span></dd></dl></div>
-      ${i.intercompany ? `<div class="demo-banner" style="margin-top:16px;margin-bottom:0">${icon('handshake')}<span>Intercompany: Wellco invoicing ${h(p.company.name)}. Flagged on the year-end workbook.</span></div>` : ''}
+      <dt>Account</dt><dd>${billCats(i).length > 1 ? 'Split: ' + h(billCats(i).join(', ')) : h(billCatLabel(i))}</dd>${i.engagementId ? `<dt>Against PO</dt><dd>${h((p.engagements.find(e => e.id === i.engagementId) || {}).scope || '')}</dd>` : ''}<dt>Pay from</dt><dd>${h(co(p).name)}<br><span class="xs muted">${h(co(p).bank)} · BSB ${h(co(p).bsb)} · Acc ${h(co(p).acc)}</span></dd></dl></div>
+      ${i.intercompany ? `<div class="demo-banner" style="margin-top:16px;margin-bottom:0">${icon('handshake')}<span>Intercompany: Wellco invoicing ${h(co(p).name)}. Flagged on the year-end workbook.</span></div>` : ''}
       ${ex && ex.lvl === 2 ? `<div class="banner banner-critical" style="margin-top:16px;margin-bottom:0">${icon('warning')}<span>${h(c.company)}: ${ex.k.toLowerCase()} expired ${fmtDate(ex.dt)}. Get a current certificate before paying.</span></div>` : ''}`;
     openApproval({ title: 'Approve bill', sub: `${h(c.company)} · ${h(i.desc)}`, preview, editable: false, note: 'no payment is made. In the live app, approving puts this in the pay run for the project company\'s bank account.', confirmLabel: 'Approve for payment', confirmIcon: 'check',
       onApprove: () => { i.status = 'approved'; addLog(p, `Invoice ${i.number} from ${c.company} approved for payment (${totalText(i)}). Approved by Dan`, 'money'); commit(); toast(`Approved. ${fmtMoney(invTotal(i))} to pay by ${fmtDateShort(i.due)}`); } });
@@ -2859,12 +3012,12 @@ const ACTIONS = {
   'pay-invoice': (el) => {
     const p = P(el); const i = p.invoicesIn.find(x => x.id === el.dataset.id);
     openSheet({ title: 'Record payment', sub: `${h(contactLabel(i.contactId))} · ${h(i.number)} · ${fmtMoney(invTotal(i))}`,
-      body: `<form id="f-pay" data-form="pay-invoice" data-p="${p.id}" data-id="${i.id}" class="stack" style="gap:16px"><div class="form-grid"><div class="field"><label for="pay-date">Paid on</label><input class="input" id="pay-date" name="date" type="date" value="${TODAY}" required></div><div class="field"><label for="pay-ref">Bank reference</label><input class="input" id="pay-ref" name="ref" value="${h(i.number)}"></div></div><p class="help">Records the payment from ${h(p.company.name)}'s account. Paid totals and Budget vs actual update straight away.</p></form>`,
+      body: `<form id="f-pay" data-form="pay-invoice" data-p="${p.id}" data-id="${i.id}" class="stack" style="gap:16px"><div class="form-grid"><div class="field"><label for="pay-date">Paid on</label><input class="input" id="pay-date" name="date" type="date" value="${TODAY}" required></div><div class="field"><label for="pay-ref">Bank reference</label><input class="input" id="pay-ref" name="ref" value="${h(i.number)}"></div></div><p class="help">Records the payment from ${h(co(p).name)}'s account. Paid totals and Budget vs actual update straight away.</p></form>`,
       foot: `<button type="button" class="btn btn-ghost" data-action="close-sheet">Cancel</button><button type="submit" form="f-pay" class="btn btn-accent">${icon('check')}Mark paid</button>` });
   },
   'issue-invoice': (el) => {
     const p = P(el); const o = p.invoicesOut.find(x => x.id === el.dataset.id);
-    const body = `Hello,\n\nPlease find attached tax invoice ${o.number} from ${p.company.name} (ABN ${p.company.abn}) for ${o.desc}.\n\nAmount: ${fmtMoney(invTotal(o))}${invGst(o) ? ' including GST of ' + fmtMoney(invGst(o)) : ''}\nDue: ${fmtDate(o.due)}\nPay to: ${p.company.name}, ${p.company.bank}, BSB ${p.company.bsb}, Account ${p.company.acc}\n\nThanks,\n${state.settings.signature}`;
+    const body = `Hello,\n\nPlease find attached tax invoice ${o.number} from ${co(p).name} (ABN ${co(p).abn}) for ${o.desc}.\n\nAmount: ${fmtMoney(invTotal(o))}${invGst(o) ? ' including GST of ' + fmtMoney(invGst(o)) : ''}\nDue: ${fmtDate(o.due)}\nPay to: ${co(p).name}, ${co(p).bank}, BSB ${co(p).bsb}, Account ${co(p).acc}\n\nThanks,\n${state.settings.signature}`;
     openApproval({ title: 'Issue invoice', sub: `${h(o.to)} · ${fmtMoney(invTotal(o))}`,
       preview: emailHTML({ to: h(o.to), cc: state.contacts.find(c => c.id === 'miltonlegal') ? 'Kate Brennan, Milton Legal' : '', subject: `Tax invoice ${o.number}: ${o.desc}`, body, attachments: [`${p.id}_InvoiceOut_${partyKey({ company: o.to })}_${TODAY}.pdf`] }),
       onApprove: () => { o.status = 'issued'; addLog(p, `Invoice ${o.number} issued to ${o.to} (${fmtMoney(invTotal(o))}). Approved by Dan`, 'send'); commit(); toast(`Invoice ${o.number} issued. Demo: nothing actually sent`, 'send'); } });
@@ -2879,52 +3032,86 @@ const ACTIONS = {
 
   /* Documents */
   'upload': (el) => {
-    const p = P(el); const folder = DOC_TYPES.includes(ui.docFolder) ? ui.docFolder : 'Report';
+    const p = P(el); const folder = DOC_TYPES.includes(ui.docFolder) ? ui.docFolder : 'Report'; const sf = docStageFilter(p); const stg = sf === 'all' ? p.stage : sf;
     const parties = state.contacts.slice().sort((a, b) => a.company.localeCompare(b.company));
-    openSheet({ title: 'Upload document', sub: `${h(p.id)} · named and filed automatically`,
+    openSheet({ title: 'Upload documents', sub: `${h(p.id)} · named and filed automatically`,
       body: `<form id="f-upload" data-form="upload" data-p="${p.id}" class="stack" style="gap:16px">
         <div class="form-grid"><div class="field"><label for="u-type">Document type</label><select class="input" id="u-type" name="type" data-input="upload-preview">${DOC_TYPES.map(k => `<option value="${k}" ${k === folder ? 'selected' : ''}>${DOC_LABELS[k]}</option>`).join('')}</select></div>
-        <div class="field"><label for="u-party">Party</label><select class="input" id="u-party" name="party" data-input="upload-preview">${parties.map(c => `<option value="${c.id}">${h(c.company)}</option>`).join('')}</select></div></div>
-        <div class="field"><label for="u-title">Title</label><input class="input" id="u-title" name="title" placeholder="e.g. Updated stormwater plan"></div>
-        <div class="field"><span class="label">File</span><button type="button" class="btn" data-action="pick-file" style="justify-content:flex-start">${icon('upload')}<span id="u-file">Choose a PDF or photo</span></button></div>
-        <div class="field"><span class="label">Will be saved as</span><div class="card" style="padding:12px;box-shadow:none"><span class="mono" id="u-name" style="font-size:12px;overflow-wrap:anywhere"></span></div></div></form>`,
+        <div class="field"><label for="u-stage">Stage</label><select class="input" id="u-stage" name="stage">${stagesOf(p).map((s0, i) => `<option value="${i + 1}" ${i + 1 === stg ? 'selected' : ''}>${i + 1}. ${h(s0.name)}</option>`).join('')}</select></div>
+        <div class="field full"><label for="u-party">Party</label><select class="input" id="u-party" name="party" data-input="upload-preview">${parties.map(c => `<option value="${c.id}">${h(c.company)}</option>`).join('')}</select></div></div>
+        <div class="field"><label for="u-title">Title</label><input class="input" id="u-title" name="title" placeholder="e.g. Updated stormwater plan"><span class="hint">Leave blank to use the file name.</span></div>
+        <div class="field"><span class="label">Files</span><button type="button" class="btn" data-action="pick-file" style="justify-content:flex-start">${icon('upload')}<span id="u-file">Choose files</span></button><span class="hint">Any file type: PDF, Excel, Word, photos. Pick several at once.</span></div>
+        <div class="field"><span class="label">Will be saved as</span><div class="card" style="padding:12px;box-shadow:none;border:1px solid var(--border)"><span class="mono" id="u-name" style="font-size:12px;overflow-wrap:anywhere"></span></div></div></form>`,
       foot: `<button type="button" class="btn btn-ghost" data-action="close-sheet">Cancel</button><button type="submit" form="f-upload" class="btn btn-primary">${icon('upload')}Upload</button>`,
-      ctx: { file: null, p: p.id } });
+      ctx: { files: [], p: p.id } });
     updateUploadPreview();
   },
   'pick-file': () => { const fi = $('#file-input'); fi.value = ''; fi.click(); },
+
+  /* Stages: per project */
+  'rename-task': (el) => { ui.editTask = el.dataset.id; render(); const i = $('#rt-' + CSS.escape(el.dataset.id)); if (i) { i.focus(); i.select(); } },
+  'edit-stages': (el) => {
+    const p = P(el); const draft = stagesOf(p).map((st, i) => ({ orig: i + 1, name: st.name, key: st.key || null }));
+    openSheet({ title: 'Edit stages', sub: `${h(p.name)} · numbers follow the order`, body: stageDraftHTML(p, draft),
+      foot: `<button type="button" class="btn btn-ghost" data-action="close-sheet">Cancel</button><button type="submit" form="f-stages" class="btn btn-primary">Save stages</button>`, ctx: { p: p.id, draft } });
+  },
+  'stage-add-after': (el) => { syncStageDraft(); const i = +el.dataset.i + 1; sheetCtx.draft.splice(i, 0, { orig: null, name: '', key: null }); redrawStageDraft(); const n = $('#sd-' + i); if (n) n.focus(); },
+  'stage-remove': (el) => { syncStageDraft(); sheetCtx.draft.splice(+el.dataset.i, 1); redrawStageDraft(); },
+
+  /* Funds needed before sign-off */
+  'add-fund': (el) => openFundForm(P(el), null),
+  'edit-fund': (el) => { const p = P(el); openFundForm(p, (p.funds || []).find(f => f.id === el.dataset.id)); },
+  'fund-paid': (el) => { const p = P(el); const f = p.funds.find(x => x.id === el.dataset.id); f.paid = true; addLog(p, `Funds needed: ${f.desc} marked paid (${fmtMoney(lineTotal(f))})`, 'money'); commit(); toast('Marked paid. Still to find: ' + fmtMoney(fundsSummary(p).toFind)); },
+  'fund-remove': (el) => { const p = P(el); const f = p.funds.find(x => x.id === el.dataset.id); p.funds = p.funds.filter(x => x !== f); addLog(p, `Funds needed: removed ${f.desc} (${fmtMoney(lineTotal(f))})`, 'money'); closeSheet(); commit(); toast('Line removed'); },
+
+  /* Our companies */
+  'company-detail': (el) => openCompanyForm(companyById(el.dataset.id)),
+  'add-company': () => openCompanyForm(null),
+  'assign-company': (el) => openAssignCompany(P(el), null),
+  'close-company': (el) => {
+    const p = P(el); const c = co(p);
+    openSheet({ title: `Close ${c.name}?`, sub: `${h(p.name)} · wind-up`,
+      body: `<div class="is-modal"><p>Its status becomes <b>Closed</b> from ${fmtDate(TODAY)} and it drops off the quarterly BAS list. Its books, documents and exports stay as they are.</p></div>`,
+      foot: `<button type="button" class="btn btn-ghost" data-action="close-sheet">Cancel</button><button type="button" class="btn btn-primary" data-action="sheet-approve">Close company</button>`,
+      ctx: { onApprove: () => { c.status = 'Closed'; c.closed = TODAY; addLog(p, `${c.name} closed. Status Closed from ${fmtDate(TODAY)}`, 'company'); addGlobalLog(`Company closed: ${c.name}`, 'company'); commit(); toast(c.name + ' closed'); } } });
+  },
 
   /* Contacts */
   'contact-detail': (el) => {
     const c = contactById(el.dataset.id); const projs = contactProjects(c.id); const ex = expiryStatus(c);
     const hist = [];
     state.projects.forEach(p => { p.rfqs.forEach(r => r.quotes.filter(q => q.contactId === c.id).forEach(q => hist.push([p, `${r.scope}: ${q.status === 'appointed' ? 'appointed' : q.status === 'declined' ? 'quoted, not chosen' : q.status}`, q.amount, q.received || q.requestedAt]))); });
-    state.projects.forEach(p => { const paid = sum(p.invoicesIn.filter(i => i.contactId === c.id && i.status === 'paid'), invTotal); if (paid) hist.push([p, 'Paid to date', paid, null]); });
-    openSheet({ title: c.company, sub: `${h(c.name)} · ${h(c.role)}`,
+    state.projects.forEach(p => { const paid = sum(p.invoicesIn.filter(i => i.contactId === c.id && i.status === 'paid'), invTotal); if (paid) hist.push([p, 'Paid to date by ' + co(p).name, paid, null]); });
+    openSheet({ title: c.company, sub: `${h(c.name)} · ${h(roleText(c))}`,
       body: `<div class="stack" style="gap:20px">
-        <dl class="kv" style="margin:0"><dt>ABN</dt><dd>${h(c.abn || '–')}</dd><dt>Email</dt><dd style="user-select:all">${h(c.email || '–')}</dd><dt>Phone</dt><dd style="user-select:all">${h(c.phone || '–')}</dd>
+        <dl class="kv" style="margin:0"><dt>Roles</dt><dd>${h(roleText(c))}</dd><dt>Shown under</dt><dd>${h(contactCategories(c).join(', '))}</dd><dt>ABN</dt><dd>${h(c.abn || '–')}</dd><dt>Email</dt><dd style="user-select:all">${h(c.email || '–')}</dd><dt>Phone</dt><dd style="user-select:all">${h(c.phone || '–')}</dd>
           <dt>Licence expiry</dt><dd>${c.licenceExpiry ? fmtDate(c.licenceExpiry) : '–'}</dd><dt>Insurance expiry</dt><dd>${c.insuranceExpiry ? fmtDate(c.insuranceExpiry) : '–'}</dd><dt>Rating</dt><dd><span class="stars" aria-label="${c.rating} out of 5">${'★'.repeat(c.rating)}${'☆'.repeat(5 - c.rating)}</span></dd></dl>
         ${ex ? `<div class="banner banner-${ex.lvl === 2 ? 'critical' : 'warning'}" style="margin:0">${icon('warning')}<span>${ex.k} ${ex.lvl === 2 ? 'expired' : 'expires'} ${fmtDate(ex.dt)}. Ask for a current certificate before the next engagement.</span></div>` : ''}
         ${c.notes ? `<div><div class="eyebrow">Notes</div><p>${h(c.notes)}</p></div>` : ''}
         <div><div class="eyebrow">Projects worked on</div>${projs.length ? `<div class="hstack">${projs.map(p => `<a class="chip" href="#/project/${p.id}" data-action="close-sheet" style="height:32px;text-decoration:none">${h(p.id)}</a>`).join('')}</div>` : '<p class="small muted">None yet</p>'}</div>
-        ${hist.length ? `<div><div class="eyebrow">History</div><div class="list">${hist.map(([p, t, amt, dt]) => `<div class="row" style="min-height:52px"><span class="body"><span class="title" style="font-size:var(--fs-14)">${h(t)}</span><span class="meta">${h(p.id)}${dt ? ' · ' + fmtDate(dt) : ''}</span></span><span class="end strong num">${amt != null ? fmtMoney(amt) : ''}</span></div>`).join('')}</div></div>` : ''}
+        ${hist.length ? `<div><div class="eyebrow">History</div><div class="list">${hist.map(([p, t, amt, dt]) => `<div class="row" style="min-height:52px"><span class="body"><span class="title">${h(t)}</span><span class="meta">${h(p.id)}${dt ? ' · ' + fmtDate(dt) : ''}</span></span><span class="end strong num">${amt != null ? fmtMoney(amt) : ''}</span></div>`).join('')}</div></div>` : ''}
       </div>`,
-      foot: `<button type="button" class="btn btn-primary" data-action="close-sheet">Done</button>` });
+      foot: `<button type="button" class="btn" data-action="edit-contact" data-id="${c.id}">${icon('edit')}Edit</button><button type="button" class="btn btn-primary" data-action="close-sheet">Done</button>` });
   },
   'add-contact': () => {
-    openSheet({ title: 'Add contact', sub: 'Shared across every project',
-      body: `<form id="f-contact" data-form="add-contact" class="form-grid">
-        <div class="field full"><label for="c-company">Company</label><input class="input" id="c-company" name="company" required></div>
-        <div class="field"><label for="c-name">Contact name</label><input class="input" id="c-name" name="name" required></div>
-        <div class="field"><label for="c-role">Role</label><select class="input" id="c-role" name="role">${ROLES.map(r => `<option>${h(r)}</option>`).join('')}</select></div>
-        <div class="field"><label for="c-abn">ABN</label><input class="input" id="c-abn" name="abn" inputmode="numeric"></div>
-        <div class="field"><label for="c-phone">Phone</label><input class="input" id="c-phone" name="phone" type="tel"></div>
-        <div class="field full"><label for="c-email">Email</label><input class="input" id="c-email" name="email" type="email"></div>
-        <div class="field"><label for="c-lic">Licence expiry</label><input class="input" id="c-lic" name="licenceExpiry" type="date"></div>
-        <div class="field"><label for="c-ins">Insurance expiry</label><input class="input" id="c-ins" name="insuranceExpiry" type="date"></div>
-        <div class="field full"><label for="c-notes">Notes</label><textarea class="input" id="c-notes" name="notes" rows="3" placeholder="How they performed, who to ask for"></textarea></div></form>`,
+    openSheet({ title: 'Add contact', sub: 'Shared across every project', body: contactFormHTML(null),
       foot: `<button type="button" class="btn btn-ghost" data-action="close-sheet">Cancel</button><button type="submit" form="f-contact" class="btn btn-primary">${icon('plus')}Add contact</button>` });
   },
+  'edit-contact': (el) => {
+    const c = contactById(el.dataset.id);
+    openSheet({ title: 'Edit contact', sub: h(c.company), body: contactFormHTML(c),
+      foot: `<button type="button" class="btn btn-ghost" data-action="close-sheet">Cancel</button><button type="submit" form="f-contact" class="btn btn-primary">${icon('check')}Save contact</button>` });
+  },
+  'role-new-toggle': (el) => { const box = $('#c-newrole'); box.hidden = !box.hidden; el.setAttribute('aria-expanded', String(!box.hidden)); if (!box.hidden) $('#nr-name').focus(); },
+  'role-add-inline': () => addRoleInline(),
+  'manage-cats': () => {
+    const draft = { cats: state.categories.map(n => ({ name: n, orig: n })), roles: [] };
+    allRoles().forEach((r, k) => { const i = state.categories.indexOf(roleCategory(r)); if (i >= 0) draft.roles.push({ name: r, key: k, cat: i }); });
+    openSheet({ title: 'Manage categories', sub: 'Categories group roles on the Contacts page', body: catDraftHTML(draft),
+      foot: `<button type="button" class="btn btn-ghost" data-action="close-sheet">Cancel</button><button type="submit" form="f-cats" class="btn btn-primary">Save categories</button>`, ctx: { catDraft: draft } });
+  },
+  'cat-add': () => { syncCatDraft(); const inp = $('#cat-new'); const name = inp.value.trim(); if (!name) { toast('Type a name for the new category', 'info'); inp.focus(); return; } if (sheetCtx.catDraft.cats.some(c => c.name.toLowerCase() === name.toLowerCase())) { toast('That category already exists', 'info'); return; } sheetCtx.catDraft.cats.push({ name, orig: null }); redrawCatDraft(); const n = $('#cn-' + (sheetCtx.catDraft.cats.length - 1)); if (n) n.scrollIntoView({ block: 'center' }); },
+  'cat-remove': (el) => { syncCatDraft(); const i = +el.dataset.i; const d0 = sheetCtx.catDraft; d0.cats.splice(i, 1); d0.roles.forEach(r => { if (r.cat > i) r.cat--; }); redrawCatDraft(); },
 
   /* Deals */
   'add-deal': () => {
@@ -2932,18 +3119,51 @@ const ACTIONS = {
       body: `<form id="f-deal" data-form="add-deal" class="form-grid">
         <div class="field full"><label for="d-addr">Address</label><input class="input" id="d-addr" name="address" required placeholder="Street, Suburb NSW"></div>
         <div class="field"><label for="d-lot">Lot / plan</label><input class="input" id="d-lot" name="lotPlan" placeholder="Lot 4 DP 123456"></div>
+        <div class="field"><label for="d-type">Project type</label><select class="input" id="d-type" name="type">${PROJECT_TYPES.map(t => `<option>${h(t)}</option>`).join('')}</select></div>
         <div class="field"><label for="d-src">Source</label><input class="input" id="d-src" name="source" placeholder="e.g. Ray Taylor, off-market"></div>
         <div class="field"><label for="d-ask">Asking price</label><input class="input" id="d-ask" name="asking" type="number" min="0" step="1000"></div>
-        <div class="field"><label for="d-yield">Lot yield</label><input class="input" id="d-yield" name="yield" placeholder="e.g. 12 lots"></div>
-        <div class="field full"><label for="d-zone">Zoning</label><input class="input" id="d-zone" name="zoning" placeholder="e.g. R2 Low Density Residential"></div>
-        <div class="field full"><label for="d-notes">Notes</label><textarea class="input" id="d-notes" name="notes" rows="3"></textarea></div></form>`,
+        <div class="field"><label for="d-yield">Yield</label><input class="input" id="d-yield" name="yield" placeholder="e.g. 12 lots or 1 house"></div>
+        <div class="field"><label for="d-zone">Zoning</label><input class="input" id="d-zone" name="zoning" placeholder="e.g. R2 Low Density Residential"></div>
+        <div class="field full"><label for="d-notes">Notes</label><textarea class="input" id="d-notes" name="notes" rows="3"></textarea><span class="hint">Add the contract, plans and sales stats from the Documents column once it's logged.</span></div></form>`,
       foot: `<button type="button" class="btn btn-ghost" data-action="close-sheet">Cancel</button><button type="submit" form="f-deal" class="btn btn-primary">${icon('plus')}Log site</button>` });
   },
   'feaso': (el) => { const dl = state.deals.find(x => x.id === el.dataset.id); dl.feaso = el.dataset.v; if (dl.feaso === 'go' && dl.margin == null) dl.margin = 20; commit(); toast(dl.feaso === 'go' ? 'Marked Go. Create the project when you\'re ready' : dl.feaso === 'nogo' ? 'Marked No-go' : 'Reopened'); },
+  'deal-docs': (el) => {
+    const dl = state.deals.find(x => x.id === el.dataset.id); dl.docs = dl.docs || [];
+    openSheet({ title: 'Deal documents', sub: `${h(dl.address)} · ${plural(dl.docs.length, 'file')}`, body: dealDocsHTML(dl),
+      foot: `<button type="button" class="btn btn-ghost" data-action="close-sheet">Close</button><button type="submit" form="f-dealdoc" class="btn btn-primary">${icon('upload')}Upload</button>`, ctx: { deal: dl.id, files: [] } });
+    updateDealDocPreview();
+  },
 
   /* Wizard */
-  'wiz-back': () => { wiz.step = Math.max(1, wiz.step - 1); render(); },
+  'wiz-back': () => { if (wiz.step === 3) wizSyncStages(); wiz.step = Math.max(1, wiz.step - 1); render(); },
   'wiz-create': () => createProjectFromWizard(),
+  'wiz-add-stage': (el) => { wizSyncStages(); const i = +el.dataset.i + 1; wiz.stages.splice(i, 0, { name: '', key: null, tplId: null }); render(); const n = $('#ws-' + i); if (n) n.focus(); },
+  'wiz-remove-stage': (el) => { wizSyncStages(); wiz.stages.splice(+el.dataset.i, 1); render(); },
+
+  /* Stage templates (Settings) */
+  'tpl-move': (el) => {
+    const type = el.dataset.type; const list = tplFor(type); const i = +el.dataset.i; const j = i + +el.dataset.dir; if (j < 0 || j >= list.length) return;
+    [list[i], list[j]] = [list[j], list[i]];
+    addGlobalLog(`Stage template (${type}): moved ${list[j].name} ${j < i ? 'up' : 'down'} to stage ${j + 1}`, 'stage'); save(); render();
+    const b = mainEl.querySelector(`[data-action="tpl-move"][data-type="${CSS.escape(type)}"][data-i="${j}"][data-dir="${el.dataset.dir}"]:not([disabled])`) || mainEl.querySelector(`[data-action="tpl-edit"][data-type="${CSS.escape(type)}"][data-i="${j}"]`); if (b) b.focus();
+  },
+  'tpl-edit': (el) => openTplForm(el.dataset.type, +el.dataset.i),
+  'tpl-add-stage': (el) => openTplForm(el.dataset.type, -1),
+  'tpl-add-task': () => { const box = $('#tpl-tasks'); box.insertAdjacentHTML('beforeend', tplTaskRow(tplSeq++, { title: '', off: 30 })); box.lastElementChild.querySelector('input').focus(); },
+  'tpl-remove-task': (el) => { el.closest('[data-tpl-task]').remove(); },
+  'tpl-remove-stage': (el) => {
+    const type = el.dataset.type; const list = tplFor(type); const st = list[+el.dataset.i];
+    list.splice(+el.dataset.i, 1); addGlobalLog(`Stage template (${type}): removed ${st.name}`, 'stage'); closeSheet(); commit(); toast('Stage removed from the template');
+  },
+
+  /* Workbook preview (claude.ai viewer that can't save files) */
+  'wb-sheet': (el) => { if (!wbView) return; wbView.idx = +el.dataset.i; $('#sheet .sheet-body').innerHTML = workbookBody(); const t = $(`#sheet [data-action="wb-sheet"][data-i="${wbView.idx}"]`); if (t) t.focus(); },
+  'copy-sheet': () => {
+    if (!wbView) return; const sh = wbView.sheets[wbView.idx]; const tsv = sheetTSV(sh);
+    const fallback = () => { const ta = $('#wb-tsv'); if (!ta) return; ta.classList.remove('sr-only'); ta.style.cssText = 'position:fixed;left:-9999px;top:0'; ta.value = tsv; ta.focus(); ta.select(); let ok = false; try { ok = document.execCommand('copy'); } catch (e) { ok = false; } ta.style.cssText = ''; ta.classList.add('sr-only'); toast(ok ? `${sh.name} copied. Paste it into Excel.` : 'Select the table and copy it with Ctrl+C (Cmd+C on a Mac).', ok ? 'check' : 'info'); };
+    try { if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(tsv).then(() => toast(`${sh.name} copied. Paste it into Excel.`), fallback); else fallback(); } catch (e) { fallback(); }
+  },
 
   /* Exports */
   'export': (el) => runExport(el),
@@ -2956,7 +3176,7 @@ const ACTIONS = {
     openSheet({ title: 'Reset demo data?', sub: 'Puts every project, contact and invoice back to how it started',
       body: `<div class="is-modal"><p>Anything you've added or approved on this device will be cleared. The welcome note shows again.</p></div>`,
       foot: `<button type="button" class="btn btn-ghost" data-action="close-sheet">Cancel</button><button type="button" class="btn btn-critical" data-action="sheet-approve">Reset demo data</button>`,
-      ctx: { onApprove: () => { state = clone(SEED); ui = { fyIn: 'all', fyGst: null, docFolder: 'all', contactRole: 'All', contactQ: '', expFY: {} }; wiz = null; save(); toast('Demo data reset'); go('#/home'); setTimeout(openWelcome, 350); } } });
+      ctx: { onApprove: () => { state = clone(SEED); ui = freshUi(); wiz = null; save(); toast('Demo data reset'); go('#/home'); setTimeout(openWelcome, 350); } } });
   },
 };
 let sheetPicked = [];
@@ -2965,6 +3185,63 @@ let sheetPicked = [];
 const lines = (s) => String(s || '').split(/\n|;/).map(x => x.trim()).filter(Boolean);
 const FORMS = {
   'top-search': (f, fd) => { ui.contactQ = String(fd.get('q') || '').trim(); ui.contactRole = 'All'; go('#/contacts'); },
+  'rename-task': (f, fd) => { const p = getProject(f.dataset.p); const t = p.tasks.find(x => x.id === f.dataset.id); const v = String(fd.get('title') || '').trim(); ui.editTask = ''; if (!v || v === t.title) { render(); return; } addLog(p, `Task renamed: "${t.title}" to "${v}"`, 'task'); t.title = v; commit(); toast('Task renamed'); },
+  'edit-stages': (f) => saveStageDraft(getProject(f.dataset.p)),
+  'fund': (f, fd) => {
+    const p = getProject(f.dataset.p); p.funds = p.funds || [];
+    const vals = { desc: fd.get('desc').trim(), contactId: fd.get('party'), amount: +fd.get('amount') || 0, gst: fd.get('gst'), category: fd.get('category'), billId: fd.get('bill') || null, paid: fd.get('status') === 'paid', note: (fd.get('note') || '').trim() };
+    let f0 = f.dataset.id ? p.funds.find(x => x.id === f.dataset.id) : null;
+    if (f0) { Object.assign(f0, vals); addLog(p, `Funds needed: updated ${f0.desc} (${fmtMoney(lineTotal(f0))})`, 'money'); }
+    else { f0 = { id: newId('fn'), ...vals }; p.funds.push(f0); addLog(p, `Funds needed: added ${f0.desc} (${fmtMoney(lineTotal(f0))}, ${taxRateName(f0.gst)})`, 'money'); }
+    closeSheet(); commit(); toast('Saved. Still to find: ' + fmtMoney(fundsSummary(p).toFind));
+  },
+  'company': (f, fd) => {
+    const k = ['name', 'short', 'abn', 'acn', 'address', 'gstFrom', 'basCycle', 'bank', 'bsb', 'acc', 'status', 'formed', 'closed', 'notes'];
+    const vals = {}; k.forEach(x => { vals[x] = String(fd.get(x) || '').trim(); }); vals.gst = !!fd.get('gst'); ['gstFrom', 'formed', 'closed'].forEach(x => { vals[x] = vals[x] || null; });
+    if (vals.status === 'Closed' && !vals.closed) vals.closed = TODAY;
+    let c = f.dataset.id ? companyById(f.dataset.id) : null;
+    if (c) { const was = c.status; Object.assign(c, vals); addGlobalLog(`Company updated: ${c.name}${was !== c.status ? ` (status ${was} to ${c.status})` : ''}`, 'company'); companyProjects(c).forEach(p => addLog(p, `Owner details updated: ${c.name}`, 'company')); }
+    else { c = { id: newId('co'), ...vals }; state.companies.push(c); addGlobalLog(`Company added: ${c.name} (${c.status})`, 'company'); }
+    if (c.manager) { state.settings.company = c.name; state.settings.abn = c.abn; state.settings.address = c.address; }
+    closeSheet(); commit(); toast(c.name + ' saved');
+  },
+  'assign-company': (f, fd) => {
+    const p = getProject(f.dataset.p); const mode = fd.get('owner'); let c;
+    if (mode === 'existing') { c = companyById(fd.get('existingId')); if (!c) { toast('Choose a company', 'info'); return; } }
+    else {
+      const name = String(fd.get('company') || '').trim(); if (!name) { toast('Enter the company name', 'info'); return; }
+      c = { id: newId('co'), name, short: p.suburb, abn: String(fd.get('abn') || '').trim() || 'Applied for', acn: String(fd.get('acn') || '').trim(), address: 'c/- ' + state.settings.company + ', ' + state.settings.address, gst: !!fd.get('gst'), gstFrom: fd.get('gst') ? TODAY : null, basCycle: fd.get('gst') ? 'quarterly' : 'none', bank: String(fd.get('bank') || '').trim(), bsb: String(fd.get('bsb') || '').trim(), acc: String(fd.get('acc') || '').trim(), status: 'Active', formed: TODAY, closed: null, notes: 'Registered for ' + p.name + '.' };
+      state.companies.push(c); addGlobalLog(`Company added: ${c.name} (ABN ${c.abn}) for ${p.id}`, 'company');
+    }
+    if (c.status !== 'Active') { addGlobalLog(`Company ${c.name} now Active (was ${c.status})`, 'company'); c.status = 'Active'; }
+    p.companyId = c.id;
+    const t = p.tasks.find(x => x.id === f.dataset.task) || p.tasks.find(x => isRegisterTask(x) && !x.done); if (t) { t.done = true; t.doneAt = TODAY; }
+    addLog(p, `Project company registered: ${c.name} (ABN ${c.abn}). Quotes, purchase orders, invoices and bills are now in its name, replacing Dan Wellman and/or nominee`, 'company');
+    closeSheet(); commit(); toast(`${p.id} is now owned by ${c.name}`);
+  },
+  'save-contact': (f, fd) => {
+    const roles = fd.getAll('roles'); if (!roles.length) { toast('Tick at least one role', 'info'); return; }
+    const implied = new Set(roles.map(roleCategory)); const extra = fd.getAll('cats').filter(x => !implied.has(x));
+    const vals = { name: fd.get('name').trim(), company: fd.get('company').trim(), roles, categories: extra, abn: fd.get('abn').trim(), email: fd.get('email').trim(), phone: fd.get('phone').trim(), licenceExpiry: fd.get('licenceExpiry') || null, insuranceExpiry: fd.get('insuranceExpiry') || null, notes: fd.get('notes').trim() };
+    let c = f.dataset.id ? contactById(f.dataset.id) : null;
+    if (c) { Object.assign(c, vals); addGlobalLog(`Contact updated: ${c.company} (${roleText(c)}; shown under ${contactCategories(c).join(', ')})`, 'note'); }
+    else { c = { id: newId('c'), rating: 4, ...vals }; state.contacts.push(c); addGlobalLog(`Contact added: ${c.company} (${roleText(c)})`, 'note'); }
+    closeSheet(); commit(); toast(c.company + (f.dataset.id ? ' saved' : ' added to contacts'));
+  },
+  'manage-cats': () => saveCatDraft(),
+  'deal-doc': (f, fd) => {
+    const dl = state.deals.find(x => x.id === f.dataset.id); const files = (sheetCtx && sheetCtx.files) || [];
+    if (!files.length) { toast('Choose a file first', 'info'); return; }
+    const c = fd.get('party') ? contactById(fd.get('party')) : null; const note = (fd.get('note') || '').trim();
+    const added = files.map(file => ({ id: newId('dd'), type: fd.get('type'), party: c ? partyKey(c) : 'Agent', date: TODAY, title: file.name.replace(/\.[^.]+$/, ''), ext: fileExt(file.name), size: Math.max(1, Math.round(file.size / 1024)), note }));
+    dl.docs = (dl.docs || []).concat(added);
+    addGlobalLog(`Deal ${dl.address}: ${added.length === 1 ? 'document added, ' + dealDocName(dl, added[0]) : plural(added.length, 'document') + ' added (' + DEAL_DOC_TYPES[added[0].type] + ')'}`, 'doc');
+    commit(); sheetCtx.files = [];
+    $('#sheet .sheet-body').innerHTML = dealDocsHTML(dl); $('#sheet .sheet-sub').textContent = `${dl.address} · ${plural(dl.docs.length, 'file')}`; updateDealDocPreview();
+    toast(`${plural(added.length, 'file')} added to the deal`, 'upload');
+  },
+  'wiz3': (f, fd) => { wizSyncStages(); if (wiz.stages.some(st => !st.name.trim())) { toast('Give every stage a name', 'info'); return; } wiz.stages.forEach(st => { st.name = st.name.trim(); }); wiz.start = +fd.get('start') || 1; wiz.step = 4; render(); },
+  'tpl-stage': (f, fd) => saveTplForm(f, fd),
   'add-task': (f, fd) => { const p = getProject(f.dataset.p); const t = { id: newId('t'), stage: +f.dataset.stage, title: fd.get('title').trim(), due: fd.get('due'), done: false, doneAt: null, notes: [], lead: (fd.get('lead') || '').trim() || null }; p.tasks.push(t); addLog(p, 'Task added: ' + t.title, 'task'); closeSheet(); commit(); toast('Task added'); },
   'add-note': (f, fd) => { const p = getProject(f.dataset.p); const t = p.tasks.find(x => x.id === f.dataset.id); t.notes = t.notes || []; t.notes.push({ ts: nowTs(), text: fd.get('text').trim() }); addLog(p, `Note on "${t.title}": ${fd.get('text').trim()}`, 'note'); closeSheet(); commit(); toast('Note saved'); },
   'new-scope': (f, fd) => { const p = getProject(f.dataset.p); const r = { id: newId('r'), scope: fd.get('scope').trim(), stage: +fd.get('stage'), category: fd.get('category'), quotes: [] }; p.rfqs.push(r); addLog(p, 'Scope created: ' + r.scope, 'note'); closeSheet(); commit(); toast('Scope created. Request three quotes when ready'); },
@@ -2973,7 +3250,7 @@ const FORMS = {
     let q = r.quotes.find(x => x.contactId === cid && x.status === 'requested');
     if (!q) { q = { id: newId('q'), contactId: cid, requestedAt: null }; r.quotes.push(q); }
     Object.assign(q, { amount: +fd.get('amount'), gst: fd.get('gst'), received: fd.get('received'), validUntil: fd.get('valid'), status: 'received', inclusions: lines(fd.get('inc')), exclusions: lines(fd.get('exc')) });
-    p.docs.push({ id: newId('f'), type: 'Quote', party: partyKey(c), date: q.received, title: 'Quote: ' + r.scope, size: 310, tags: [r.scope] });
+    p.docs.push({ id: newId('f'), type: 'Quote', party: partyKey(c), date: q.received, title: 'Quote: ' + r.scope, size: 310, tags: [r.scope], ext: 'pdf', stage: r.stage });
     addLog(p, `Quote received from ${c.company} for ${r.scope}: ${fmtMoney(q.amount)} ex GST`, 'money'); closeSheet(); commit(); toast('Quote saved and filed');
   },
   'appoint': (f, fd) => {
@@ -2987,13 +3264,13 @@ const FORMS = {
   },
   'add-invoice': (f, fd) => {
     const p = getProject(f.dataset.p); const dir = f.dataset.dir; const base = (p.sales && p.sales[0] && p.sales[0].marginBase) || 0;
-    const descs = fd.getAll('ldesc'), amts = fd.getAll('lamt'), gsts = fd.getAll('lgst');
-    const ls = descs.map((d0, i) => { const l = { desc: d0.trim(), amount: +amts[i] || 0, gst: gsts[i] }; if (l.gst === 'margin_scheme') l.marginBase = base; return l; });
+    const descs = fd.getAll('ldesc'), amts = fd.getAll('lamt'), gsts = fd.getAll('lgst'), cats = fd.getAll('lcat');
+    const ls = descs.map((d0, i) => { const l = { desc: d0.trim(), amount: +amts[i] || 0, gst: gsts[i] }; if (dir === 'in') l.category = cats[i] || fd.get('category'); if (l.gst === 'margin_scheme') l.marginBase = base; return l; });
     const inv = { id: newId('i'), number: fd.get('number').trim(), date: fd.get('date'), due: fd.get('due') || addDays(fd.get('date'), 14), desc: fd.get('desc').trim(), lines: ls, status: 'draft', paidDate: null };
     if (dir === 'in') {
       Object.assign(inv, { contactId: fd.get('party'), category: fd.get('category'), engagementId: fd.get('engagement') || null, intercompany: fd.get('party') === 'wellco' });
-      p.invoicesIn.push(inv); p.docs.push({ id: newId('f'), type: 'InvoiceIn', party: partyKey(contactById(inv.contactId)), date: inv.date, title: 'Invoice ' + inv.number, size: 140, tags: [inv.category] });
-      addLog(p, `Invoice ${inv.number} from ${contactLabel(inv.contactId)} added (${totalText(inv)}). Waiting for approval`, 'money');
+      p.invoicesIn.push(inv); p.docs.push({ id: newId('f'), type: 'InvoiceIn', party: partyKey(contactById(inv.contactId)), date: inv.date, title: 'Invoice ' + inv.number, size: 140, tags: billCats(inv), ext: 'pdf', stage: p.stage });
+      addLog(p, `Invoice ${inv.number} from ${contactLabel(inv.contactId)} added (${totalText(inv)}${billCats(inv).length > 1 ? ', split: ' + billCats(inv).join(', ') : ''}). Waiting for approval`, 'money');
       ui.fyIn = 'all'; closeSheet(); commit(); toast('Invoice added. It\'s waiting for your approval');
     } else {
       inv.to = fd.get('to').trim(); p.invoicesOut = p.invoicesOut || []; p.invoicesOut.push(inv);
@@ -3003,17 +3280,24 @@ const FORMS = {
   'pay-invoice': (f, fd) => { const p = getProject(f.dataset.p); const i = p.invoicesIn.find(x => x.id === f.dataset.id); i.status = 'paid'; i.paidDate = fd.get('date'); addLog(p, `Paid ${contactLabel(i.contactId)} ${i.number}: ${fmtMoney(invTotal(i))} (ref ${fd.get('ref')})`, 'money'); closeSheet(); commit(); toast('Marked paid. Budget updated'); },
   'edit-budget': (f, fd) => { const p = getProject(f.dataset.p); p.budget = p.budget || {}; CATEGORIES.forEach(c => { p.budget[c] = +fd.get(c) || 0; }); addLog(p, 'Feaso budget updated: ' + fmtMoney(sum(CATEGORIES, c => p.budget[c])) + ' ex GST', 'money'); closeSheet(); commit(); toast('Budget saved'); },
   'upload': (f, fd) => {
-    const p = getProject(f.dataset.p); const file = sheetCtx && sheetCtx.file;
-    if (!file) { toast('Choose a file first', 'info'); return; }
-    const c = contactById(fd.get('party')); const ext = (file.name.split('.').pop() || 'pdf').toLowerCase().slice(0, 4);
-    const d0 = { id: newId('f'), type: fd.get('type'), party: partyKey(c), date: TODAY, title: (fd.get('title') || '').trim() || file.name, size: Math.max(1, Math.round(file.size / 1024)), tags: [], ext };
-    p.docs.push(d0); addLog(p, 'Document uploaded: ' + docName(p, d0), 'doc'); ui.docFolder = d0.type; closeSheet(); commit(); toast('Stored in Supabase bucket project-documents (demo)', 'upload');
+    const p = getProject(f.dataset.p); const files = (sheetCtx && sheetCtx.files) || [];
+    if (!files.length) { toast('Choose a file first', 'info'); return; }
+    const c = contactById(fd.get('party')); const title = (fd.get('title') || '').trim(); const stage = +fd.get('stage') || p.stage;
+    const added = files.map(file => ({ id: newId('f'), type: fd.get('type'), party: partyKey(c), date: TODAY, title: title ? (files.length > 1 ? `${title}: ${file.name}` : title) : file.name, size: Math.max(1, Math.round(file.size / 1024)), tags: [], ext: fileExt(file.name), stage }));
+    p.docs.push(...added);
+    addLog(p, added.length === 1 ? `Document uploaded to ${stageLabel(p, stage)}: ${docName(p, added[0])}` : `${plural(added.length, 'document')} uploaded to ${stageLabel(p, stage)}: ${added.map(x => docName(p, x)).join(', ')}`, 'doc');
+    ui.docFolder = added[0].type; if (docStageFilter(p) !== 'all' && docStageFilter(p) !== stage) ui.docStage = String(stage);
+    closeSheet(); commit(); toast(`${plural(added.length, 'file')} stored in Supabase bucket project-documents (demo)`, 'upload');
   },
-  'add-contact': (f, fd) => { const c = { id: newId('c'), name: fd.get('name').trim(), company: fd.get('company').trim(), role: fd.get('role'), abn: fd.get('abn').trim(), email: fd.get('email').trim(), phone: fd.get('phone').trim(), licenceExpiry: fd.get('licenceExpiry') || null, insuranceExpiry: fd.get('insuranceExpiry') || null, rating: 4, notes: fd.get('notes').trim() }; state.contacts.push(c); closeSheet(); commit(); toast(c.company + ' added to contacts'); },
-  'add-deal': (f, fd) => { const dl = { id: newId('D'), address: fd.get('address').trim(), lotPlan: fd.get('lotPlan').trim(), source: fd.get('source').trim() || 'Listing', asking: +fd.get('asking') || 0, yield: fd.get('yield').trim() || 'TBC', zoning: fd.get('zoning').trim() || 'TBC', feaso: 'pending', margin: null, logged: TODAY, notes: fd.get('notes').trim() }; state.deals.unshift(dl); closeSheet(); commit(); toast('Site logged. Run the feaso next'); },
-  'settings': (f, fd) => { ['company', 'abn', 'address', 'director', 'established', 'trust', 'trustee', 'feeBasis', 'feeNote', 'signature'].forEach(k => { state.settings[k] = fd.get(k); }); state.settings.feeAmount = +fd.get('feeAmount') || 0; commit(); toast('Settings saved'); },
+  'add-deal': (f, fd) => { const dl = { id: newId('D'), address: fd.get('address').trim(), lotPlan: fd.get('lotPlan').trim(), type: fd.get('type') || 'Land subdivision', source: fd.get('source').trim() || 'Listing', asking: +fd.get('asking') || 0, yield: fd.get('yield').trim() || 'TBC', zoning: fd.get('zoning').trim() || 'TBC', feaso: 'pending', margin: null, logged: TODAY, notes: fd.get('notes').trim(), docs: [] }; state.deals.unshift(dl); addGlobalLog(`Site logged: ${dl.address} (${dl.type})`, 'deal'); closeSheet(); commit(); toast('Site logged. Run the feaso next'); },
+  'settings': (f, fd) => { ['company', 'abn', 'address', 'director', 'established', 'trust', 'trustee', 'feeBasis', 'feeNote', 'signature'].forEach(k => { state.settings[k] = fd.get(k); }); state.settings.feeAmount = +fd.get('feeAmount') || 0; const m = state.companies.find(c => c.manager); if (m) { m.name = state.settings.company; m.abn = state.settings.abn; m.address = state.settings.address; } commit(); toast('Settings saved'); },
   'wiz1': (f, fd) => { ['street', 'suburb', 'state', 'type', 'lot', 'planType', 'planNo', 'yield'].forEach(k => { wiz[k] = (fd.get(k) || '').trim(); }); wiz.id = fd.get('id').trim().toUpperCase(); if (state.projects.some(p => p.id === wiz.id)) { toast('That project ID is already used', 'warning'); return; } if (!wiz.company) wiz.company = wiz.suburb + ' Developments Pty Ltd'; wiz.step = 2; render(); },
-  'wiz2': (f, fd) => { ['company', 'abn', 'acn', 'bank', 'bsb', 'acc', 'price'].forEach(k => { wiz[k] = (fd.get(k) || '').trim(); }); wiz.gst = !!fd.get('gst'); wiz.step = 3; render(); },
+  'wiz2': (f, fd) => {
+    wiz.owner = fd.get('owner') || 'new'; ['company', 'abn', 'acn', 'bank', 'bsb', 'acc', 'price', 'existingId'].forEach(k => { wiz[k] = (fd.get(k) || '').trim(); }); wiz.gst = !!fd.get('gst');
+    if (wiz.owner === 'new' && !wiz.company) { toast('Enter the new company name', 'info'); return; }
+    if (wiz.owner === 'existing' && !companyById(wiz.existingId)) { toast('Choose a company', 'info'); return; }
+    wiz.step = 3; render();
+  },
 };
 function createProjectFromWizard() {
   const w = wiz; const start = w.dealId ? 3 : 1; const base = w.dealId ? addDays(TODAY, -21) : TODAY;
@@ -3029,7 +3313,7 @@ function createProjectFromWizard() {
   };
   if (w.dealId) { const dl = state.deals.find(x => x.id === w.dealId); dl.projectId = p.id; addLog(p, `Project created from deal: ${dl.address} (feaso Go, ${dl.margin}% margin)`, 'deal'); }
   const reg = p.tasks.find(t => t.title.startsWith('Register project company')); reg.done = true; reg.doneAt = TODAY;
-  addLog(p, `${p.company.name} set up as the project company, 100% held by ${state.settings.trust}. Approved by Dan`, 'company');
+  addLog(p, `${co(p).name} set up as the project company, 100% held by ${state.settings.trust}. Approved by Dan`, 'company');
   addLog(p, `Stage checklist (${p.tasks.length} tasks), budget skeleton and 10 document folders created`, 'note');
   state.projects.push(p); wiz.done = true; save();
   toast(`${p.id} created`); go(`#/project/${p.id}/stage/${p.stage}`);
