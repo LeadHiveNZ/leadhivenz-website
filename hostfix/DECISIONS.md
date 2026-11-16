@@ -9,6 +9,86 @@ price, a fee or a promise, add a line here saying what and why.
 
 ---
 
+## 2026-11-17 — A second tier for property managers (Portfolio)
+
+The first inbound owner-side enquiry was not an owner. It was a property
+manager with 63 properties. Managers are a real second segment, not a special
+case: roughly a quarter of Queenstown's short-stay listings sit under
+professional management, so this buyer will come back.
+
+**They are not buying the same thing.** An owner with one holiday home is
+buying a phone number to ring — peace of mind they do not currently have. A
+manager already has tradies, systems and staff. What they lack is capacity:
+the job their own people cannot get to, Friday at 4pm in peak season, with a
+guest already in the house. Selling a manager 63 memberships is selling them
+something they believe they already own, and it prices at $6,237 a month,
+which ends the conversation.
+
+### The structure
+
+**The platform fee never varies: 15% of every job, every tier, every
+portfolio size.** That is the spine. Only the access fee changes.
+
+| Tier | Who | Access fee |
+| --- | --- | --- |
+| Essential | Owners, 1-9 properties | $99 per property per month |
+| Portfolio | Managers, 10+ properties | A retainer banded by portfolio size |
+
+Portfolio bands, per month:
+
+| Properties | Retainer |
+| --- | --- |
+| 10-24 | $600 |
+| 25-49 | $900 |
+| 50-99 | $1,200 |
+| 100+ | By arrangement |
+
+A manager with 63 properties pays $1,200 a month plus 15% of jobs — around
+$1,975 a month on an estimate of 25 overflow jobs.
+
+**Why a band and not a per-property rate.** What a manager buys is guaranteed
+response capacity, and capacity does not scale one-to-one with doors. It
+scales with how many things break at once. A band says that honestly and
+survives the obvious question on a sales call.
+
+### The intro offer, in both tiers
+
+The rule is the same — a small commitment to start — but the instrument
+differs, because discounting a manager anchors them to the lower number and
+makes month four a fight.
+
+- **Essential: lower the price.** Half price for the first three months.
+- **Portfolio: lower the scope.** A 60-day pilot on 10 properties at the
+  10-24 band, then the real band. No discount is given, so there is no
+  discount to claw back.
+
+The pilot is also how the prices get tested. Every price in the menu is
+researched rather than observed, and ten properties for 60 days produces real
+job costs before the other 53 are priced.
+
+### Code still to change
+
+`MembershipTier` in `config/markets.ts` documents `monthlyPriceCents` as
+"Price per property, per month". Portfolio does not fit that, so this is not a
+matter of adding a third entry to `tiers`:
+
+- a tier needs a billing basis — per property or per account — and the
+  billing code needs to branch on it
+- a Portfolio account owns many properties, so whatever a membership is
+  attached to has to be able to hold a portfolio rather than one address
+- the bands need a lookup from property count to retainer, re-evaluated when a
+  manager adds or removes properties mid-term
+- `src/lib/content.ts` carries a `tier: "essential" | "priority"` union that is
+  already wrong (see the Priority decision below) and will need "portfolio"
+- the pricing page shows per-property pricing and needs a second panel
+
+Until all of that exists, a Portfolio customer is billed by hand against the
+bands above, and the band they are on is written here:
+
+<!-- Portfolio customers on manual billing: add each one here with the band. -->
+
+---
+
 ## 2026-11-16 — Real prices researched, staged, not yet loaded
 
 `seed/menu-queenstown.proposed.json` holds 59 researched jobs and is meant to

@@ -53,9 +53,12 @@ it when you change one.
   money tests on purpose and is a task in `DECISIONS.md`. Until then `seed/menu-queenstown.json` is still
   placeholders and nothing may be shown to a real owner as a price. The researched prices sit at local
   market rate, not above it, so nothing may tell an owner they pay a premium for price certainty.
-- **There is one membership.** Essential, 24-hour response. Urgent response is an add-on the owner pays
-  for, never an inclusion. Priority was removed because delivering it cost more than it charged
-  (`DECISIONS.md`). A surcharge always goes to the tradie in full.
+- **Two tiers, one fee.** Essential for owners, priced per property. Portfolio for managers with 10+
+  properties, priced as a retainer banded by portfolio size (`DECISIONS.md`). The platform fee is 15% of
+  every job in both, and never varies. Urgent response is an add-on the owner pays for, never an
+  inclusion; Priority was removed because delivering it cost more than it charged. A surcharge always
+  goes to the tradie in full. Only Essential is built — Portfolio is billed by hand until the code
+  supports a per-account billing basis.
 - **Urgent work is never discounted.** Whatever rate a tradie is on for booked work, same-day, urgent
   and after-hours jobs pay the full card rate. A discounted urgent rate puts the network last in a cold
   snap, which is when the response guarantee is actually tested.
