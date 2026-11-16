@@ -470,17 +470,20 @@ select.input-inline { width: auto; min-width: 140px; }
 .line-item .icon-btn { margin-bottom: 0; }
 .line-item .li-desc { grid-column: 1 / 3; }
 .line-item .li-x { grid-column: 3; grid-row: 1; align-self: end; }
-.line-item.has-cat { grid-template-columns: 104px minmax(0, 1fr) minmax(0, 1fr) 32px; }
+.line-item.has-cat { grid-template-columns: 96px minmax(0, 1.35fr) minmax(0, 1fr) 32px; }
 .line-item.has-cat .li-desc { grid-column: 1 / 4; }
 .line-item.has-cat .li-x { grid-column: 4; }
+.line-item.has-cat .li-cat { grid-column: 3 / 5; }
+.line-item .li-gst { grid-column: 2 / 4; }
+.line-item.has-cat .li-gst { grid-column: auto; }
 .line-item.tpl-task { grid-template-columns: minmax(0, 1fr) 96px 32px; }
 .line-item.tpl-task .li-desc { grid-column: auto; }
 @media (max-width: 767px) {
   .line-item, .line-item.has-cat { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 36px; }
   .line-item .li-desc, .line-item.has-cat .li-desc { grid-column: 1 / 3; }
   .line-item .li-x, .line-item.has-cat .li-x { grid-column: 3; }
-  .line-item .li-gst { grid-column: 2 / 4; }
-  .line-item .li-cat { grid-column: 1 / -1; }
+  .line-item .li-gst, .line-item.has-cat .li-gst { grid-column: 2 / 4; }
+  .line-item .li-cat, .line-item.has-cat .li-cat { grid-column: 1 / -1; }
   .line-item.tpl-task { grid-template-columns: minmax(0, 1fr) 88px 36px; }
   .line-item.tpl-task .li-desc { grid-column: auto; }
 }
@@ -765,9 +768,12 @@ a.row:hover, button.row:hover { background: var(--surface-hover); }
 .cat-block .role-row { display: flex; align-items: center; gap: 12px; padding: 6px 0; min-height: 40px; }
 .cat-block .role-row .body { flex: 1; min-width: 0; }
 .cat-block .role-row select.input { width: auto; min-width: 150px; max-width: 55%; min-height: var(--btn-h); padding-top: 2px; padding-bottom: 2px; }
-.ftype { font-family: var(--font); min-width: 44px; justify-content: center; flex: none; }
+.ftype { font-family: var(--font); min-width: 50px; justify-content: center; flex: none; }
 .file-cell { display: flex; gap: 8px; align-items: flex-start; min-width: 0; }
 .file-cell .fn { min-width: 0; }
+@media (min-width: 768px) { .itable .ref-cell { max-width: 150px; } .itable .bill-cat { max-width: 130px; } }
+.wb-wrap { max-height: max(240px, calc(100vh - 300px)); overflow: auto; }
+.wb-table tr:first-child th { position: sticky; top: 0; z-index: 1; box-shadow: 0 1px 0 var(--border-secondary); }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; scroll-behavior: auto !important; }
@@ -1856,7 +1862,7 @@ function tabStage(p, n) {
     </section>
     ${isCert ? fundsCard(p) : ''}</div>
     <div>
-      <section class="card"><div class="card-head"><div class="ch-titles"><h2 class="card-title">Stages</h2></div><div class="ch-actions"><button class="btn btn-micro" data-action="edit-stages" data-p="${p.id}">Edit stages</button></div></div><nav class="stage-list" aria-label="Project stages">${stages}</nav></section>
+      <section class="card"><div class="card-head"><div class="ch-titles" style="flex:1 1 0"><h2 class="card-title">Stages</h2></div><div class="ch-actions"><button class="btn btn-micro" data-action="edit-stages" data-p="${p.id}">Edit stages</button></div></div><nav class="stage-list" aria-label="Project stages">${stages}</nav></section>
       ${projectCompanyCard(p, n)}
     </div></div>`;
 }
@@ -1878,7 +1884,7 @@ function fundsCard(p) {
   const byCat = {}; fs.lines.forEach(x => { byCat[x.f.category] = (byCat[x.f.category] || 0) + x.total; });
   const rows = fs.lines.map(({ f, bill, total, paid }) => `<tr data-id="${f.id}">
       <td class="m-title"><span style="font-weight:var(--fw-medium)">${h(f.desc)}</span><div class="sub">${h(contactLabel(f.contactId))}${bill ? ' · Bill ' + h(bill.number) : ''}${f.note ? ' · ' + h(f.note) : ''}</div></td>
-      <td class="m-meta">${h(f.category)}</td>
+      <td class="m-meta nowrap">${h(f.category)}</td>
       <td class="m-meta">${gstChip(f.gst)}</td>
       <td class="num m-amt">${fmtMoney(total)}</td>
       <td class="m-meta m-lead nowrap">${paid ? badge('Paid', 'success') : bill ? statusChip(bill.status, 'bill') : badge('To pay', 'attention')}</td>
@@ -1996,7 +2002,7 @@ function invRow(p, i, dir) {
   const party = dir === 'in' ? contactLabel(i.contactId) : i.to;
   const dueCell = `<span class="${overdue ? 'crit' : ''}">${dateCell(i.due)}</span>${overdue ? '<div class="sub crit d-only">Overdue</div>' : ''}`;
   const first = dir === 'in'
-    ? `<td class="m-title from-cell"><span style="font-weight:var(--fw-medium)">${h(party)}</span><div class="sub clamp" title="${h(i.desc)}">${h(i.desc)}${notes ? ' · ' + h(notes) : ''}</div></td><td class="m-meta nowrap">${h(i.number)}${eng ? `<div class="sub d-only">PO: ${h(eng.scope)}</div>` : ''}</td><td class="m-meta bill-cat">${billCats(i).length > 1 ? `${badge('Split', 'neutral')}<div class="sub d-only">${h(billCats(i).join(', '))}</div>` : h(billCatLabel(i))}</td>`
+    ? `<td class="m-title from-cell"><span style="font-weight:var(--fw-medium)">${h(party)}</span><div class="sub clamp" title="${h(i.desc)}">${h(i.desc)}${notes ? ' · ' + h(notes) : ''}</div></td><td class="m-meta ref-cell"><span class="nowrap">${h(i.number)}</span>${eng ? `<div class="sub d-only">PO: ${h(eng.scope)}</div>` : ''}</td><td class="m-meta bill-cat">${billCats(i).length > 1 ? `<span title="${h(billCats(i).join(', '))}">${badge('Split', 'neutral')}</span><div class="sub d-only">${h(billCats(i).join(', '))}</div>` : h(billCatLabel(i))}</td>`
     : `<td class="m-title nowrap" style="font-weight:var(--fw-medium)">${h(i.number)}</td><td class="m-sub">${h(i.desc)}${notes ? `<div class="sub">${h(notes)}</div>` : ''}</td><td class="m-meta">${h(party)}</td>`;
   return `<tr class="inv" data-id="${i.id}">${first}
     <td class="date m-hide">${fmtDate(i.date)}</td>
@@ -2134,14 +2140,14 @@ function tabDocuments(p) {
   return `<div class="section-bar">${uiSelect({ k: 'docStage', value: String(stageF), options: stageOpts, label: 'Stage', id: 'doc-stage' })}<p class="help grow">Files are named <span class="mono">${h(p.id)}_DocType_Party_Date</span> automatically, any file type. OneDrive keeps a nightly backup.</p><button class="btn btn-primary" data-action="upload" data-p="${p.id}">Upload</button></div>
   <div class="docs"><nav class="card folders" aria-label="Document folders">${fbtn('all', stageF === 'all' ? 'All documents' : 'All in stage ' + stageF, inStage.length)}${DOC_TYPES.map(k => fbtn(k, DOC_LABELS[k], counts[k] || 0)).join('')}</nav>
     <section class="card"><div class="itable-wrap stack"><table class="itable">
-      <thead><tr><th scope="col">File name</th><th scope="col">Stage</th><th scope="col">Folder</th><th scope="col">Date</th><th scope="col" class="num">Size</th></tr></thead>
-      <tbody>${docs.length ? docs.map(d0 => `<tr class="file" data-id="${d0.id}"><td class="m-title"><div class="file-cell"><span class="badge tone-neutral ftype">${h(docExt(d0))}</span><div style="min-width:0"><div class="fn">${h(docName(p, d0)).replace(/_/g, '_<wbr>')}</div><div class="sub">${h(d0.title)}${(d0.tags || []).length ? ' · ' + h(d0.tags.join(', ')) : ''}</div></div></div></td><td class="m-meta"><span class="d-only">${d0.stage}. ${h(stageName(p, d0.stage))}</span><span class="m-only">Stage ${d0.stage}</span></td><td class="m-meta">${h(DOC_LABELS[d0.type] || d0.type)}</td><td class="date m-meta">${dateCell(d0.date)}</td><td class="num m-amt" style="font-weight:var(--fw-regular)">${d0.size} KB</td></tr>`).join('') : emptyRow(5, 'Nothing filed here', stageF === 'all' ? 'Upload a file and it will be named and filed for you.' : 'Nothing in this folder for stage ' + stageF + '. Try All stages.')}</tbody>
+      <thead><tr><th scope="col">File name</th>${stageF === 'all' ? '<th scope="col">Stage</th>' : ''}<th scope="col">Folder</th><th scope="col">Date</th><th scope="col" class="num">Size</th></tr></thead>
+      <tbody>${docs.length ? docs.map(d0 => `<tr class="file" data-id="${d0.id}"><td class="m-title"><div class="file-cell"><span class="badge tone-neutral ftype">${h(docExt(d0))}</span><div style="min-width:0"><div class="fn">${h(docName(p, d0)).replace(/_/g, '_<wbr>')}</div><div class="sub">${h(d0.title)}${(d0.tags || []).length ? ' · ' + h(d0.tags.join(', ')) : ''}</div></div></div></td>${stageF === 'all' ? `<td class="m-meta"><span class="nowrap">Stage ${d0.stage}</span><div class="sub d-only">${h(stageName(p, d0.stage))}</div></td>` : ''}<td class="m-meta">${h(DOC_LABELS[d0.type] || d0.type)}</td><td class="date m-meta">${dateCell(d0.date)}</td><td class="num m-amt" style="font-weight:var(--fw-regular)">${d0.size} KB</td></tr>`).join('') : emptyRow(stageF === 'all' ? 5 : 4, 'Nothing filed here', stageF === 'all' ? 'Upload a file and it will be named and filed for you.' : 'Nothing in this folder for stage ' + stageF + '. Try All stages.')}</tbody>
     </table></div></section></div>`;
 }
 const LOG_ICONS = { send: 'send', appoint: 'check', money: 'dollar', stage: 'layers', deal: 'pin', company: 'building', note: 'note', task: 'check', doc: 'upload' };
 const LOG_KINDS = { send: 'Sent', appoint: 'Appointment', money: 'Money', stage: 'Stage', deal: 'Deal', company: 'Company', note: 'Note', task: 'Task', doc: 'Document' };
 function tabLog(p) {
-  const items = p.log.slice().sort((a, b) => b.ts.localeCompare(a.ts));
+  const items = p.log.slice().reverse().sort((a, b) => b.ts.localeCompare(a.ts));
   return `<section class="card">
     <div class="card-head"><div class="ch-titles"><h2 class="card-title">History and notes</h2></div><p class="card-sub">Every send, approval, payment and change on this project. Nothing goes out without Dan's approval.</p></div>
     <div class="itable-wrap stack" style="border-top:1px solid var(--border-secondary)"><table class="itable">
@@ -2152,12 +2158,37 @@ function tabLog(p) {
 
 /* ===== View: Contacts ===== */
 // Categories and the roles in them live in state (state.categories, state.roles), so Dan can change them himself.
+// "Our companies" (the companies Dan owns, one per project) is listed first; they come from state.companies.
+const OUR = 'Our companies';
+function contactTabs(groups, group) { return groups.map(g => ptab({ label: g, n: g === 'All' ? state.contacts.length : g === OUR ? state.companies.length : state.contacts.filter(c => contactCategories(c).includes(g)).length, current: g === group, k: 'contactRole', v: g })).join(''); }
+function viewCompanies(groups, q) {
+  const list = state.companies.slice().sort((a, b) => (a.manager - b.manager) || (COMPANY_STATUSES.indexOf(a.status) === 3) - (COMPANY_STATUSES.indexOf(b.status) === 3)).filter(c => !q || [c.name, c.short, c.abn, c.acn, c.status, companyProjects(c).map(p => p.id + ' ' + p.name).join(' ')].join(' ').toLowerCase().includes(q));
+  const rows = list.map(c => { const ps = companyProjects(c); return `<tr class="company clickable" data-action="company-detail" data-id="${c.id}">
+      <td class="m-title"><button type="button" class="row-link" data-action="company-detail" data-id="${c.id}">${h(c.name)}</button><div class="sub">${c.manager ? 'Project manager' : h(c.short || '')}</div></td>
+      <td class="m-meta m-lead nowrap">${c.manager ? badge('Project manager', 'info') : companyStatusChip(c)}</td>
+      <td class="m-sub">ABN ${h(c.abn || '–')}${c.acn ? `<span class="d-only"><br>ACN ${h(c.acn)}</span>` : ''}</td>
+      <td class="m-meta">${c.gst ? (c.basCycle === 'quarterly' ? 'GST · quarterly BAS' : 'GST · not lodging') : 'Not registered for GST'}</td>
+      <td class="m-hide">${h(c.bank || '–')}<div class="sub">${c.bsb ? 'BSB ' + h(c.bsb) + ' · ' + h(c.acc) : ''}</div></td>
+      <td class="${ps.length ? 'm-meta' : 'm-hide'}">${ps.length ? h(ps.map(p => p.id).join(', ')) : '<span class="muted">–</span>'}</td></tr>`; }).join('');
+  return `<div class="page page-full">
+    ${pageHeader({ title: 'Contacts', sub: `${plural(ownCompanies().length, 'company', 'companies')} owned by Dan, each with its own ABN, bank and BAS`, actions: `<button class="btn" data-action="manage-cats"><span class="d-only">Manage&nbsp;</span>categories</button><button class="btn btn-primary" data-action="add-company">Add company</button>` })}
+    <section class="card">
+      <nav class="ptabs" aria-label="Filter by category">${contactTabs(groups, OUR)}</nav>
+      <div class="filterbar"><div class="search grow">${icon('search')}<label class="sr-only" for="contact-search">Search companies</label><input class="input" id="contact-search" type="search" placeholder="Search by name, ABN or project" value="${h(ui.contactQ)}" data-input="contact-search" autocomplete="off"></div></div>
+      <div class="itable-wrap stack" id="contact-grid">${list.length ? `<table class="itable">
+        <thead><tr><th scope="col">Company</th><th scope="col">Status</th><th scope="col">ABN / ACN</th><th scope="col">GST and BAS</th><th scope="col">Bank</th><th scope="col">Projects</th></tr></thead>
+        <tbody>${rows}</tbody></table>` : emptyState('users', 'No companies found', 'Try another search, or add a company.')}</div>
+      <div class="card-footer">A project starts in Dan Wellman's name and/or nominee. Registering its company moves quotes, purchase orders, invoices, bills and BAS to that company.</div>
+    </section>
+  </div>`;
+}
 function viewContacts() {
   const q = ui.contactQ.trim().toLowerCase();
   const inCat = (c, g) => contactCategories(c).includes(g);
   const hasOther = state.contacts.some(c => inCat(c, 'Other'));
-  const groups = ['All', ...state.categories, ...(hasOther ? ['Other'] : [])];
+  const groups = ['All', OUR, ...state.categories, ...(hasOther ? ['Other'] : [])];
   const group = groups.includes(ui.contactRole) ? ui.contactRole : 'All';
+  if (group === OUR) return viewCompanies(groups, q);
   const list = state.contacts.slice().sort((a, b) => (a.id === 'wellco') - (b.id === 'wellco')).filter(c => (group === 'All' || inCat(c, group)) && (!q || [c.name, c.company, roleText(c), contactCategories(c).join(' '), c.abn, c.notes].join(' ').toLowerCase().includes(q)));
   const warnings = state.contacts.filter(c => expiryStatus(c)).length;
   const rows = list.map(c => {
@@ -2173,7 +2204,7 @@ function viewContacts() {
   return `<div class="page page-full">
     ${pageHeader({ title: 'Contacts', sub: `${state.contacts.length} contacts used across all projects${warnings ? ` · ${plural(warnings, 'licence or insurance', 'licences or insurances')} to check` : ''}`, actions: `<button class="btn" data-action="manage-cats"><span class="d-only">Manage&nbsp;</span>categories</button><button class="btn btn-primary" data-action="add-contact">Add contact</button>` })}
     <section class="card">
-      <nav class="ptabs" aria-label="Filter by category">${groups.map(g => ptab({ label: g, n: g === 'All' ? state.contacts.length : state.contacts.filter(c => inCat(c, g)).length, current: g === group, k: 'contactRole', v: g })).join('')}</nav>
+      <nav class="ptabs" aria-label="Filter by category">${contactTabs(groups, group)}</nav>
       <div class="filterbar"><div class="search grow">${icon('search')}<label class="sr-only" for="contact-search">Search contacts</label><input class="input" id="contact-search" type="search" placeholder="Search by name, company, role or ABN" value="${h(ui.contactQ)}" data-input="contact-search" autocomplete="off"></div></div>
       <div class="itable-wrap stack" id="contact-grid">${list.length ? `<table class="itable">
         <thead><tr><th scope="col">Company</th><th scope="col">Contact</th><th scope="col">Roles and categories</th><th scope="col">ABN</th><th scope="col">Licence / insurance</th><th scope="col">Projects</th></tr></thead>
@@ -2232,7 +2263,7 @@ function catDraftHTML(draft) {
     <p class="help" style="margin-bottom:16px">Rename a category, move a role to another category, or add a new one. Contacts follow their roles.</p>
     ${draft.cats.map((c, i) => { const rs = draft.roles.filter(r => r.cat === i); const extraN = c.orig ? state.contacts.filter(x => (x.categories || []).includes(c.orig)).length : 0; return `<div class="cat-block" data-cat-row data-i="${i}">
       <div class="field"><label for="cn-${i}">Category ${i + 1}</label><div class="hstack" style="flex-wrap:nowrap"><input class="input" id="cn-${i}" name="catname" required value="${h(c.name)}" placeholder="Category name" data-input="cat-name" data-i="${i}">${!rs.length && !extraN ? `<button type="button" class="btn btn-micro btn-danger" data-action="cat-remove" data-i="${i}">Remove</button>` : ''}</div></div>
-      ${rs.length ? `<div class="rows">${rs.map(r => `<div class="role-row"><span class="body">${h(r.name)}<span class="small muted"> · ${plural(state.contacts.filter(x => cRoles(x).includes(r.name)).length, 'contact')}</span></span><label class="sr-only" for="rm-${h(r.key)}">Category for ${h(r.name)}</label><select class="input" id="rm-${h(r.key)}" data-role="${h(r.name)}" data-input="role-move">${opts(r.cat)}</select></div>`).join('')}</div>` : `<p class="small muted" style="margin-top:8px">No roles in this category yet${extraN ? `. ${plural(extraN, 'contact')} listed here directly` : ''}.</p>`}
+      ${rs.length ? `<div class="rows">${rs.map(r => `<div class="role-row"><span class="body">${h(r.name)}<span class="small muted" style="display:block">${plural(state.contacts.filter(x => cRoles(x).includes(r.name)).length, 'contact')}</span></span><label class="sr-only" for="rm-${h(r.key)}">Category for ${h(r.name)}</label><select class="input" id="rm-${h(r.key)}" data-role="${h(r.name)}" data-input="role-move">${opts(r.cat)}</select></div>`).join('')}</div>` : `<p class="small muted" style="margin-top:8px">No roles in this category yet${extraN ? `. ${plural(extraN, 'contact')} listed here directly` : ''}.</p>`}
     </div>`; }).join('')}
     <div class="cat-block"><div class="new-role" style="grid-template-columns:minmax(0,1fr) auto;margin-top:0">
       <div class="field"><label for="cat-new">New category</label><input class="input" id="cat-new" placeholder="e.g. Building contractors" autocomplete="off"></div>
@@ -2310,11 +2341,11 @@ function dealDocsHTML(dl) {
   const docs = (dl.docs || []).slice().sort((a, b) => b.date.localeCompare(a.date));
   const parties = state.contacts.slice().sort((a, b) => a.company.localeCompare(b.company));
   return `<div class="stack" style="gap:20px">
-    <div><div class="eyebrow">On this deal</div>${docs.length ? `<div class="list">${docs.map(d0 => `<div class="row" data-id="${d0.id}"><span class="badge tone-neutral ftype">${h(docExt(d0))}</span><span class="body"><span class="title">${h(d0.title)}</span><span class="meta">${h(DEAL_DOC_TYPES[d0.type] || d0.type)} · ${fmtDate(d0.date)} · ${d0.size} KB${d0.note ? ' · ' + h(d0.note) : ''}</span><span class="meta fn" style="margin-top:2px">${h(dealDocName(dl, d0)).replace(/_/g, '_<wbr>')}</span></span></div>`).join('')}</div>` : '<p class="small muted">No files yet. Drop the contract, plans and sales stats here as the agent sends them.</p>'}</div>
+    <div><div class="eyebrow">On this deal</div>${docs.length ? `<div class="list">${docs.map(d0 => `<div class="row" data-id="${d0.id}" style="align-items:flex-start"><span class="badge tone-neutral ftype" style="margin-top:2px">${h(docExt(d0))}</span><span class="body"><span class="title">${h(d0.title)}</span><span class="meta">${h(DEAL_DOC_TYPES[d0.type] || d0.type)} · ${fmtDate(d0.date)} · ${d0.size} KB${d0.note ? ' · ' + h(d0.note) : ''}</span><span class="meta fn" style="margin-top:2px">${h(dealDocName(dl, d0)).replace(/_/g, '_<wbr>')}</span></span></div>`).join('')}</div>` : '<p class="small muted">No files yet. Drop the contract, plans and sales stats here as the agent sends them.</p>'}</div>
     <form id="f-dealdoc" data-form="deal-doc" data-id="${dl.id}" class="stack" style="gap:16px">
       <h3 class="eyebrow" style="margin:0">Add files</h3>
       <div class="form-grid"><div class="field"><label for="dd-type">Document type</label><select class="input" id="dd-type" name="type" data-input="dealdoc-preview">${Object.entries(DEAL_DOC_TYPES).map(([k, l]) => `<option value="${k}">${h(l)}</option>`).join('')}</select></div>
-      <div class="field"><label for="dd-party">From</label><select class="input" id="dd-party" name="party" data-input="dealdoc-preview"><option value="">Agent or vendor (not in contacts)</option>${parties.map(c => `<option value="${c.id}">${h(c.company)}</option>`).join('')}</select></div></div>
+      <div class="field"><label for="dd-party">From</label><select class="input" id="dd-party" name="party" data-input="dealdoc-preview"><option value="">Agent or vendor</option>${parties.map(c => `<option value="${c.id}">${h(c.company)}</option>`).join('')}</select></div></div>
       <div class="field"><label for="dd-note">Note (optional)</label><input class="input" id="dd-note" name="note" placeholder="e.g. Agent's sales stats for 5-acre lots" autocomplete="off"></div>
       <div class="field"><span class="label">Files</span><button type="button" class="btn" data-action="pick-file" style="justify-content:flex-start">${icon('upload')}<span id="u-file">Choose files</span></button><span class="hint">Any file type: PDF, Excel, Word, photos. Pick several at once.</span></div>
       <div class="field"><span class="label">Will be saved as</span><div class="card" style="padding:12px;box-shadow:none;border:1px solid var(--border)"><span class="mono" id="u-name" style="font-size:12px;overflow-wrap:anywhere"></span></div><span class="hint">When this deal becomes a project, its files move across under stages 1 and 2.</span></div>
@@ -2429,7 +2460,7 @@ function templatesCard() {
     <div class="card-footer" style="display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between"><span>New ${h(type.toLowerCase())} projects get these ${st.length} stages and ${sum(st, x => x.tasks.length)} tasks.</span><button type="button" class="btn" data-action="tpl-add-stage" data-type="${h(type)}">Add stage</button></div></div>`;
 }
 function changeHistoryCard() {
-  const items = (state.log || []).slice().sort((a, b) => b.ts.localeCompare(a.ts)).slice(0, 12);
+  const items = (state.log || []).slice().reverse().sort((a, b) => b.ts.localeCompare(a.ts)).slice(0, 12); // newest first, ties by entry order
   return `<div class="card"><div class="itable-wrap stack"><table class="itable"><thead><tr><th scope="col">Date</th><th scope="col">Change</th><th scope="col">User</th></tr></thead>
     <tbody>${items.length ? items.map(l => `<tr><td class="date m-meta">${h(fmtDateTime(l.ts))}</td><td class="m-title" style="font-weight:var(--fw-regular)">${h(l.text)}</td><td class="m-meta nowrap">${h(l.who)}</td></tr>`).join('') : emptyRow(3, 'No changes yet', 'Renaming a role, a category or a stage template is recorded here.')}</tbody></table></div></div>`;
 }
@@ -2618,12 +2649,13 @@ function openApproval({ title, sub, intro = '', preview, confirmLabel = 'Approve
 }
 
 /* ===== RFQ helpers ===== */
-const SCOPE_ROLES = { 'Civil works': ['Civil contractor'], 'Civil & bulk earthworks': ['Civil contractor'], 'Bond inspection rectification': ['Civil contractor'], 'Electrical reticulation': ['Electrical'], 'NBN pit & pipe': ['NBN'], 'Works-as-executed survey': ['Surveyor'], 'Surveying': ['Surveyor'], 'Landscaping & street trees': ['Landscaping', 'Civil contractor'], 'Town planning': ['Town planner'], 'Traffic report': ['Traffic engineer'] };
+const SCOPE_ROLES = { 'Civil works': ['Civil contractor', 'Earthworks'], 'Civil & bulk earthworks': ['Civil contractor', 'Earthworks'], 'Bond inspection rectification': ['Civil contractor'], 'Electrical reticulation': ['Electrical'], 'NBN pit & pipe': ['NBN'], 'Works-as-executed survey': ['Surveyor'], 'Surveying': ['Surveyor'], 'Landscaping & street trees': ['Landscaping', 'Civil contractor'], 'Town planning': ['Town planner'], 'Traffic report': ['Traffic engineer'] };
 function rfqCandidates(r) {
   const roles = SCOPE_ROLES[r.scope] || null;
   const used = new Set(r.quotes.map(q => q.contactId));
-  return state.contacts.filter(c => !used.has(c.id) && (roles ? roles.includes(c.role) : !['Council', 'Government', 'Bank', 'Vendor', 'Project manager', 'Accountant'].includes(c.role)))
-    .sort((a, b) => (roles ? roles.indexOf(a.role) - roles.indexOf(b.role) : 0) || (b.rating - a.rating));
+  const rank = (c) => Math.min(...cRoles(c).map(r => { const k = roles.indexOf(r); return k < 0 ? 99 : k; }));
+  return state.contacts.filter(c => !used.has(c.id) && (roles ? hasRole(c, roles) : !onlyRoles(c, ['Council', 'Government', 'Bank', 'Vendor', 'Project manager', 'Accountant'])))
+    .sort((a, b) => (roles ? rank(a) - rank(b) : 0) || (b.rating - a.rating));
 }
 function rfqSubject(p, r) { return `Request for quote: ${r.scope} · ${p.name} (${p.lotPlan})`; }
 function rfqBody(p, r, cid) {
@@ -2781,7 +2813,7 @@ function workbookBody() {
   const { sheets, idx } = wbView; const sh = sheets[idx]; const w = Math.max(1, ...sh.rows.map(r => r.length));
   return `<p class="help" style="margin-bottom:12px">This preview link can't save files. In your own app this downloads as an Excel file. You can paste this straight into Excel now.</p>
     <nav class="ptabs" aria-label="Sheets" style="margin-bottom:12px">${sheets.map((x, i) => `<button type="button" class="ptab" data-action="wb-sheet" data-i="${i}" aria-pressed="${i === idx}">${h(x.name)}</button>`).join('')}</nav>
-    <div class="table-wrap" style="max-height:52vh;overflow:auto"><table class="t wb-table"><tbody>${sh.rows.map((r, ri) => `<tr>${Array.from({ length: w }, (_, ci) => { const v = r[ci]; const tag = ri === 0 ? 'th' : 'td'; return `<${tag}${typeof v === 'number' ? '' : ' style="text-align:left"'}>${h(typeof v === 'number' ? (Math.abs(v) >= 1000 || v % 1 ? nf2.format(v) : String(v)) : cellText(v))}</${tag}>`; }).join('')}</tr>`).join('')}</tbody></table></div>
+    <div class="table-wrap wb-wrap"><table class="t wb-table"><tbody>${sh.rows.map((r, ri) => `<tr>${Array.from({ length: w }, (_, ci) => { const v = r[ci]; const tag = ri === 0 ? 'th' : 'td'; return `<${tag}${typeof v === 'number' ? '' : ' style="text-align:left"'}>${h(typeof v === 'number' ? (Math.abs(v) >= 1000 || v % 1 ? nf2.format(v) : String(v)) : cellText(v))}</${tag}>`; }).join('')}</tr>`).join('')}</tbody></table></div>
     <textarea id="wb-tsv" class="sr-only" aria-hidden="true" tabindex="-1" readonly>${h(sheetTSV(sh))}</textarea>`;
 }
 function showWorkbook(filename, sheets) {
@@ -3299,41 +3331,214 @@ const FORMS = {
     wiz.step = 3; render();
   },
 };
+function isRegisterTask(t) { return /^Register\b.*\b(company|Pty Ltd)/i.test(t.title); }
 function createProjectFromWizard() {
-  const w = wiz; const start = w.dealId ? 3 : 1; const base = w.dealId ? addDays(TODAY, -21) : TODAY;
+  const w = wiz; wizEnsureStages(w); const start = w.start || 1; const base = w.dealId ? addDays(TODAY, -21) : TODAY;
   const price = +w.price || 0;
+  let companyId = null; let newCo = null;
+  if (w.owner === 'existing') companyId = w.existingId;
+  else if (w.owner === 'new') { newCo = { id: newId('co'), name: w.company, short: w.suburb, abn: w.abn || 'Applied for', acn: w.acn, address: 'c/- ' + state.settings.company + ', ' + state.settings.address, gst: w.gst, gstFrom: w.gst ? TODAY : null, basCycle: w.gst ? 'quarterly' : 'none', bank: w.bank, bsb: w.bsb, acc: w.acc, status: 'Active', formed: TODAY, closed: null, notes: '' }; companyId = newCo.id; }
+  const tasks = [];
+  w.stages.forEach((st, i) => wizTasksFor(st).forEach(t => { const n = i + 1; tasks.push({ id: newId('t'), stage: n, title: t.title, due: addDays(base, t.off || 0), done: n < start, doneAt: n < start ? addDays(base, t.off || 0) : null, notes: [], lead: t.lead || null }); }));
   const p = {
     id: w.id, name: `${w.street}, ${w.suburb}`, street: w.street, suburb: w.suburb, state: w.state, lotPlan: `Lot ${w.lot} ${w.planType} ${w.planNo}`, type: w.type, yield: w.yield || 'TBC',
-    status: 'live', stage: start, council: null, started: TODAY,
-    company: { name: w.company, abn: w.abn || 'Applied for', acn: w.acn, gst: w.gst, gstFrom: TODAY, bank: w.bank, bsb: w.bsb, acc: w.acc, tfn: 'To apply' },
+    stages: w.stages.map(st => (st.key ? { name: st.name, key: st.key } : { name: st.name })),
+    status: 'live', stage: start, council: null, started: TODAY, companyId,
     stageNote: w.dealId ? 'Created from a Go deal. Next: exchange and due diligence.' : '',
     budget: { 'Acquisition': Math.round(price * 1.06 / 1000) * 1000, 'Holding': 0, 'Consultants': 0, 'Council & Gov': 0, 'Construction': 0, 'Sales': 0, 'Management fee': state.settings.feeAmount || 0 },
-    tasks: TEMPLATE_TASKS.map(([stage, title, off, lead]) => ({ id: newId('t'), stage, title, due: addDays(base, off), done: stage < start, doneAt: stage < start ? addDays(base, off) : null, notes: [], lead: lead || null })),
-    rfqs: [], engagements: [], invoicesIn: [], invoicesOut: [], sales: [], trust: [], docs: [], log: [],
+    tasks, rfqs: [], engagements: [], invoicesIn: [], invoicesOut: [], sales: [], trust: [], docs: [], funds: [], log: [],
   };
-  if (w.dealId) { const dl = state.deals.find(x => x.id === w.dealId); dl.projectId = p.id; addLog(p, `Project created from deal: ${dl.address} (feaso Go, ${dl.margin}% margin)`, 'deal'); }
-  const reg = p.tasks.find(t => t.title.startsWith('Register project company')); reg.done = true; reg.doneAt = TODAY;
-  addLog(p, `${co(p).name} set up as the project company, 100% held by ${state.settings.trust}. Approved by Dan`, 'company');
-  addLog(p, `Stage checklist (${p.tasks.length} tasks), budget skeleton and 10 document folders created`, 'note');
+  if (w.dealId) {
+    const dl = state.deals.find(x => x.id === w.dealId); dl.projectId = p.id; addLog(p, `Project created from deal: ${dl.address} (feaso Go, ${dl.margin}% margin)`, 'deal');
+    // The deal's files come across, filed under Sourcing or Feasibility
+    const carried = (dl.docs || []).map(d0 => { const [type, stage] = DEAL_TO_PROJECT_DOC[d0.type] || ['Correspondence', 1]; const n = Math.min(stage, p.stages.length); return { id: newId('f'), type, party: d0.party, date: d0.date, title: d0.title, size: d0.size, tags: ['From deal'].concat(d0.note ? [d0.note] : []), ext: d0.ext || 'pdf', stage: n }; });
+    if (carried.length) { p.docs.push(...carried); const stagesUsed = [...new Set(carried.map(x => x.stage))].sort(); addLog(p, `${plural(carried.length, 'document')} carried over from the deal, filed under ${stagesUsed.map(n => stageLabel(p, n)).join(' and ')}`, 'doc'); }
+  }
+  if (newCo) { state.companies.push(newCo); addGlobalLog(`Company added: ${newCo.name} (ABN ${newCo.abn}) for ${p.id}`, 'company'); }
+  if (companyId) { const reg = p.tasks.find(isRegisterTask); if (reg) { reg.done = true; reg.doneAt = TODAY; } const c = companyById(companyId); if (c.status !== 'Active') { addGlobalLog(`Company ${c.name} now Active (was ${c.status})`, 'company'); c.status = 'Active'; } addLog(p, `${c.name} is the project company, 100% held by ${state.settings.trust}. Approved by Dan`, 'company'); }
+  else addLog(p, 'Owner: Dan Wellman and/or nominee until the project company is registered', 'company');
+  addLog(p, `${p.type} checklist (${p.stages.length} stages, ${p.tasks.length} tasks), budget skeleton and ${DOC_TYPES.length} document folders created`, 'note');
   state.projects.push(p); wiz.done = true; save();
   toast(`${p.id} created`); go(`#/project/${p.id}/stage/${p.stage}`);
 }
 function updateUploadPreview() {
   const f = $('#f-upload'); if (!f) return; const p = getProject(f.dataset.p);
-  const c = contactById(f.querySelector('[name=party]').value); const file = sheetCtx && sheetCtx.file;
-  const ext = file ? (file.name.split('.').pop() || 'pdf').toLowerCase().slice(0, 4) : 'pdf';
-  $('#u-name').textContent = docName(p, { type: f.querySelector('[name=type]').value, party: partyKey(c), date: TODAY, ext });
+  const c = contactById(f.querySelector('[name=party]').value); const files = (sheetCtx && sheetCtx.files) || [];
+  const name = docName(p, { type: f.querySelector('[name=type]').value, party: partyKey(c), date: TODAY, ext: files.length ? fileExt(files[0].name) : 'pdf' });
+  $('#u-name').textContent = name + (files.length > 1 ? ` (+ ${files.length - 1} more)` : '');
+}
+function updateDealDocPreview() {
+  const f = $('#f-dealdoc'); if (!f) return; const dl = state.deals.find(x => x.id === f.dataset.id);
+  const cid = f.querySelector('[name=party]').value; const files = (sheetCtx && sheetCtx.files) || [];
+  const name = dealDocName(dl, { type: f.querySelector('[name=type]').value, party: cid ? partyKey(contactById(cid)) : 'Agent', date: TODAY, ext: files.length ? fileExt(files[0].name) : 'pdf' });
+  $('#u-name').textContent = name + (files.length > 1 ? ` (+ ${files.length - 1} more)` : '');
+}
+/* Edit stages drawer (project): a working copy, applied on Save */
+function stageRefs(p, n) { const r = { tasks: p.tasks.filter(t => t.stage === n).length, rfqs: p.rfqs.filter(x => x.stage === n).length, docs: p.docs.filter(x => x.stage === n).length, funds: n === certStageNo(p) ? (p.funds || []).length : 0 }; r.total = r.tasks + r.rfqs + r.docs + r.funds; return r; }
+function refsText(r) { const parts = []; if (r.tasks) parts.push(plural(r.tasks, 'task')); if (r.rfqs) parts.push(plural(r.rfqs, 'quote scope')); if (r.docs) parts.push(plural(r.docs, 'document')); if (r.funds) parts.push('funds-needed list'); return parts.join(', ') || 'empty'; }
+function stageDraftHTML(p, draft) {
+  return `<form id="f-stages" data-form="edit-stages" data-p="${p.id}"><p class="help" style="margin-bottom:16px">Rename a stage, add one after any stage, or remove a stage with nothing in it. Tasks, quotes and documents move with their stage, and the numbers follow the order.</p>
+    <div class="rows">${draft.map((st, i) => { const r = st.orig ? stageRefs(p, st.orig) : null; const isCur = st.orig === p.stage && p.status !== 'closed'; const can = draft.length > 1 && (!st.orig || (!r.total && !isCur)); const info = !st.orig ? 'new' : isCur ? 'current stage, ' + refsText(r) : refsText(r);
+      return `<div class="stage-row" data-stage-row><div class="field"><label for="sd-${i}">Stage ${i + 1}${st.orig && st.orig !== i + 1 ? ` (was ${st.orig})` : ''} <span class="muted">· ${h(info)}</span></label><input class="input" id="sd-${i}" name="sname" required value="${h(st.name)}" placeholder="New stage name" autocomplete="off"></div>
+        <span class="btn-group"><button type="button" class="btn btn-micro" data-action="stage-add-after" data-i="${i}">Add stage after</button><button type="button" class="btn btn-micro btn-danger" data-action="stage-remove" data-i="${i}" ${can ? '' : 'disabled'} title="${can ? 'Remove this stage' : 'Only an empty stage that isn\'t the current one can be removed'}">Remove</button></span></div>`; }).join('')}</div></form>`;
+}
+function syncStageDraft() { const ins = [...document.querySelectorAll('#f-stages [name=sname]')]; if (sheetCtx && sheetCtx.draft && ins.length === sheetCtx.draft.length) ins.forEach((el, i) => { sheetCtx.draft[i].name = el.value; }); }
+function redrawStageDraft() { $('#sheet .sheet-body').innerHTML = stageDraftHTML(getProject(sheetCtx.p), sheetCtx.draft); }
+function saveStageDraft(p) {
+  syncStageDraft(); const draft = sheetCtx.draft;
+  if (draft.some(x => !x.name.trim())) { toast('Give every stage a name', 'info'); return; }
+  const map = {}; draft.forEach((x, i) => { if (x.orig) map[x.orig] = i + 1; });
+  const changes = [];
+  draft.forEach((x, i) => { const nm = x.name.trim(); if (!x.orig) changes.push(`added ${nm} as stage ${i + 1}`); else if (nm !== p.stages[x.orig - 1].name) changes.push(`renamed ${p.stages[x.orig - 1].name} to ${nm}`); });
+  p.stages.forEach((st, i) => { if (!map[i + 1]) changes.push(`removed ${st.name}`); });
+  if (!changes.length) { closeSheet(); toast('No changes to the stages', 'info'); return; }
+  const re = (n) => map[n] || n;
+  p.tasks.forEach(t => { t.stage = re(t.stage); }); p.rfqs.forEach(r => { r.stage = re(r.stage); }); p.docs.forEach(d0 => { d0.stage = re(d0.stage); }); p.stage = re(p.stage);
+  p.stages = draft.map(x => (x.key ? { name: x.name.trim(), key: x.key } : { name: x.name.trim() }));
+  addLog(p, 'Stages edited: ' + changes.join('; '), 'stage'); closeSheet(); commit(); toast('Stages saved');
+}
+/* Funds needed: add / edit a line */
+function openFundForm(p, f) {
+  const parties = state.contacts.slice().sort((a, b) => a.company.localeCompare(b.company));
+  const bills = p.invoicesIn.slice().sort((a, b) => b.date.localeCompare(a.date));
+  const v = f || { desc: '', contactId: 'shoalcouncil', amount: '', gst: 'gst_free', category: 'Council & Gov', billId: '', paid: false, note: '' };
+  openSheet({ title: f ? 'Edit payment' : 'Add payment', sub: `${h(p.name)} · funds needed before sign-off`,
+    body: `<form id="f-fund" data-form="fund" data-p="${p.id}" data-id="${f ? f.id : ''}" class="form-grid">
+      <div class="field full"><label for="fn-desc">Payment</label><input class="input" id="fn-desc" name="desc" required value="${h(v.desc)}" placeholder="e.g. Section 7.11 contributions"></div>
+      <div class="field full"><label for="fn-party">Paid to</label><select class="input" id="fn-party" name="party">${parties.map(c => `<option value="${c.id}" ${c.id === v.contactId ? 'selected' : ''}>${h(c.company)}</option>`).join('')}</select></div>
+      <div class="field"><label for="fn-amt">Amount</label><input class="input" id="fn-amt" name="amount" type="number" min="0" step="0.01" required value="${h(v.amount)}"><span class="hint">Ex GST for GST on Expenses, otherwise the full amount.</span></div>
+      <div class="field"><label for="fn-gst">Tax rate</label><select class="input" id="fn-gst" name="gst">${['gst_free', 'taxable', 'input_taxed'].map(k => `<option value="${k}" ${v.gst === k ? 'selected' : ''}>${h(taxRateName(k))}</option>`).join('')}</select></div>
+      <div class="field"><label for="fn-cat">Category</label><select class="input" id="fn-cat" name="category">${CATEGORIES.map(c => `<option ${v.category === c ? 'selected' : ''}>${h(c)}</option>`).join('')}</select></div>
+      <div class="field"><label for="fn-status">Status</label><select class="input" id="fn-status" name="status"><option value="topay">To pay</option><option value="paid" ${v.paid ? 'selected' : ''}>Paid</option></select></div>
+      <div class="field full"><label for="fn-bill">Linked bill (optional)</label><select class="input" id="fn-bill" name="bill"><option value="">Not linked</option>${bills.map(i => `<option value="${i.id}" ${i.id === v.billId ? 'selected' : ''}>${h(i.number)} · ${h(contactLabel(i.contactId))} · ${fmtMoney(invTotal(i))}</option>`).join('')}</select><span class="hint">When linked, the status follows the bill: paid once the bill is paid.</span></div>
+      <div class="field full"><label for="fn-note">Note</label><input class="input" id="fn-note" name="note" value="${h(v.note || '')}" placeholder="e.g. Indexed quarterly"></div></form>`,
+    foot: `<button type="button" class="btn btn-ghost" data-action="close-sheet">Cancel</button>${f ? `<button type="button" class="btn btn-danger" data-action="fund-remove" data-p="${p.id}" data-id="${f.id}">Remove</button>` : ''}<button type="submit" form="f-fund" class="btn btn-primary">${f ? 'Save' : 'Add payment'}</button>` });
+}
+/* Our companies: detail / edit drawer, and assigning a company to a project */
+function openCompanyForm(c) {
+  const v = (k) => h(c ? (c[k] == null ? '' : c[k]) : '');
+  const ps = c ? companyProjects(c) : [];
+  openSheet({ title: c ? c.name : 'Add company', sub: c ? (c.manager ? 'Project manager for every project' : ps.length ? 'Owns ' + ps.map(p => p.id).join(', ') : 'Owns no projects yet') : 'A company Dan owns, to buy and develop a site',
+    body: `<form id="f-company" data-form="company" data-id="${c ? c.id : ''}" class="form-grid">
+      ${c && c.manager ? `<div class="full">${demoNote('Wellco is the project manager. Its details also show in Settings and on every purchase order.').replace('<b>Demo:</b> ', '')}</div>` : ''}
+      <div class="field full"><label for="co-name">Legal name</label><input class="input" id="co-name" name="name" required value="${v('name')}" placeholder="e.g. 22 Peel Street Pty Ltd"></div>
+      <div class="field"><label for="co-short">Short name</label><input class="input" id="co-short" name="short" value="${v('short')}" placeholder="e.g. Peel St"></div>
+      <div class="field"><label for="co-status">Status</label><select class="input" id="co-status" name="status">${COMPANY_STATUSES.map(x => `<option ${(c ? c.status : 'To be formed') === x ? 'selected' : ''}>${x}</option>`).join('')}</select></div>
+      <div class="field"><label for="co-abn">ABN</label><input class="input" id="co-abn" name="abn" inputmode="numeric" value="${v('abn')}" placeholder="Applied for"></div>
+      <div class="field"><label for="co-acn">ACN</label><input class="input" id="co-acn" name="acn" inputmode="numeric" value="${v('acn')}"></div>
+      <div class="field full"><label for="co-addr">Registered address</label><input class="input" id="co-addr" name="address" value="${c ? v('address') : h('c/- ' + state.settings.company + ', ' + state.settings.address)}"></div>
+      <div class="field"><label class="toggle"><input type="checkbox" name="gst" ${!c || c.gst ? 'checked' : ''}> Registered for GST</label></div>
+      <div class="field"><label for="co-gstfrom">GST from</label><input class="input" id="co-gstfrom" name="gstFrom" type="date" value="${v('gstFrom')}"></div>
+      <div class="field"><label for="co-bas">BAS</label><select class="input" id="co-bas" name="basCycle"><option value="quarterly">Quarterly</option><option value="none" ${c && c.basCycle === 'none' ? 'selected' : ''}>Not lodging yet</option></select></div>
+      <div class="field"><label for="co-bank">Bank</label><input class="input" id="co-bank" name="bank" value="${c ? v('bank') : 'Coastal Mutual Bank'}"></div>
+      <div class="field"><label for="co-bsb">BSB</label><input class="input" id="co-bsb" name="bsb" inputmode="numeric" value="${v('bsb')}" placeholder="633-000"></div>
+      <div class="field"><label for="co-acc">Account</label><input class="input" id="co-acc" name="acc" inputmode="numeric" value="${v('acc')}"></div>
+      <div class="field"><label for="co-formed">Formed</label><input class="input" id="co-formed" name="formed" type="date" value="${v('formed')}"></div>
+      <div class="field"><label for="co-closed">Closed</label><input class="input" id="co-closed" name="closed" type="date" value="${v('closed')}"></div>
+      <div class="field full"><label for="co-notes">Notes</label><textarea class="input" id="co-notes" name="notes" rows="3">${v('notes')}</textarea></div></form>`,
+    foot: `<button type="button" class="btn btn-ghost" data-action="close-sheet">Cancel</button><button type="submit" form="f-company" class="btn btn-primary">${icon('check')}${c ? 'Save company' : 'Add company'}</button>` });
+}
+function openAssignCompany(p, taskId) {
+  const existing = ownCompanies().filter(c => c.status !== 'Closed');
+  openSheet({ title: 'Register project company', sub: `${h(p.name)} · moves the project from Dan Wellman and/or nominee`,
+    body: `<form id="f-assign" data-form="assign-company" data-p="${p.id}" data-task="${taskId || ''}" class="stack" style="gap:16px">
+      <p class="help">From now on quotes, purchase orders, invoices and bills for ${h(p.id)} are in this company's name, and it lodges the BAS.</p>
+      <div class="recips" style="margin:0">
+        <label class="recip"><input type="radio" name="owner" value="new" checked data-input="assign-owner"><span class="body"><span class="strong" style="display:block">Register a new company</span><span class="small muted">About a day with ASIC. Enter the ABN and ACN once they're issued.</span></span></label>
+        <label class="recip"><input type="radio" name="owner" value="existing" ${existing.length ? '' : 'disabled'} data-input="assign-owner"><span class="body"><span class="strong" style="display:block">Use an existing company</span><span class="small muted">For example a dormant one kept on the shelf.</span></span></label></div>
+      <div class="form-grid" id="as-existing" hidden><div class="field full"><label for="as-co">Company</label><select class="input" id="as-co" name="existingId">${existing.map(c => `<option value="${c.id}">${h(c.name)} (${h(c.status)})</option>`).join('')}</select></div></div>
+      <div class="form-grid" id="as-new">
+        <div class="field full"><label for="as-name">Company name</label><input class="input" id="as-name" name="company" value="${h(p.suburb + ' Land Pty Ltd')}"></div>
+        <div class="field"><label for="as-abn">ABN</label><input class="input" id="as-abn" name="abn" inputmode="numeric" placeholder="Applied for"></div>
+        <div class="field"><label for="as-acn">ACN</label><input class="input" id="as-acn" name="acn" inputmode="numeric"></div>
+        <div class="field full"><label class="toggle"><input type="checkbox" name="gst" checked> Registered for GST</label></div>
+        <div class="field"><label for="as-bank">Bank</label><input class="input" id="as-bank" name="bank" value="Coastal Mutual Bank"></div>
+        <div class="field"><label for="as-bsb">BSB</label><input class="input" id="as-bsb" name="bsb" inputmode="numeric" placeholder="633-000"></div>
+        <div class="field"><label for="as-acc">Account</label><input class="input" id="as-acc" name="acc" inputmode="numeric"></div></div></form>`,
+    foot: `<button type="button" class="btn btn-ghost" data-action="close-sheet">Cancel</button><button type="submit" form="f-assign" class="btn btn-primary">${icon('check')}Assign company</button>` });
+}
+/* Contacts: new role inline, manage categories */
+function addRoleInline() {
+  const nameEl = $('#nr-name'); const name = nameEl.value.trim(); const cat = $('#nr-cat').value;
+  if (!name) { toast('Type the new role first', 'info'); nameEl.focus(); return; }
+  const existing = allRoles().find(r => r.toLowerCase() === name.toLowerCase());
+  const role = existing || name;
+  if (!existing) { state.roles[name] = cat; addGlobalLog(`Role added: ${name} (under ${cat})`, 'note'); save(); }
+  const checked = new Set([...document.querySelectorAll('#c-roles input[name=roles]:checked')].map(x => x.value)); checked.add(role);
+  $('#c-roles').innerHTML = rolesChoiceHTML([...checked]); refreshContactCats();
+  nameEl.value = ''; $('#c-newrole').hidden = true; const tg = $('[data-action="role-new-toggle"]'); if (tg) tg.setAttribute('aria-expanded', 'false');
+  const box = $(`#c-roles input[value="${CSS.escape(role)}"]`); if (box) { box.scrollIntoView({ block: 'nearest' }); box.focus(); }
+  toast(existing ? `${role} ticked` : `Role added: ${name} under ${cat}`);
+}
+function syncCatDraft() {
+  const d0 = sheetCtx && sheetCtx.catDraft; if (!d0) return;
+  document.querySelectorAll('#f-cats [name=catname]').forEach(el => { const c = d0.cats[+el.dataset.i]; if (c) c.name = el.value; });
+  document.querySelectorAll('#f-cats select[data-role]').forEach(el => { const r = d0.roles.find(x => x.name === el.dataset.role); if (r) r.cat = +el.value; });
+}
+function redrawCatDraft() { $('#sheet .sheet-body').innerHTML = catDraftHTML(sheetCtx.catDraft); }
+function saveCatDraft() {
+  syncCatDraft(); const d0 = sheetCtx.catDraft; const names = d0.cats.map(c => c.name.trim());
+  if (names.some(n => !n)) { toast('Give every category a name', 'info'); return; }
+  if (new Set(names.map(n => n.toLowerCase())).size !== names.length) { toast('Two categories have the same name', 'info'); return; }
+  const changes = []; const rename = {};
+  d0.cats.forEach((c, i) => { if (!c.orig) changes.push(`added ${names[i]}`); else if (c.orig !== names[i]) { rename[c.orig] = names[i]; changes.push(`renamed ${c.orig} to ${names[i]}`); } });
+  state.categories.forEach(o => { if (!d0.cats.some(c => c.orig === o)) changes.push(`removed ${o}`); });
+  d0.roles.forEach(r => { const before = roleCategory(r.name); const after = names[r.cat]; if ((rename[before] || before) !== after) changes.push(`moved ${r.name} to ${after}`); state.roles[r.name] = after; });
+  state.contacts.forEach(c => { c.categories = (c.categories || []).map(x => rename[x] || x).filter(x => names.includes(x)); });
+  if (rename[ui.contactRole]) ui.contactRole = rename[ui.contactRole];
+  state.categories = names;
+  if (changes.length) addGlobalLog('Contact categories: ' + changes.join('; '), 'note');
+  closeSheet(); commit(); toast(changes.length ? 'Categories saved' : 'No changes to the categories', changes.length ? 'check' : 'info');
+}
+/* Stage templates (Settings): edit a stage's name and default tasks */
+let tplSeq = 0;
+function tplTaskRow(i, t) {
+  return `<div class="line-item tpl-task" data-tpl-task><div class="field li-desc"><label for="tt-${i}">Task</label><input class="input" id="tt-${i}" name="ttitle" required value="${h(t.title)}"></div>
+    <div class="field"><label for="to-${i}">Day</label><input class="input" id="to-${i}" name="toff" type="number" min="0" step="1" value="${h(t.off)}" title="Days from project start"></div>
+    <button type="button" class="icon-btn" data-action="tpl-remove-task" aria-label="Remove task" style="align-self:end">${icon('x')}</button><input type="hidden" name="tlead" value="${h(t.lead || '')}"></div>`;
+}
+function openTplForm(type, i) {
+  const list = tplFor(type); const isNew = i < 0; const st = isNew ? { name: '', tasks: [] } : list[i]; tplSeq = 0;
+  const canRemove = !isNew && !st.tasks.length && st.key !== 'cert' && list.length > 1;
+  openSheet({ title: isNew ? 'Add stage' : 'Edit stage', sub: `${h(type)} template`,
+    body: `<form id="f-tpl" data-form="tpl-stage" data-type="${h(type)}" data-i="${i}" class="stack" style="gap:16px">
+      <div class="form-grid"><div class="field"><label for="tp-name">Stage name</label><input class="input" id="tp-name" name="name" required value="${h(st.name)}" placeholder="e.g. Certification & Registration"></div>
+      <div class="field"><label for="tp-pos">Position</label><select class="input" id="tp-pos" name="pos">${(isNew ? [...list, null] : list).map((x, j) => `<option value="${j}" ${j === (isNew ? list.length : i) ? 'selected' : ''}>Stage ${j + 1}${x && j !== i ? ' (before ' + h(x.name) + ')' : ''}</option>`).join('')}</select></div></div>
+      <div><h3 class="eyebrow">Default tasks</h3><p class="help" style="margin-bottom:8px">Due dates count from the day a project is created. Lead-time notes stay with their task.</p>
+      <div class="stack" style="gap:8px" id="tpl-tasks">${st.tasks.map(t => tplTaskRow(tplSeq++, t)).join('')}</div>
+      <button type="button" class="btn btn-sm" data-action="tpl-add-task" style="margin-top:8px">${icon('plus')}Add task</button></div></form>`,
+    foot: `<button type="button" class="btn btn-ghost" data-action="close-sheet">Cancel</button>${!isNew ? `<button type="button" class="btn btn-danger" data-action="tpl-remove-stage" data-type="${h(type)}" data-i="${i}" ${canRemove ? '' : 'disabled'} title="${canRemove ? 'Remove from the template' : 'Remove its tasks first'}">Remove stage</button>` : ''}<button type="submit" form="f-tpl" class="btn btn-primary">${isNew ? 'Add stage' : 'Save stage'}</button>` });
+}
+function saveTplForm(f, fd) {
+  const type = f.dataset.type; const list = tplFor(type); const i = +f.dataset.i; const isNew = i < 0;
+  const titles = fd.getAll('ttitle'), offs = fd.getAll('toff'), leads = fd.getAll('tlead');
+  const tasks = titles.map((t, j) => ({ title: t.trim(), off: Math.max(0, +offs[j] || 0), lead: leads[j] || null })).filter(t => t.title);
+  const name = fd.get('name').trim(); const pos = Math.min(+fd.get('pos'), isNew ? list.length : list.length - 1);
+  let st;
+  if (isNew) { st = { id: newId('s'), name, tasks }; list.splice(pos, 0, st); addGlobalLog(`Stage template (${type}): added ${name} as stage ${pos + 1} with ${plural(tasks.length, 'task')}`, 'stage'); }
+  else {
+    st = list[i]; const ch = [];
+    if (st.name !== name) ch.push(`renamed ${st.name} to ${name}`);
+    const before = st.tasks.map(t => t.title).join('|'); const after = tasks.map(t => t.title).join('|');
+    if (before !== after || st.tasks.some((t, j) => !tasks[j] || tasks[j].off !== t.off)) ch.push(`${plural(tasks.length, 'default task')} (was ${st.tasks.length})`);
+    st.name = name; st.tasks = tasks;
+    if (pos !== i) { list.splice(i, 1); list.splice(pos, 0, st); ch.push(`moved to stage ${pos + 1}`); }
+    if (ch.length) addGlobalLog(`Stage template (${type}): ${st.name}: ${ch.join('; ')}`, 'stage');
+  }
+  closeSheet(); commit(); toast(isNew ? 'Stage added to the template' : 'Template saved');
 }
 function openWelcome() {
   const claim = (getProject('CROOBYAR') || { invoicesIn: [] }).invoicesIn.find(i => i.number === 'SCC-PC06');
   openSheet({ title: 'Welcome, Dan',
     body: `<div class="is-modal welcome">${logoHTML('welcome-logo')}
       <p>This is a working demo of the Wellco project brain, loaded with four sample projects: Croobyar Rd, Ulladulla, Jimboomba and Vincentia.</p>
+      <p><b>Updated after our call on 16 Nov:</b> new Certification & Registration stage, split bills, your own roles and stages, files on deals, and a register of your companies with a BAS for each.</p>
       <p>Approve bills, request quotes and download the Excel workbooks. Nothing you do here is sent anywhere.</p>
       <h3 class="welcome-h">Try this</h3>
       <ul class="try">
         <li><button type="button" data-action="welcome-go" data-href="#/project/CROOBYAR/money/in${claim ? '?f=' + claim.id : ''}"><span class="try-title">Approve a progress claim</span><span class="try-sub">Southcoast Civil's claim #6 on Croobyar</span></button></li>
         <li><button type="button" data-action="welcome-go" data-href="#/project/CROOBYAR/rfqs"><span class="try-title">Request quotes</span><span class="try-sub">Landscaping on Croobyar, from your RFQ template</span></button></li>
+        <li><button type="button" data-action="welcome-go" data-href="#/project/CROOBYAR/stage/7"><span class="try-title">See the money needed before sign-off</span><span class="try-sub">Certification & Registration on Croobyar</span></button></li>
         <li><button type="button" data-action="welcome-go" data-href="#/exports"><span class="try-title">Download a year-end workbook</span><span class="try-sub">The Excel file your accountant gets for FY2025-26</span></button></li>
       </ul></div>`,
     foot: `<button type="button" class="btn btn-primary" data-action="welcome-close">Have a look around</button>` });
@@ -3352,6 +3557,8 @@ document.addEventListener('input', (e) => {
   if (k === 'contact-search') { ui.contactQ = el.value; const html = viewContacts(); const tmp = document.createElement('div'); tmp.innerHTML = html; $('#contact-grid').replaceWith(tmp.querySelector('#contact-grid')); }
   if (k === 'inv-calc') updateInvoiceCalc();
   if (k === 'upload-preview') updateUploadPreview();
+  if (k === 'dealdoc-preview') updateDealDocPreview();
+  if (k === 'cat-name') document.querySelectorAll(`#f-cats select[data-role] option[value="${el.dataset.i}"]`).forEach(o => { o.textContent = el.value || 'New category'; });
   if (k === 'wiz-suburb' && wiz) { const idEl = $('#w-id'); if (idEl && (!idEl.value || idEl.dataset.auto)) { idEl.value = el.value.toUpperCase().replace(/[^A-Z0-9]/g, ''); idEl.dataset.auto = '1'; } }
 });
 document.addEventListener('change', (e) => {
@@ -3360,6 +3567,12 @@ document.addEventListener('change', (e) => {
   if (k === 'exp-fy') { ui.expFY[el.dataset.p] = el.value; render(); const s = $('#fy-' + CSS.escape(el.dataset.p)); if (s) s.focus(); }
   if (k === 'inv-calc') updateInvoiceCalc();
   if (k === 'upload-preview') updateUploadPreview();
+  if (k === 'dealdoc-preview') updateDealDocPreview();
+  if (k === 'contact-roles') refreshContactCats();
+  if (k === 'def-cat') { const prev = el.dataset.prev; document.querySelectorAll('#inv-lines [name=lcat]').forEach(x => { if (x.value === prev) x.value = el.value; }); el.dataset.prev = el.value; updateInvoiceCalc(); }
+  if (k === 'wiz-owner') { wiz.owner = el.value; $('#wiz-existing').hidden = el.value !== 'existing'; $('#wiz-new').hidden = el.value !== 'new'; }
+  if (k === 'assign-owner') { $('#as-existing').hidden = el.value !== 'existing'; $('#as-new').hidden = el.value !== 'new'; }
+  if (k === 'role-move') { syncCatDraft(); redrawCatDraft(); const s0 = $(`#f-cats select[data-role="${CSS.escape(el.dataset.role)}"]`); if (s0) s0.focus(); }
   if (k === 'rfq-rcpt') {
     const p = getProject(el.dataset.p); const r = findRfq(p, el.dataset.r);
     sheetPicked = [...document.querySelectorAll('#sheet input[name=rcpt]:checked')].map(x => x.value);
@@ -3368,13 +3581,16 @@ document.addEventListener('change', (e) => {
   }
 });
 $('#file-input').addEventListener('change', (e) => {
-  const file = e.target.files && e.target.files[0]; if (!file || !sheetCtx) return;
-  sheetCtx.file = { name: file.name, size: file.size };
-  const lbl = $('#u-file'); if (lbl) lbl.textContent = `${file.name} · ${Math.max(1, Math.round(file.size / 1024))} KB`;
-  updateUploadPreview();
+  const files = [...(e.target.files || [])]; if (!files.length || !sheetCtx) return;
+  sheetCtx.files = files.map(f => ({ name: f.name, size: f.size }));
+  const kb = (n) => Math.max(1, Math.round(n / 1024)) + ' KB';
+  const lbl = $('#u-file'); if (lbl) lbl.textContent = files.length === 1 ? `${files[0].name} · ${kb(files[0].size)}` : `${files.length} files: ${files.map(f => f.name).join(', ')}`;
+  updateUploadPreview(); updateDealDocPreview();
 });
 document.addEventListener('keydown', (e) => {
   if (sheetEl.hidden) return;
+  // Enter in the inline "new role" / "new category" boxes adds it instead of submitting the whole form
+  if (e.key === 'Enter' && e.target && (e.target.id === 'nr-name' || e.target.id === 'cat-new')) { e.preventDefault(); if (e.target.id === 'nr-name') addRoleInline(); else ACTIONS['cat-add'](); return; }
   if (e.key === 'Escape') { e.preventDefault(); closeSheet(); return; }
   if (e.key === 'Tab') {
     const f = [...sheetEl.querySelectorAll('a[href], button:not([disabled]), input:not([type=hidden]), select, textarea, [tabindex]:not([tabindex="-1"])')].filter(x => x.offsetParent !== null);
