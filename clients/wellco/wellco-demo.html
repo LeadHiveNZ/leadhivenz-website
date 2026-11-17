@@ -812,7 +812,7 @@ a.row:hover, button.row:hover { background: var(--surface-hover); }
 const LOGO_DATA_URI = "data:image/png;base64,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";
 /* ===== Constants ===== */
 const TODAY = '2026-11-02';
-const STORE_KEY = 'wellco_demo_v2'; // v1 was the pre-16 Nov demo; its saved state is ignored
+const STORE_KEY = 'wellco_demo_v3'; // v1 and v2 were earlier drafts; their saved state is ignored
 function addDays(iso, n) { const d = new Date(iso + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
 const d = (n) => addDays(TODAY, n);
 /* Stage templates per project type. Each stage: name, optional key ('cert' marks the sign-off stage that carries the
@@ -822,9 +822,9 @@ const DEFAULT_TEMPLATES = {
   'Land subdivision': [
     { name: 'Sourcing', tasks: [['Log site and source', 0], ['Desktop zoning check (Stash / Mecone Mosaic)', 3]] },
     { name: 'Feasibility', tasks: [['Run feaso in Feasely', 10], ['Go / no-go decision', 14]] },
-    { name: 'Acquisition & DD', tasks: [['Register project company (ABN, GST, bank)', 21], ['Exchange contracts and pay deposit', 30], ['Due diligence: title, contamination, flooding, bushfire', 45], ['DD expiry: decide go / no-go', 50, 'Unconditional after this date.'], ['Settlement', 365]] },
+    { name: 'Acquisition & DD', tasks: [['Register project company (ABN, GST, bank)', 21], ['Exchange contracts and pay deposit', 30, null, { ms: 'exchange' }], ['Due diligence: title, contamination, flooding, bushfire', 45], ['DD expiry: decide go / no-go', 90, 'Unconditional after this date.', { ms: 'ddExpiry', link: { to: 'm:exchange', n: 60, unit: 'days' } }], ['Settlement', 395, null, { ms: 'settlement', link: { to: 'm:exchange', n: 12, unit: 'months' } }]] },
     { name: 'Consultants', tasks: [['Get 3 quotes: town planner', 60], ['Get 3 quotes: surveyor', 60], ['Get 3 quotes: civil engineer', 75], ['Geotech, ecology and bushfire reports', 120]] },
-    { name: 'Development Approval', tasks: [['Lodge DA and pay fees', 200], ['Request civil quotes during DA', 260, 'Quotes take 3 to 4 weeks. Execute the day DA lands.'], ['Respond to RFIs', 280], ['DA determination: review conditions', 380]] },
+    { name: 'Development Approval', tasks: [['Lodge DA and pay fees', 200], ['Request civil quotes during DA', 260, 'Quotes take 3 to 4 weeks. Execute the day DA lands.'], ['Respond to RFIs', 280], ['DA determination: review conditions', 380, null, { ms: 'daApproval' }]] },
     { name: 'Construction', tasks: [['Tender civil works: 3 quotes', 400], ['Construction certificate issued', 430], ['Electricity connection application (Endeavour / Energex)', 440, '3-month lead time. Needed before sign-off.'], ['Practical completion of civil works', 600]] },
     { name: 'Certification & Registration', key: 'cert', tasks: [['Confirm contributions and headworks amounts', 580, 'Council and the water authority need paying before they sign. Line up the money early.'], ['Practical completion inspection with council', 610], ['Works-as-executed plans to council', 620], ['NBN and electricity sign-offs', 630], ['Water authority compliance certificate (Section 73 / s307)', 635], ['Lodge subdivision certificate application', 640, 'Council turnaround 6 to 8 weeks.'], ['Bank consent to the plan (mortgagee)', 660], ['Register plan (NSW LRS / Titles Queensland)', 680]] },
     { name: 'Sales & Settlements', tasks: [['Appoint selling agent', 520], ['Settle lots and discharge loan', 720]] },
@@ -833,9 +833,9 @@ const DEFAULT_TEMPLATES = {
   'Commercial / industrial': [
     { name: 'Sourcing', tasks: [['Log site and source', 0], ['Desktop zoning check (Stash / Mecone Mosaic)', 3]] },
     { name: 'Feasibility', tasks: [['Run feaso in Feasely', 10], ['Go / no-go decision', 14]] },
-    { name: 'Acquisition & DD', tasks: [['Register project company (ABN, GST, bank)', 21], ['Exchange contracts and pay deposit', 30], ['Due diligence: title, contamination, services', 45], ['DD expiry: decide go / no-go', 50, 'Unconditional after this date.'], ['Settlement', 120]] },
+    { name: 'Acquisition & DD', tasks: [['Register project company (ABN, GST, bank)', 21], ['Exchange contracts and pay deposit', 30, null, { ms: 'exchange' }], ['Due diligence: title, contamination, services', 45], ['DD expiry: decide go / no-go', 90, 'Unconditional after this date.', { ms: 'ddExpiry', link: { to: 'm:exchange', n: 60, unit: 'days' } }], ['Settlement', 180, null, { ms: 'settlement', link: { to: 'm:ddExpiry', n: 90, unit: 'days' } }]] },
     { name: 'Consultants', tasks: [['Get 3 quotes: town planner', 60], ['Get 3 quotes: traffic engineer', 60], ['Survey, geotech and stormwater', 90]] },
-    { name: 'Development Approval', tasks: [['Lodge DA and pay fees', 200], ['Request civil and building quotes during DA', 260, 'Quotes take 3 to 4 weeks. Execute the day DA lands.'], ['Respond to RFIs', 280], ['DA determination: review conditions', 380]] },
+    { name: 'Development Approval', tasks: [['Lodge DA and pay fees', 200], ['Request civil and building quotes during DA', 260, 'Quotes take 3 to 4 weeks. Execute the day DA lands.'], ['Respond to RFIs', 280], ['DA determination: review conditions', 380, null, { ms: 'daApproval' }]] },
     { name: 'Construction', tasks: [['Tender civil and building works: 3 quotes each', 400], ['Pay contributions and get CC', 430], ['Energy authority application (substation)', 440, '3-month lead time.'], ['Practical completion', 640]] },
     { name: 'Certification & Registration', key: 'cert', tasks: [['Confirm contributions and headworks amounts', 600, 'Council and the water authority need paying before they sign. Line up the money early.'], ['Final inspection by certifier', 650], ['Water authority compliance certificate', 660], ['Fire safety certificate', 665], ['Occupation certificate', 670, "Units can't settle without it."], ['Bank consent to the strata plan', 690], ['Strata certificate and lodge strata plan', 695]] },
     { name: 'Sales & Settlements', tasks: [['Appoint agent for pre-sales', 450], ['Settle units and discharge loan', 760]] },
@@ -844,7 +844,7 @@ const DEFAULT_TEMPLATES = {
   'Residential build': [
     { name: 'Sourcing', tasks: [['Log site and source', 0], ['Desktop planning check: zoning, overlays, CDC eligible?', 3]] },
     { name: 'Feasibility', tasks: [["Builder's estimate and feaso", 10], ['Go / no-go decision', 14]] },
-    { name: 'Acquisition & DD', tasks: [['Register project company (ABN, GST, bank)', 21], ['Exchange contracts and pay deposit', 30], ['Due diligence: title, easements, services, flood and bushfire', 45], ['Settlement', 90]] },
+    { name: 'Acquisition & DD', tasks: [['Register project company (ABN, GST, bank)', 21], ['Exchange contracts and pay deposit', 30, null, { ms: 'exchange' }], ['Due diligence: title, easements, services, flood and bushfire', 45], ['Settlement', 72, null, { ms: 'settlement', link: { to: 'm:exchange', n: 42, unit: 'days' } }]] },
     { name: 'Design & approvals', tasks: [['Designer: concept and working drawings', 120], ['Engineering: structural, stormwater and BASIX', 150], ['Lodge DA or CDC', 170, 'CDC is about 20 days if it complies. A DA takes 3 to 6 months.'], ["Check builder's licence (NSW Fair Trading)", 225], ['Home warranty insurance (HBCF) certificate', 230, 'Needed before work starts on residential jobs over $20,000 in NSW.'], ['Pay long service levy', 232], ['Construction certificate', 240]] },
     { name: 'Construction', tasks: [['Sign fixed-price building contract', 245], ['Slab inspection by certifier', 290], ['Frame inspection by certifier', 330], ['Approve progress claims against the contract', 400], ['Practical completion and defects list', 480]] },
     { name: 'Certification & Occupation', key: 'cert', tasks: [['Final inspection by certifier', 490], ['Water authority final sign-off', 495], ['Occupation certificate', 500, "Can't settle or lease without it."], ['Handover: keys, manuals and warranties', 505]] },
@@ -866,59 +866,91 @@ const DEFAULT_CATEGORIES = ['Consultants', 'Civil contractors', 'Building contra
 const DEFAULT_ROLES = {
   'Town planner': 'Consultants', 'Surveyor': 'Consultants', 'Civil engineer': 'Consultants', 'Geotech': 'Consultants', 'Ecology': 'Consultants', 'Bushfire': 'Consultants', 'Traffic engineer': 'Consultants', 'Certifier': 'Consultants',
   'Civil contractor': 'Civil contractors', 'Earthworks': 'Civil contractors', 'Electrical': 'Civil contractors', 'NBN': 'Civil contractors', 'Landscaping': 'Civil contractors',
-  'Builder': 'Building contractors', 'Carpenter': 'Building contractors', 'Plumber': 'Building contractors', 'Electrician (building)': 'Building contractors',
+  'Builder': 'Building contractors', 'Carpenter': 'Building contractors', 'Plumber': 'Building contractors', 'Electrician (building)': 'Building contractors', 'Plasterer': 'Building contractors',
   "Buyer's agent": 'Agents & advisers', 'Solicitor': 'Agents & advisers', 'Real estate agent': 'Agents & advisers', 'Accountant': 'Agents & advisers', 'Project manager': 'Agents & advisers',
   'Council': 'Council & government', 'Government': 'Council & government',
   'Bank': 'Banks & vendors', 'Vendor': 'Banks & vendors',
 };
-const DOC_TYPES = ['Contract', 'DA', 'Report', 'SalesEvidence', 'Quote', 'Engagement', 'InvoiceIn', 'InvoiceOut', 'Survey', 'Company', 'Correspondence'];
-const DOC_LABELS = { Contract: 'Contracts', DA: 'DA & planning', Report: 'Reports', SalesEvidence: 'Sales evidence', Quote: 'Quotes', Engagement: 'Engagements & POs', InvoiceIn: 'Bills', InvoiceOut: 'Sales invoices', Survey: 'Survey & plans', Company: 'Company & ASIC', Correspondence: 'Correspondence' };
-// Documents on a deal, and where each lands when the deal becomes a project: [project doc type, stage]
-const DEAL_DOC_TYPES = { Contract: 'Contract', Plans: 'Plans', SalesEvidence: 'Sales evidence', Planning: 'Planning / zoning', Report: 'Report', Correspondence: 'Correspondence' };
-const DEAL_TO_PROJECT_DOC = { Contract: ['Contract', 1], Plans: ['Survey', 1], Planning: ['DA', 1], Correspondence: ['Correspondence', 1], SalesEvidence: ['SalesEvidence', 2], Report: ['Report', 2] };
+// Document types live in state (Settings › Lists). System types are filed by the app itself and can't be removed.
+const DEFAULT_DOC_TYPES = [
+  { key: 'Contract', label: 'Contracts' }, { key: 'DA', label: 'DA & planning' }, { key: 'Report', label: 'Reports' }, { key: 'Feaso', label: 'Feasos' },
+  { key: 'SalesEvidence', label: 'Sales evidence' }, { key: 'Offer', label: 'Offers', system: true }, { key: 'Quote', label: 'Quotes', system: true },
+  { key: 'Engagement', label: 'Engagements & POs', system: true }, { key: 'InvoiceIn', label: 'Bills', system: true }, { key: 'InvoiceOut', label: 'Sales invoices', system: true },
+  { key: 'Survey', label: 'Survey & plans' }, { key: 'Company', label: 'Company & ASIC' }, { key: 'Correspondence', label: 'Correspondence' },
+];
+// Files on a deal go to the new project under Feasibility (stage 2) for feasos, sales evidence and reports, otherwise Sourcing (stage 1)
+const DEAL_STAGE2_DOCS = ['Feaso', 'SalesEvidence', 'Report', 'Offer'];
+// Zonings Dan picks from when logging a site (Settings › Lists)
+const DEFAULT_ZONINGS = ['R1 General Residential', 'R2 Low Density Residential', 'R5 Large Lot Residential', 'RU1 Primary Production', 'RU2 Rural Landscape', 'RU4 Primary Production Small Lots', 'RU5 Village', 'E4 General Industrial', 'IN1 General Industrial (legacy)', 'IN2 Light Industrial (legacy)', 'MU1 Mixed Use', 'QLD Rural Residential', 'QLD Emerging Community', 'QLD Low Density Residential', 'QLD Low Impact Industry'];
+const AU_STATES = ['NSW', 'QLD', 'VIC', 'SA', 'WA', 'TAS', 'ACT', 'NT'];
+const TAX_TYPES = { gst: 'GST', margin: 'Margin scheme', exempt: 'GST exempt' };
+// Dan's letter-of-offer term bank, word for word from his Word template's drop-downs
+const DEFAULT_TERM_BANK = {
+  deposit: ['$50,000 paid on contract exchange – refundable prior to satisfaction of DD. Balance to 5% upon satisfaction of DD.', '$10,000 paid on contract exchange – refundable prior to satisfaction of DD. Balance to 5% upon satisfaction of DD.', '$100,000 paid on contract exchange – refundable prior to satisfaction of DD. Balance to 10% upon satisfaction of DD.', '5% deposit paid in full on contract exchange – released to vendor only on satisfaction of DD.', '10% deposit on contract exchange – deposit bond acceptable to the vendor.', '$1 deposit on exchange (option structure), balance to 5% on satisfaction of DD.'],
+  dd: ['60 days from contract exchange date.', '60 days from the later of Contract exchange date, or receipt of all requested and relevant documents.', '90 days from the later of Contract exchange date, or receipt of all requested and relevant documents.', '120 days from the later of Contract exchange date, or receipt of all requested and relevant documents.', '30 days from Contract exchange date.', '60 days from Contract exchange date, with one 30 day extension at the purchaser’s election.', '60 days from exchange, expiring no earlier than 14 days after receipt of the final survey, geotechnical and contamination reports.', 'DD satisfied on exchange – due diligence completed prior to offer.'],
+  settlement: ['120 days from Contract Unconditional date', '90 days from Contract Unconditional date', '180 days from Contract Unconditional date', '60 days from Contract Unconditional date', 'The later of 120 days from Contract Unconditional date, or determination of the DA', '14 days from registration of the plan of subdivision', 'Staged settlement – 50% at [stage 1], balance at [stage 2]', '60 Days from Satisfaction of DA Approval', '60 Days From issued of DA and Subdivision works Certificate or 12 Months from date of Exchange.'],
+  conditions: ['Settlement is subject to receipt of satisfactory DA approval.', 'Purchaser to have 7 days to review and advise of satisfaction of DA.', 'Vendor to provide signed “owners consent to lodge DA” as part of contract exchange documentation.', 'Vendor to allow Marketing Signage to be erected.', 'Access to site for purchaser’s consultants post exchange', 'Receipt of all relevant reports and approvals on exchange of contract', 'Comprehensive list of all consultants on contract exchange', 'Vendor to provide all existing survey, geotechnical and contamination reports', 'Subject to purchaser obtaining development consent for not less than XX lots', 'Subject to satisfactory geotechnical and contamination investigation', 'Subject to confirmation of servicing capacity – water, sewer, power and NBN', 'Subject to purchaser’s finance approval', 'Vendor to maintain the land in its current condition until settlement', 'Contract to include a licence for early works following DA approval', 'Subject to registration of the plan of subdivision for the balance land', 'No further encumbrances or leases to be registered on title after exchange', 'Contract Sunset date; 18 Month from Satisfaction of DA date with option in favour of Purchaser to extend Sunset Period an Extra 6 Months due to delays from 3rd Party authorities such as, but not limited to, (add Council) . Purchaser to pay additional $10,000, and released to Vendor, if an extension is Sought.'],
+  solicitor: ['To be advised once agreed.', '[Firm 2 name] – [Contact] – [Phone] – [Email]', '[Firm 3 name] – [Contact] – [Phone] – [Email]'],
+};
+const TAX_WORDING = {
+  gst: '+ GST',
+  margin: 'inclusive of GST, vendor to apply the margin scheme',
+  exempt: 'GST exempt (no taxable supply)',
+  noted: '+ GST (Contract noted no taxable supply -not made in the course or furtherance of an enterprise that the vendor carries on (section 9-5(b))',
+};
+// Dan's Quick Feaso defaults, from his spreadsheet
+const FEASO_DEFAULTS = { lots: 30, price: 300000, agencyPct: 2.5, legalPerLot: 3000, gstMode: 'margin', land: 800000, stampPct: 5, landLegals: 5000, elecPerLot: 18000, civilsPerLot: 100000, landscapePerLot: 5000, contingencyPct: 5, elecDesign: 20000, consOther: 30000, engineer: 50000, surveyorPerLot: 3000, planning: 30000, marketing: 10000, pmRate: 5000, pmMonths: 18, bondPct: 1, accounting: 10000, holding: 20000, ccFee: 20000, s94PerLot: 20000, s94Credit: 1, equity: 800000, landDebtPct: 8, conDebtPct: 8, estFeePct: 1.5 };
+// Which roles get asked to quote on each standard scope (kept in state so renaming a role carries through)
+const SCOPE_ROLES = { 'Civil works': ['Civil contractor', 'Earthworks'], 'Civil & bulk earthworks': ['Civil contractor', 'Earthworks'], 'Bond inspection rectification': ['Civil contractor'], 'Electrical reticulation': ['Electrical'], 'NBN pit & pipe': ['NBN'], 'Works-as-executed survey': ['Surveyor'], 'Surveying': ['Surveyor'], 'Landscaping & street trees': ['Landscaping', 'Civil contractor'], 'Town planning': ['Town planner'], 'Traffic report': ['Traffic engineer'] };
+const TERM_FIELDS = { deposit: 'Deposit', dd: 'Due Diligence', settlement: 'Settlement', conditions: 'Conditions', solicitor: 'Purchaser Solicitor' };
+const OFFER_STATUSES = ['Draft', 'Sent', 'Countered', 'Accepted', 'Declined', 'Withdrawn'];
+// Milestones a task date can follow ("60 days after DD expiry")
+const MILESTONES = { exchange: 'Exchange', ddExpiry: 'DD expiry', unconditional: 'Unconditional', daApproval: 'DA approval', settlement: 'Settlement' };
 
 /* ===== Seed: contacts (shared register) ===== */
 // role can be one role or an array of roles; extra.categories puts a contact under more categories than its roles imply
-const C = (id, name, company, role, abn, email, phone, extra = {}) => ({ id, name, company, roles: Array.isArray(role) ? role : [role], categories: [], abn, email, phone, licenceExpiry: null, insuranceExpiry: null, rating: 4, notes: '', ...extra });
+// phone is the firm's landline; a mobile number passed as phone moves to mobile. extra.mobile adds a mobile for the person.
+const C = (id, name, company, role, abn, email, phone, extra = {}) => { const mob = /^04/.test(phone); return { id, name, company, roles: Array.isArray(role) ? role : [role], categories: [], abn, email, phone: mob ? '' : phone, mobile: mob ? phone : '', licenceExpiry: null, insuranceExpiry: null, rating: 4, notes: '', ...extra }; };
 const SEED_CONTACTS = [
   C('wellco', 'Dan Wellman', 'Wellco Developments Pty Ltd', 'Project manager', '81 096 401 400', 'dan@wellco.example', '0491 570 156', { rating: 5, notes: 'Project manager of every project company. Management fee invoiced to each.' }),
   C('ray', 'Ray Taylor', 'Taylor Property Advisory', "Buyer's agent", '23 611 482 907', 'ray@taylorproperty.example', '0491 570 157', { licenceExpiry: '2027-06-30', insuranceExpiry: '2027-03-31', rating: 5, notes: 'Finds off-market sites from Nowra to Batemans Bay. Brought us Croobyar and Woollamia.' }),
-  C('miltonlegal', 'Kate Brennan', 'Milton Legal', 'Solicitor', '44 108 223 615', 'kate@miltonlegal.example', '02 5550 1204', { insuranceExpiry: '2027-06-30', rating: 5, notes: 'Contracts, DD and settlements. Quick on exchange.' }),
+  C('miltonlegal', 'Kate Brennan', 'Milton Legal', 'Solicitor', '44 108 223 615', 'kate@miltonlegal.example', '02 5550 1204', { mobile: '0491 575 254', insuranceExpiry: '2027-06-30', rating: 5, notes: 'Contracts, DD and settlements. Quick on exchange.' }),
   C('beaudesertlaw', 'Andrew Kim', 'Beaudesert Property Law', 'Solicitor', '57 284 119 302', 'andrew@bdlaw.example', '0491 570 158', { insuranceExpiry: '2027-02-28', rating: 4, notes: 'QLD conveyancing for Jimboomba.' }),
-  C('shoalplan', 'Tom Reid', 'Shoalhaven Planning Co', 'Town planner', '31 552 907 114', 'tom@shoalplan.example', '02 5550 1388', { insuranceExpiry: '2027-04-30', rating: 5, notes: 'Knows Shoalhaven Council DCP inside out. RFI responses within a week.' }),
-  C('coastalplan', 'Priya Nair', 'Coastal Town Planning', 'Town planner', '62 307 455 981', 'priya@coastalplanning.example', '02 5550 2210', { insuranceExpiry: '2027-01-31', rating: 4, notes: 'Strong on industrial. Appointed on Ulladulla.' }),
+  C('shoalplan', 'Tom Reid', 'Shoalhaven Planning Co', 'Town planner', '31 552 907 114', 'tom@shoalplan.example', '02 5550 1388', { mobile: '0491 575 789', insuranceExpiry: '2027-04-30', rating: 5, notes: 'Knows Shoalhaven Council DCP inside out. RFI responses within a week.' }),
+  C('coastalplan', 'Priya Nair', 'Coastal Town Planning', 'Town planner', '62 307 455 981', 'priya@coastalplanning.example', '02 5550 2210', { mobile: '0491 576 398', insuranceExpiry: '2027-01-31', rating: 4, notes: 'Strong on industrial. Appointed on Ulladulla.' }),
   C('illplan', 'Mark Delaney', 'Illawarra Planning Partners', 'Town planner', '18 990 341 276', 'mark@ipp.example', '02 5550 3471', { insuranceExpiry: '2026-12-15', rating: 3, notes: 'Dearer, slower turnaround.' }),
   C('loganplan', 'Sophie Grant', 'Logan Planning Group', 'Town planner', '75 410 228 663', 'sophie@loganplanning.example', '0491 570 159', { insuranceExpiry: '2027-05-31', rating: 4, notes: 'Logan City Council specialist.' }),
   C('scenicplan', 'Liam Walsh', 'Scenic Rim Town Planning', 'Town planner', '29 813 664 018', 'liam@scenicrimplanning.example', '0491 570 110', { insuranceExpiry: '2027-03-15', rating: 4 }),
   C('urbanedge', 'Hannah Lowe', 'Urban Edge Planning QLD', 'Town planner', '86 155 902 437', 'hannah@urbanedge.example', '0491 570 313', { insuranceExpiry: '2027-08-31', rating: 3 }),
-  C('harbour', 'Mick Donnelly', 'Harbour Survey Group', 'Surveyor', '47 226 091 385', 'mick@harboursurvey.example', '02 5550 4102', { licenceExpiry: '2027-09-30', insuranceExpiry: '2027-02-28', rating: 5, notes: 'Registered surveyor. Did detail, subdivision plan and set-out on Croobyar.' }),
+  C('harbour', 'Mick Donnelly', 'Harbour Survey Group', 'Surveyor', '47 226 091 385', 'mick@harboursurvey.example', '02 5550 4102', { mobile: '0491 576 801', licenceExpiry: '2027-09-30', insuranceExpiry: '2027-02-28', rating: 5, notes: 'Registered surveyor. Did detail, subdivision plan and set-out on Croobyar.' }),
   C('ridgeline', 'Ben Archer', 'Ridgeline Surveying', 'Surveyor', '92 774 310 556', 'ben@ridgelinesurvey.example', '0491 570 737', { licenceExpiry: '2027-03-31', insuranceExpiry: '2027-03-31', rating: 4, notes: 'Works NSW and QLD.' }),
   C('beausurvey', 'Grace Tully', 'Beaudesert Survey Co', 'Surveyor', '13 486 207 991', 'grace@beausurvey.example', '0491 571 266', { licenceExpiry: '2027-07-31', insuranceExpiry: '2027-07-31', rating: 4 }),
-  C('northcott', 'Ellie Northcott', 'Northcott Civil Engineers', 'Civil engineer', '38 662 154 720', 'ellie@northcottcivil.example', '02 5550 5519', { insuranceExpiry: '2027-06-30', rating: 5, categories: ['Civil contractors'], notes: 'Civil design and CC drawings. Good with Shoalhaven Water. Also runs civil superintendence on site, so listed with the civil contractors.' }),
-  C('coastgeo', 'Raj Patel', 'Coastline Geotech', 'Geotech', '55 309 821 447', 'raj@coastlinegeotech.example', '02 5550 6630', { insuranceExpiry: d(40), rating: 4, notes: 'Fast turnaround on bore logs.' }),
+  C('northcott', 'Ellie Northcott', 'Northcott Civil Engineers', 'Civil engineer', '38 662 154 720', 'ellie@northcottcivil.example', '02 5550 5519', { mobile: '0491 577 426', insuranceExpiry: '2027-06-30', rating: 5, categories: ['Civil contractors'], notes: 'Civil design and CC drawings. Good with Shoalhaven Water. Also runs civil superintendence on site, so listed with the civil contractors.' }),
+  C('coastgeo', 'Raj Patel', 'Coastline Geotech', 'Geotech', '55 309 821 447', 'raj@coastlinegeotech.example', '02 5550 6630', { mobile: '0491 579 455', insuranceExpiry: d(40), rating: 4, notes: 'Fast turnaround on bore logs.' }),
   C('bushland', 'Claire Moss', 'Bushland Ecology Services', 'Ecology', '27 441 096 318', 'claire@bushlandeco.example', '02 5550 7714', { insuranceExpiry: '2027-04-30', rating: 4 }),
   C('firewise', 'Pete Collins', 'Firewise Consulting', 'Bushfire', '69 230 557 812', 'pete@firewise.example', '0491 571 491', { licenceExpiry: '2027-01-31', insuranceExpiry: d(-12), rating: 4, notes: 'BPAD accredited. Insurance certificate lapsed, request new one before next job.' }),
-  C('trafficco', 'Nina Shaw', 'South Coast Traffic Engineering', 'Traffic engineer', '41 905 263 774', 'nina@sctraffic.example', '02 5550 8820', { insuranceExpiry: '2027-02-28', rating: 4 }),
-  C('southcoastcivil', 'Jason Hale', 'Southcoast Civil Pty Ltd', 'Civil contractor', '64 118 739 205', 'jason@southcoastcivil.example', '02 5550 9031', { licenceExpiry: '2027-08-31', insuranceExpiry: d(51), rating: 5, notes: 'Appointed on Croobyar. Tidy site, claims are always backed by quantities.' }),
-  C('bayview', 'Craig Mullins', 'Bayview Earthworks', ['Earthworks', 'Civil contractor'], '73 550 812 649', 'craig@bayviewearthworks.example', '02 5550 9144', { licenceExpiry: '2027-05-31', insuranceExpiry: '2027-05-31', rating: 3, notes: 'Cheapest on Croobyar but excluded rock. 16-week program.' }),
+  C('trafficco', 'Nina Shaw', 'South Coast Traffic Engineering', 'Traffic engineer', '41 905 263 774', 'nina@sctraffic.example', '02 5550 8820', { mobile: '0491 579 760', insuranceExpiry: '2027-02-28', rating: 4 }),
+  C('southcoastcivil', 'Jason Hale', 'Southcoast Civil Pty Ltd', 'Civil contractor', '64 118 739 205', 'jason@southcoastcivil.example', '02 5550 9031', { mobile: '0491 577 644', licenceExpiry: '2027-08-31', insuranceExpiry: d(51), rating: 5, notes: 'Appointed on Croobyar. Tidy site, claims are always backed by quantities.' }),
+  C('bayview', 'Craig Mullins', 'Bayview Earthworks', ['Earthworks', 'Civil contractor'], '73 550 812 649', 'craig@bayviewearthworks.example', '02 5550 9144', { mobile: '0491 570 006', licenceExpiry: '2027-05-31', insuranceExpiry: '2027-05-31', rating: 3, notes: 'Cheapest on Croobyar but excluded rock. 16-week program.' }),
   C('monaro', 'Steve Ruddock', 'Monaro Civil Group', 'Civil contractor', '35 228 940 107', 'steve@monarocivil.example', '0491 571 804', { licenceExpiry: '2027-10-31', insuranceExpiry: '2027-10-31', rating: 4 }),
   C('voltline', 'Luke Barrett', 'Volt Line Electrical', 'Electrical', '82 663 105 948', 'luke@voltline.example', '0491 572 549', { licenceExpiry: '2027-02-28', insuranceExpiry: '2027-02-28', rating: 5, notes: 'ASP Level 1 and 3. Handles the Endeavour Energy application.' }),
   C('southernpower', 'Dean Fraser', 'Southern Power Services', 'Electrical', '19 874 336 520', 'dean@southernpower.example', '0491 572 665', { licenceExpiry: '2026-12-31', insuranceExpiry: '2027-04-30', rating: 3 }),
   C('connectcomms', 'Mia Torres', 'Connect Comms', 'NBN', '58 302 774 196', 'mia@connectcomms.example', '0491 572 983', { insuranceExpiry: '2027-03-31', rating: 4, notes: 'NBN pit and pipe, accredited.' }),
   C('greenedge', 'Sam Oakley', 'Green Edge Landscapes', 'Landscaping', '24 667 019 835', 'sam@greenedge.example', '0491 573 770', { insuranceExpiry: '2027-06-30', rating: 4 }),
-  C('coastco', 'Jess Harper', 'Coast & Co Real Estate', 'Real estate agent', '66 140 587 293', 'jess@coastco.example', '02 5550 1777', { licenceExpiry: '2027-04-30', rating: 5, notes: 'Appointed selling agent on Croobyar and Vincentia. 1.8% + GST.' }),
-  C('pereira', 'Lucy Pereira', 'Pereira & Co Accountants', 'Accountant', '52 381 096 714', 'lucy@pereiraco.example', '02 5550 2468', { rating: 5, notes: 'BAS and year-end for every project company. Wants Excel, one workbook per company per FY.' }),
+  C('coastco', 'Jess Harper', 'Coast & Co Real Estate', 'Real estate agent', '66 140 587 293', 'jess@coastco.example', '02 5550 1777', { mobile: '0491 578 957', licenceExpiry: '2027-04-30', rating: 5, notes: 'Appointed selling agent on Croobyar and Vincentia. 1.8% + GST.' }),
+  C('pereira', 'Lucy Pereira', 'Pereira & Co Accountants', 'Accountant', '52 381 096 714', 'lucy@pereiraco.example', '02 5550 2468', { mobile: '0491 578 148', rating: 5, notes: 'BAS and year-end for every project company. Wants Excel, one workbook per company per FY.' }),
   C('shoalcouncil', 'Development Services', 'Shoalhaven City Council', 'Council', '59 855 182 344', 'council@shoalhaven.example', '02 5550 3000', { rating: 3, notes: 'DA, CC, contributions, bonds and rates.' }),
   C('logancouncil', 'Development Assessment', 'Logan City Council', 'Council', '21 627 796 435', 'council@logan.example', '0491 573 087', { rating: 3 }),
   C('revnsw', 'Revenue NSW', 'Revenue NSW', 'Government', '', '', '', { rating: 3, notes: 'Transfer duty and land tax. GST-free.' }),
   C('asic', 'ASIC', 'Australian Securities & Investments Commission', 'Government', '', '', '', { rating: 3, notes: 'Company registration and annual review fees. GST-free.' }),
   C('lrs', 'NSW Land Registry Services', 'NSW Land Registry Services', 'Government', '', '', '', { rating: 3, notes: 'Plan registration and dealings. GST-free.' }),
-  C('coastalbank', 'Michael Chen', 'Coastal Mutual Bank', 'Bank', '33 087 651 942', 'mchen@coastalmutual.example', '02 5550 4800', { rating: 4, notes: 'Construction facilities for Croobyar and Ulladulla. Interest is input taxed.' }),
-  C('coastcert', 'Rob Feeney', 'South Coast Certifiers', 'Certifier', '46 219 830 572', 'rob@sccertifiers.example', '02 5550 6142', { licenceExpiry: '2027-05-31', insuranceExpiry: '2027-05-31', rating: 4, notes: 'Registered certifier. Final inspections, compliance and strata certificates.' }),
-  C('miltonhomes', 'Greg Pascoe', 'Milton Homes & Construction', 'Builder', '71 508 334 926', 'greg@miltonhomes.example', '0491 573 412', { licenceExpiry: '2027-08-31', insuranceExpiry: '2027-08-31', rating: 4, notes: 'Licensed builder for one-off houses and duplexes. Arranges HBCF home warranty cover.' }),
-  C('bannister', 'Kyle Bannister', 'Bannister Plumbing & Drainage', 'Plumber', '28 664 019 553', 'kyle@bannisterplumbing.example', '0491 573 528', { licenceExpiry: '2027-02-28', insuranceExpiry: '2027-02-28', rating: 4 }),
+  C('coastalbank', 'Michael Chen', 'Coastal Mutual Bank', 'Bank', '33 087 651 942', 'mchen@coastalmutual.example', '02 5550 4800', { mobile: '0491 578 888', rating: 4, notes: 'Construction facilities for Croobyar and Ulladulla. Interest is input taxed.' }),
+  C('coastcert', 'Rob Feeney', 'South Coast Certifiers', 'Certifier', '46 219 830 572', 'rob@sccertifiers.example', '02 5550 6142', { mobile: '0491 579 212', licenceExpiry: '2027-05-31', insuranceExpiry: '2027-05-31', rating: 4, notes: 'Registered certifier. Final inspections, compliance and strata certificates.' }),
+  C('miltonhomes', 'Greg Pascoe', 'Milton Homes & Construction', 'Builder', '71 508 334 926', 'greg@miltonhomes.example', '0491 574 118', { licenceExpiry: '2027-08-31', insuranceExpiry: '2027-08-31', rating: 4, notes: 'Licensed builder for one-off houses and duplexes. Arranges HBCF home warranty cover.' }),
+  C('bannister', 'Kyle Bannister', 'Bannister Plumbing & Drainage', 'Plumber', '28 664 019 553', 'kyle@bannisterplumbing.example', '0491 574 632', { licenceExpiry: '2027-02-28', insuranceExpiry: '2027-02-28', rating: 4 }),
   C('shoalwater', 'Development Services', 'Shoalhaven Water', 'Council', '59 855 182 344', 'water@shoalhaven.example', '02 5550 3010', { rating: 3, notes: 'Section 64 headworks charges and s307 certificates of compliance. GST-free charges.' }),
   C('titlesqld', 'Titles Queensland', 'Titles Queensland', 'Government', '', '', '', { rating: 3, notes: 'Survey plan and dealing lodgement in QLD. GST-free.' }),
+  C('miltonplaster', 'Gary Firth', 'Milton Plaster & Ceilings', 'Plasterer', '17 302 668 145', 'gary@miltonplaster.example', '02 5550 6230', { licenceExpiry: '2027-04-30', insuranceExpiry: '2027-04-30', rating: 4, notes: 'Plasterboard and cornice for one-off builds.' }),
   C('hollis', 'P & J Hollis', 'Hollis family (vendor)', 'Vendor', '', '', '', { rating: 4, notes: 'Croobyar vendor. Farmers, not GST registered, so no GST on the land.' }),
 ];
 
@@ -939,7 +971,8 @@ const SCOPE_ITEMS = {
 /* ===== Seed: helpers ===== */
 let _uid = 1000;
 const uid = (p) => p + (++_uid).toString(36);
-const T = (stage, title, due, done, extra = {}) => ({ id: uid('t'), stage, title, due, done: !!done, doneAt: done ? (typeof done === 'string' ? done : due) : null, notes: [], lead: null, ...extra });
+// extra.ms marks a milestone task (exchange, ddExpiry...); extra.link makes the due date follow another task or milestone
+const T = (stage, title, due, done, extra = {}) => ({ id: uid('t'), stage, title, due, done: !!done, doneAt: done ? (typeof done === 'string' ? done : due) : null, notes: [], lead: null, ms: null, link: null, dateSetByYou: false, ...extra });
 const Q = (contactId, amount, received, status, inc = [], exc = [], extra = {}) => ({ id: uid('q'), contactId, amount, gst: 'taxable', received, requestedAt: extra.requestedAt || (received ? addDays(received, -14) : null), status, inclusions: inc, exclusions: exc, ...extra });
 const L = (desc, amount, gst = 'taxable', extra = {}) => ({ desc, amount, gst, ...extra });
 // Each bill line carries its own cost category. The bill's category is only the default for its lines.
@@ -957,7 +990,7 @@ function buildSeed() {
 
   /* ---------- P1 CROOBYAR ---------- */
   const p1 = {
-    id: 'CROOBYAR', name: 'Croobyar Rd, Milton', street: 'Croobyar Rd', suburb: 'Milton', state: 'NSW', lotPlan: 'Lot 12 DP 1187234',
+    id: 'CROOBYAR', name: 'Croobyar Rd, Milton', street: 'Croobyar Rd', suburb: 'Milton', state: 'NSW', postcode: '2538', zoning: 'R2 Low Density Residential', landSize: 12400, minLotSize: 500, lots: 14, taxType: 'exempt', notes: 'Off-market from Ray Taylor. Vendor not GST registered.', lotPlan: 'Lot 12 DP 1187234',
     type: 'Land subdivision', stages: tplStages('Land subdivision'), yield: '14 lots', status: 'live', stage: 6, council: 'shoalcouncil', started: '2024-02-12',
     company: { name: 'Croobyar Developments Pty Ltd', abn: '61 234 567 890', acn: '234 567 890', gst: true, gstFrom: '2024-03-01', bank: 'Coastal Mutual Bank', bsb: '633-000', acc: '1874 2209', tfn: 'On file' },
     stageNote: 'Civil works 60% complete. Southcoast Civil on road base and pavement.',
@@ -966,12 +999,12 @@ function buildSeed() {
   p1.tasks = [
     T(1, 'Log site from Ray Taylor (off-market)', '2024-02-12', true), T(1, 'Desktop zoning check in Mecone Mosaic', '2024-02-14', true),
     T(2, 'Run feaso in Feasely: 14 lots, 21% margin', '2024-02-26', true), T(2, 'Go / no-go decision', '2024-03-01', true),
-    T(3, 'Register Croobyar Developments Pty Ltd (ABN, GST, bank)', '2024-03-08', true), T(3, 'Exchange contracts, pay 10% deposit', '2024-07-05', true),
-    T(3, 'Due diligence: contamination, title, easements', '2024-07-26', true), T(3, 'Settle and pay transfer duty', '2024-08-22', true),
+    T(3, 'Register Croobyar Developments Pty Ltd (ABN, GST, bank)', '2024-03-08', true), T(3, 'Exchange contracts, pay 10% deposit', '2024-07-05', true, { ms: 'exchange' }),
+    T(3, 'Due diligence: contamination, title, easements', '2024-07-26', true, { ms: 'ddExpiry' }), T(3, 'Settle and pay transfer duty', '2024-08-22', true, { ms: 'settlement' }),
     T(4, 'Get 3 quotes: town planner', '2024-09-20', true), T(4, 'Get 3 quotes: surveyor', '2024-09-27', true),
     T(4, 'Geotech, ecology and bushfire reports', '2024-12-13', true), T(4, 'Concept civil design and stormwater', '2025-01-24', true),
     T(5, 'Lodge DA and pay fees', '2025-04-08', true), T(5, 'Respond to council RFI', '2025-07-25', true),
-    T(5, 'DA approved: review conditions', '2025-12-12', true), T(5, 'Request civil quotes during DA', '2025-11-14', true),
+    T(5, 'DA approved: review conditions', '2025-12-12', true, { ms: 'daApproval' }), T(5, 'Request civil quotes during DA', '2025-11-14', true),
     T(6, 'Tender civil works: 3 quotes', '2026-03-13', true), T(6, 'Appoint civil contractor', '2026-03-27', true),
     T(6, 'Pay first contributions instalment before CC', '2026-03-06', true), T(6, 'Construction certificate issued', '2026-04-17', true),
     T(6, 'Engage electrical (ASP) and NBN', '2026-05-22', true),
@@ -1136,7 +1169,7 @@ function buildSeed() {
 
   /* ---------- P2 ULLADULLA-IND ---------- */
   const p2 = {
-    id: 'ULLADULLA-IND', name: 'Princes Hwy, Ulladulla', street: 'Princes Hwy', suburb: 'Ulladulla', state: 'NSW', lotPlan: 'Lot 3 DP 1092211',
+    id: 'ULLADULLA-IND', name: 'Princes Hwy, Ulladulla', street: 'Princes Hwy', suburb: 'Ulladulla', state: 'NSW', postcode: '2539', zoning: 'E4 General Industrial', landSize: 8600, minLotSize: 1000, lots: 8, taxType: 'gst', notes: 'Vendor GST registered: land bought with GST.', lotPlan: 'Lot 3 DP 1092211',
     type: 'Commercial / industrial', stages: tplStages('Commercial / industrial'), yield: '8 factory units', status: 'live', stage: 5, council: 'shoalcouncil', started: '2024-11-04',
     company: { name: 'Ulladulla Industrial Pty Ltd', abn: '72 345 678 901', acn: '345 678 901', gst: true, gstFrom: '2025-01-15', bank: 'Coastal Mutual Bank', bsb: '633-000', acc: '1874 5512', tfn: 'On file' },
     stageNote: 'DA lodged 14 Aug. Council RFI received 21 Oct, response due 11 Nov.',
@@ -1150,7 +1183,7 @@ function buildSeed() {
     T(5, 'RFI response due to council', d(9), false, { lead: 'Council stops the clock until we respond. Tom and Nina both need to input.', notes: [{ ts: '2026-10-29T10:20', text: 'Nina sending updated swept paths by Thursday.' }] }),
     T(5, 'Request civil quotes now so we execute the day DA lands', d(14), false, { lead: 'Quotes take 3 to 4 weeks. Money is time.' }),
     T(5, 'Endeavour Energy pre-application for substation', d(25), false, { lead: '3-month lead time.' }),
-    T(5, 'DA determination expected', '2027-02-26', false),
+    T(5, 'DA determination expected', '2027-02-26', false, { ms: 'daApproval' }),
     T(6, 'Tender civil and building works: 3 quotes each', '2027-03-19', false), T(6, 'Construction certificate', '2027-04-30', false), T(6, 'Pay s7.11 contributions', '2027-04-16', false),
     T(6, 'Practical completion', '2027-12-17', false),
     T(7, 'Endeavour Energy: substation energised, notification of arrangement', '2027-12-10', false), T(7, 'NBN connection sign-off', '2027-12-17', false),
@@ -1212,7 +1245,7 @@ function buildSeed() {
 
   /* ---------- P3 JIMBOOMBA ---------- */
   const p3 = {
-    id: 'JIMBOOMBA', name: 'Bells Rd, Jimboomba', street: 'Bells Rd', suburb: 'Jimboomba', state: 'QLD', lotPlan: 'Lot 2 SP 301887',
+    id: 'JIMBOOMBA', name: 'Bells Rd, Jimboomba', street: 'Bells Rd', suburb: 'Jimboomba', state: 'QLD', postcode: '4280', zoning: 'QLD Emerging Community', landSize: 41000, minLotSize: 600, lots: 32, taxType: 'exempt', notes: '12-month settlement terms. DD 60 days from exchange.', lotPlan: 'Lot 2 SP 301887',
     type: 'Land subdivision', stages: tplStages('Land subdivision'), yield: '32 lots', status: 'live', stage: 3, council: 'logancouncil', started: '2026-06-15',
     company: { name: 'Bells Road Land Pty Ltd', abn: '83 456 789 012', acn: '456 789 012', gst: true, gstFrom: '2026-09-01', bank: 'Coastal Mutual Bank', bsb: '633-000', acc: '1875 0381', tfn: 'Applied' },
     stageNote: 'Deposit paid. 12-month settlement. DD expires 23 Nov.',
@@ -1220,12 +1253,12 @@ function buildSeed() {
   };
   p3.tasks = [
     T(1, 'Log site from Ray Taylor', '2026-06-15', true), T(2, 'Feaso: 32 lots, 19% margin', '2026-07-10', true), T(2, 'Go decision', '2026-07-17', true),
-    T(3, 'Register Bells Road Land Pty Ltd (ABN, GST, bank)', '2026-08-28', true), T(3, 'Exchange and pay deposit', '2026-09-24', true),
-    T(3, 'DD expiry: decide go / no-go', d(21), false, { lead: 'Unconditional on 23 Nov. Need planner and survey advice before then.' }),
+    T(3, 'Register Bells Road Land Pty Ltd (ABN, GST, bank)', '2026-08-28', true), T(3, 'Exchange and pay deposit', '2026-09-24', true, { ms: 'exchange' }),
+    T(3, 'DD expiry: decide go / no-go', d(21), false, { ms: 'ddExpiry', link: { to: 'm:exchange', n: 60, unit: 'days', basis: 'due' }, lead: 'Unconditional on this date. Need planner and survey advice before then.' }),
     T(3, 'Appoint town planner (3 quotes in)', d(4), false),
     T(3, 'Chase third surveyor quote', d(-2), false),
     T(3, 'Flood and overland flow check with Logan City Council', d(10), false),
-    T(3, 'Settlement (12-month terms)', '2027-09-24', false, { lead: 'Line up construction finance 3 months before.' }),
+    T(3, 'Settlement (12-month terms)', '2027-09-24', false, { ms: 'settlement', link: { to: 'm:exchange', n: 12, unit: 'months', basis: 'due' }, lead: 'Line up construction finance 3 months before.' }),
     T(4, 'Get 3 quotes: civil engineer', '2026-12-11', false), T(4, 'Ecology and bushfire', '2027-01-29', false),
     T(5, 'Lodge development application (Logan)', '2027-04-30', false), T(6, 'Tender civil works', '2027-11-26', false),
     T(7, 'Confirm Logan infrastructure charges notice', '2028-06-30', false, { lead: 'About $868,000 for 31 additional lots. Due before plan sealing.' }),
@@ -1271,7 +1304,7 @@ function buildSeed() {
 
   /* ---------- P4 VINCENTIA ---------- */
   const p4 = {
-    id: 'VINCENTIA', name: 'Hawken Dr, Vincentia', street: 'Hawken Dr', suburb: 'Vincentia', state: 'NSW', lotPlan: 'Lot 7 DP 1156002',
+    id: 'VINCENTIA', name: 'Hawken Dr, Vincentia', street: 'Hawken Dr', suburb: 'Vincentia', state: 'NSW', postcode: '2540', zoning: 'R2 Low Density Residential', landSize: 4100, minLotSize: 500, lots: 6, taxType: 'exempt', notes: '', lotPlan: 'Lot 7 DP 1156002',
     type: 'Land subdivision', stages: tplStages('Land subdivision'), yield: '6 lots', status: 'live', stage: 9, council: 'shoalcouncil', started: '2023-05-08',
     company: { name: 'Hawken Drive Developments Pty Ltd', abn: '94 567 890 123', acn: '567 890 123', gst: true, gstFrom: '2023-06-01', bank: 'Coastal Mutual Bank', bsb: '633-000', acc: '1871 3390', tfn: 'On file' },
     stageNote: 'All 6 lots settled. Maintenance bond with council. Distribution to trust pending.',
@@ -1334,7 +1367,7 @@ function buildSeed() {
 
   /* ---------- Closed: WANDANDIAN ---------- */
   const p5 = {
-    id: 'WANDANDIAN', name: 'Wandandian Rd, Wandandian', street: 'Wandandian Rd', suburb: 'Wandandian', state: 'NSW', lotPlan: 'Lot 41 DP 755923',
+    id: 'WANDANDIAN', name: 'Wandandian Rd, Wandandian', street: 'Wandandian Rd', suburb: 'Wandandian', state: 'NSW', postcode: '2540', zoning: 'RU5 Village', landSize: 15000, minLotSize: 700, lots: 14, taxType: 'exempt', notes: '', lotPlan: 'Lot 41 DP 755923',
     type: 'Land subdivision', stages: tplStages('Land subdivision'), yield: '14 lots', status: 'closed', stage: 9, council: 'shoalcouncil', started: '2022-03-14', closed: '2025-11-28',
     company: { name: 'Wandandian Land Pty Ltd', abn: '15 678 901 234', acn: '678 901 234', gst: false, gstFrom: '2022-04-01', bank: 'Coastal Mutual Bank', bsb: '633-000', acc: '1869 2204', tfn: 'On file' },
     stageNote: 'Company deregistered 28 Nov 2025. Proceeds distributed to the trust.',
@@ -1366,25 +1399,50 @@ function buildSeed() {
   });
 
   const DD = (type, party, date, title, ext, size, note = '') => ({ id: uid('dd'), type, party, date, title, ext, size, note });
+  const FV = (v, date, inputs, note = '') => ({ v, date, note, inputs: { ...FEASO_DEFAULTS, ...inputs } });
+  // Offers on a deal, from Dan's letter-of-offer template and term bank
+  const TB = DEFAULT_TERM_BANK;
+  const OF = (n, status, date, extra) => ({ id: uid('of'), n, status, date, purchaser: 'Daniel Wellman or Nominee (TBC)', ...extra });
+  const DLOG = (ts, text, kind = 'deal', who = 'Dan') => ({ id: uid('l'), ts, who, text, kind });
   const deals = [
-    { id: 'D1', address: 'Woollamia Rd, Woollamia NSW', source: "Ray Taylor (buyer's agent), off-market", asking: 2350000, yield: '18 lots', zoning: 'R2 Low Density Residential', feaso: 'go', margin: 22, logged: '2026-09-02', notes: 'Feaso done in Feasely. Vendor wants 9-month settlement. Sewer available at boundary.', lotPlan: 'Lot 5 DP 1203381', council: 'Shoalhaven City Council', type: 'Land subdivision',
+    { id: 'D1', street: 'Woollamia Rd', suburb: 'Woollamia', state: 'NSW', postcode: '2540', lotPlan: 'Lot 5 DP 1203381', type: 'Land subdivision', zoning: 'R2 Low Density Residential', landSize: 16900, minLotSize: 500, lots: 18, taxType: 'margin',
+      source: "Ray Taylor (buyer's agent), off-market", agentId: 'ray', asking: 2350000, feaso: 'go', logged: '2026-09-02', notes: 'Vendor wants 9-month settlement. Sewer available at boundary. Water main easement along the eastern boundary.', council: 'Shoalhaven City Council',
       docs: [DD('Contract', 'TaylorPropertyAdvisory', '2026-09-02', 'Draft contract for sale, Lot 5 DP 1203381', 'pdf', 1840, 'Sent by Ray. Check the water main easement on title.'),
-        DD('Planning', 'ShoalhavenCityCouncil', '2026-09-03', 'Zoning and minimum lot size map extract', 'pdf', 640),
+        DD('DA', 'ShoalhavenCityCouncil', '2026-09-03', 'Zoning and minimum lot size map extract', 'pdf', 640),
         DD('SalesEvidence', 'CoastAndCoRealEstate', '2026-09-05', 'Comparable lot sales: Woollamia and Huskisson', 'pdf', 920, 'Jess: 600 to 700 m² lots selling $480k to $560k.'),
-        DD('Report', 'WellcoDevelopments', '2026-09-12', 'Feaso v2: 18 lots (Feasely export)', 'xlsx', 214, '22% margin at $505k average lot price.')] },
-    { id: 'D2', address: 'Island Point Rd, St Georges Basin NSW', source: 'realestate.com.au listing', asking: 1450000, yield: '9 lots', zoning: 'R2 Low Density Residential', feaso: 'pending', margin: null, logged: '2026-10-14', notes: 'Check flood mapping in Stash. Possible koala habitat on eastern boundary.', lotPlan: 'Lot 18 DP 30144', type: 'Land subdivision',
+        DD('Feaso', 'WellcoDevelopments', '2026-09-12', 'Feasely feaso: 18 lots', 'xlsx', 214, 'Deeper feaso once the quick one stacked up.')],
+      feasos: [FV(1, '2026-09-04', { lots: 18, price: 480000, land: 2350000, equity: 1000000, civilsPerLot: 125000, elecPerLot: 21000, s94PerLot: 30000, engineer: 65000, planning: 55000, holding: 45000, pmMonths: 24, consOther: 40000 }, 'First pass at $480k a lot'),
+        FV(2, '2026-09-11', { lots: 18, price: 505000, land: 2350000, equity: 1000000, civilsPerLot: 125000, elecPerLot: 21000, s94PerLot: 30000, engineer: 65000, planning: 55000, holding: 45000, pmMonths: 24, consOther: 40000 }, "Jess's sales evidence: $505k average")],
+      offers: [
+        OF(1, 'Countered', '2026-09-15', { price: 2250000, gstWording: TAX_WORDING.margin, deposit: TB.deposit[0], dd: TB.dd[0], settlement: TB.settlement[4],
+          conditions: ['Subject to purchaser obtaining development consent for not less than 18 lots', TB.conditions[10], TB.conditions[7], TB.conditions[4]], solicitor: 'Milton Legal – Kate Brennan – 02 5550 1204 – kate@miltonlegal.example', sentAt: '2026-09-15', note: 'Vendor countered at $2,350,000 and wants 90 days DD capped.' }),
+        OF(2, 'Sent', '2026-09-22', { price: 2320000, gstWording: TAX_WORDING.margin, deposit: TB.deposit[2], dd: TB.dd[2], settlement: TB.settlement[0],
+          conditions: ['Subject to purchaser obtaining development consent for not less than 18 lots', TB.conditions[10], TB.conditions[7], TB.conditions[4], TB.conditions[2]], solicitor: 'Milton Legal – Kate Brennan – 02 5550 1204 – kate@miltonlegal.example', sentAt: '2026-09-22' }),
+      ],
+      log: [DLOG('2026-09-02T09:40', "Site logged from Ray Taylor (buyer's agent), off-market"), DLOG('2026-09-04T17:10', 'Quick feaso v1: 17.3% margin on cost'), DLOG('2026-09-11T16:30', 'Quick feaso v2: 23.3% margin on cost. Marked Go'),
+        DLOG('2026-09-15T10:05', 'Offer 1 sent to Ray Taylor: $2,250,000. Approved by Dan', 'send'), DLOG('2026-09-19T14:20', 'Offer 1 countered by the vendor at $2,350,000'), DLOG('2026-09-22T11:45', 'Offer 2 sent to Ray Taylor: $2,320,000. Approved by Dan', 'send')] },
+    { id: 'D2', street: 'Island Point Rd', suburb: 'St Georges Basin', state: 'NSW', postcode: '2540', lotPlan: 'Lot 18 DP 30144', type: 'Land subdivision', zoning: 'R2 Low Density Residential', landSize: 7400, minLotSize: 500, lots: 9, taxType: 'exempt',
+      source: 'realestate.com.au listing', asking: 1450000, feaso: 'pending', logged: '2026-10-14', notes: 'Check flood mapping in Stash. Possible koala habitat on eastern boundary.',
       docs: [DD('Contract', 'Agent', '2026-10-14', 'Contract for sale, Lot 18 DP 30144', 'pdf', 1520),
-        DD('Plans', 'Agent', '2026-10-14', 'Deposited plan and title search', 'pdf', 380),
-        DD('Correspondence', 'Agent', '2026-10-16', 'Agent email: vendor terms and flood report', 'docx', 46, 'Vendor will consider a 6-month settlement.')] },
-    { id: 'D3', address: 'Mount Lindesay Hwy, Park Ridge QLD', source: "Off-market via Ray Taylor", asking: 4800000, yield: '6 factory units', zoning: 'Low impact industry', feaso: 'pending', margin: null, logged: '2026-10-27', notes: 'Need Logan infrastructure charges estimate before feaso.', lotPlan: 'Lot 9 RP 89122', type: 'Commercial / industrial', docs: [] },
-    { id: 'D4', address: 'Bishop Dr, Mollymook NSW', source: 'Domain listing', asking: 980000, yield: '4 lots', zoning: 'R2 Low Density Residential', feaso: 'nogo', margin: 9, logged: '2026-08-19', notes: 'BAL-40 on two lots and flood affectation. Margin 9% after APZ. No-go.', lotPlan: 'Lot 3 DP 26677', type: 'Land subdivision', docs: [] },
+        DD('Survey', 'Agent', '2026-10-14', 'Deposited plan and title search', 'pdf', 380),
+        DD('Correspondence', 'Agent', '2026-10-16', 'Agent email: vendor terms and flood report', 'docx', 46, 'Vendor will consider a 6-month settlement.')],
+      feasos: [], offers: [], log: [DLOG('2026-10-14T08:50', 'Site logged from realestate.com.au listing')] },
+    { id: 'D3', street: 'Mount Lindesay Hwy', suburb: 'Park Ridge', state: 'QLD', postcode: '4125', lotPlan: 'Lot 9 RP 89122', type: 'Commercial / industrial', zoning: 'QLD Low Impact Industry', landSize: 6200, minLotSize: 600, lots: 6, taxType: 'gst',
+      source: 'Off-market via Ray Taylor', agentId: 'ray', asking: 4800000, feaso: 'pending', logged: '2026-10-27', notes: 'Need Logan infrastructure charges estimate before feaso.', feasos: [], offers: [], docs: [],
+      log: [DLOG('2026-10-27T15:15', 'Site logged, off-market via Ray Taylor')] },
+    { id: 'D4', street: 'Bishop Dr', suburb: 'Mollymook', state: 'NSW', postcode: '2539', lotPlan: 'Lot 3 DP 26677', type: 'Land subdivision', zoning: 'R2 Low Density Residential', landSize: 3100, minLotSize: 500, lots: 4, taxType: 'exempt',
+      source: 'Domain listing', asking: 980000, feaso: 'nogo', logged: '2026-08-19', notes: 'BAL-40 on two lots and flood affectation. No-go once the APZ comes off the yield.', offers: [], docs: [],
+      feasos: [FV(1, '2026-08-21', { lots: 4, price: 600000, land: 980000, equity: 500000, civilsPerLot: 115000, s94PerLot: 30000, engineer: 25000, planning: 30000, elecDesign: 8000, consOther: 15000, pmMonths: 12, holding: 15000, marketing: 5000, ccFee: 8000, landscapePerLot: 4000 }, 'After APZ and BAL-40 costs')],
+      log: [DLOG('2026-08-19T10:00', 'Site logged from Domain listing'), DLOG('2026-08-21T16:40', 'Quick feaso v1 below target. Marked No-go')] },
   ];
+  deals.forEach(dl => { dl.address = dealAddress(dl); dl.yield = yieldText(dl.type, dl.lots); dl.offers.forEach(o => { o.addressLine = `Proposed Lots 1 to ${dl.lots}, ${dl.address}`; o.titleLine = offerTitleLine(dl); }); });
 
   const settings = {
     company: 'Wellco Developments Pty Ltd', abn: '81 096 401 400', address: 'Milton NSW 2538', director: 'Dan Wellman', established: '2001',
     trust: 'Wellman Family Trust', trustee: 'Wellman Holdings Pty Ltd', feeBasis: 'fixed', feeAmount: 20000, feeNote: 'Fixed fee per project, invoiced once a year or at completion.',
     accountant: 'Pereira & Co Accountants', signature: 'Dan Wellman\nManaging Director\nWellco Developments Pty Ltd\n0491 570 156',
     lastBackup: '2026-11-01T23:40',
+    letterSignoff: 'Dan Wellman\nDirector\nWellco Developments PL', letterFooter: 'Wellco Developments PL | Milton NSW 2538 | 0491 570 156',
   };
 
   // Our companies: Wellco (project manager) plus one company per project, built from each project's company details
@@ -1402,9 +1460,9 @@ function buildSeed() {
 
   // Stage templates (editable copy of DEFAULT_TEMPLATES) with stable ids
   const templates = {};
-  PROJECT_TYPES.forEach(t => { templates[t] = DEFAULT_TEMPLATES[t].map(st => ({ id: uid('s'), name: st.name, ...(st.key ? { key: st.key } : {}), tasks: st.tasks.map(([title, off, lead]) => ({ title, off, lead: lead || null })) })); });
+  PROJECT_TYPES.forEach(t => { templates[t] = DEFAULT_TEMPLATES[t].map(st => ({ id: uid('s'), name: st.name, ...(st.key ? { key: st.key } : {}), tasks: st.tasks.map(([title, off, lead, x]) => ({ title, off, lead: lead || null, ms: (x && x.ms) || null, link: (x && x.link) || null })) })); });
 
-  return { version: 2, projects, contacts: SEED_CONTACTS.map(c => ({ ...c, roles: c.roles.slice(), categories: c.categories.slice() })), deals, settings, companies, categories: DEFAULT_CATEGORIES.slice(), roles: { ...DEFAULT_ROLES }, templates, log: [], welcomed: false };
+  return { version: 3, projects, contacts: SEED_CONTACTS.map(c => ({ ...c, roles: c.roles.slice(), categories: c.categories.slice() })), deals, settings, companies, zonings: DEFAULT_ZONINGS.slice(), docTypes: DEFAULT_DOC_TYPES.map(x => ({ ...x })), termBank: JSON.parse(JSON.stringify(DEFAULT_TERM_BANK)), scopeRoles: JSON.parse(JSON.stringify(SCOPE_ROLES)), categories: DEFAULT_CATEGORIES.slice(), roles: { ...DEFAULT_ROLES }, templates, log: [], welcomed: false };
 }
 /* ===== Utilities ===== */
 const h = (v) => String(v == null ? '' : v).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -1533,7 +1591,7 @@ const clone = (o) => JSON.parse(JSON.stringify(o));
 function loadState() {
   try {
     const raw = localStorage.getItem(STORE_KEY);
-    if (raw) { const s = JSON.parse(raw); if (s && s.version === SEED.version && Array.isArray(s.projects) && Array.isArray(s.categories) && s.roles && s.templates && Array.isArray(s.companies) && s.projects.every(p => Array.isArray(p.stages))) { s.log = s.log || []; return s; } }
+    if (raw) { const s = JSON.parse(raw); if (s && s.version === SEED.version && Array.isArray(s.projects) && Array.isArray(s.categories) && s.roles && s.templates && Array.isArray(s.companies) && Array.isArray(s.zonings) && Array.isArray(s.docTypes) && s.termBank && s.projects.every(p => Array.isArray(p.stages))) { s.log = s.log || []; return s; } }
   } catch (e) { /* storage blocked or unreadable: start from the demo data */ }
   return clone(SEED);
 }
@@ -1578,6 +1636,84 @@ function fundsSummary(p) {
   const total = round2(sum(lines, x => x.total)); const paid = round2(sum(lines.filter(x => x.paid), x => x.total));
   return { lines, total, paid, toFind: round2(total - paid) };
 }
+
+/* ===== Round 3 helpers: lists, sites, Quick Feaso, task links, offers ===== */
+function docTypeList() { return (state.docTypes && state.docTypes.length ? state.docTypes : DEFAULT_DOC_TYPES); }
+function docKeys() { return docTypeList().map(x => x.key); }
+function docLabel(k) { const t = docTypeList().find(x => x.key === k); return t ? t.label : k; }
+function uploadDocKeys() { return docTypeList().filter(x => !x.system || x.key === 'Offer').map(x => x.key); }
+function docTypeInUse(k) { return state.projects.some(p => p.docs.some(d0 => d0.type === k)) || state.deals.some(dl => (dl.docs || []).some(d0 => d0.type === k)); }
+function dealDocStage(type) { return DEAL_STAGE2_DOCS.includes(type) ? 2 : 1; }
+// Sites: address parts, Lot / DP, zoning, sizes, yield and purchase tax type (deals and projects share these)
+function dealAddress(x) { return `${x.street}, ${x.suburb} ${x.state}${x.postcode ? ' ' + x.postcode : ''}`; }
+function lotsWord(type, n) { const one = n === 1; return type === 'Commercial / industrial' ? (one ? 'factory unit' : 'factory units') : type === 'Residential build' ? (one ? 'unit' : 'units') : (one ? 'lot' : 'lots'); }
+function lotsLabel(type) { return type === 'Commercial / industrial' ? 'Number of factory units' : type === 'Residential build' ? 'Number of units' : 'Number of lots'; }
+function yieldText(type, n) { return n ? `${n} ${lotsWord(type, +n)}` : 'TBC'; }
+function fmtArea(m2) { return m2 ? nf0.format(m2) + ' m²' + (m2 >= 10000 ? ` (${(m2 / 10000).toFixed(2).replace(/\.?0+$/, '')} ha)` : '') : '–'; }
+function taxTypeName(t) { return TAX_TYPES[t] || '–'; }
+/* Quick Feaso: Dan's spreadsheet, cell for cell (B = rate, C = quantity, D = overall, E = per lot).
+   His hard-coded 30 lots and 29 for s94 follow the lot count and the existing-lot credit here. */
+function feasoCalc(inp) {
+  const i = { ...FEASO_DEFAULTS, ...inp }; const n = (x) => +x || 0; const L = n(i.lots); const per = (x) => (L ? x / L : 0); const v = {};
+  v.C3 = L; v.E3 = n(i.price); v.D5 = L * v.E3;
+  v.B6 = n(i.agencyPct) / 100; v.D6 = v.B6 * v.D5;
+  v.B7 = n(i.legalPerLot); v.C7 = L; v.D7 = v.C7 * v.B7;
+  v.D12 = n(i.land);
+  v.D8 = i.gstMode === 'full' ? v.D5 / 11 : i.gstMode === 'none' ? 0 : (v.D5 - v.D12) / 11;
+  v.D9 = v.D5 - v.D6 - v.D7 - v.D8; v.E9 = per(v.D9);
+  v.B13 = n(i.stampPct) / 100; v.D13 = v.D12 * v.B13; v.C14 = n(i.landLegals); v.D14 = v.C14; v.D15 = v.D12 + v.D13 + v.D14; v.E15 = per(v.D15);
+  v.C17 = n(i.elecPerLot); v.D17 = v.C17 * L; v.C18 = n(i.civilsPerLot); v.D18 = v.C18 * L; v.C19 = n(i.landscapePerLot); v.D19 = v.C19 * L;
+  v.D20 = v.D17 + v.D18 + v.D19; v.B21 = n(i.contingencyPct) / 100; v.D21 = v.D20 * v.B21; v.D22 = v.D20 + v.D21; v.E22 = per(v.D22);
+  v.D24 = n(i.elecDesign); v.D25 = n(i.consOther); v.D26 = n(i.engineer); v.C27 = n(i.surveyorPerLot); v.D27 = v.C27 * L; v.D28 = n(i.planning);
+  v.D29 = v.D24 + v.D25 + v.D26 + v.D27 + v.D28; v.E29 = per(v.D29);
+  v.D31 = n(i.marketing); v.B32 = n(i.pmRate); v.C32 = n(i.pmMonths); v.D32 = v.B32 * v.C32; v.B33 = n(i.bondPct) / 100; v.D33 = v.D18 * v.B33;
+  v.D34 = n(i.accounting); v.D35 = n(i.holding); v.D37 = n(i.ccFee); v.C38 = n(i.s94PerLot); v.B38 = n(i.s94Credit); v.D38 = v.C38 * Math.max(0, L - v.B38);
+  v.D39 = v.D31 + v.D32 + v.D33 + v.D34 + v.D35 + v.D37 + v.D38;
+  v.D40 = v.D15 + v.D22 + v.D29 + v.D39; v.E40 = per(v.D40 - v.D15);
+  v.D41 = v.D9 - v.D40;
+  v.B42 = n(i.equity); v.B43 = v.D40 - v.B42; v.B44 = v.D15 - v.B42; v.C44 = n(i.landDebtPct) / 100; v.D44 = v.C44 * v.B44;
+  v.B45 = v.B43 - v.B44; v.C45 = n(i.conDebtPct) / 100; v.D45 = v.B45 * v.C45 / 2; v.C46 = n(i.estFeePct) / 100; v.D46 = v.C46 * (v.B45 + v.B44);
+  v.D47 = v.D44 + v.D45 + v.D46; v.D48 = v.D40 + v.D47; v.E48 = per(v.D48);
+  v.D50 = v.D9 - v.D48; v.E50 = per(v.D50); v.D51 = v.D48 ? v.D50 / v.D48 : 0;
+  return v;
+}
+function feasoHint(moc) { return moc >= 0.2 ? ['Go territory', 'success'] : moc >= 0.15 ? ['Tight', 'attention'] : ['No-go territory', 'critical']; }
+function latestFeaso(dl) { const f = (dl.feasos || []); return f.length ? f[f.length - 1] : null; }
+function feasoDealDefaults(dl) { return { ...FEASO_DEFAULTS, lots: +dl.lots || FEASO_DEFAULTS.lots, land: +dl.asking || FEASO_DEFAULTS.land, equity: +dl.asking || FEASO_DEFAULTS.equity, gstMode: dl.taxType === 'gst' ? 'full' : 'margin' }; }
+// Budget categories from a feaso: Acquisition = land; Construction; Consultants; Council & Gov = CC fee, s94 and bond; Holding = holding, accounting and interest; Sales = agency, sales legals and marketing; Management fee = PM
+function feasoBudget(v) { const r = (x) => Math.round(x); return { 'Acquisition': r(v.D15), 'Holding': r(v.D35 + v.D34 + v.D47), 'Consultants': r(v.D29), 'Council & Gov': r(v.D37 + v.D38 + v.D33), 'Construction': r(v.D22), 'Sales': r(v.D6 + v.D7 + v.D31), 'Management fee': r(v.D32) }; }
+/* Task dates: a task can follow another task or a milestone ("60 days after Exchange"). Changing an anchor ripples down. */
+function addMonths(iso, n) { const [y, m, dd] = iso.split('-').map(Number); const t = new Date(Date.UTC(y, m - 1 + n, 1)); const last = new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth() + 1, 0)).getUTCDate(); t.setUTCDate(Math.min(dd, last)); return t.toISOString().slice(0, 10); }
+function msTask(p, key) { return p.tasks.find(x => x.ms === key) || (key === 'unconditional' ? p.tasks.find(x => x.ms === 'ddExpiry') : null); }
+function anchorTask(p, link) { if (!link || !link.to) return null; return link.to.startsWith('m:') ? msTask(p, link.to.slice(2)) : p.tasks.find(x => x.id === link.to); }
+function linkDate(p, t) { const a = anchorTask(p, t.link); if (!a) return null; const base = t.link.basis === 'done' && a.done && a.doneAt ? a.doneAt : a.due; if (!base) return null; return t.link.unit === 'months' ? addMonths(base, +t.link.n || 0) : addDays(base, +t.link.n || 0); }
+function anchorName(p, link) { if (!link) return ''; if (link.to.startsWith('m:')) return MILESTONES[link.to.slice(2)] || link.to.slice(2); const a = anchorTask(p, link); return a ? a.title : 'a removed task'; }
+function linkText(p, t) { const l = t.link; return `${l.n} ${l.unit === 'months' ? (+l.n === 1 ? 'month' : 'months') : (+l.n === 1 ? 'day' : 'days')} after ${anchorName(p, l)}${l.basis === 'done' ? ' is done' : ''}`; }
+function dependsOn(p, t, target, seen = new Set()) { if (!t.link || seen.has(t.id)) return false; seen.add(t.id); const a = anchorTask(p, t.link); if (!a) return false; return a === target || dependsOn(p, a, target, seen); }
+// Recompute every task that follows src (directly or down the chain). Returns how many dates moved.
+function rippleFrom(p, src, seen = new Set()) {
+  let moved = 0; seen.add(src.id);
+  p.tasks.forEach(t => { if (!t.link || t.dateSetByYou || seen.has(t.id) || anchorTask(p, t.link) !== src) return; const nd = linkDate(p, t); if (nd && nd !== t.due) { t.due = nd; moved++; } moved += rippleFrom(p, t, seen); });
+  return moved;
+}
+/* Offers: read "60 days from contract exchange date" style terms */
+function parseTerm(text) {
+  const s0 = String(text || '').toLowerCase(); const re = /(\d+)\s*(days?|months?)\s+from\s+(?:the\s+)?(?:later of\s+)?(?:date of\s+)?(contract\s+)?(exchange|unconditional)/g; let m; const hits = [];
+  while ((m = re.exec(s0))) hits.push({ n: +m[1], unit: /month/.test(m[2]) ? 'months' : 'days', from: m[4] });
+  if (/dd satisfied on exchange/.test(s0)) hits.push({ n: 0, unit: 'days', from: 'exchange' });
+  return hits[0] || null;
+}
+function termDate(term, dates) { if (!term) return null; const base = term.from === 'exchange' ? dates.exchange : dates.unconditional; if (!base) return null; return term.unit === 'months' ? addMonths(base, term.n) : addDays(base, term.n); }
+function offerDates(o, exchange) { const ddT = parseTerm(o.dd); const ddExpiry = termDate(ddT, { exchange }) || null; const stT = parseTerm(o.settlement); const settlement = termDate(stT, { exchange, unconditional: ddExpiry || exchange }); return { ddT, stT, ddExpiry, settlement }; }
+function offerTitleLine(dl) { const m = String(dl.lotPlan || '').match(/Lot\s+(\S+)\s+(DP|SP|RP)\s+(\S+)/i); if (!m) return dl.lotPlan ? `(${dl.lotPlan})` : ''; const plan = { DP: 'DEPOSITED PLAN', SP: 'STRATA PLAN', RP: 'REGISTERED PLAN' }[m[2].toUpperCase()]; return `(Lot ${m[1]} ${plan} ${m[3]}, Folio identifier ${m[1]}/${m[3]})`; }
+function newOfferFor(dl) {
+  const prev = (dl.offers || [])[dl.offers.length - 1];
+  const base = prev ? { price: prev.price, gstWording: prev.gstWording, deposit: prev.deposit, dd: prev.dd, settlement: prev.settlement, conditions: prev.conditions.slice(), solicitor: prev.solicitor, addressLine: prev.addressLine, titleLine: prev.titleLine, purchaser: prev.purchaser }
+    : { price: dl.asking || 0, gstWording: TAX_WORDING[dl.taxType] || TAX_WORDING.gst, deposit: state.termBank.deposit[0] || '', dd: state.termBank.dd[0] || '', settlement: state.termBank.settlement[0] || '', conditions: [], solicitor: state.termBank.solicitor[0] || '', purchaser: 'Daniel Wellman or Nominee (TBC)' };
+  return { id: newId('of'), n: (dl.offers || []).reduce((a, o) => Math.max(a, o.n), 0) + 1, status: 'Draft', date: TODAY, addressLine: base.addressLine || dealAddress(dl), titleLine: base.titleLine != null ? base.titleLine : offerTitleLine(dl), ...base };
+}
+function offerChip(o) { const tone = { Draft: 'neutral', Sent: 'info', Countered: 'attention', Accepted: 'success', Declined: 'critical', Withdrawn: 'neutral' }[o.status] || 'neutral'; return badge(o.status, tone); }
+function dealLog(dl, text, kind = 'deal') { dl.log = dl.log || []; dl.log.push({ id: newId('l'), ts: nowTs(), who: 'Dan', text, kind }); }
 
 /* ===== Derived data ===== */
 function projectMoney(p) {
@@ -1843,7 +1979,7 @@ function tabStage(p, n) {
     return `<div class="task ${t.done ? 'done' : ''}" data-id="${t.id}">
       <button class="check" role="checkbox" aria-checked="${t.done}" data-action="toggle-task" data-p="${p.id}" data-id="${t.id}" aria-label="${t.done ? 'Mark not done' : 'Mark done'}: ${h(t.title)}">${icon('check')}</button>
       <div class="t-body">${title}
-        <div class="t-meta"><span class="due ${rd.cls}">${h(rd.text)}</span>${t.lead && !t.done ? badge('Lead time', 'warning') : ''}<button class="link-btn" data-action="add-note" data-p="${p.id}" data-id="${t.id}">Add note</button>${editing ? '' : `<button class="link-btn" data-action="rename-task" data-p="${p.id}" data-id="${t.id}">Rename</button>`}</div>
+        <div class="t-meta"><span class="t-date-wrap"><label class="sr-only" for="td-${t.id}">Due date for ${h(t.title)}</label><input class="input t-date" type="date" id="td-${t.id}" value="${h(t.due || '')}" data-input="task-due" data-p="${p.id}" data-id="${t.id}"></span><span class="due ${rd.cls}">${h(rd.text)}</span>${t.link && !t.dateSetByYou ? `<span class="t-link" title="Date follows another task">${icon('clock', 'icon-sm')}${h(linkText(p, t))}</span>` : ''}${t.link && t.dateSetByYou ? `${badge('Date set by you', 'neutral')}<button class="link-btn" data-action="task-relink" data-p="${p.id}" data-id="${t.id}">Relink</button>` : ''}${t.lead && !t.done ? badge('Lead time', 'warning') : ''}<button class="link-btn" data-action="task-link" data-p="${p.id}" data-id="${t.id}">${t.link ? 'Change link' : 'Due relative to…'}</button><button class="link-btn" data-action="add-note" data-p="${p.id}" data-id="${t.id}">Add note</button>${editing ? '' : `<button class="link-btn" data-action="rename-task" data-p="${p.id}" data-id="${t.id}">Rename</button>`}</div>
         ${t.lead && !t.done ? `<div class="note lead">${h(t.lead)}</div>` : ''}
         ${(t.notes || []).map(nt => `<div class="note"><span class="when">${h(fmtDateTime(nt.ts))}</span>${h(nt.text)}</div>`).join('')}
       </div></div>`;
@@ -1864,7 +2000,31 @@ function tabStage(p, n) {
     <div>
       <section class="card"><div class="card-head"><div class="ch-titles" style="flex:1 1 0"><h2 class="card-title">Stages</h2></div><div class="ch-actions"><button class="btn btn-micro" data-action="edit-stages" data-p="${p.id}">Edit stages</button></div></div><nav class="stage-list" aria-label="Project stages">${stages}</nav></section>
       ${projectCompanyCard(p, n)}
+      ${siteCard(p)}
     </div></div>`;
+}
+// Site details carried from the deal (editable)
+function siteCard(p) {
+  return `<section class="card"><div class="card-head"><div class="ch-titles" style="flex:1 1 0"><h2 class="card-title">Site</h2></div><div class="ch-actions"><button class="btn btn-micro" data-action="edit-site" data-kind="project" data-id="${p.id}">Edit details</button></div></div>
+    <div class="card-section" style="padding-top:4px">${siteKV(p)}<dl class="kv" style="margin-top:8px"><dt>Project</dt><dd>${h(p.type)} · ${h(p.yield)}</dd></dl></div></section>`;
+}
+function siteFormHTML(x, kind) {
+  const zs = state.zonings.slice(); if (x.zoning && !zs.includes(x.zoning)) zs.push(x.zoning);
+  const isDeal = kind !== 'project';
+  return `<form id="f-site" data-form="${kind === 'new' ? 'add-deal' : 'site-details'}" data-kind="${kind}" data-id="${h(x.id || '')}" class="form-grid">
+    <div class="field full"><label for="st-street">Street</label><input class="input" id="st-street" name="street" required value="${h(x.street || '')}" placeholder="e.g. 22 Peel St" autocomplete="off"></div>
+    <div class="field"><label for="st-suburb">Suburb</label><input class="input" id="st-suburb" name="suburb" required value="${h(x.suburb || '')}"></div>
+    <div class="field"><span class="label" id="st-sp">State and postcode</span><div class="hstack" style="flex-wrap:nowrap"><select class="input" id="st-state" name="state" aria-labelledby="st-sp" style="width:96px;flex:none">${AU_STATES.map(st => `<option ${(x.state || 'NSW') === st ? 'selected' : ''}>${st}</option>`).join('')}</select><input class="input" id="st-postcode" name="postcode" value="${h(x.postcode || '')}" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" aria-label="Postcode" placeholder="Postcode"></div></div>
+    <div class="field"><label for="st-lot">Lot / DP</label><input class="input" id="st-lot" name="lotPlan" value="${h(x.lotPlan || '')}" placeholder="Lot 4 DP 123456"></div>
+    ${isDeal ? `<div class="field"><label for="st-type">Project type</label><select class="input" id="st-type" name="type" data-input="site-type">${PROJECT_TYPES.map(t => `<option ${(x.type || PROJECT_TYPES[0]) === t ? 'selected' : ''}>${h(t)}</option>`).join('')}</select></div>` : `<div class="field"><span class="label">Project type</span><span class="input" style="background:var(--surface-secondary);display:flex;align-items:center">${h(x.type)}</span></div>`}
+    <div class="field full"><label for="st-zoning">Zoning</label><select class="input" id="st-zoning" name="zoning"><option value="">Not set</option>${zs.map(z => `<option ${x.zoning === z ? 'selected' : ''}>${h(z)}</option>`).join('')}</select><span class="hint">Your list is in Settings › Lists.</span></div>
+    <div class="field"><label for="st-land">Original land size (m²)</label><input class="input" id="st-land" name="landSize" type="number" min="0" step="1" value="${h(x.landSize || '')}"></div>
+    <div class="field"><label for="st-min">Minimum lot size (m²)</label><input class="input" id="st-min" name="minLotSize" type="number" min="0" step="1" value="${h(x.minLotSize || '')}"></div>
+    <div class="field"><label for="st-lots" id="st-lots-label">${h(lotsLabel(x.type || PROJECT_TYPES[0]))}</label><input class="input" id="st-lots" name="lots" type="number" min="0" step="1" value="${h(x.lots || '')}"></div>
+    <div class="field"><label for="st-tax">Purchase tax type</label><select class="input" id="st-tax" name="taxType">${Object.entries(TAX_TYPES).map(([k, l]) => `<option value="${k}" ${(x.taxType || 'gst') === k ? 'selected' : ''}>${h(l)}</option>`).join('')}</select></div>
+    ${isDeal ? `<div class="field"><label for="st-ask">Asking price</label><input class="input" id="st-ask" name="asking" type="number" min="0" step="1000" value="${h(x.asking || '')}"></div>
+    <div class="field"><label for="st-src">Source</label><input class="input" id="st-src" name="source" value="${h(x.source || '')}" placeholder="e.g. Ray Taylor, off-market"></div>` : ''}
+    <div class="field full"><label for="st-notes">Notes</label><textarea class="input" id="st-notes" name="notes" rows="3">${h(x.notes || '')}</textarea>${kind === 'new' ? '<span class="hint">Add the contract, plans and sales stats under Documents once it\'s logged.</span>' : ''}</div></form>`;
 }
 // Owner of the project: the company record (or Dan Wellman and/or nominee until it is registered)
 function projectCompanyCard(p, n) {
@@ -1872,8 +2032,8 @@ function projectCompanyCard(p, n) {
   const act = c.nominee ? `<button class="btn btn-micro" data-action="assign-company" data-p="${p.id}">Assign company</button>`
     : `<button class="btn btn-micro" data-action="company-detail" data-id="${c.id}">Details</button>`;
   const body = c.nominee
-    ? `<p class="small" style="margin-bottom:8px">Offers and contracts go in Dan's name <b>and/or nominee</b> until the project company is registered. Tick <b>Register project company</b> in Acquisition & DD, or assign one now.</p><dl class="kv"><dt>Site</dt><dd>${h(p.lotPlan)}, ${h(p.street)}, ${h(p.suburb)} ${h(p.state)}</dd><dt>Project</dt><dd>${h(p.type)} · ${h(p.yield)}</dd></dl>`
-    : `<dl class="kv"><dt>Company</dt><dd>${h(c.name)} ${companyStatusChip(c)}</dd><dt>ABN</dt><dd>${h(c.abn)}</dd>${c.acn ? `<dt>ACN</dt><dd>${h(c.acn)}</dd>` : ''}<dt>GST</dt><dd>${c.gst ? 'Registered' + (c.gstFrom ? ' from ' + fmtDate(c.gstFrom) : '') : 'Not registered'}</dd><dt>Bank</dt><dd>${h(c.bank)} · BSB ${h(c.bsb)} · Acc ${h(c.acc)}</dd><dt>Site</dt><dd>${h(p.lotPlan)}, ${h(p.street)}, ${h(p.suburb)} ${h(p.state)}</dd><dt>Project</dt><dd>${h(p.type)} · ${h(p.yield)}</dd></dl>
+    ? `<p class="small" style="margin-bottom:8px">Offers and contracts go in Dan's name <b>and/or nominee</b> until the project company is registered. Tick <b>Register project company</b> in Acquisition & DD, or assign one now.</p>`
+    : `<dl class="kv"><dt>Company</dt><dd>${h(c.name)} ${companyStatusChip(c)}</dd><dt>ABN</dt><dd>${h(c.abn)}</dd>${c.acn ? `<dt>ACN</dt><dd>${h(c.acn)}</dd>` : ''}<dt>GST</dt><dd>${c.gst ? 'Registered' + (c.gstFrom ? ' from ' + fmtDate(c.gstFrom) : '') : 'Not registered'}</dd><dt>Bank</dt><dd>${h(c.bank)} · BSB ${h(c.bsb)} · Acc ${h(c.acc)}</dd></dl>
       ${lastStage && c.status !== 'Closed' ? `<div class="btn-group" style="margin-top:12px"><button class="btn" data-action="close-company" data-p="${p.id}">Close company</button></div><p class="help help-below">Once the bond is back and the trust has its distribution.</p>` : ''}`;
   return `<section class="card"><div class="card-head"><div class="ch-titles"><h2 class="card-title">${c.nominee ? 'Owner' : 'Project company'}</h2>${c.nominee ? badge('To be formed', 'info') : ''}</div><div class="ch-actions">${act}</div></div>
         <div class="card-section" style="padding-top:4px">${body}</div></section>`;
@@ -2133,15 +2293,15 @@ function tabDocuments(p) {
   const stageF = docStageFilter(p);
   const inStage = p.docs.filter(d0 => stageF === 'all' || d0.stage === stageF);
   const counts = {}; inStage.forEach(d0 => { counts[d0.type] = (counts[d0.type] || 0) + 1; });
-  const folder = ui.docFolder === 'all' || DOC_TYPES.includes(ui.docFolder) ? ui.docFolder : 'all';
+  const folder = ui.docFolder === 'all' || docKeys().includes(ui.docFolder) ? ui.docFolder : 'all';
   const docs = inStage.filter(d0 => folder === 'all' || d0.type === folder).sort((a, b) => b.date.localeCompare(a.date));
   const fbtn = (k, label, n) => `<button type="button" class="folder" data-action="set-ui" data-k="docFolder" data-v="${k}" aria-pressed="${folder === k}">${h(label)}<span class="n">${n}</span></button>`;
   const stageOpts = [['all', `All stages (${p.docs.length})`], ...stagesOf(p).map((s0, i) => [String(i + 1), `${i + 1}. ${s0.name} (${p.docs.filter(d0 => d0.stage === i + 1).length})`])];
   return `<div class="section-bar">${uiSelect({ k: 'docStage', value: String(stageF), options: stageOpts, label: 'Stage', id: 'doc-stage' })}<p class="help grow">Files are named <span class="mono">${h(p.id)}_DocType_Party_Date</span> automatically, any file type. OneDrive keeps a nightly backup.</p><button class="btn btn-primary" data-action="upload" data-p="${p.id}">Upload</button></div>
-  <div class="docs"><nav class="card folders" aria-label="Document folders">${fbtn('all', stageF === 'all' ? 'All documents' : 'All in stage ' + stageF, inStage.length)}${DOC_TYPES.map(k => fbtn(k, DOC_LABELS[k], counts[k] || 0)).join('')}</nav>
+  <div class="docs"><nav class="card folders" aria-label="Document folders">${fbtn('all', stageF === 'all' ? 'All documents' : 'All in stage ' + stageF, inStage.length)}${docKeys().map(k => fbtn(k, docLabel(k), counts[k] || 0)).join('')}</nav>
     <section class="card"><div class="itable-wrap stack"><table class="itable">
       <thead><tr><th scope="col">File name</th>${stageF === 'all' ? '<th scope="col">Stage</th>' : ''}<th scope="col">Folder</th><th scope="col">Date</th><th scope="col" class="num">Size</th></tr></thead>
-      <tbody>${docs.length ? docs.map(d0 => `<tr class="file" data-id="${d0.id}"><td class="m-title"><div class="file-cell"><span class="badge tone-neutral ftype">${h(docExt(d0))}</span><div style="min-width:0"><div class="fn">${h(docName(p, d0)).replace(/_/g, '_<wbr>')}</div><div class="sub">${h(d0.title)}${(d0.tags || []).length ? ' · ' + h(d0.tags.join(', ')) : ''}</div></div></div></td>${stageF === 'all' ? `<td class="m-meta"><span class="nowrap">Stage ${d0.stage}</span><div class="sub d-only">${h(stageName(p, d0.stage))}</div></td>` : ''}<td class="m-meta">${h(DOC_LABELS[d0.type] || d0.type)}</td><td class="date m-meta">${dateCell(d0.date)}</td><td class="num m-amt" style="font-weight:var(--fw-regular)">${d0.size} KB</td></tr>`).join('') : emptyRow(stageF === 'all' ? 5 : 4, 'Nothing filed here', stageF === 'all' ? 'Upload a file and it will be named and filed for you.' : 'Nothing in this folder for stage ' + stageF + '. Try All stages.')}</tbody>
+      <tbody>${docs.length ? docs.map(d0 => `<tr class="file" data-id="${d0.id}"><td class="m-title"><div class="file-cell"><span class="badge tone-neutral ftype">${h(docExt(d0))}</span><div style="min-width:0"><div class="fn">${h(docName(p, d0)).replace(/_/g, '_<wbr>')}</div><div class="sub">${h(d0.title)}${(d0.tags || []).length ? ' · ' + h(d0.tags.join(', ')) : ''}</div></div></div></td>${stageF === 'all' ? `<td class="m-meta"><span class="nowrap">Stage ${d0.stage}</span><div class="sub d-only">${h(stageName(p, d0.stage))}</div></td>` : ''}<td class="m-meta">${h(docLabel(d0.type) || d0.type)}</td><td class="date m-meta">${dateCell(d0.date)}</td><td class="num m-amt" style="font-weight:var(--fw-regular)">${d0.size} KB</td></tr>`).join('') : emptyRow(stageF === 'all' ? 5 : 4, 'Nothing filed here', stageF === 'all' ? 'Upload a file and it will be named and filed for you.' : 'Nothing in this folder for stage ' + stageF + '. Try All stages.')}</tbody>
     </table></div></section></div>`;
 }
 const LOG_ICONS = { send: 'send', appoint: 'check', money: 'dollar', stage: 'layers', deal: 'pin', company: 'building', note: 'note', task: 'check', doc: 'upload' };
@@ -2162,7 +2322,7 @@ function tabLog(p) {
 const OUR = 'Our companies';
 function contactTabs(groups, group) { return groups.map(g => ptab({ label: g, n: g === 'All' ? state.contacts.length : g === OUR ? state.companies.length : state.contacts.filter(c => contactCategories(c).includes(g)).length, current: g === group, k: 'contactRole', v: g })).join(''); }
 function viewCompanies(groups, q) {
-  const list = state.companies.slice().sort((a, b) => (a.manager - b.manager) || (COMPANY_STATUSES.indexOf(a.status) === 3) - (COMPANY_STATUSES.indexOf(b.status) === 3)).filter(c => !q || [c.name, c.short, c.abn, c.acn, c.status, companyProjects(c).map(p => p.id + ' ' + p.name).join(' ')].join(' ').toLowerCase().includes(q));
+  const list = state.companies.slice().sort((a, b) => a.name.localeCompare(b.name)).filter(c => !q || [c.name, c.short, c.abn, c.acn, c.status, companyProjects(c).map(p => p.id + ' ' + p.name).join(' ')].join(' ').toLowerCase().includes(q));
   const rows = list.map(c => { const ps = companyProjects(c); return `<tr class="company clickable" data-action="company-detail" data-id="${c.id}">
       <td class="m-title"><button type="button" class="row-link" data-action="company-detail" data-id="${c.id}">${h(c.name)}</button><div class="sub">${c.manager ? 'Project manager' : h(c.short || '')}</div></td>
       <td class="m-meta m-lead nowrap">${c.manager ? badge('Project manager', 'info') : companyStatusChip(c)}</td>
@@ -2189,13 +2349,13 @@ function viewContacts() {
   const groups = ['All', OUR, ...state.categories, ...(hasOther ? ['Other'] : [])];
   const group = groups.includes(ui.contactRole) ? ui.contactRole : 'All';
   if (group === OUR) return viewCompanies(groups, q);
-  const list = state.contacts.slice().sort((a, b) => (a.id === 'wellco') - (b.id === 'wellco')).filter(c => (group === 'All' || inCat(c, group)) && (!q || [c.name, c.company, roleText(c), contactCategories(c).join(' '), c.abn, c.notes].join(' ').toLowerCase().includes(q)));
+  const list = sortContacts(state.contacts).filter(c => (group === 'All' || inCat(c, group)) && (!q || [c.name, c.company, roleText(c), contactCategories(c).join(' '), c.abn, c.notes].join(' ').toLowerCase().includes(q)));
   const warnings = state.contacts.filter(c => expiryStatus(c)).length;
   const rows = list.map(c => {
     const projs = contactProjects(c.id); const ex = expiryChip(c); const cats = contactCategories(c);
     return `<tr class="contact clickable" data-action="contact-detail" data-id="${c.id}">
       <td class="m-title"><button type="button" class="row-link" data-action="contact-detail" data-id="${c.id}" aria-label="${h(c.company)}, ${h(roleText(c))}">${h(c.company)}</button></td>
-      <td class="m-sub">${h(c.name)}<span class="m-only"> · ${h(roleText(c))}</span></td>
+      <td class="m-sub">${h(c.name)}<span class="m-only"> · ${h(roleText(c))}</span><div class="sub d-only">${[c.mobile ? 'M ' + h(c.mobile) : '', c.phone ? 'P ' + h(c.phone) : ''].filter(Boolean).join(' · ')}</div></td>
       <td class="m-hide">${h(roleText(c))}<div class="sub">${h(cats.join(', '))}</div></td>
       <td class="m-hide nowrap num" style="text-align:left">${h(c.abn || '–')}</td>
       <td class="${ex ? 'm-meta m-lead' : 'm-hide'} nowrap">${ex || ((c.licenceExpiry || c.insuranceExpiry) ? '<span class="muted">Current</span>' : '<span class="muted">–</span>')}</td>
@@ -2244,7 +2404,9 @@ function contactFormHTML(c) {
       <div class="choice-box choice-grid" id="c-cats" style="max-height:none">${catsChoiceHTML(c ? cRoles(c) : [], c ? c.categories || [] : [])}</div>
       <span class="hint">Categories from the ticked roles are included automatically. Tick others to list this contact there too.</span></fieldset>
     <div class="field"><label for="c-abn">ABN</label><input class="input" id="c-abn" name="abn" inputmode="numeric" value="${v('abn')}"></div>
-    <div class="field"><label for="c-phone">Phone</label><input class="input" id="c-phone" name="phone" type="tel" value="${v('phone')}"></div>
+    <div class="field"><label for="c-mobile">Mobile</label><input class="input" id="c-mobile" name="mobile" type="tel" value="${v('mobile')}" placeholder="04xx xxx xxx"></div>
+    <div class="field"><label for="c-phone">Phone (office)</label><input class="input" id="c-phone" name="phone" type="tel" value="${v('phone')}"></div>
+    <div class="field"><span class="label">&nbsp;</span></div>
     <div class="field full"><label for="c-email">Email</label><input class="input" id="c-email" name="email" type="email" value="${v('email')}"></div>
     <div class="field"><label for="c-lic">Licence expiry</label><input class="input" id="c-lic" name="licenceExpiry" type="date" value="${v('licenceExpiry')}"></div>
     <div class="field"><label for="c-ins">Insurance expiry</label><input class="input" id="c-ins" name="insuranceExpiry" type="date" value="${v('insuranceExpiry')}"></div>
@@ -2259,11 +2421,12 @@ function refreshContactCats() {
 // Manage categories drawer: a working copy, applied on Save
 function catDraftHTML(draft) {
   const opts = (sel) => draft.cats.map((c, i) => `<option value="${i}" ${i === sel ? 'selected' : ''}>${h(c.name || 'New category')}</option>`).join('');
+  const rs0 = draft.roles.filter(r => !r.deleted);
   return `<form id="f-cats" data-form="manage-cats" class="stack" style="gap:0">
-    <p class="help" style="margin-bottom:16px">Rename a category, move a role to another category, or add a new one. Contacts follow their roles.</p>
+    <p class="help" style="margin-bottom:16px">Rename a category or a role, move a role to another category, delete a role, or add a category. Contacts follow their roles.</p>
     ${draft.cats.map((c, i) => { const rs = draft.roles.filter(r => r.cat === i); const extraN = c.orig ? state.contacts.filter(x => (x.categories || []).includes(c.orig)).length : 0; return `<div class="cat-block" data-cat-row data-i="${i}">
       <div class="field"><label for="cn-${i}">Category ${i + 1}</label><div class="hstack" style="flex-wrap:nowrap"><input class="input" id="cn-${i}" name="catname" required value="${h(c.name)}" placeholder="Category name" data-input="cat-name" data-i="${i}">${!rs.length && !extraN ? `<button type="button" class="btn btn-micro btn-danger" data-action="cat-remove" data-i="${i}">Remove</button>` : ''}</div></div>
-      ${rs.length ? `<div class="rows">${rs.map(r => `<div class="role-row"><span class="body">${h(r.name)}<span class="small muted" style="display:block">${plural(state.contacts.filter(x => cRoles(x).includes(r.name)).length, 'contact')}</span></span><label class="sr-only" for="rm-${h(r.key)}">Category for ${h(r.name)}</label><select class="input" id="rm-${h(r.key)}" data-role="${h(r.name)}" data-input="role-move">${opts(r.cat)}</select></div>`).join('')}</div>` : `<p class="small muted" style="margin-top:8px">No roles in this category yet${extraN ? `. ${plural(extraN, 'contact')} listed here directly` : ''}.</p>`}
+      ${rs.length ? `<div class="rows">${rs.map(r => roleRowHTML(draft, r, opts)).join('')}</div>` : `<p class="small muted" style="margin-top:8px">No roles in this category yet${extraN ? `. ${plural(extraN, 'contact')} listed here directly` : ''}.</p>`}
     </div>`; }).join('')}
     <div class="cat-block"><div class="new-role" style="grid-template-columns:minmax(0,1fr) auto;margin-top:0">
       <div class="field"><label for="cat-new">New category</label><input class="input" id="cat-new" placeholder="e.g. Building contractors" autocomplete="off"></div>
@@ -2308,6 +2471,12 @@ function viewMoney() {
 }
 
 /* ===== View: Deals ===== */
+function dealResultCell(dl) {
+  const f = latestFeaso(dl); if (!f) return '<span class="muted">No feaso yet</span>';
+  const v = feasoCalc(f.inputs); const [hint, tone] = feasoHint(v.D51);
+  return `<span class="nowrap">${(v.D51 * 100).toFixed(1)}% MoC</span> ${badge(hint, tone)}<div class="sub">v${f.v} · ${fmtMoney(v.D50, { whole: true })} profit</div>`;
+}
+function dealOfferCell(dl) { const os = dl.offers || []; if (!os.length) return '<span class="muted">None</span>'; const o = os[os.length - 1]; return `Offer ${o.n} ${offerChip(o)}<div class="sub">${fmtMoney(o.price, { whole: true })} · ${fmtDateShort(o.date)}</div>`; }
 function viewDeals() {
   const order = { go: 0, pending: 1, nogo: 2 };
   const all = state.deals.slice().sort((a, b) => order[a.feaso] - order[b.feaso]);
@@ -2315,41 +2484,295 @@ function viewDeals() {
   const tab = tabs.some(t => t[0] === ui.dealTab) ? ui.dealTab : 'all';
   const deals = tab === 'all' ? all : all.filter(dl => dl.feaso === tab);
   const fb = (f) => f === 'go' ? badge('Go', 'success') : f === 'nogo' ? badge('No-go', 'neutral') : badge('Pending', 'attention');
-  const rows = deals.map(dl => `<tr data-id="${dl.id}">
-    <td class="m-title"><span style="font-weight:var(--fw-medium)">${h(dl.address)}</span><div class="sub">${h(dl.lotPlan || 'Lot / plan not recorded')}</div>${dl.notes ? `<div class="sub clamp d-only">${h(dl.notes)}</div>` : ''}</td>
-    <td class="m-sub">${h(dl.source)}</td>
+  const rows = deals.map(dl => `<tr class="clickable" data-id="${dl.id}">
+    <td class="m-title"><a class="row-link" href="#/deal/${dl.id}">${h(dl.address)}</a><div class="sub">${h(dl.lotPlan || 'Lot / DP not recorded')} · ${h(dl.type)}</div><div class="sub d-only">${h(dl.source)}</div></td>
     <td class="num m-amt">${fmtMoney(dl.asking)}</td>
-    <td class="m-meta">${h(dl.yield)}<div class="sub d-only">${h(dl.type || 'Land subdivision')}</div></td>
-    <td class="m-hide">${h(dl.zoning)}</td>
-    <td class="m-meta"><button type="button" class="link-btn" data-action="deal-docs" data-id="${dl.id}">${(dl.docs || []).length ? plural(dl.docs.length, 'file') : 'Add files'}</button></td>
-    <td class="num m-meta" data-label="Margin">${dl.margin != null ? dl.margin + '%' : '–'}</td>
+    <td class="m-meta">${h(dl.yield)}<div class="sub d-only">${h(dl.zoning || 'Zoning not set')}</div></td>
+    <td class="m-sub" data-label="Quick feaso">${dealResultCell(dl)}</td>
+    <td class="m-meta" data-label="Offer">${dealOfferCell(dl)}</td>
     <td class="m-meta m-lead nowrap">${fb(dl.feaso)}</td>
-    <td class="date m-hide">${fmtDate(dl.logged)}</td>
     <td class="act m-act">${dl.feaso === 'go' ? (dl.projectId ? `<a class="btn btn-micro" href="#/project/${h(dl.projectId)}">Open project</a>` : `<a class="btn btn-micro" href="#/new/${dl.id}">Create project</a>`) : dl.feaso === 'pending' ? `<button class="btn btn-micro" data-action="feaso" data-id="${dl.id}" data-v="go">Mark Go</button><button class="btn btn-micro" data-action="feaso" data-id="${dl.id}" data-v="nogo">Mark No-go</button>` : `<button class="link-btn" data-action="feaso" data-id="${dl.id}" data-v="pending">Reopen</button>`}</td></tr>`).join('');
   return `<div class="page page-full">
-    ${pageHeader({ title: 'Deals', sub: "Sites logged from listings and buyer's agents, with the feaso result and the agent's files. Stage 1: Sourcing.", actions: `<button class="btn btn-primary" data-action="add-deal">Log a site</button>` })}
+    ${pageHeader({ title: 'Deals', sub: "Sites from listings and buyer's agents, with your quick feaso, offers and the agent's files. Stage 1: Sourcing.", actions: `<button class="btn btn-primary" data-action="add-deal">Log a site</button>` })}
     <section class="card">
       <nav class="ptabs" aria-label="Feaso result">${tabs.map(([k, l]) => ptab({ label: l, n: k === 'all' ? all.length : all.filter(dl => dl.feaso === k).length, current: k === tab, k: 'dealTab', v: k })).join('')}</nav>
       <div class="itable-wrap stack"><table class="itable">
-        <thead><tr><th scope="col">Site</th><th scope="col">Source</th><th scope="col" class="num">Asking</th><th scope="col">Yield</th><th scope="col">Zoning</th><th scope="col">Documents</th><th scope="col" class="num">Margin</th><th scope="col">Feaso</th><th scope="col">Logged</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
-        <tbody>${rows || emptyRow(10, 'No deals in this view', 'Try another tab, or log a site.')}</tbody></table></div>
+        <thead><tr><th scope="col">Site</th><th scope="col" class="num">Asking</th><th scope="col">Yield</th><th scope="col">Quick feaso</th><th scope="col">Latest offer</th><th scope="col">Status</th><th scope="col"><span class="sr-only">Actions</span></th></tr></thead>
+        <tbody>${rows || emptyRow(7, 'No deals in this view', 'Try another tab, or log a site.')}</tbody></table></div>
     </section>
   </div>`;
 }
-
+/* ===== View: Deal (Details, Quick Feaso, Offers, Documents) ===== */
+const DEAL_TABS = [['details', 'Details'], ['feaso', 'Quick feaso'], ['offers', 'Offers'], ['documents', 'Documents']];
+function viewDeal() {
+  const dl = state.deals.find(x => x.id === route.parts[0]);
+  if (!dl) return `<div class="page">${pageHeader({ title: 'Deal not found', back: '#/deals', backLabel: 'Deals' })}<div class="card">${emptyState('pin', 'Deal not found', 'It may have been removed when the demo data was reset.', '<a class="btn" href="#/deals">All deals</a>')}</div></div>`;
+  const tab = DEAL_TABS.some(t => t[0] === route.parts[1]) ? route.parts[1] : 'details';
+  const fb = dl.feaso === 'go' ? badge('Go', 'success') : dl.feaso === 'nogo' ? badge('No-go', 'neutral') : badge('Pending', 'attention');
+  const tabs = DEAL_TABS.map(([k, l]) => ptab({ href: `#/deal/${dl.id}/${k}`, label: l, current: k === tab, n: k === 'offers' ? ((dl.offers || []).length || '') : k === 'documents' ? ((dl.docs || []).length || '') : k === 'feaso' ? ((dl.feasos || []).length ? 'v' + latestFeaso(dl).v : '') : '' })).join('');
+  const act = dl.projectId ? `<a class="btn" href="#/project/${h(dl.projectId)}">Open project</a>` : dl.feaso === 'go' ? `<a class="btn btn-primary" href="#/new/${dl.id}">Create project</a>` : '';
+  const body = { details: () => dealDetailsTab(dl), feaso: () => dealFeasoTab(dl), offers: () => dealOffersTab(dl), documents: () => dealDocsTab(dl) }[tab]();
+  return `<div class="page page-full">
+    ${pageHeader({ title: dl.address, back: '#/deals', backLabel: 'Deals', badges: fb, sub: `${h(dl.lotPlan || 'Lot / DP not recorded')} · ${h(dl.type)} · ${h(dl.yield)}<span class="d-only"> · ${h(dl.zoning || 'Zoning not set')} · ${h(dl.source)}</span>`, actions: `<button class="btn" data-action="edit-site" data-kind="deal" data-id="${dl.id}">Edit details</button>${act}` })}
+    <nav class="ptabs page-tabs proj-tabs" aria-label="Deal sections">${tabs}</nav>
+    ${body}
+  </div>`;
+}
+function siteKV(x) {
+  return `<dl class="kv"><dt>Address</dt><dd>${h(x.street)}, ${h(x.suburb)} ${h(x.state)} ${h(x.postcode || '')}</dd><dt>Lot / DP</dt><dd>${h(x.lotPlan || '–')}</dd><dt>Zoning</dt><dd>${h(x.zoning || '–')}</dd>
+    <dt>Original land size</dt><dd>${fmtArea(x.landSize)}</dd><dt>Minimum lot size</dt><dd>${x.minLotSize ? nf0.format(x.minLotSize) + ' m²' : '–'}</dd><dt>${h(lotsLabel(x.type))}</dt><dd>${x.lots || '–'}</dd>
+    <dt>Purchase tax type</dt><dd>${h(taxTypeName(x.taxType))}</dd>${x.notes ? `<dt>Notes</dt><dd>${h(x.notes)}</dd>` : ''}</dl>`;
+}
+function dealDetailsTab(dl) {
+  const f = latestFeaso(dl); const v = f ? feasoCalc(f.inputs) : null; const o = (dl.offers || []).slice(-1)[0];
+  const log = (dl.log || []).slice().reverse().sort((a, b) => b.ts.localeCompare(a.ts));
+  return `<div class="layout"><div>
+    <section class="card"><div class="card-head"><div class="ch-titles"><h2 class="card-title">Quick feaso</h2>${f ? badge(...feasoHint(v.D51)) : ''}</div><div class="ch-actions"><a class="btn" href="#/deal/${dl.id}/feaso">${f ? 'Open feaso' : 'Run quick feaso'}</a></div>${f ? `<p class="card-sub">Version ${f.v} · ${fmtDate(f.date)}${f.note ? ' · ' + h(f.note) : ''}</p>` : ''}</div>
+      ${f ? `<div class="card-section" style="padding-top:4px"><div class="summary"><div><div class="k">Net revenue</div><div class="v">${fmtMoney(v.D9, { whole: true })}</div></div><div><div class="k">Total cost inc finance</div><div class="v">${fmtMoney(v.D48, { whole: true })}</div></div><div><div class="k">Net profit</div><div class="v">${fmtMoney(v.D50, { whole: true })}</div></div><div><div class="k">Margin on cost</div><div class="v">${(v.D51 * 100).toFixed(1)}%</div></div></div></div>` : `<div class="card-section" style="padding-top:0"><p class="muted">Your quick feaso, prefilled with the lots and asking price. Save a version each time the numbers change.</p></div>`}</section>
+    <section class="card"><div class="card-head"><div class="ch-titles"><h2 class="card-title">Offers</h2>${o ? offerChip(o) : ''}</div><div class="ch-actions"><a class="btn" href="#/deal/${dl.id}/offers">${o ? 'Open offers' : 'Make offer'}</a></div>${o ? `<p class="card-sub">Offer ${o.n} · ${fmtMoney(o.price, { whole: true })} · ${fmtDate(o.date)}</p>` : ''}</div>
+      ${o ? '' : `<div class="card-section" style="padding-top:0"><p class="muted">Build a letter of offer from your template and term bank.</p></div>`}</section>
+    <section class="card"><div class="card-head"><h2 class="card-title">History</h2></div>
+      <div class="itable-wrap stack" style="border-top:1px solid var(--border-secondary)"><table class="itable"><tbody>${log.length ? log.map(l => `<tr><td class="date m-meta">${h(fmtDateTime(l.ts))}</td><td class="m-title" style="font-weight:var(--fw-regular)">${h(l.text)}</td><td class="m-meta nowrap">${h(l.who)}</td></tr>`).join('') : emptyRow(3, 'Nothing yet', 'Feasos, offers and edits are recorded here.')}</tbody></table></div></section>
+  </div><div>
+    <section class="card"><div class="card-head"><div class="ch-titles" style="flex:1 1 0"><h2 class="card-title">Site</h2></div><div class="ch-actions"><button class="btn btn-micro" data-action="edit-site" data-kind="deal" data-id="${dl.id}">Edit details</button></div></div>
+      <div class="card-section" style="padding-top:4px">${siteKV(dl)}<dl class="kv" style="margin-top:8px"><dt>Asking price</dt><dd>${fmtMoney(dl.asking)}</dd><dt>Source</dt><dd>${h(dl.source)}</dd><dt>Logged</dt><dd>${fmtDate(dl.logged)}</dd></dl></div></section>
+  </div></div>`;
+}
+function dealDocsTab(dl) {
+  const docs = (dl.docs || []).slice().sort((a, b) => b.date.localeCompare(a.date));
+  return `<div class="section-bar"><p class="help grow">Files are named <span class="mono">${h(dealSlug(dl))}_DocType_Party_Date</span>. They move into the project under stages 1 and 2 when you create it.</p><button class="btn btn-primary" data-action="deal-docs" data-id="${dl.id}">Upload</button></div>
+    <section class="card"><div class="itable-wrap stack"><table class="itable">
+      <thead><tr><th scope="col">File name</th><th scope="col">Type</th><th scope="col">Date</th><th scope="col" class="num">Size</th></tr></thead>
+      <tbody>${docs.length ? docs.map(d0 => `<tr class="file" data-id="${d0.id}"><td class="m-title"><div class="file-cell"><span class="badge tone-neutral ftype">${h(docExt(d0))}</span><div style="min-width:0"><div class="fn">${h(dealDocName(dl, d0)).replace(/_/g, '_<wbr>')}</div><div class="sub">${h(d0.title)}${d0.note ? ' · ' + h(d0.note) : ''}</div></div></div></td><td class="m-meta">${h(docLabel(d0.type))}</td><td class="date m-meta">${dateCell(d0.date)}</td><td class="num m-amt" style="font-weight:var(--fw-regular)">${d0.size} KB</td></tr>`).join('') : emptyRow(4, 'No files yet', 'Drop the contract, plans and sales stats here as the agent sends them.')}</tbody></table></div></section>`;
+}
 function dealDocsHTML(dl) {
   const docs = (dl.docs || []).slice().sort((a, b) => b.date.localeCompare(a.date));
-  const parties = state.contacts.slice().sort((a, b) => a.company.localeCompare(b.company));
+  const parties = sortContacts(state.contacts);
   return `<div class="stack" style="gap:20px">
-    <div><div class="eyebrow">On this deal</div>${docs.length ? `<div class="list">${docs.map(d0 => `<div class="row" data-id="${d0.id}" style="align-items:flex-start"><span class="badge tone-neutral ftype" style="margin-top:2px">${h(docExt(d0))}</span><span class="body"><span class="title">${h(d0.title)}</span><span class="meta">${h(DEAL_DOC_TYPES[d0.type] || d0.type)} · ${fmtDate(d0.date)} · ${d0.size} KB${d0.note ? ' · ' + h(d0.note) : ''}</span><span class="meta fn" style="margin-top:2px">${h(dealDocName(dl, d0)).replace(/_/g, '_<wbr>')}</span></span></div>`).join('')}</div>` : '<p class="small muted">No files yet. Drop the contract, plans and sales stats here as the agent sends them.</p>'}</div>
+    <div><div class="eyebrow">On this deal</div>${docs.length ? `<div class="list">${docs.map(d0 => `<div class="row" data-id="${d0.id}" style="align-items:flex-start"><span class="badge tone-neutral ftype" style="margin-top:2px">${h(docExt(d0))}</span><span class="body"><span class="title">${h(d0.title)}</span><span class="meta">${h(docLabel(d0.type))} · ${fmtDate(d0.date)} · ${d0.size} KB${d0.note ? ' · ' + h(d0.note) : ''}</span><span class="meta fn" style="margin-top:2px">${h(dealDocName(dl, d0)).replace(/_/g, '_<wbr>')}</span></span></div>`).join('')}</div>` : '<p class="small muted">No files yet. Drop the contract, plans and sales stats here as the agent sends them.</p>'}</div>
     <form id="f-dealdoc" data-form="deal-doc" data-id="${dl.id}" class="stack" style="gap:16px">
       <h3 class="eyebrow" style="margin:0">Add files</h3>
-      <div class="form-grid"><div class="field"><label for="dd-type">Document type</label><select class="input" id="dd-type" name="type" data-input="dealdoc-preview">${Object.entries(DEAL_DOC_TYPES).map(([k, l]) => `<option value="${k}">${h(l)}</option>`).join('')}</select></div>
+      <div class="form-grid"><div class="field"><label for="dd-type">Document type</label><select class="input" id="dd-type" name="type" data-input="dealdoc-preview">${uploadDocKeys().map(k => `<option value="${k}">${h(docLabel(k))}</option>`).join('')}</select></div>
       <div class="field"><label for="dd-party">From</label><select class="input" id="dd-party" name="party" data-input="dealdoc-preview"><option value="">Agent or vendor</option>${parties.map(c => `<option value="${c.id}">${h(c.company)}</option>`).join('')}</select></div></div>
       <div class="field"><label for="dd-note">Note (optional)</label><input class="input" id="dd-note" name="note" placeholder="e.g. Agent's sales stats for 5-acre lots" autocomplete="off"></div>
       <div class="field"><span class="label">Files</span><button type="button" class="btn" data-action="pick-file" style="justify-content:flex-start">${icon('upload')}<span id="u-file">Choose files</span></button><span class="hint">Any file type: PDF, Excel, Word, photos. Pick several at once.</span></div>
       <div class="field"><span class="label">Will be saved as</span><div class="card" style="padding:12px;box-shadow:none;border:1px solid var(--border)"><span class="mono" id="u-name" style="font-size:12px;overflow-wrap:anywhere"></span></div><span class="hint">When this deal becomes a project, its files move across under stages 1 and 2.</span></div>
     </form></div>`;
+}
+/* Quick Feaso tab: Dan's sheet, row for row. in = editable input (pct shows %), out = calculated cell. */
+const FEASO_LAYOUT = [
+  ['h', 'Revenue'],
+  [5, 'Total', { D: 'D5' }],
+  [6, 'Agency', { B: ['in', 'agencyPct', 'pct'], D: 'D6' }],
+  [7, 'Legal', { B: ['in', 'legalPerLot', 'money'], C: 'C7', D: 'D7' }],
+  [8, 'GST under margin', { B: ['gst'], D: 'D8' }],
+  ['t', 9, 'NET REVENUE', { D: 'D9', E: 'E9' }],
+  ['h', 'Land'],
+  [12, 'Purchase Price', { D: ['in', 'land', 'money'] }],
+  [13, 'Stamp Duty', { B: ['in', 'stampPct', 'pct'], D: 'D13' }],
+  [14, 'Legals', { C: ['in', 'landLegals', 'money'], D: 'D14' }],
+  ['t', 15, 'Acquisition', { D: 'D15', E: 'E15' }],
+  ['h', 'Construction'],
+  [17, 'Electrics and Comms', { C: ['in', 'elecPerLot', 'money'], D: 'D17' }],
+  [18, 'Civils', { C: ['in', 'civilsPerLot', 'money'], D: 'D18' }],
+  [19, 'Planting/landscaping', { C: ['in', 'landscapePerLot', 'money'], D: 'D19' }],
+  [20, 'Sub Total', { D: 'D20' }],
+  [21, 'Contingency', { B: ['in', 'contingencyPct', 'pct'], D: 'D21' }],
+  ['t', 22, 'Total Construction', { D: 'D22', E: 'E22' }],
+  ['h', 'Consultants'],
+  [24, 'Electrical design', { D: ['in', 'elecDesign', 'money'] }],
+  [25, 'Other', { D: ['in', 'consOther', 'money'] }],
+  [26, 'Engineer', { D: ['in', 'engineer', 'money'] }],
+  [27, 'Surveyor', { C: ['in', 'surveyorPerLot', 'money'], D: 'D27' }],
+  [28, 'Planning', { D: ['in', 'planning', 'money'] }],
+  ['t', 29, 'Total Consultants', { D: 'D29', E: 'E29' }],
+  ['h', 'Fees'],
+  [31, 'Marketing', { D: ['in', 'marketing', 'money'] }],
+  [32, 'Project Mgmt (monthly × months)', { B: ['in', 'pmRate', 'money'], C: ['in', 'pmMonths', 'int'], D: 'D32' }],
+  [33, 'Bond (of civils)', { B: ['in', 'bondPct', 'pct'], D: 'D33' }],
+  [34, 'Accounting and Admin', { D: ['in', 'accounting', 'money'] }],
+  [35, 'Holding', { D: ['in', 'holding', 'money'] }],
+  ['h', 'Fees & Levies'],
+  [37, 'Council CC Approval fee', { D: ['in', 'ccFee', 'money'] }],
+  [38, 's94 Costs (per lot, less existing lots)', { B: ['in', 's94Credit', 'int'], C: ['in', 's94PerLot', 'money'], D: 'D38' }],
+  ['t', 39, 'Total Fees', { D: 'D39' }],
+  ['t', 40, 'Total cost', { D: 'D40', E: 'E40' }],
+  ['t', 41, 'Gross Profit Before Finance', { D: 'D41' }],
+  ['h', 'Finance'],
+  [42, 'Equity', { B: ['in', 'equity', 'money'] }],
+  [43, 'Funds to Complete', { B: 'B43' }],
+  [44, 'Land Debt', { B: 'B44', C: ['in', 'landDebtPct', 'pct'], D: 'D44' }],
+  [45, 'Construction Debt (half drawn on average)', { B: 'B45', C: ['in', 'conDebtPct', 'pct'], D: 'D45' }],
+  [46, 'Establishment Fee', { C: ['in', 'estFeePct', 'pct'], D: 'D46' }],
+  ['t', 47, 'Interest Costs', { D: 'D47' }],
+  ['t', 48, 'Total Costs inc Finance', { D: 'D48', E: 'E48' }],
+  ['t', 50, 'Net Profit Post Finance', { D: 'D50', E: 'E50' }],
+  ['t', 51, 'Margin on Cost (MoC)', { D: 'D51' }],
+];
+const FEASO_PCT_OUT = ['D51'];
+function feasoOut(v, key) { const x = v[key]; if (FEASO_PCT_OUT.includes(key)) return (x * 100).toFixed(2) + '%'; return fmtMoney(x, { whole: true }); }
+function feasoDraft(dl) { ui.feaso = ui.feaso || {}; if (!ui.feaso[dl.id]) { const f = latestFeaso(dl); ui.feaso[dl.id] = { inputs: { ...(f ? f.inputs : feasoDealDefaults(dl)) }, from: f ? f.v : 0 }; } return ui.feaso[dl.id]; }
+function feasoInput(key, kind, val) {
+  const shown = val == null ? '' : val; const step = kind === 'pct' ? '0.1' : kind === 'int' ? '1' : '1000';
+  return `<span class="f-cell"><label class="sr-only" for="fi-${key}">${h(key)}</label><input class="input f-in" id="fi-${key}" type="number" inputmode="decimal" step="${step}" value="${h(shown)}" data-input="feaso" data-k="${key}">${kind === 'pct' ? '<span class="f-unit">%</span>' : ''}</span>`;
+}
+function dealFeasoTab(dl) {
+  const dr = feasoDraft(dl); const i = dr.inputs; const v = feasoCalc(i); const [hint, tone] = feasoHint(v.D51);
+  const cell = (spec, key) => {
+    if (!spec) return '';
+    if (typeof spec === 'string') return `<span data-o="${spec}">${feasoOut(v, spec)}</span>`;
+    if (spec[0] === 'gst') return `<label class="sr-only" for="fi-gstMode">GST on sales</label><select class="input f-in f-sel" id="fi-gstMode" data-input="feaso" data-k="gstMode">${[['margin', 'Margin scheme'], ['full', 'Full GST'], ['none', 'No GST']].map(([k, l]) => `<option value="${k}" ${i.gstMode === k ? 'selected' : ''}>${l}</option>`).join('')}</select>`;
+    return feasoInput(spec[1], spec[2], i[spec[1]]);
+  };
+  const rows = FEASO_LAYOUT.map(r => {
+    if (r[0] === 'h') return `<tr class="f-head"><td colspan="5" class="m-title">${h(r[1])}</td></tr>`;
+    const tot = r[0] === 't'; const [row, label, c] = tot ? r.slice(1) : r;
+    return `<tr class="${tot ? 'f-total' : ''}" data-row="${row}"><td class="m-title">${h(label)}</td><td class="num f-b m-meta">${cell(c.B)}</td><td class="num f-c m-meta">${cell(c.C)}</td><td class="num m-amt">${cell(c.D)}</td><td class="num m-meta f-e">${c.E ? `<span class="m-only muted">Per lot </span>${cell(c.E)}` : ''}</td></tr>`;
+  }).join('');
+  const vers = (dl.feasos || []);
+  return `<div class="section-bar"><div class="summary grow" id="feaso-summary">${feasoSummaryHTML(v)}</div>
+    <div class="btn-group"><button class="btn" data-action="feaso-export" data-id="${dl.id}">Export to Excel</button><button class="btn btn-primary" data-action="feaso-save" data-id="${dl.id}">Save as v${vers.length + 1}</button></div></div>
+  <div class="layout"><div>
+  <section class="card">
+    <div class="card-head"><div class="ch-titles"><h2 class="card-title">FEASIBILITY TEMPLATE</h2><span id="feaso-hint">${badge(hint, tone)}</span></div><div class="ch-actions"><button class="link-btn" data-action="feaso-reset" data-id="${dl.id}">Reset to deal</button></div>
+      <p class="card-sub">Property: ${h(dl.address)} · ${fmtArea(dl.landSize)} · ${dr.from ? 'Editing from version ' + dr.from : 'New, prefilled from the deal'}. Every white box is yours to change.</p></div>
+    <div class="filterbar f-top" style="border-top:1px solid var(--border-secondary)"><span class="select-inline"><label for="fi-lots">Lots</label>${feasoInput('lots', 'int', i.lots).replace('class="input f-in"', 'class="input f-in f-wide"')}</span><span class="select-inline"><label for="fi-price">Price per lot</label>${feasoInput('price', 'money', i.price).replace('class="input f-in"', 'class="input f-in f-wide"')}</span></div>
+    <div class="itable-wrap stack feaso-wrap"><table class="itable feaso-table">
+      <thead><tr><th scope="col">Cost to complete</th><th scope="col" class="num">Rate</th><th scope="col" class="num">Quantity</th><th scope="col" class="num">Overall</th><th scope="col" class="num">Per Lot</th></tr></thead>
+      <tbody>${rows}</tbody></table></div>
+    <div class="card-footer">Per-lot figures follow the lot count. s94 charges every lot less the existing-lot credit (1 in your sheet). Total cost per lot leaves out land, as in your sheet.</div>
+  </section></div><div>
+    <section class="card"><div class="card-head"><h2 class="card-title">Saved versions</h2></div>
+      ${vers.length ? `<div class="rows">${vers.slice().reverse().map(f => { const fv = feasoCalc(f.inputs); return `<div class="row tpl-row"><span class="body"><span class="title">Version ${f.v} · ${(fv.D51 * 100).toFixed(1)}% MoC</span><span class="meta">${fmtDate(f.date)} · ${fmtMoney(fv.D50, { whole: true })} profit${f.note ? ' · ' + h(f.note) : ''}</span></span><span class="end"><button class="btn btn-micro" data-action="feaso-load" data-id="${dl.id}" data-v="${f.v}">Load</button></span></div>`; }).join('')}</div>` : `<div class="card-section" style="padding-top:0"><p class="muted">Nothing saved yet. Save a version and the latest result shows on the deal.</p></div>`}
+    </section>
+    <section class="card"><div class="card-head"><h2 class="card-title">How it flows</h2></div><div class="card-section" style="padding-top:0;color:var(--text-secondary)">The latest saved version shows on the Deals list. When the deal becomes a project, it sets the project budget (land to Acquisition, construction, consultants, council fees and s94, holding and interest, sales costs and project management) and is filed as a document under Feasibility.</div></section>
+  </div></div>`;
+}
+function feasoSummaryHTML(v) { return `<div><div class="k">Net revenue</div><div class="v">${fmtMoney(v.D9, { whole: true })}</div></div><div><div class="k">Total cost</div><div class="v">${fmtMoney(v.D40, { whole: true })}</div></div><div><div class="k">Inc finance</div><div class="v">${fmtMoney(v.D48, { whole: true })}</div></div><div><div class="k">Net profit</div><div class="v ${v.D50 < 0 ? 'crit' : ''}">${fmtMoney(v.D50, { whole: true })}</div></div><div><div class="k">Margin on cost</div><div class="v">${(v.D51 * 100).toFixed(2)}%</div></div>`; }
+// Live update while typing: recompute and refresh the calculated cells only, so focus stays put
+function feasoLiveUpdate(el) {
+  const dl = state.deals.find(x => x.id === route.parts[0]); if (!dl) return; const dr = feasoDraft(dl);
+  const k = el.dataset.k; dr.inputs[k] = k === 'gstMode' ? el.value : (el.value === '' ? '' : +el.value);
+  const v = feasoCalc(dr.inputs);
+  mainEl.querySelectorAll('[data-o]').forEach(o => { o.textContent = feasoOut(v, o.dataset.o); });
+  const sm = $('#feaso-summary'); if (sm) sm.innerHTML = feasoSummaryHTML(v);
+  const hn = $('#feaso-hint'); if (hn) hn.innerHTML = badge(...feasoHint(v.D51));
+}
+/* Offers tab: several offers per deal, each from Dan's letter template and term bank */
+function sortContacts(list) { return list.slice().sort((a, b) => String(a.company).localeCompare(String(b.company)) || String(a.name).localeCompare(String(b.name))); }
+function offerPriceLine(o) { return `$ ${nf0.format(+o.price || 0)} ${o.gstWording || ''}`.trim(); }
+function offerRows(o) {
+  return [['Property Address:', [o.addressLine, o.titleLine].filter(Boolean)], ['Price:', [offerPriceLine(o)]], ['Purchaser:', [o.purchaser]], ['Deposit:', [o.deposit]], ['Due Diligence:', [o.dd]], ['Settlement:', [o.settlement]],
+    ['Conditions:', (o.conditions || []).filter(Boolean).map((c, i) => `${i + 1}.  ${c}`)], ['Purchaser Solicitor:', [o.solicitor]]];
+}
+function letterDate(iso) { const [y, m, dd] = iso.split('-'); return `${dd}/${m}/${y}`; }
+function signoffLines() { return String(state.settings.letterSignoff || 'Dan Wellman\nDirector\nWellco Developments PL').split('\n').filter(Boolean); }
+// The letter, laid out like Dan's Word template
+function letterHTML(dl, o) {
+  return `<div class="letter" id="letter-${o.id}"><img class="letter-logo" src="${LOGO_DATA_URI}" alt="Wellco Developments">
+    <p class="letter-date">${letterDate(o.date)}</p><p class="letter-brand">W E L L C O &nbsp; D E V E L O P M E N T S</p><h3 class="letter-title">Letter of <span>Offer</span></h3>
+    <table class="letter-table"><tbody>${offerRows(o).map(([k, vs]) => `<tr><th scope="row">${h(k)}</th><td>${vs.map(x => `<p>${h(x)}</p>`).join('') || '<p>&nbsp;</p>'}</td></tr>`).join('')}</tbody></table>
+    <div class="letter-sign">${signoffLines().map(x => `<p>${h(x)}</p>`).join('')}</div>
+    <p class="letter-foot">${h(state.settings.letterFooter || '')}</p></div>`;
+}
+function letterText(o) { return [letterDate(o.date), 'WELLCO DEVELOPMENTS', 'Letter of Offer', '', ...offerRows(o).map(([k, vs]) => `${k}\t${vs.join('\n\t')}`), '', ...signoffLines()].join('\n'); }
+function offerFileName(dl, o) { return `${dealSlug(dl)}_Offer${o.n}_${partyKey({ company: 'Wellco Developments' })}_${o.date}.docx`; }
+function dealOffersTab(dl) {
+  const os = (dl.offers || []).slice().reverse();
+  const card = (o) => {
+    const acc = o.status === 'Accepted';
+    return `<article class="card offer" data-id="${o.id}">
+      <div class="card-head"><div class="ch-titles"><h2 class="card-title">Offer ${o.n}</h2>${offerChip(o)}</div>
+        <div class="ch-actions"><span class="select-inline"><label class="sr-only" for="os-${o.id}">Status of offer ${o.n}</label><select class="input input-inline" id="os-${o.id}" data-input="offer-status" data-deal="${dl.id}" data-id="${o.id}">${OFFER_STATUSES.map(st => `<option ${st === o.status ? 'selected' : ''}>${st}</option>`).join('')}</select></span></div>
+        <p class="card-sub">${fmtDate(o.date)}${o.sentAt ? ' · sent ' + fmtDate(o.sentAt) : ''}${o.note ? ' · ' + h(o.note) : ''}</p></div>
+      <div class="card-section" style="padding-top:4px"><dl class="kv kv-offer"><dt>Price</dt><dd>${h(offerPriceLine(o))}</dd><dt>Deposit</dt><dd>${h(o.deposit)}</dd><dt>Due Diligence</dt><dd>${h(o.dd)}</dd><dt>Settlement</dt><dd>${h(o.settlement)}</dd><dt>Conditions</dt><dd>${(o.conditions || []).length ? `<ol class="cond-list">${o.conditions.map(c => `<li>${h(c)}</li>`).join('')}</ol>` : 'None'}</dd><dt>Purchaser Solicitor</dt><dd>${h(o.solicitor)}</dd></dl></div>
+      ${acc ? `<div class="banner in-card" style="background:var(--success-surface)">${icon('check')}<span class="grow">Accepted. Exchange <b>${fmtDate(o.exchangeDate)}</b> · DD expiry <b>${o.ddExpiry ? fmtDate(o.ddExpiry) : 'set on the project'}</b> · settlement <b>${o.settlementDate ? fmtDate(o.settlementDate) : 'set on the project'}</b>. These dates go to the project's tasks.</span></div>` : ''}
+      <div class="card-footer" style="display:flex;flex-wrap:wrap;gap:8px;align-items:center"><button class="btn btn-micro" data-action="offer-preview" data-deal="${dl.id}" data-id="${o.id}">Preview letter</button><button class="btn btn-micro" data-action="offer-docx" data-deal="${dl.id}" data-id="${o.id}">Download .docx</button>${o.status === 'Draft' ? `<button class="btn btn-micro" data-action="offer-edit" data-deal="${dl.id}" data-id="${o.id}">Edit</button><button class="btn btn-micro btn-primary" data-action="offer-send" data-deal="${dl.id}" data-id="${o.id}">Send</button>` : ''}<span class="spacer"></span><button class="link-btn" data-action="offer-new" data-deal="${dl.id}" data-from="${o.id}">New offer from this</button></div>
+    </article>`;
+  };
+  return `<div class="section-bar"><p class="help grow">Each offer is saved with its terms and status. Terms come from your term bank (Settings › Lists) or your own wording.</p><button class="btn btn-primary" data-action="offer-new" data-deal="${dl.id}">New offer</button></div>
+    <div class="stack-cards">${os.length ? os.map(card).join('') : `<div class="card">${emptyState('mail', 'No offers yet', 'Make the first offer from your letter template.', `<button class="btn btn-primary" data-action="offer-new" data-deal="${dl.id}">New offer</button>`)}</div>`}</div>`;
+}
+function termPicker(field, current) {
+  const list = state.termBank[field] || [];
+  return `<label class="sr-only" for="tp-${field}">Pick ${h(TERM_FIELDS[field])} from your term bank</label><select class="input term-pick" id="tp-${field}" data-input="term-pick" data-target="of-${field}"><option value="">Pick from your term bank…</option>${list.map((t, i) => `<option value="${i}" ${t === current ? 'selected' : ''}>${h(t.length > 90 ? t.slice(0, 88) + '…' : t)}</option>`).join('')}</select>`;
+}
+function condRowHTML(text, i) { return `<div class="cond-row" data-cond><span class="cond-n tnum">${i + 1}.</span><label class="sr-only" for="oc-${i}">Condition ${i + 1}</label><textarea class="input" id="oc-${i}" name="cond" rows="2">${h(text)}</textarea><span class="cond-btns"><button type="button" class="btn btn-micro icon-only" data-action="cond-move" data-dir="-1" aria-label="Move condition up" title="Move up">${icon('chevron-up')}</button><button type="button" class="btn btn-micro icon-only" data-action="cond-move" data-dir="1" aria-label="Move condition down" title="Move down">${icon('chevron-down')}</button><button type="button" class="btn btn-micro icon-only" data-action="cond-remove" aria-label="Remove condition" title="Remove">${icon('x')}</button></span></div>`; }
+function renumberConds() { document.querySelectorAll('#of-conds [data-cond]').forEach((r, i) => { r.querySelector('.cond-n').textContent = (i + 1) + '.'; const ta = r.querySelector('textarea'); ta.id = 'oc-' + i; r.querySelector('label').setAttribute('for', 'oc-' + i); r.querySelector('label').textContent = 'Condition ' + (i + 1); }); }
+function offerFormHTML(dl, o) {
+  const wordingOpts = [['gst', 'GST: plus GST'], ['margin', 'Margin scheme'], ['exempt', 'GST exempt'], ['noted', 'Your wording: no taxable supply (s9-5(b))']];
+  const tf = (field) => `<div class="field full"><label for="of-${field}">${h(TERM_FIELDS[field])}</label>${termPicker(field, o[field])}<textarea class="input" id="of-${field}" name="${field}" rows="2">${h(o[field] || '')}</textarea></div>`;
+  return `<form id="f-offer" data-form="offer" data-deal="${dl.id}" data-id="${o.id}" class="form-grid">
+    <div class="field"><label for="of-date">Date</label><input class="input" id="of-date" name="date" type="date" required value="${h(o.date)}"></div>
+    <div class="field"><label for="of-purchaser">Purchaser</label><input class="input" id="of-purchaser" name="purchaser" required value="${h(o.purchaser)}"></div>
+    <div class="field full"><label for="of-addr">Property address</label><input class="input" id="of-addr" name="addressLine" value="${h(o.addressLine)}"><input class="input" id="of-title" name="titleLine" value="${h(o.titleLine)}" aria-label="Lot, DP and folio identifier" placeholder="(Proposed Lot 1 DEPOSITED PLAN … Folio identifier …)" style="margin-top:6px"><span class="hint">Proposed lot, DP and folio identifier on the second line.</span></div>
+    <div class="field"><label for="of-price">Price ($)</label><input class="input" id="of-price" name="price" type="number" min="0" step="1000" required value="${h(o.price)}"></div>
+    <div class="field"><label for="of-gstpre">GST wording</label><select class="input" id="of-gstpre" data-input="gst-wording">${wordingOpts.map(([k, l]) => `<option value="${k}" ${TAX_WORDING[k] === o.gstWording ? 'selected' : ''}>${h(l)}</option>`).join('')}<option value="" ${Object.values(TAX_WORDING).includes(o.gstWording) ? '' : 'selected'}>Custom</option></select></div>
+    <div class="field full"><label for="of-gst" class="sr-only">GST wording text</label><textarea class="input" id="of-gst" name="gstWording" rows="2" aria-label="GST wording">${h(o.gstWording)}</textarea><span class="hint">Preset from the deal's purchase tax type (${h(taxTypeName(dl.taxType))}). Edit freely.</span></div>
+    ${tf('deposit')}${tf('dd')}${tf('settlement')}
+    <fieldset class="field full" style="border:0;padding:0;margin:0;min-width:0"><legend class="label" style="margin-bottom:4px">Conditions</legend>
+      <div class="stack" style="gap:8px" id="of-conds">${(o.conditions || []).map(condRowHTML).join('')}</div>
+      <div class="hstack" style="margin-top:8px;flex-wrap:nowrap"><label class="sr-only" for="of-addcond">Add a condition from your term bank</label><select class="input" id="of-addcond" style="flex:1;min-width:0"><option value="">Add a condition from your term bank…</option>${state.termBank.conditions.map((t, i) => `<option value="${i}">${h(t.length > 90 ? t.slice(0, 88) + '…' : t)}</option>`).join('')}</select><button type="button" class="btn" data-action="cond-add">Add</button></div>
+      <button type="button" class="link-btn" data-action="cond-add-own" style="margin-top:8px;align-self:flex-start">+ Write your own condition</button></fieldset>
+    ${tf('solicitor')}
+  </form>`;
+}
+/* .docx: a small WordprocessingML package built here (no library), styled like Dan's template */
+const CRC_TABLE = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function crc32(buf) { let c = 0xFFFFFFFF; for (let i = 0; i < buf.length; i++) c = CRC_TABLE[(c ^ buf[i]) & 0xFF] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+function zipStore(files) { // files: [{ name, data: Uint8Array }] stored without compression
+  const enc = new TextEncoder(); const parts = []; const central = []; let offset = 0;
+  const u16 = (n) => [n & 255, (n >>> 8) & 255]; const u32 = (n) => [n & 255, (n >>> 8) & 255, (n >>> 16) & 255, (n >>> 24) & 255];
+  files.forEach(f => {
+    const name = enc.encode(f.name); const crc = crc32(f.data); const sz = f.data.length;
+    const local = new Uint8Array([...u32(0x04034b50), ...u16(20), ...u16(0x0800), ...u16(0), ...u16(0), ...u16(0x21), ...u32(crc), ...u32(sz), ...u32(sz), ...u16(name.length), ...u16(0)]);
+    parts.push(local, name, f.data);
+    central.push(new Uint8Array([...u32(0x02014b50), ...u16(20), ...u16(20), ...u16(0x0800), ...u16(0), ...u16(0), ...u16(0x21), ...u32(crc), ...u32(sz), ...u32(sz), ...u16(name.length), ...u16(0), ...u16(0), ...u16(0), ...u16(0), ...u32(0), ...u32(offset)]), name);
+    offset += local.length + name.length + sz;
+  });
+  const cdSize = central.reduce((a, b) => a + b.length, 0);
+  const end = new Uint8Array([...u32(0x06054b50), ...u16(0), ...u16(0), ...u16(files.length), ...u16(files.length), ...u32(cdSize), ...u32(offset), ...u16(0)]);
+  const all = [...parts, ...central, end]; const out = new Uint8Array(all.reduce((a, b) => a + b.length, 0)); let p0 = 0; all.forEach(b => { out.set(b, p0); p0 += b.length; }); return out;
+}
+function xmlEsc(s0) { return String(s0 == null ? '' : s0).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+function offerDocx(dl, o) {
+  const W = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"';
+  const run = (t, rpr = '') => `<w:r>${rpr ? `<w:rPr>${rpr}</w:rPr>` : ''}<w:t xml:space="preserve">${xmlEsc(t)}</w:t></w:r>`;
+  const para = (runs, ppr = '') => `<w:p>${ppr ? `<w:pPr>${ppr}</w:pPr>` : ''}${runs}</w:p>`;
+  const OLIVE = '636B2F';
+  const noB = '<w:top w:val="none" w:sz="0" w:space="0" w:color="FFFFFF"/><w:left w:val="none" w:sz="0" w:space="0" w:color="FFFFFF"/><w:bottom w:val="none" w:sz="0" w:space="0" w:color="FFFFFF"/><w:right w:val="none" w:sz="0" w:space="0" w:color="FFFFFF"/>';
+  const cell = (w, inner, right) => `<w:tc><w:tcPr><w:tcW w:w="${w}" w:type="dxa"/><w:tcBorders>${noB}</w:tcBorders><w:tcMar><w:top w:w="60" w:type="dxa"/><w:bottom w:w="60" w:type="dxa"/>${right ? '<w:right w:w="200" w:type="dxa"/>' : ''}</w:tcMar></w:tcPr>${inner}</w:tc>`;
+  const rows = offerRows(o).map(([k, vs]) => `<w:tr>${cell(2000, para(run(k, '<w:b/><w:bCs/>')), true)}${cell(6640, (vs.length ? vs : ['']).map(x => para(run(x), '<w:spacing w:after="16" w:line="252" w:lineRule="auto"/>')).join(''))}</w:tr>`).join('');
+  const cx = 1714500, cy = 741400;
+  const logo = `<w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${cx}" cy="${cy}"/><wp:docPr id="1" name="Wellco logo"/><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic><pic:nvPicPr><pic:cNvPr id="0" name="logo.png"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="rIdLogo"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>`;
+  const body = logo
+    + para(run(letterDate(o.date), '<w:color w:val="8A8A8A"/>'), '<w:spacing w:before="240" w:after="360"/>')
+    + para(run('W E L L C O   D E V E L O P M E N T S', `<w:b/><w:bCs/><w:color w:val="${OLIVE}"/><w:sz w:val="15"/><w:szCs w:val="15"/>`))
+    + para(run('Letter of ', '<w:b/><w:bCs/><w:sz w:val="40"/><w:szCs w:val="40"/>') + run('Offer', `<w:b/><w:bCs/><w:color w:val="${OLIVE}"/><w:sz w:val="40"/><w:szCs w:val="40"/>`), '<w:spacing w:after="100"/>')
+    + `<w:tbl><w:tblPr><w:tblW w:w="8640" w:type="dxa"/><w:tblBorders>${noB}<w:insideH w:val="none" w:sz="0" w:space="0" w:color="FFFFFF"/><w:insideV w:val="none" w:sz="0" w:space="0" w:color="FFFFFF"/></w:tblBorders><w:tblCellMar><w:left w:w="10" w:type="dxa"/><w:right w:w="10" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblGrid><w:gridCol w:w="2000"/><w:gridCol w:w="6640"/></w:tblGrid>${rows}</w:tbl>`
+    + para('', '<w:spacing w:before="360"/>') + signoffLines().map(x => para(run(x))).join('')
+    + `<w:sectPr><w:footerReference w:type="default" r:id="rIdFoot"/><w:pgSz w:w="11906" w:h="16838"/><w:pgMar w:top="567" w:right="1440" w:bottom="1009" w:left="1440" w:header="709" w:footer="709" w:gutter="0"/></w:sectPr>`;
+  const docXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document ${W}><w:body>${body}</w:body></w:document>`;
+  const styles = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:docDefaults><w:rPrDefault><w:rPr><w:rFonts w:ascii="Calibri" w:eastAsia="Calibri" w:hAnsi="Calibri" w:cs="Calibri"/><w:color w:val="2F3316"/><w:sz w:val="21"/><w:szCs w:val="21"/><w:lang w:val="en-AU"/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:spacing w:after="0" w:line="252" w:lineRule="auto"/></w:pPr></w:pPrDefault></w:docDefaults><w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/></w:style></w:styles>`;
+  const footer = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:ftr ${W}>${para(run(state.settings.letterFooter || '', '<w:color w:val="8A8A8A"/><w:sz w:val="16"/><w:szCs w:val="16"/>'), '<w:jc w:val="center"/>')}</w:ftr>`;
+  const types = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="png" ContentType="image/png"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/><Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/><Override PartName="/word/footer1.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.footer+xml"/><Override PartName="/docProps/core.xml" ContentType="application/vnd.openxmlformats-package.core-properties+xml"/></Types>`;
+  const rels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/></Relationships>`;
+  const docRels = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rIdStyles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/><Relationship Id="rIdLogo" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/logo.png"/><Relationship Id="rIdFoot" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/footer" Target="footer1.xml"/></Relationships>`;
+  const core = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:dcterms="http://purl.org/dc/terms/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"><dc:title>Letter of Offer: ${xmlEsc(dl.address)}</dc:title><dc:creator>${xmlEsc(state.settings.director || 'Dan Wellman')}</dc:creator><dcterms:created xsi:type="dcterms:W3CDTF">${o.date}T09:00:00Z</dcterms:created></cp:coreProperties>`;
+  const enc = new TextEncoder(); const b64 = LOGO_DATA_URI.split(',')[1]; const bin = atob(b64); const png = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) png[i] = bin.charCodeAt(i);
+  return zipStore([{ name: '[Content_Types].xml', data: enc.encode(types) }, { name: '_rels/.rels', data: enc.encode(rels) }, { name: 'docProps/core.xml', data: enc.encode(core) }, { name: 'word/document.xml', data: enc.encode(docXml) }, { name: 'word/styles.xml', data: enc.encode(styles) }, { name: 'word/footer1.xml', data: enc.encode(footer) }, { name: 'word/_rels/document.xml.rels', data: enc.encode(docRels) }, { name: 'word/media/logo.png', data: png }]);
+}
+// Save any file: a real download in the app; in the claude.ai preview via its save prompt, or the fallback when it can't save
+function saveFile(filename, data, mime, fallback) {
+  if (IN_ARTIFACT) { artifactSave(filename, data, fallback); return; }
+  const blob = new Blob([data], { type: mime }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = filename; document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+  toast('Downloaded ' + filename, 'download');
+}
+function showLetter(dl, o, note) {
+  openSheet({ title: `Offer ${o.n}: ${dl.address}`, sub: `${o.status} · ${fmtDate(o.date)}`,
+    body: `${note ? `<p class="help" style="margin-bottom:12px">${h(note)}</p>` : ''}<div class="letter-wrap">${letterHTML(dl, o)}</div><textarea id="letter-text" class="sr-only" aria-hidden="true" tabindex="-1" readonly>${h(letterText(o))}</textarea>`,
+    foot: `<button type="button" class="btn btn-ghost" data-action="close-sheet">Close</button><button type="button" class="btn" data-action="copy-letter">Copy letter</button><button type="button" class="btn btn-primary" data-action="offer-docx" data-deal="${dl.id}" data-id="${o.id}">${icon('download')}Download .docx</button>`, ctx: { deal: dl.id, offer: o.id } });
 }
 
 /* ===== View: Exports ===== */
@@ -2437,6 +2860,7 @@ function viewSettings() {
       ${section('Email signature', 'Added to every RFQ, purchase order and invoice email.', `<div class="field"><label for="s-sig">Signature</label><textarea class="input" id="s-sig" name="signature" rows="4">${h(s.signature)}</textarea></div>`)}
       <div class="form-actions"><button class="btn btn-primary" type="submit">Save</button></div>
     </form>
+    ${sectionRaw('Lists', 'The zonings you pick from when logging a site, your document types, and the term bank your letters of offer draw on. Add, rename or remove as you go.', listsCard())}
     ${sectionRaw('Stage templates', 'New projects start from these stages and default tasks. Rename, add or reorder them here. Projects already set up keep their own stages: change those with Edit stages on the project.', templatesCard())}
     ${sectionRaw('Change history', 'Changes to stage templates, roles, categories, companies and deal documents. Project changes are in each project\'s Log.', changeHistoryCard())}
     ${section('Hosting and backups', 'Demo values. In the live build these show real status.', `<div class="status-list">
@@ -2450,6 +2874,29 @@ function viewSettings() {
   </div>`;
 }
 
+const LIST_KINDS = [['zonings', 'Zonings'], ['docTypes', 'Document types'], ['terms', 'Term bank']];
+function listItems(kind) {
+  if (kind === 'zonings') return state.zonings.map(z => ({ text: z, uses: state.deals.filter(d0 => d0.zoning === z).length + state.projects.filter(p => p.zoning === z).length }));
+  if (kind === 'docTypes') return state.docTypes.map(t => ({ text: t.label, system: !!t.system, uses: docTypeInUse(t.key) ? 1 : 0, key: t.key }));
+  return (state.termBank[kind.slice(3)] || []).map(t => ({ text: t }));
+}
+function listsCard() {
+  const kind0 = LIST_KINDS.some(k => k[0] === ui.listKind) ? ui.listKind : 'zonings';
+  const field = TERM_FIELDS[ui.termField] ? ui.termField : 'deposit';
+  const kind = kind0 === 'terms' ? 'tb:' + field : kind0; const long = kind0 === 'terms';
+  const items = listItems(kind);
+  const rows = items.map((it, i) => {
+    const key = `${kind}|${i}`;
+    if (ui.listEdit === key) return `<form class="row tpl-row list-edit" data-form="list-edit" data-kind="${h(kind)}" data-i="${i}"><span class="body"><label class="sr-only" for="le-${i}">Edit</label>${long ? `<textarea class="input" id="le-${i}" name="text" rows="3" required>${h(it.text)}</textarea>` : `<input class="input" id="le-${i}" name="text" required value="${h(it.text)}">`}</span><span class="end"><button class="btn btn-micro btn-primary" type="submit">Save</button><button class="btn btn-micro" type="button" data-action="set-ui" data-k="listEdit" data-v="">Cancel</button></span></form>`;
+    const why = it.system ? 'Filed by the app' : it.uses ? (kind === 'docTypes' ? 'In use' : plural(it.uses, 'site')) : '';
+    const canRemove = !it.system && !(kind === 'docTypes' && it.uses);
+    return `<div class="row tpl-row" data-i="${i}"><span class="si-n">${i + 1}</span><span class="body"><span class="${long ? '' : 'title'}" style="${long ? 'display:block' : ''}">${h(it.text)}</span>${why ? `<span class="meta">${h(why)}</span>` : ''}</span><span class="end"><button type="button" class="btn btn-micro" data-action="list-edit" data-key="${h(key)}">${kind === 'docTypes' ? 'Rename' : 'Edit'}</button><button type="button" class="btn btn-micro btn-danger" data-action="list-remove" data-kind="${h(kind)}" data-i="${i}" ${canRemove ? '' : 'disabled'} title="${canRemove ? 'Remove' : it.system ? 'The app files these itself' : 'Move its documents first'}">Remove</button></span></div>`;
+  }).join('');
+  return `<div class="card" id="lists"><nav class="ptabs" aria-label="List">${LIST_KINDS.map(([k, l]) => ptab({ label: l, n: k === 'terms' ? Object.values(state.termBank).reduce((a, x) => a + x.length, 0) : listItems(k).length, current: k === kind0, k: 'listKind', v: k })).join('')}</nav>
+    ${long ? `<nav class="ptabs" aria-label="Term bank field" style="padding:6px 8px;border-bottom:1px solid var(--border-secondary)">${Object.entries(TERM_FIELDS).map(([k, l]) => ptab({ label: l, n: (state.termBank[k] || []).length, current: k === field, k: 'termField', v: k })).join('')}</nav>` : ''}
+    <div class="rows">${rows || `<div class="card-section">${emptyState('', 'Nothing here yet', 'Add the first one below.')}</div>`}</div>
+    <form class="card-footer list-add" data-form="list-add" data-kind="${h(kind)}" style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap"><div class="field" style="flex:1 1 240px"><label for="la-new">${kind0 === 'zonings' ? 'Add a zoning' : kind0 === 'docTypes' ? 'Add a document type' : 'Add a ' + h(TERM_FIELDS[field].toLowerCase()) + ' term'}</label>${long ? `<textarea class="input" id="la-new" name="text" rows="2" required placeholder="Your wording"></textarea>` : `<input class="input" id="la-new" name="text" required autocomplete="off" placeholder="${kind0 === 'zonings' ? 'e.g. C4 Environmental Living' : 'e.g. Valuations'}">`}</div><button class="btn" type="submit">Add</button></form></div>`;
+}
 function templatesCard() {
   const type = PROJECT_TYPES.includes(ui.tplType) ? ui.tplType : PROJECT_TYPES[0];
   const st = tplFor(type);
@@ -2556,7 +3003,7 @@ function viewNew() {
     body = `<div class="card"><div class="card-head"><h2 class="card-title">Confirm</h2></div>
       <div class="card-section" style="padding-top:4px"><dl class="kv kv-inline"><dt>Project ID</dt><dd>${h(w.id)}</dd><dt>Site</dt><dd>${h(w.street)}, ${h(w.suburb)} ${h(w.state)}</dd><dt>Lot / plan</dt><dd>Lot ${h(w.lot)} ${h(w.planType)} ${h(w.planNo)}</dd><dt>Type</dt><dd>${h(w.type)}${w.yield ? ' · ' + h(w.yield) : ''}</dd><dt>Owner</dt><dd>${h(ownerName)}</dd>${w.owner === 'new' ? `<dt>ABN</dt><dd>${h(w.abn || 'Applied for')}</dd><dt>GST</dt><dd>${w.gst ? 'Registered' : 'Not registered'}</dd>` : ''}<dt>Starts at</dt><dd>Stage ${w.start}: ${h(w.stages[w.start - 1].name)}</dd></dl></div>
       <div class="card-section"><h3 class="eyebrow">This will create</h3>
-      <div class="create-list">${[`${w.stages.length}-stage checklist with ${nTasks} tasks and due dates`, 'Budget skeleton across 7 cost categories' + (w.price ? ' (land ' + fmtMoney(+w.price) + ')' : ''), `${DOC_TYPES.length} document folders named ${w.id}_DocType_Party_Date`, ...(ddocs.length ? [`${plural(ddocs.length, 'document')} from the deal, filed under stages 1 and 2`] : []), w.owner === 'nominee' ? 'Owner: Dan Wellman and/or nominee until the company is registered' : w.owner === 'new' ? `${w.company} in Our companies, with separate books: bills, invoices, GST and year-end` : `Books under ${ownerName}`, 'An entry in the project log'].map(t => `<div>${icon('check')}<span>${h(t)}</span></div>`).join('')}</div></div>
+      <div class="create-list">${[`${w.stages.length}-stage checklist with ${nTasks} tasks and due dates`, 'Budget skeleton across 7 cost categories' + (w.price ? ' (land ' + fmtMoney(+w.price) + ')' : ''), `${docKeys().length} document folders named ${w.id}_DocType_Party_Date`, ...(ddocs.length ? [`${plural(ddocs.length, 'document')} from the deal, filed under stages 1 and 2`] : []), w.owner === 'nominee' ? 'Owner: Dan Wellman and/or nominee until the company is registered' : w.owner === 'new' ? `${w.company} in Our companies, with separate books: bills, invoices, GST and year-end` : `Books under ${ownerName}`, 'An entry in the project log'].map(t => `<div>${icon('check')}<span>${h(t)}</span></div>`).join('')}</div></div>
       ${foot(`<button class="btn" type="button" data-action="wiz-back">Back</button>`, `<button class="btn btn-primary" type="button" data-action="wiz-create">Create project</button>`)}</div>`;
   }
   return `<div class="page page-narrow">
@@ -2649,9 +3096,8 @@ function openApproval({ title, sub, intro = '', preview, confirmLabel = 'Approve
 }
 
 /* ===== RFQ helpers ===== */
-const SCOPE_ROLES = { 'Civil works': ['Civil contractor', 'Earthworks'], 'Civil & bulk earthworks': ['Civil contractor', 'Earthworks'], 'Bond inspection rectification': ['Civil contractor'], 'Electrical reticulation': ['Electrical'], 'NBN pit & pipe': ['NBN'], 'Works-as-executed survey': ['Surveyor'], 'Surveying': ['Surveyor'], 'Landscaping & street trees': ['Landscaping', 'Civil contractor'], 'Town planning': ['Town planner'], 'Traffic report': ['Traffic engineer'] };
 function rfqCandidates(r) {
-  const roles = SCOPE_ROLES[r.scope] || null;
+  const roles = (state.scopeRoles || SCOPE_ROLES)[r.scope] || null;
   const used = new Set(r.quotes.map(q => q.contactId));
   const rank = (c) => Math.min(...cRoles(c).map(r => { const k = roles.indexOf(r); return k < 0 ? 99 : k; }));
   return state.contacts.filter(c => !used.has(c.id) && (roles ? hasRole(c, roles) : !onlyRoles(c, ['Council', 'Government', 'Bank', 'Vendor', 'Project manager', 'Accountant'])))
@@ -2799,12 +3245,13 @@ function basBook(p, fy, q) {
 function colWidths(rows) { const w = []; rows.forEach(r => r.forEach((v, i) => { const l = String(v == null ? '' : v).length; w[i] = Math.min(60, Math.max(w[i] || 8, l + 2)); })); return w.map(wch => ({ wch })); }
 // Inside the claude.ai preview the page can't download on its own. It hands the file to the viewer's save prompt;
 // if the viewer can't save (a shared link, say), it shows the workbook in a drawer to copy straight into Excel.
-async function artifactSave(filename, data, sheets) {
+async function artifactSave(filename, data, fallback) {
+  const fb = typeof fallback === 'function' ? fallback : () => showWorkbook(filename, fallback);
   let dl = null;
   try { dl = window.claude && typeof window.claude.use === 'function' ? await window.claude.use('downloads') : null; } catch (e) { dl = null; }
-  if (!dl || typeof dl.save !== 'function') { showWorkbook(filename, sheets); return; }
+  if (!dl || typeof dl.save !== 'function') { fb(); return; }
   try { await dl.save({ filename, data }); toast('Saved ' + filename, 'download'); }
-  catch (err) { if (err && err.code === 'declined') return; showWorkbook(filename, sheets); }
+  catch (err) { if (err && err.code === 'declined') return; fb(); }
 }
 let wbView = null;
 function cellText(v) { return v == null ? '' : typeof v === 'number' ? String(Math.round(v * 100) / 100) : String(v); }
@@ -2855,7 +3302,7 @@ function runExport(el) {
       sheets.push({ name: 'Tasks', rows: [['Stage', 'Task', 'Due', 'Done', 'Lead time'], ...p.tasks.slice().sort((a, b) => a.stage - b.stage).map(t => [`${t.stage}. ${stageName(p, t.stage)}`, t.title, t.due, t.done ? 'Yes' : 'No', t.lead || ''])] });
       const fs = fundsSummary(p);
       if (fs.lines.length) sheets.push({ name: 'Funds needed', rows: [['Payment', 'Party', 'Category', 'GST treatment', 'Amount inc GST ($)', 'Status', 'Linked bill'], ...fs.lines.map(x => [x.f.desc, contactLabel(x.f.contactId), x.f.category, GST_TYPES[x.f.gst].label, x.total, x.paid ? 'Paid' : 'To pay', x.bill ? x.bill.number : '']), [], ['Total to pay', '', '', '', fs.total], ['Paid', '', '', '', fs.paid], ['Still to find', '', '', '', fs.toFind]] });
-      sheets.push({ name: 'Documents', rows: [['Stage', 'Folder', 'File name', 'Title', 'Date', 'Size (KB)'], ...p.docs.slice().sort((a, b) => (a.stage - b.stage) || a.date.localeCompare(b.date)).map(d0 => [`${d0.stage}. ${stageName(p, d0.stage)}`, DOC_LABELS[d0.type] || d0.type, docName(p, d0), d0.title, d0.date, d0.size])] });
+      sheets.push({ name: 'Documents', rows: [['Stage', 'Folder', 'File name', 'Title', 'Date', 'Size (KB)'], ...p.docs.slice().sort((a, b) => (a.stage - b.stage) || a.date.localeCompare(b.date)).map(d0 => [`${d0.stage}. ${stageName(p, d0.stage)}`, docLabel(d0.type) || d0.type, docName(p, d0), d0.title, d0.date, d0.size])] });
       sheets.push({ name: 'Log', rows: [['When', 'Who', 'What'], ...p.log.slice().sort((a, b) => a.ts.localeCompare(b.ts)).map(l => [l.ts.replace('T', ' '), l.who, l.text])] });
       name = downloadBook(`${p.id}_ProjectWorkbook_${TODAY}.xlsx`, sheets); label = 'Full project workbook';
     }
@@ -2883,7 +3330,7 @@ function runExport(el) {
     }
     else if (kind === 'projects') { name = downloadBook(`WELLCO_ProjectsRegister_${TODAY}.xlsx`, [{ name: 'Projects', rows: [['Project ID', 'Site', 'Lot / plan', 'Type', 'Yield', 'Owner', 'ABN', 'Stage', 'Stages', 'Status', 'Budget ex GST ($)', 'Committed ($)', 'Paid ($)'], ...state.projects.map(x => { const m = projectMoney(x).tot; return [x.id, x.name, x.lotPlan, x.type, x.yield, co(x).name, co(x).nominee ? '' : co(x).abn, `${x.stage}. ${stageName(x, x.stage)}`, stageCount(x), x.status, m.budget, money$(m.committed), money$(m.paid)]; })] }]); }
     else if (kind === 'companies') { name = downloadBook(`WELLCO_CompaniesRegister_${TODAY}.xlsx`, [{ name: 'Companies', rows: [['Company', 'Short name', 'ABN', 'ACN', 'Registered address', 'GST registered', 'GST from', 'BAS', 'Bank', 'BSB', 'Account', 'Status', 'Formed', 'Closed', 'Projects', 'Notes'], ...state.companies.map(c => [c.name, c.short || '', c.abn, c.acn || '', c.address || '', c.gst ? 'Yes' : 'No', c.gstFrom || '', c.basCycle === 'quarterly' ? 'Quarterly' : 'Not lodging', c.bank || '', c.bsb || '', c.acc || '', c.manager ? 'Project manager' : c.status, c.formed || '', c.closed || '', companyProjects(c).map(p0 => p0.id).join(', '), c.notes || ''])] }]); }
-    else if (kind === 'contacts') { name = downloadBook(`WELLCO_ContactsRegister_${TODAY}.xlsx`, [{ name: 'Contacts', rows: [['Company', 'Contact', 'Roles', 'Categories', 'ABN', 'Email', 'Phone', 'Licence expiry', 'Insurance expiry', 'Projects', 'Notes'], ...state.contacts.map(c => [c.company, c.name, roleText(c), contactCategories(c).join(', '), c.abn, c.email, c.phone, c.licenceExpiry || '', c.insuranceExpiry || '', contactProjects(c.id).map(x => x.id).join(', '), c.notes])] }]); }
+    else if (kind === 'contacts') { name = downloadBook(`WELLCO_ContactsRegister_${TODAY}.xlsx`, [{ name: 'Contacts', rows: [['Company', 'Contact', 'Roles', 'Categories', 'ABN', 'Email', 'Mobile', 'Phone', 'Licence expiry', 'Insurance expiry', 'Projects', 'Notes'], ...sortContacts(state.contacts).map(c => [c.company, c.name, roleText(c), contactCategories(c).join(', '), c.abn, c.email, c.mobile || '', c.phone, c.licenceExpiry || '', c.insuranceExpiry || '', contactProjects(c.id).map(x => x.id).join(', '), c.notes])] }]); }
   } catch (err) { console.warn(err); toast('Export failed. Try again.', 'warning'); return; }
   if (label) { [...new Set(logTo)].forEach(x => addLog(x, `${label} exported for the accountant`, 'doc')); save(); }
   if (!IN_ARTIFACT) toast('Downloaded ' + name, 'download');
@@ -3064,11 +3511,11 @@ const ACTIONS = {
 
   /* Documents */
   'upload': (el) => {
-    const p = P(el); const folder = DOC_TYPES.includes(ui.docFolder) ? ui.docFolder : 'Report'; const sf = docStageFilter(p); const stg = sf === 'all' ? p.stage : sf;
+    const p = P(el); const folder = docKeys().includes(ui.docFolder) ? ui.docFolder : 'Report'; const sf = docStageFilter(p); const stg = sf === 'all' ? p.stage : sf;
     const parties = state.contacts.slice().sort((a, b) => a.company.localeCompare(b.company));
     openSheet({ title: 'Upload documents', sub: `${h(p.id)} · named and filed automatically`,
       body: `<form id="f-upload" data-form="upload" data-p="${p.id}" class="stack" style="gap:16px">
-        <div class="form-grid"><div class="field"><label for="u-type">Document type</label><select class="input" id="u-type" name="type" data-input="upload-preview">${DOC_TYPES.map(k => `<option value="${k}" ${k === folder ? 'selected' : ''}>${DOC_LABELS[k]}</option>`).join('')}</select></div>
+        <div class="form-grid"><div class="field"><label for="u-type">Document type</label><select class="input" id="u-type" name="type" data-input="upload-preview">${docKeys().map(k => `<option value="${k}" ${k === folder ? 'selected' : ''}>${docLabel(k)}</option>`).join('')}</select></div>
         <div class="field"><label for="u-stage">Stage</label><select class="input" id="u-stage" name="stage">${stagesOf(p).map((s0, i) => `<option value="${i + 1}" ${i + 1 === stg ? 'selected' : ''}>${i + 1}. ${h(s0.name)}</option>`).join('')}</select></div>
         <div class="field full"><label for="u-party">Party</label><select class="input" id="u-party" name="party" data-input="upload-preview">${parties.map(c => `<option value="${c.id}">${h(c.company)}</option>`).join('')}</select></div></div>
         <div class="field"><label for="u-title">Title</label><input class="input" id="u-title" name="title" placeholder="e.g. Updated stormwater plan"><span class="hint">Leave blank to use the file name.</span></div>
@@ -3116,7 +3563,7 @@ const ACTIONS = {
     state.projects.forEach(p => { const paid = sum(p.invoicesIn.filter(i => i.contactId === c.id && i.status === 'paid'), invTotal); if (paid) hist.push([p, 'Paid to date by ' + co(p).name, paid, null]); });
     openSheet({ title: c.company, sub: `${h(c.name)} · ${h(roleText(c))}`,
       body: `<div class="stack" style="gap:20px">
-        <dl class="kv" style="margin:0"><dt>Roles</dt><dd>${h(roleText(c))}</dd><dt>Shown under</dt><dd>${h(contactCategories(c).join(', '))}</dd><dt>ABN</dt><dd>${h(c.abn || '–')}</dd><dt>Email</dt><dd style="user-select:all">${h(c.email || '–')}</dd><dt>Phone</dt><dd style="user-select:all">${h(c.phone || '–')}</dd>
+        <dl class="kv" style="margin:0"><dt>Roles</dt><dd>${h(roleText(c))}</dd><dt>Shown under</dt><dd>${h(contactCategories(c).join(', '))}</dd><dt>ABN</dt><dd>${h(c.abn || '–')}</dd><dt>Email</dt><dd style="user-select:all">${h(c.email || '–')}</dd><dt>Mobile</dt><dd style="user-select:all">${h(c.mobile || '–')}</dd><dt>Phone</dt><dd style="user-select:all">${h(c.phone || '–')}</dd>
           <dt>Licence expiry</dt><dd>${c.licenceExpiry ? fmtDate(c.licenceExpiry) : '–'}</dd><dt>Insurance expiry</dt><dd>${c.insuranceExpiry ? fmtDate(c.insuranceExpiry) : '–'}</dd><dt>Rating</dt><dd><span class="stars" aria-label="${c.rating} out of 5">${'★'.repeat(c.rating)}${'☆'.repeat(5 - c.rating)}</span></dd></dl>
         ${ex ? `<div class="banner banner-${ex.lvl === 2 ? 'critical' : 'warning'}" style="margin:0">${icon('warning')}<span>${ex.k} ${ex.lvl === 2 ? 'expired' : 'expires'} ${fmtDate(ex.dt)}. Ask for a current certificate before the next engagement.</span></div>` : ''}
         ${c.notes ? `<div><div class="eyebrow">Notes</div><p>${h(c.notes)}</p></div>` : ''}
@@ -3138,7 +3585,7 @@ const ACTIONS = {
   'role-add-inline': () => addRoleInline(),
   'manage-cats': () => {
     const draft = { cats: state.categories.map(n => ({ name: n, orig: n })), roles: [] };
-    allRoles().forEach((r, k) => { const i = state.categories.indexOf(roleCategory(r)); if (i >= 0) draft.roles.push({ name: r, key: k, cat: i }); });
+    allRoles().forEach((r, k) => { const i = state.categories.indexOf(roleCategory(r)); if (i >= 0) draft.roles.push({ name: r, orig: r, key: k, cat: i }); });
     openSheet({ title: 'Manage categories', sub: 'Categories group roles on the Contacts page', body: catDraftHTML(draft),
       foot: `<button type="button" class="btn btn-ghost" data-action="close-sheet">Cancel</button><button type="submit" form="f-cats" class="btn btn-primary">Save categories</button>`, ctx: { catDraft: draft } });
   },
@@ -3254,7 +3701,7 @@ const FORMS = {
   'save-contact': (f, fd) => {
     const roles = fd.getAll('roles'); if (!roles.length) { toast('Tick at least one role', 'info'); return; }
     const implied = new Set(roles.map(roleCategory)); const extra = fd.getAll('cats').filter(x => !implied.has(x));
-    const vals = { name: fd.get('name').trim(), company: fd.get('company').trim(), roles, categories: extra, abn: fd.get('abn').trim(), email: fd.get('email').trim(), phone: fd.get('phone').trim(), licenceExpiry: fd.get('licenceExpiry') || null, insuranceExpiry: fd.get('insuranceExpiry') || null, notes: fd.get('notes').trim() };
+    const vals = { name: fd.get('name').trim(), company: fd.get('company').trim(), roles, categories: extra, abn: fd.get('abn').trim(), email: fd.get('email').trim(), phone: fd.get('phone').trim(), mobile: (fd.get('mobile') || '').trim(), licenceExpiry: fd.get('licenceExpiry') || null, insuranceExpiry: fd.get('insuranceExpiry') || null, notes: fd.get('notes').trim() };
     let c = f.dataset.id ? contactById(f.dataset.id) : null;
     if (c) { Object.assign(c, vals); addGlobalLog(`Contact updated: ${c.company} (${roleText(c)}; shown under ${contactCategories(c).join(', ')})`, 'note'); }
     else { c = { id: newId('c'), rating: 4, ...vals }; state.contacts.push(c); addGlobalLog(`Contact added: ${c.company} (${roleText(c)})`, 'note'); }
@@ -3267,7 +3714,7 @@ const FORMS = {
     const c = fd.get('party') ? contactById(fd.get('party')) : null; const note = (fd.get('note') || '').trim();
     const added = files.map(file => ({ id: newId('dd'), type: fd.get('type'), party: c ? partyKey(c) : 'Agent', date: TODAY, title: file.name.replace(/\.[^.]+$/, ''), ext: fileExt(file.name), size: Math.max(1, Math.round(file.size / 1024)), note }));
     dl.docs = (dl.docs || []).concat(added);
-    addGlobalLog(`Deal ${dl.address}: ${added.length === 1 ? 'document added, ' + dealDocName(dl, added[0]) : plural(added.length, 'document') + ' added (' + DEAL_DOC_TYPES[added[0].type] + ')'}`, 'doc');
+    addGlobalLog(`Deal ${dl.address}: ${added.length === 1 ? 'document added, ' + dealDocName(dl, added[0]) : plural(added.length, 'document') + ' added (' + docLabel(added[0).type] + ')'}`, 'doc');
     commit(); sheetCtx.files = [];
     $('#sheet .sheet-body').innerHTML = dealDocsHTML(dl); $('#sheet .sheet-sub').textContent = `${dl.address} · ${plural(dl.docs.length, 'file')}`; updateDealDocPreview();
     toast(`${plural(added.length, 'file')} added to the deal`, 'upload');
@@ -3357,7 +3804,7 @@ function createProjectFromWizard() {
   if (newCo) { state.companies.push(newCo); addGlobalLog(`Company added: ${newCo.name} (ABN ${newCo.abn}) for ${p.id}`, 'company'); }
   if (companyId) { const reg = p.tasks.find(isRegisterTask); if (reg) { reg.done = true; reg.doneAt = TODAY; } const c = companyById(companyId); if (c.status !== 'Active') { addGlobalLog(`Company ${c.name} now Active (was ${c.status})`, 'company'); c.status = 'Active'; } addLog(p, `${c.name} is the project company, 100% held by ${state.settings.trust}. Approved by Dan`, 'company'); }
   else addLog(p, 'Owner: Dan Wellman and/or nominee until the project company is registered', 'company');
-  addLog(p, `${p.type} checklist (${p.stages.length} stages, ${p.tasks.length} tasks), budget skeleton and ${DOC_TYPES.length} document folders created`, 'note');
+  addLog(p, `${p.type} checklist (${p.stages.length} stages, ${p.tasks.length} tasks), budget skeleton and ${docKeys().length} document folders created`, 'note');
   state.projects.push(p); wiz.done = true; save();
   toast(`${p.id} created`); go(`#/project/${p.id}/stage/${p.stage}`);
 }
@@ -3470,10 +3917,22 @@ function addRoleInline() {
   const box = $(`#c-roles input[value="${CSS.escape(role)}"]`); if (box) { box.scrollIntoView({ block: 'nearest' }); box.focus(); }
   toast(existing ? `${role} ticked` : `Role added: ${name} under ${cat}`);
 }
+function roleUses(name) { return state.contacts.filter(x => cRoles(x).includes(name)).length; }
+function roleRowHTML(draft, r, opts) {
+  const n = roleUses(r.orig);
+  if (r.deleting) {
+    const others = draft.roles.filter(x => x !== r && !x.deleted && !x.deleting).map(x => x.name).sort();
+    return `<div class="role-row role-del" data-role-key="${r.key}"><span class="body"><span class="strong">Delete ${h(r.orig)}?</span><span class="small muted" style="display:block">${n ? `${plural(n, 'contact has', 'contacts have')} this role. Move ${n === 1 ? 'it' : 'them'} to:` : 'No contacts use it.'}</span>${n ? `<label class="sr-only" for="rmv-${r.key}">Move contacts to</label><select class="input" id="rmv-${r.key}" data-move-for="${r.key}" style="margin-top:6px;max-width:100%">${others.map(x => `<option ${x === r.moveTo ? 'selected' : ''}>${h(x)}</option>`).join('')}</select>` : ''}</span><span class="btn-group" style="flex-wrap:nowrap"><button type="button" class="btn btn-micro btn-critical" data-action="role-del-confirm" data-key="${r.key}">Delete</button><button type="button" class="btn btn-micro" data-action="role-del-cancel" data-key="${r.key}">Keep</button></span></div>`;
+  }
+  if (r.deleted) return `<div class="role-row" data-role-key="${r.key}"><span class="body"><s>${h(r.orig)}</s><span class="small muted" style="display:block">Deleted on Save${r.moveTo ? '. Contacts move to ' + h(r.moveTo) : ''}</span></span><button type="button" class="link-btn" data-action="role-del-undo" data-key="${r.key}">Undo</button></div>`;
+  return `<div class="role-row" data-role-key="${r.key}"><span class="body"><label class="sr-only" for="rn-${r.key}">Role name</label><input class="input role-name" id="rn-${r.key}" name="rolename" data-key="${r.key}" value="${h(r.name)}" required><span class="small muted" style="display:block;margin-top:2px">${plural(n, 'contact')}${r.name !== r.orig ? ' · was ' + h(r.orig) : ''}</span></span><label class="sr-only" for="rm-${r.key}">Category for ${h(r.name)}</label><select class="input" id="rm-${r.key}" data-role="${h(r.orig)}" data-input="role-move">${opts(r.cat)}</select><button type="button" class="btn btn-micro icon-only" data-action="role-del" data-key="${r.key}" aria-label="Delete role ${h(r.name)}" title="Delete role">${icon('x')}</button></div>`;
+}
 function syncCatDraft() {
   const d0 = sheetCtx && sheetCtx.catDraft; if (!d0) return;
+  document.querySelectorAll('#f-cats [name=rolename]').forEach(el => { const r = d0.roles.find(x => String(x.key) === el.dataset.key); if (r) r.name = el.value; });
+  document.querySelectorAll('#f-cats [data-move-for]').forEach(el => { const r = d0.roles.find(x => String(x.key) === el.dataset.moveFor); if (r) r.moveTo = el.value; });
   document.querySelectorAll('#f-cats [name=catname]').forEach(el => { const c = d0.cats[+el.dataset.i]; if (c) c.name = el.value; });
-  document.querySelectorAll('#f-cats select[data-role]').forEach(el => { const r = d0.roles.find(x => x.name === el.dataset.role); if (r) r.cat = +el.value; });
+  document.querySelectorAll('#f-cats select[data-role]').forEach(el => { const r = d0.roles.find(x => x.orig === el.dataset.role); if (r) r.cat = +el.value; });
 }
 function redrawCatDraft() { $('#sheet .sheet-body').innerHTML = catDraftHTML(sheetCtx.catDraft); }
 function saveCatDraft() {
@@ -3483,7 +3942,24 @@ function saveCatDraft() {
   const changes = []; const rename = {};
   d0.cats.forEach((c, i) => { if (!c.orig) changes.push(`added ${names[i]}`); else if (c.orig !== names[i]) { rename[c.orig] = names[i]; changes.push(`renamed ${c.orig} to ${names[i]}`); } });
   state.categories.forEach(o => { if (!d0.cats.some(c => c.orig === o)) changes.push(`removed ${o}`); });
-  d0.roles.forEach(r => { const before = roleCategory(r.name); const after = names[r.cat]; if ((rename[before] || before) !== after) changes.push(`moved ${r.name} to ${after}`); state.roles[r.name] = after; });
+  const rn = d0.roles.filter(r => !r.deleted).map(r => r.name.trim());
+  if (rn.some(x => !x)) { toast('Give every role a name', 'info'); return; }
+  if (new Set(rn.map(x => x.toLowerCase())).size !== rn.length) { toast('Two roles have the same name', 'info'); return; }
+  const newRoles = {};
+  Object.keys(state.roles).forEach(r => { if (!d0.roles.some(x => x.orig === r)) newRoles[r] = state.roles[r]; }); // roles outside the listed categories stay as they are
+  d0.roles.forEach(r => {
+    const nm = r.name.trim();
+    if (r.deleted) {
+      changes.push(`deleted role ${r.orig}${r.moveTo ? ` (contacts moved to ${r.moveTo})` : ''}`);
+      state.contacts.forEach(c => { const rs = cRoles(c); if (!rs.includes(r.orig)) return; c.roles = rs.filter(x => x !== r.orig); const target = r.moveTo ? (d0.roles.find(x => x.orig === r.moveTo) || {}).name || r.moveTo : null; if (target && !c.roles.includes(target.trim())) c.roles.push(target.trim()); });
+      return;
+    }
+    const before = roleCategory(r.orig); const after = names[r.cat];
+    if ((rename[before] || before) !== after) changes.push(`moved ${nm} to ${after}`);
+    if (nm !== r.orig) { changes.push(`renamed role ${r.orig} to ${nm} (${plural(roleUses(r.orig), 'contact')} updated)`); state.contacts.forEach(c => { c.roles = cRoles(c).map(x => x === r.orig ? nm : x); }); Object.values(state.scopeRoles || {}).forEach(list => { const k = list.indexOf(r.orig); if (k >= 0) list[k] = nm; }); }
+    newRoles[nm] = after;
+  });
+  state.roles = newRoles;
   state.contacts.forEach(c => { c.categories = (c.categories || []).map(x => rename[x] || x).filter(x => names.includes(x)); });
   if (rename[ui.contactRole]) ui.contactRole = rename[ui.contactRole];
   state.categories = names;
