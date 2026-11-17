@@ -109,7 +109,6 @@ for i, sg in enumerate(segs):
     clips.append(f'<video id="v{i}" class="clip" src="assets/source.mp4" muted playsinline data-start="{T(sg["out_in"])}" '
                  f'data-duration="{T(sg["out_out"] - sg["out_in"])}" data-media-start="{T(sg["src_in"])}" data-track-index="0"></video>')
     js.append(f'tl.set("#cam", {{ scale: {1.0 if i % 2 == 0 else 1.075} }}, {T(sg["out_in"])});')
-js.append(f'tl.set("#cam", {{ scale: 1.075 }}, {T(word_t("i", 0))});')              # beats inside the longer takes
 js.append(f'tl.set("#cam", {{ scale: 1.0 }}, {T(word_t("and", 1))});')
 js.append(f'tl.set("#cam", {{ scale: 1.075 }}, {T(word_t("invoicing,", 2) if False else word_t("quoting", 2))});')
 js.append(f'tl.set("#cam", {{ scale: 1.0 }}, {T(word_t("how", 5))});')
@@ -147,9 +146,9 @@ def ts(text, seg, nth=0):
 
 # opening banner over the band where the Videoleap logo was removed (source 0.25-3.2 s)
 WM_END = to_out(3.2) + 0.1
-over.append(f'<div class="wanted" id="wanted"><i>{ICON["spark"]}</i>TRADIE AI WORKSHOP</div>')
-js.append(f'tl.fromTo("#wanted", {{ opacity: 0, scale: 0.9 }}, {{ opacity: 1, scale: 1, duration: 0.12, ease: "power2.out" }}, 0.001);')
-js.append(f'tl.to("#wanted", {{ opacity: 0, y: 40, duration: 0.2, ease: "power2.in" }}, {T(WM_END)});')
+# open punched in so the logo band (source rows 1454-1538) sits below the frame: row 1455 lands at y 1920
+js.append('tl.set("#cam", { scale: 1.35, y: 243 }, 0);')
+js.append(f'tl.set("#cam", {{ scale: 1.075, y: 0 }}, {T(WM_END)});')
 
 # ------------------------------------------------------------------ 1. 28 October, Claude AI workshop (seg 0)
 s0 = segs[0]
@@ -229,7 +228,7 @@ SFX = [B1_IN, B2_IN]
 cb = []
 for gi, g in enumerate(CAP):
     spans = "".join(f'<span class="cw{" key" if wi in g["keys"] else ""}" id="cw{gi}-{wi}">{esc(w["text"])}</span>' for wi, w in enumerate(g["words"]))
-    early = " early" if g["start"] < WM_END + 0.2 else ""
+    early = ""
     cb.append(f'<div class="cg{early}" id="cg{gi}">{spans}</div>')
     js.append(f'tl.set("#cg{gi}", {{ opacity: 1 }}, {T(g["start"])});')
     for wi, w in enumerate(g["words"]):
