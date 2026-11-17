@@ -14,7 +14,7 @@ BEFORE SENDING
 
 PRICING RATIONALE
 - Build fee range: AU$5,500 to 8,500. Recommend AU$6,500.
-  - About 17 build days after the 16 Nov changes (see README phase table). AU$6.5k is ~AU$380/day, fair for a Lovable +
+  - About 20.5 build days after the 16 and 17 Nov changes (see README phase table). AU$6.5k is ~AU$320/day, so quote Quick Feaso + Make Offer (~2.5 days) as an extra, fair for a Lovable +
     Supabase build where you reuse the demo and schema already done.
   - Go to 7,500 to 8,500 if Dan wants real Gmail sending + Calendar sync + email-in inbox in v1,
     or if data load from his old spreadsheets is messy (several live companies).
@@ -62,7 +62,7 @@ Prepared by Joe Ingram, LeadHive · hello@leadhivenz.com · November 2026
 **Have a click around the demo first: https://claude.ai/artifact/PLBSD85NfHUDxkKS8Z3tiB**
 It works on your phone, iPad and laptop. Nothing you do in it gets sent anywhere.
 
-*Updated after our setup call on 16 November with the changes you asked for: the new Certification & Registration stage, stages and contact roles you can change yourself, a cost category on every bill line, documents on deals, and a register of your companies.*
+*Updated after our setup call on 16 November with the changes you asked for: the new Certification & Registration stage, stages and contact roles you can change yourself, a cost category on every bill line, documents on deals, and a register of your companies. Updated again after your email of 17 November: Quick Feaso and Make Offer on every deal, more detail when you log a site, and task dates you can change on the task itself.*
 
 ---
 
@@ -92,8 +92,15 @@ The stages and checklists are yours to change. Rename a stage, add one, or add a
 - Home screen with "Needs you today" first: approvals waiting, overdue tasks, quotes to chase, bills due, lead-time warnings.
 - One card per live project: stage, next deadline, budget vs committed vs paid.
 - Checklist for every stage with due dates and lead-time warnings (e.g. "apply for the Endeavour Energy connection now, 3-month lead time").
-- New project in 3 steps: site and lot/plan, project type (land subdivision, commercial / industrial or residential build), confirm. It sets up the stages, checklist, budget and folders for you.
-- Deal log for sites from agents and listings, with the feaso result. Drop the agent's contract, plans and sales evidence straight onto the deal. A "go" site becomes a project in one tap and its documents come with it.
+- Change any due date on the task itself. Dates can also follow each other: due diligence 60 days after exchange, settlement 120 days after that, the electricity application the day the DA lands. Move the exchange date, or type a new DD date when the solicitor runs two weeks late, and the dates that follow move with it.
+- New project in 3 steps: site (street, suburb, state, postcode and lot / DP), project type (land subdivision, commercial / industrial or residential build), confirm. It sets up the stages, checklist, budget and folders for you.
+
+**Deals**
+- Log a site with the address, lot / DP, zoning (from your own list in Settings), original land size, minimum lot size, number of lots (or factory units / units) and how the purchase is taxed (GST, margin scheme or GST exempt). All of it stays editable.
+- Drop the agent's contract, plans and sales evidence straight onto the deal.
+- **Quick Feaso:** your back-of-envelope spreadsheet, built in. Lots and land price fill in from the deal; change any figure and see net revenue, total cost, finance, net profit and margin on cost straight away, with the per-lot column. Save as many versions as you like. The fixed 30 lots in your sheet now follow the lot count, with a credit for the existing lot on the s94 line.
+- **Make Offer:** builds your letter of offer in your layout, with drop-downs from your term bank (deposit, due diligence, settlement, conditions, solicitor) or your own wording. Make several offers on a deal, each saved with its terms and where it's at (sent, countered, accepted and so on).
+- A "go" site becomes a project in one tap: address, lot / DP, zoning, sizes, lot count, notes, documents, the latest Quick Feaso and the accepted offer all come with it.
 - Certification & Registration stage covers the certifier, surveyor, town planner, NBN, the bank, council's final sign-off and subdivision certificate, and plan registration.
 - **Funds needed before sign-off:** list the contributions, bonds and fees that must be paid before council or the certifier will sign. You see the total, what's paid and what's still to find, and it shows on your home screen as the job gets close.
 
@@ -119,12 +126,13 @@ The stages and checklists are yours to change. Rename a stage, add one, or add a
 
 **Documents**
 - Upload any file from your phone, iPad or laptop: PDFs, Excel, Word, photos.
-- Filed under the project by stage and by type (contract, plans, sales evidence, planning / zoning, report, quote, engagement, bill, survey, company, correspondence and more), or on a deal before it becomes a project.
+- Filed under the project by stage and by type (contract, plans, sales evidence, planning / zoning, report, quote, engagement, bill, survey, company, correspondence and more), or on a deal before it becomes a project. Add to or rename the types in Settings.
 - Named automatically: `CROOBYAR_Quote_SouthcoastCivil_2026-10-14`.
 
 **Contacts**
 - One shared list, reusable on every project, grouped into Consultants, Civil contractors, Building contractors, Agents & advisers, Council & government, and Banks & vendors.
-- Add your own roles and groups as you go, choose which group a role sits in, and put a contact in more than one group.
+- Listed A to Z, with phone and mobile.
+- Add your own roles and groups as you go, rename or delete them, choose which group a role sits in, and put a contact in more than one group.
 - ABN, licence and insurance expiry (warns you 60 days out), which projects they've worked on, your notes on them.
 
 **Exports**

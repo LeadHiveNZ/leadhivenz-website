@@ -10,6 +10,8 @@ BAS per company, documents, Excel for the accountant. Single user. Wellco itself
 
 **16 Nov 2026 setup call:** Dan is happy with the layout; the schema has been updated for his
 changes. See [Changes from 16 Nov call](#changes-from-16-nov-call) below.
+**17 Nov 2026 feedback on draft 2:** Quick Feaso, Make Offer, fuller "Log a site", task dates that
+follow each other. Schema v3. See [Changes from 17 Nov](#changes-from-17-nov) below.
 
 ## What's in this folder
 
@@ -19,7 +21,9 @@ clients/wellco/
   screens/               screenshots of the demo for the proposal / email
   proposal.md            client proposal to Dan (Joe-only notes in the HTML comment at the top)
   changes-2026-11-16.md  what Dan asked for on the 16 Nov setup call (the source for v2)
-  supabase-schema.sql    production database + file storage for the real app (paste into Supabase), v2
+  changes-2026-11-17.md  Dan's feedback on draft 2 (the source for v3)
+  reference/             Dan's own files: Quick Feso Subdivision.xlsx, Letter of Offer template .docx
+  supabase-schema.sql    production database + file storage for the real app (paste into Supabase), v3
   supabase-tests.sql     local Postgres test script for the schema (never run on Dan's project)
   README.md              this file
 ```
@@ -85,10 +89,10 @@ Dan owns the data and the PDFs and pays Supabase directly. Joe is invited as a t
 **A3. Run the schema**
 1. Left menu > **SQL Editor** > New query.
 2. Paste all of `supabase-schema.sql` > **Run**. Expect "Success. No rows returned".
-3. Check: Table Editor shows 27 tables (projects, project_stages, companies, contacts, tasks,
-   invoice_in_lines...). Storage shows the `project-documents` bucket (private).
-4. The stage templates, contact categories / roles, project types, document types and the Wellco
-   company row are created per user **when Dan's login is created (A5)**, so they are empty until then.
+3. Check: Table Editor shows 31 tables (projects, project_stages, companies, contacts, tasks,
+   invoice_in_lines, deal_feasos, deal_offers...). Storage shows the `project-documents` bucket (private).
+4. The stage templates, contact categories / roles, project types, document types, zonings, the offer
+   term bank and the Wellco company row are created per user **when Dan's login is created (A5)**, so they are empty until then.
 
 **A4. File storage**
 - The schema creates the private bucket `project-documents` and its access rules. Nothing to click.
@@ -146,8 +150,9 @@ This repo's client sites already go through Lovable. Use it to turn the demo int
 4. Tell Lovable: "The database schema already exists. Use the existing tables, views and functions
    (v_project_summary, v_project_stages, v_needs_attention, v_bas_summary, v_bas_company_quarters,
    v_bas_by_project, v_budget_vs_actual, v_funds_needed, v_project_issuer, v_rfq_status,
-   v_engagement_progress, v_contacts, v_contacts_by_category, v_documents; create_project_from_template,
-   add_project_stage, add_template_stage, convert_deal_to_project, close_company). Bills are a header in
+   v_engagement_progress, v_contacts, v_contacts_by_category, v_documents, v_deals, v_deal_feasos,
+   v_offer_letters; create_project_from_template, add_project_stage, add_template_stage,
+   convert_deal_to_project, close_company, delete_contact_role). Bills are a header in
    invoices_in plus rows in invoice_in_lines. Do not create or change tables unless I ask."
    Use plan mode for each section (Projects, Quotes, Money...) before letting it write code.
 5. Publish > connect a domain like `app.wellco.au` (needs a paid Lovable plan; Dan adds one DNS record).
@@ -192,8 +197,9 @@ Rough effort for one builder using Lovable + the schema in this folder.
 | # | Chunk | What's in it | Est. |
 |---|---|---|---|
 | 2.1 | Foundation | Dan's Supabase (A1-A6), schema, login, home-screen install, Wellco settings | 0.5 day |
-| 2.2 | Projects & stages | Home "Needs you today", project cards, stage stepper from `project_stages`, checklists, lead-time warnings, new project wizard by type (land / commercial / residential). Settings: edit stage templates and template tasks; on a project, rename / insert stages and tasks | 2.5 days |
-| 2.3 | Contacts, deals & companies | Contacts by category with editable categories and roles (a contact in several), expiry warnings. Deals with documents dropped straight on the deal; "Create project" moves them across. Companies register (owner per project, assign when registered, close after bonds) | 2 days |
+| 2.2 | Projects & stages | Home "Needs you today", project cards, stage stepper from `project_stages`, checklists, lead-time warnings, new project wizard by type (land / commercial / residential) with street / suburb / state / postcode. Settings: edit stage templates and template tasks; on a project, rename / insert stages and tasks. Task due dates editable on the task, or set to follow another task or a project date (exchange, DD expiry, unconditional, DA approval, settlement) | 3 days |
+| 2.3 | Contacts, deals & companies | Contacts A to Z by category with editable categories and roles (rename, delete with "move contacts to"), phone and mobile, expiry warnings. Log a site with split address, zoning (Settings list), land and minimum lot size, yield, purchase tax type; documents dropped straight on the deal; "Create project" carries it all across. Companies register (owner per project, assign when registered, close after bonds) | 2.5 days |
+| 2.3b | Quick Feaso & Make Offer | Quick Feaso on a deal (his spreadsheet, prefilled from the deal, saved as versions). Make Offer: offers per deal from his term bank, status, one accepted; letter generated as PDF / Word in his layout and filed on the deal | 2.5 days |
 | 2.4 | Quotes & engagements | RFQ templates, side-by-side compare, min-3 check, appoint with reason, POs/engagement letters as PDF in the project company's name | 2.5 days |
 | 2.5 | Approvals & email | Approval drawer, real sending from Dan's Gmail (Make.com Gmail module, or Gmail API with an internal Workspace OAuth app), action log | 1.5 days |
 | 2.6 | Money & GST | Bills and sales invoices with lines (GST treatment AND cost category per line), budget vs actual by line, BAS per company per quarter with the "nothing to lodge" list, funds needed before sign-off, FY roll-over, intercompany/distribution flags | 3.5 days |
@@ -201,7 +207,7 @@ Rough effort for one builder using Lovable + the schema in this folder.
 | 2.8 | Exports | One BAS workbook per company per quarter, year-end workbook per company per FY, full project workbook (.xlsx) | 1.5 days |
 | 2.9 | Backups | Make.com nightly PDFs + weekly workbooks to OneDrive | 0.5 day |
 | 2.10 | Data load & handover | Load Dan's live projects from his spreadsheets, test on his phone/iPad/laptop, handover Zoom | 1.5 days |
-| | **Total** | **v1 live in ~3 to 4 weeks of calendar time** | **~17 days** |
+| | **Total** | **v1 live in ~4 weeks of calendar time** | **~20.5 days** |
 | 3 | Tweaks | 30 days of Dan using it for real; fixes and small changes included | as needed |
 
 **Later (quote separately if Dan asks):** forward-an-email/PDF-to-the-app inbox that drafts the invoice or
@@ -210,8 +216,9 @@ Xero link for Wellco's management fee invoices.
 
 ## 5. Open items to confirm with Dan
 
-- "Log a site" fields on Deals: the recording cut off before Dan answered (suggested list in
-  `changes-2026-11-16.md`). The `deals` table only needs columns adding once he confirms.
+- Quick Feaso: his sheet charges finance as one year's interest (land debt at 8%, half the construction
+  debt at 8%) whatever the project length. Kept as is; ask if he wants a months input.
+- Letter of offer: generate as PDF, Word, or both? (Word lets him tweak before sending.)
 - Per company: GST registration date and BAS cycle (quarterly or not lodging yet), so the quarter-end
   list shows the right "lodge / nil BAS / nothing to lodge".
 - Management fee basis (fixed / % of costs / one invoice at the end). Field exists in Settings.
@@ -243,3 +250,32 @@ App notes for the build:
   and the line is created for you. Split bills: header first, then one `invoice_in_lines` row per line.
 - Issued documents (RFQs, engagement letters, POs, sales invoices) take the name, ABN and bank from
   `v_project_issuer`, which reads "Dan Wellman and/or nominee" until a company is assigned.
+
+## Changes from 17 Nov
+
+Source: `changes-2026-11-17.md` (Dan's email on draft 2) and his two files in `reference/`. Schema is now
+**v3** (replaces v2 outright; still nothing loaded on Dan's Supabase). `supabase-tests.sql`: two fresh
+Postgres 16 databases, 139 checks, all passing, including his Quick Feaso example to the cent.
+
+| # | Dan asked for | Where it lives now |
+|---|---|---|
+| 1 | Quick Feaso button on a deal | `deal_feasos` (inputs, one row per saved version; lots, land price and sales GST method fill from the deal; every other default is his sheet's figure) + `v_deal_feasos` (his formulas, rounded at the end). His example (30 lots x $300,000, land $800,000, equity $800,000): net revenue $7,939,545.45, total cost $5,699,500.00, inc finance $5,970,772.50, net profit $1,968,772.95, MoC 0.3297 |
+| 2 | Make Offer tab, several offers per deal | `deal_offers` (status draft / sent / countered / accepted / declined / withdrawn, one accepted per deal, conditions as an ordered list, `document_id` for the generated letter); `offer_terms` seeded with the 41 options from his Word term bank, word for word; `v_offer_letters` lays out page 1 of his template |
+| 3 | Log a site captures more and carries into the project | `deals`: street / suburb / state / postcode (+ `address` for display), lot / DP, `zoning_id` (`zonings`, his list), land area, min lot size, yield + unit (lots / factory units / units), purchase tax type. `convert_deal_to_project` copies all of it plus notes, documents, the latest feaso (`projects.feaso_id`, headline budget) and the accepted offer (`projects.accepted_offer_id`, purchase price, exchange date) |
+| 4 | Edit original info after creation | Plain columns on deals and projects; a converted deal can't be deleted (it's the project's history) |
+| 5 | Mobile as well as phone | `contacts.mobile` |
+| 6 | Rename and delete roles | Rename = update the name (links are by id). Delete: refused while in use, or `delete_contact_role(role, move_to_role)` moves the contacts first |
+| 7 | Contacts A to Z | `v_contacts.sort_name` (company, else name, any case) |
+| 8 | Postcode on the new project form | `projects.street / suburb / state / postcode`; same split on the company's registered address |
+| 9 | Task due dates editable; real dates move | `tasks.due_on` editable. Optional rule: follow another task (its due date or the day it's ticked off) or a project date (`exchange_on`, `dd_expiry_on`, `unconditional_on`, `da_approval_on`, `settlement_on`) by N days. Changes ripple down the chain; a date Dan types sticks (`manual_override`); loops refused. Template tasks carry default rules (DD 60 days after exchange, settlement 120 days after DD, electricity application on DA approval) |
+| 10 | Document types editable | `document_types`: add, rename (file-name code follows), delete if unused |
+
+App notes for the build:
+- Quick Feaso: save a new version per change (don't edit old ones); show `v_deal_feasos` where `is_latest`.
+  His per-lot "Total cost" excludes the land; it is `cost_to_complete_per_lot`.
+- Fixes to his sheet: the fixed 30 lots (legal quantity, two per-lot cells) and 29 for s94 now follow the
+  lot count, with `existing_lot_credit` (default 1) for lots already on title.
+- Make Offer: the term drop-downs read `offer_terms` by field; Dan can type his own wording too.
+  Generate the letter from `v_offer_letters`, file it as a document on the deal, set `deal_offers.document_id`.
+- Task dates: set the project's milestone dates (exchange etc.) and the following tasks fill themselves.
+  Show a small "follows ..." note and a "reset to rule" action (clears `manual_override`).

@@ -1,5 +1,5 @@
 -- =============================================================================
---  WELLCO PROJECT BRAIN  -  schema tests (v2, 16 Nov 2026)
+--  WELLCO PROJECT BRAIN  -  schema tests (v3, 17 Nov 2026)
 --  LOCAL POSTGRES ONLY.  Never run this on Dan's live Supabase project: it
 --  creates test users and fake projects.
 -- =============================================================================
@@ -20,7 +20,15 @@
 --       nominee"), a newly registered company is assigned (logged, issued
 --       documents switch to it), BAS by company for two companies in the same
 --       quarter, a dormant company shows "nothing to lodge", a company closes.
---    8. A second user sees zero of Dan's rows, in tables, views and storage.
+--    8. Dan's 17 Nov feedback: zonings / document types he edits; Log a site
+--       with split address, zoning, land and lot sizes, yield, purchase tax
+--       type; Quick Feaso reproducing his spreadsheet to the cent (and a
+--       second version at 28 lots); Make Offer from his term bank (several
+--       offers, one accepted, letter layout); Create project carrying all of
+--       it across; task dates that follow exchange / DA / another task, with
+--       Dan's typed dates sticking and changes rippling down the chain, loops
+--       refused; mobile numbers, role rename / delete, alphabetical contacts.
+--    9. A second user sees zero of Dan's rows, in tables, views and storage.
 --
 --  HOW TO RUN (Postgres 16; psql as the postgres superuser):
 --    createdb wellco_test
@@ -396,8 +404,8 @@ select wellco_test.expect_error('5. a role in use cannot be deleted',
 -- -----------------------------------------------------------------------------
 -- 6. Deal documents and deal -> project.
 -- -----------------------------------------------------------------------------
-insert into public.deals (address, state, lot_plan, project_type, source, feaso_result)
-values ('88 Bells Rd, Jimboomba', 'QLD', 'Lot 2 SP 301887', 'land_subdivision', 'Ray White Logan', 'go')
+insert into public.deals (street, suburb, state, postcode, lot_plan, project_type, source, feaso_result)
+values ('88 Bells Rd', 'Jimboomba', 'QLD', '4280', 'Lot 2 SP 301887', 'land_subdivision', 'Ray White Logan', 'go')
 returning id as deal_id \gset
 insert into public.documents (deal_id, doc_type, party, original_name, doc_date) values
   (:'deal_id', 'contract',       'Ray White Logan', 'Contract of sale.pdf', '2026-11-16'),
@@ -465,10 +473,11 @@ select wellco_test.ok('7. before assignment, BAS shows the unassigned line',
   = 'Dan Wellman and/or nominee (no company assigned)');
 
 -- Dan decides to proceed: the company is registered (about a day) and assigned
-insert into public.companies (legal_name, short_name, abn, acn, registered_address, gst_registered,
+insert into public.companies (legal_name, short_name, abn, acn, registered_street, registered_suburb,
+                              registered_state, registered_postcode, gst_registered,
                               gst_registered_from, bas_cycle, bank_name, bank_bsb, bank_account,
                               trust_name, status, formed_on)
-values ('Croobyar Road Pty Ltd', 'Croobyar', '12 345 678 901', '345 678 901', '1 Main St, Milton NSW 2538', true,
+values ('Croobyar Road Pty Ltd', 'Croobyar', '12 345 678 901', '345 678 901', '1 Main St', 'Milton', 'NSW', '2538', true,
         '2026-10-01', 'quarterly', 'CBA', '062-000', '1234', 'Wellman Family Trust', 'active', '2026-10-01')
 returning id as co_croobyar \gset
 insert into public.companies (legal_name, short_name, abn, gst_registered, gst_registered_from, bas_cycle, status, formed_on)
@@ -487,9 +496,9 @@ select wellco_test.ok('7. assignment logged in plain English',
   exists (select 1 from public.activity_log where project_id = 'CROOBYAR' and action = 'project.company_assigned'
            and summary = 'Owner assigned: Dan Wellman and/or nominee -> Croobyar Road Pty Ltd. Transactions now sit with Croobyar Road Pty Ltd.'));
 select wellco_test.ok('7. issued documents now read the company (name, ABN, bank)',
-  (select issuer_name || ' | ' || abn || ' | ' || bank_bsb || ' ' || bank_account || ' | ' || is_interim
+  (select issuer_name || ' | ' || abn || ' | ' || registered_address || ' | ' || bank_bsb || ' ' || bank_account || ' | ' || is_interim
      from public.v_project_issuer where project_id = 'CROOBYAR')
-  = 'Croobyar Road Pty Ltd | 12 345 678 901 | 062-000 1234 | false');
+  = 'Croobyar Road Pty Ltd | 12 345 678 901 | 1 Main St, Milton NSW 2538 | 062-000 1234 | false');
 select wellco_test.expect_error('7. Wellco (project manager) cannot own a project',
   $$update public.projects set owner_company_id = (select id from public.companies where is_project_manager)
      where project_id = 'BELLS-RD'$$);
@@ -549,7 +558,286 @@ select wellco_test.expect_error('7. a closed company cannot take on a project',
 
 
 -- =============================================================================
--- 8. A second login sees none of Dan's data.
+-- 8. Dan's feedback on draft 2 (17 Nov): Log a site fields, Quick Feaso,
+--    Make Offer, everything flowing into the project, contacts, task dates
+--    that follow each other, editable lists.
+-- =============================================================================
+
+-- 8a. Lists Dan maintains in Settings ---------------------------------------
+select wellco_test.ok('8a. seed: zonings for NSW (14) and QLD (9)',
+  (select count(*) filter (where state = 'NSW') = 14 and count(*) filter (where state = 'QLD') = 9 from public.zonings));
+select wellco_test.ok('8a. seed: offer term bank from his Word template (deposit 6, DD 8, settlement 9, conditions 17, solicitor 1)',
+  (select string_agg(field || '=' || n, ' ' order by field)
+     from (select field::text, count(*) n from public.offer_terms group by 1) x)
+  = 'condition=17 deposit=6 due_diligence=8 settlement=9 solicitor=1',
+  (select string_agg(field || '=' || n, ' ' order by field)
+     from (select field::text, count(*) n from public.offer_terms group by 1) x));
+select wellco_test.ok('8a. term bank wording is his, word for word',
+  (select wording from public.offer_terms where field = 'deposit' and sort_order = 1)
+    = '$50,000 paid on contract exchange – refundable prior to satisfaction of DD. Balance to 5% upon satisfaction of DD.'
+  and (select wording from public.offer_terms where field = 'due_diligence' and sort_order = 6)
+    = '60 days from Contract exchange date, with one 30-day extension at the purchaser’s election.'
+  and (select wording from public.offer_terms where field = 'condition' and sort_order = 3)
+    = 'Vendor to provide signed “owners consent to lodge DA” as part of contract exchange documentation.');
+
+insert into public.zonings (state, code, name, sort_order) values ('NSW', 'RU6', 'Transition', 15);
+update public.zonings set name = 'Transition zone' where code = 'RU6';
+select wellco_test.ok('8a. zoning: Dan can add and rename one',
+  exists (select 1 from public.zonings where code = 'RU6' and name = 'Transition zone'));
+delete from public.zonings where code = 'RU6';
+select wellco_test.ok('8a. zoning: an unused one can be deleted',
+  not exists (select 1 from public.zonings where code = 'RU6'));
+
+insert into public.document_types (code, name, sort_order) values ('valuation', 'Valuation', 13);
+update public.document_types set name = 'Bank valuation' where code = 'valuation';
+select wellco_test.ok('8a. document type: added and renamed; the file-name code follows the name',
+  (select file_code from public.document_types where code = 'valuation') = 'BankValuation');
+delete from public.document_types where code = 'valuation';
+select wellco_test.ok('8a. document type: an unused one can be deleted',
+  not exists (select 1 from public.document_types where code = 'valuation'));
+select wellco_test.expect_error('8a. document type: one in use cannot be deleted',
+  $$delete from public.document_types where code = 'contract'$$);
+
+-- 8b. Log a site with the new fields --------------------------------------------
+insert into public.deals (street, suburb, state, postcode, lot_plan, project_type, zoning_id, land_area_m2,
+                          min_lot_size_m2, yield_count, yield_unit, purchase_tax_type, asking_price,
+                          source, feaso_result, notes)
+select '21 Tynan Road', 'Tabletop', 'NSW', '2640', 'Lot 1 DP 1017395', 'land_subdivision', z.id, 120000,
+       2000, 30, 'lots', 'gst_exempt', 800000, 'Off-market', 'go', 'Water main through the middle of the site'
+from public.zonings z where z.code = 'R5'
+returning id as tt_deal \gset
+
+select wellco_test.ok('8b. deal address is split and shows as one line',
+  (select address from public.deals where id = :'tt_deal') = '21 Tynan Road, Tabletop NSW 2640');
+select wellco_test.expect_error('8b. postcode must be 4 digits',
+  format($$update public.deals set postcode = '26401' where id = %L$$, :'tt_deal'));
+select wellco_test.expect_error('8b. a zoning in use cannot be deleted',
+  $$delete from public.zonings where code = 'R5'$$);
+select wellco_test.ok('8b. deals list shows the zoning label',
+  (select zoning_label from public.v_deals where id = :'tt_deal') = 'R5 Large Lot Residential');
+-- original information stays editable on the deal
+update public.deals set street = '21 Tynan Rd', notes = notes || '. Check easement width.' where id = :'tt_deal';
+select wellco_test.ok('8b. deal address and notes can be edited after logging',
+  (select address from public.deals where id = :'tt_deal') = '21 Tynan Rd, Tabletop NSW 2640');
+
+-- 8c. Quick Feaso: his example, to the cent ----------------------------------
+-- Only equity is given: lots (30) and land price ($800,000) come from the deal,
+-- every other input is his sheet's figure, and a GST-exempt purchase means
+-- margin scheme GST on the sales.
+insert into public.deal_feasos (deal_id, equity, label) values (:'tt_deal', 800000, 'His example');
+
+select wellco_test.ok('8c. feaso inputs filled from the deal (30 lots, $800,000 land, margin scheme)',
+  (select lots = 30 and land_price = 800000 and sales_gst_method = 'margin_scheme' and version = 1
+     from public.deal_feasos where deal_id = :'tt_deal'));
+select wellco_test.ok('8c. net revenue 7,939,545.45',
+  (select net_revenue from public.v_deal_feasos where deal_id = :'tt_deal' and version = 1) = 7939545.45,
+  (select net_revenue::text from public.v_deal_feasos where deal_id = :'tt_deal' and version = 1));
+select wellco_test.ok('8c. revenue lines: 9,000,000.00 less agency 225,000.00, legal 90,000.00, margin GST 745,454.55',
+  (select revenue = 9000000 and agency = 225000 and legal = 90000 and gst_on_sales = 745454.55
+     from public.v_deal_feasos where deal_id = :'tt_deal' and version = 1));
+select wellco_test.ok('8c. cost blocks: acquisition 845,000; construction 3,874,500; consultants 220,000; fees 760,000 (s94 on 29 lots)',
+  (select acquisition = 845000 and total_construction = 3874500 and total_consultants = 220000
+          and total_fees = 760000 and s94_lots = 29 and s94 = 580000
+     from public.v_deal_feasos where deal_id = :'tt_deal' and version = 1));
+select wellco_test.ok('8c. total cost 5,699,500.00',
+  (select total_cost from public.v_deal_feasos where deal_id = :'tt_deal' and version = 1) = 5699500.00);
+select wellco_test.ok('8c. finance: land 3,600; construction 194,180; establishment 73,492.50; total 271,272.50',
+  (select land_interest = 3600 and construction_interest = 194180 and establishment_fee = 73492.50
+          and finance_costs = 271272.50
+     from public.v_deal_feasos where deal_id = :'tt_deal' and version = 1));
+select wellco_test.ok('8c. total cost inc finance 5,970,772.50',
+  (select total_cost_inc_finance from public.v_deal_feasos where deal_id = :'tt_deal' and version = 1) = 5970772.50);
+select wellco_test.ok('8c. net profit 1,968,772.95',
+  (select net_profit from public.v_deal_feasos where deal_id = :'tt_deal' and version = 1) = 1968772.95,
+  (select net_profit::text from public.v_deal_feasos where deal_id = :'tt_deal' and version = 1));
+select wellco_test.ok('8c. margin on cost 0.3297',
+  (select margin_on_cost from public.v_deal_feasos where deal_id = :'tt_deal' and version = 1) = 0.3297);
+select wellco_test.ok('8c. per-lot column matches his sheet (264,651.52 / 28,166.67 / 129,150.00 / 7,333.33 / 161,816.67 / 199,025.75 / 65,625.77)',
+  (select net_revenue_per_lot = 264651.52 and acquisition_per_lot = 28166.67 and construction_per_lot = 129150.00
+          and consultants_per_lot = 7333.33 and cost_to_complete_per_lot = 161816.67
+          and total_cost_inc_finance_per_lot = 199025.75 and net_profit_per_lot = 65625.77
+     from public.v_deal_feasos where deal_id = :'tt_deal' and version = 1));
+
+-- a second version at 28 lots: his fixed 30s and 29 now follow the lot count
+insert into public.deal_feasos (deal_id, equity, lots, label) values (:'tt_deal', 800000, 28, 'At 28 lots');
+select wellco_test.ok('8c. version 2 at 28 lots: legal 84,000, s94 on 27 lots, per-lot on 28; v1 unchanged',
+  (select version = 2 and is_latest and legal = 84000 and s94_lots = 27 and s94 = 540000
+          and net_revenue_per_lot = round((9000000 / 30.0 * 28 - 0.025 * 8400000 - 84000 - (8400000 - 800000) / 11.0) / 28, 2)
+     from public.v_deal_feasos where deal_id = :'tt_deal' and version = 2)
+  and (select not is_latest and net_profit = 1968772.95 from public.v_deal_feasos where deal_id = :'tt_deal' and version = 1));
+
+-- land bought WITH GST: the sales default to full GST (revenue / 11), not margin scheme
+insert into public.deals (street, suburb, postcode, yield_count, asking_price, purchase_tax_type)
+values ('5 Test St', 'Milton', '2538', 30, 800000, 'gst')
+returning id as gst_deal \gset
+insert into public.deal_feasos (deal_id) values (:'gst_deal');
+select wellco_test.ok('8c. purchase with GST: full GST on sales, 9,000,000 / 11 = 818,181.82',
+  (select sales_gst_method = 'full_gst' and gst_on_sales = 818181.82 from public.v_deal_feasos where deal_id = :'gst_deal'));
+select wellco_test.expect_error('8c. a feaso needs at least one lot',
+  format($$insert into public.deal_feasos (deal_id, lots) values (%L, 0)$$, :'gst_deal'));
+
+-- 8d. Make Offer -----------------------------------------------------------------
+insert into public.deal_offers (deal_id, price, gst_wording, deposit, due_diligence, settlement, conditions, solicitor, status, sent_on)
+select :'tt_deal', 2000000,
+       '+ GST (Contract noted no taxable supply -not made in the course or furtherance of an enterprise that the vendor carries on (section 9-5(b))',
+       (select wording from public.offer_terms where field = 'deposit' and sort_order = 1),
+       (select wording from public.offer_terms where field = 'due_diligence' and sort_order = 1),
+       (select wording from public.offer_terms where field = 'settlement' and sort_order = 1),
+       array[(select wording from public.offer_terms where field = 'condition' and sort_order = 1),
+             (select wording from public.offer_terms where field = 'condition' and sort_order = 2),
+             (select wording from public.offer_terms where field = 'condition' and sort_order = 5)],
+       (select wording from public.offer_terms where field = 'solicitor' and sort_order = 1),
+       'sent', '2026-11-17'
+returning id as offer1 \gset
+
+select wellco_test.ok('8d. offer 1: numbered per deal, property line from the deal, default purchaser',
+  (select offer_no = 1 and property_text = E'21 Tynan Rd, Tabletop NSW 2640\n(Lot 1 DP 1017395)'
+          and purchaser = 'Daniel Wellman or Nominee (TBC)'
+     from public.deal_offers where id = :'offer1'),
+  (select property_text from public.deal_offers where id = :'offer1'));
+select wellco_test.ok('8d. letter layout: price line with GST wording, conditions numbered in order, signed by Dan',
+  (select price_line = '$ 2,000,000 + GST (Contract noted no taxable supply -not made in the course or furtherance of an enterprise that the vendor carries on (section 9-5(b))'
+          and conditions_numbered = E'1. Settlement is subject to receipt of satisfactory DA approval.\n2. Purchaser to have 7 days to review and advise of satisfaction of DA.\n3. Access to site for purchaser’s consultants post exchange'
+          and signatory_name || ', ' || signatory_title || ', ' || signatory_company = 'Dan Wellman, Director, Wellco Developments PL'
+          and letter_date = '2026-11-17'
+     from public.v_offer_letters where offer_id = :'offer1'));
+
+-- the vendor counters; Dan makes a second offer and it's accepted with an exchange date
+update public.deal_offers set status = 'countered' where id = :'offer1';
+insert into public.deal_offers (deal_id, price, gst_wording, deposit, due_diligence, settlement, status, accepted_on, exchange_on)
+values (:'tt_deal', 1950000, '+ GST', '10% deposit on contract exchange – deposit bond acceptable to the vendor.',
+        '60 days from contract exchange date.', '120 days from Contract Unconditional date', 'accepted', '2026-11-20', '2026-12-01')
+returning id as offer2 \gset
+select wellco_test.ok('8d. several offers per deal: offer 2 accepted, offer 1 countered',
+  (select string_agg(offer_no || ':' || status, ', ' order by offer_no) from public.deal_offers where deal_id = :'tt_deal')
+  = '1:countered, 2:accepted');
+select wellco_test.expect_error('8d. only one accepted offer per deal',
+  format($$update public.deal_offers set status = 'accepted', accepted_on = '2026-11-21' where id = %L$$, :'offer1'));
+select wellco_test.expect_error('8d. an exchange date needs an accepted offer',
+  format($$update public.deal_offers set exchange_on = '2026-12-01' where id = %L$$, :'offer1'));
+select wellco_test.ok('8d. deals list shows offers, accepted price and latest feaso',
+  (select offers = 2 and accepted_price = 1950000 and feaso_version = 2 from public.v_deals where id = :'tt_deal'));
+
+-- 8e. Create project: everything flows across ------------------------------
+select public.convert_deal_to_project(:'tt_deal', 'TABLETOP') \g /dev/null
+
+select wellco_test.ok('8e. project has the deal''s street / suburb / state / postcode / lot-DP and name',
+  (select name || ' | ' || address || ' | ' || lot_plan from public.projects where project_id = 'TABLETOP')
+  = '21 Tynan Rd, Tabletop | 21 Tynan Rd, Tabletop NSW 2640 | Lot 1 DP 1017395',
+  (select name || ' | ' || address || ' | ' || lot_plan from public.projects where project_id = 'TABLETOP'));
+select wellco_test.ok('8e. site details copied: zoning, land 120,000 m2, min lot 2,000 m2, 30 lots, GST exempt, notes',
+  (select z.code = 'R5' and p.land_area_m2 = 120000 and p.min_lot_size_m2 = 2000 and p.yield_count = 30
+          and p.yield_unit = 'lots' and p.purchase_tax_type = 'gst_exempt'
+          and p.notes = 'Water main through the middle of the site. Check easement width.'
+     from public.projects p join public.zonings z on z.id = p.zoning_id where p.project_id = 'TABLETOP'));
+select wellco_test.ok('8e. latest feaso (v2) linked; its total cost inc finance is the headline budget',
+  (select p.feaso_id = vf.feaso_id and vf.version = 2 and p.budget = vf.total_cost_inc_finance
+     from public.projects p join public.v_deal_feasos vf on vf.feaso_id = p.feaso_id where p.project_id = 'TABLETOP'));
+select wellco_test.ok('8e. accepted offer linked: purchase price 1,950,000 and exchange 1 Dec 2026',
+  (select accepted_offer_id = :'offer2' and purchase_price = 1950000 and exchange_on = '2026-12-01'
+     from public.projects where project_id = 'TABLETOP'));
+select wellco_test.ok('8e. log line mentions the feaso and the offer',
+  exists (select 1 from public.activity_log where project_id = 'TABLETOP' and action = 'deal.converted'
+           and summary like '%Quick Feaso v2 attached; accepted offer 2 attached'));
+update public.projects set street = '21 Tynan Road', notes = notes || ' Easement 6m.' where project_id = 'TABLETOP';
+select wellco_test.ok('8e. original information editable on the project too',
+  (select address from public.projects where project_id = 'TABLETOP') = '21 Tynan Road, Tabletop NSW 2640');
+select wellco_test.expect_error('8e. a deal that became a project cannot be deleted',
+  format($$delete from public.deals where id = %L$$, :'tt_deal'));
+
+-- 8f. Task dates that follow each other (Dan's DD -> settlement chain) -----------
+\set dd_title 'Due diligence: title, contamination, services, flooding, bushfire'
+select wellco_test.ok('8f. template carries default rules: DD 60 days after exchange; settlement 120 days after DD',
+  (select tt.anchor_milestone = 'exchange' and tt.offset_days = 60
+     from public.stage_template_tasks tt join public.stage_templates st on st.id = tt.stage_template_id
+    where st.project_type = 'land_subdivision' and tt.title = :'dd_title')
+  and (select dep.title = :'dd_title' and tt.offset_days = 120
+     from public.stage_template_tasks tt
+     join public.stage_templates st on st.id = tt.stage_template_id
+     join public.stage_template_tasks dep on dep.id = tt.depends_on_template_task_id
+    where st.project_type = 'land_subdivision' and tt.title = 'Settlement'));
+select wellco_test.ok('8f. on the project, exchange 1 Dec 2026 set DD due 30 Jan 2027 and settlement 30 May 2027',
+  (select string_agg(title || '=' || due_on, ' | ' order by sort_order) from public.tasks
+    where project_id = 'TABLETOP' and title in (:'dd_title', 'Settlement'))
+  = :'dd_title' || '=2027-01-30 | Settlement=2027-05-30',
+  (select string_agg(title || '=' || coalesce(due_on::text, 'null'), ' | ' order by sort_order) from public.tasks
+    where project_id = 'TABLETOP' and title in (:'dd_title', 'Settlement')));
+
+-- Dan changes the DD date on the task itself (the solicitor ran two weeks late)
+update public.tasks set due_on = '2027-02-15' where project_id = 'TABLETOP' and title = :'dd_title';
+select wellco_test.ok('8f. typed DD date sticks (manual override) and settlement ripples to 15 Jun 2027',
+  (select manual_override and due_on = '2027-02-15' from public.tasks where project_id = 'TABLETOP' and title = :'dd_title')
+  and (select due_on from public.tasks where project_id = 'TABLETOP' and title = 'Settlement') = '2027-06-15');
+update public.projects set exchange_on = '2026-12-15' where project_id = 'TABLETOP';
+select wellco_test.ok('8f. moving exchange leaves the overridden DD (and so settlement) alone',
+  (select due_on from public.tasks where project_id = 'TABLETOP' and title = :'dd_title') = '2027-02-15'
+  and (select due_on from public.tasks where project_id = 'TABLETOP' and title = 'Settlement') = '2027-06-15');
+update public.tasks set manual_override = false where project_id = 'TABLETOP' and title = :'dd_title';
+select wellco_test.ok('8f. clearing the override: DD follows exchange again (13 Feb 2027) and settlement ripples (13 Jun 2027)',
+  (select due_on from public.tasks where project_id = 'TABLETOP' and title = :'dd_title') = '2027-02-13'
+  and (select due_on from public.tasks where project_id = 'TABLETOP' and title = 'Settlement') = '2027-06-13');
+update public.projects set da_approval_on = '2027-03-01' where project_id = 'TABLETOP';
+select wellco_test.ok('8f. DA approval date drives the electricity application (same day) and DA conditions review (+7)',
+  (select string_agg(title || '=' || due_on, ' | ' order by title) from public.tasks
+    where project_id = 'TABLETOP' and anchor_milestone = 'da_approval')
+  = 'Apply for electricity connection=2027-03-01 | Review DA conditions and add tasks for them=2027-03-08');
+
+-- a task that follows the DATE ANOTHER TASK WAS TICKED OFF
+insert into public.tasks (project_id, stage_id, title, depends_on_task_id, anchor_on, offset_days)
+select 'TABLETOP', t.stage_id, 'Send unconditional notice to vendor''s solicitor', t.id, 'done', 2
+from public.tasks t where t.project_id = 'TABLETOP' and t.title = :'dd_title';
+select wellco_test.ok('8f. "after it''s ticked off" task has no date until DD is done',
+  (select due_on is null from public.tasks where project_id = 'TABLETOP' and title like 'Send unconditional notice%'));
+update public.tasks set done = true where project_id = 'TABLETOP' and title = :'dd_title';
+select wellco_test.ok('8f. ticking DD off dates it: done date + 2 days',
+  (select due_on = public.today_syd() + 2 from public.tasks where project_id = 'TABLETOP' and title like 'Send unconditional notice%'));
+
+select wellco_test.expect_error('8f. a loop is refused (DD cannot follow settlement, which follows DD)',
+  $$update public.tasks set anchor_milestone = null,
+        depends_on_task_id = (select id from public.tasks where project_id = 'TABLETOP' and title = 'Settlement')
+     where project_id = 'TABLETOP' and title = 'Due diligence: title, contamination, services, flooding, bushfire'$$);
+select wellco_test.expect_error('8f. a task follows a task OR a milestone, not both',
+  $$update public.tasks set anchor_milestone = 'exchange' where project_id = 'TABLETOP' and title = 'Settlement'$$);
+select wellco_test.expect_error('8f. a task cannot follow a task on another project',
+  $$update public.tasks set depends_on_task_id = (select id from public.tasks where project_id = 'CROOBYAR' limit 1)
+     where project_id = 'TABLETOP' and title = 'Settlement'$$);
+update public.tasks set due_on = '2027-01-10' where project_id = 'TABLETOP' and title = 'Engage solicitor';
+select wellco_test.ok('8f. a plain task''s due date is simply editable',
+  (select due_on = '2027-01-10' and not manual_override from public.tasks where project_id = 'TABLETOP' and title = 'Engage solicitor'));
+
+-- 8g. Contacts: mobile, roles renamed and deleted, alphabetical -------------------
+insert into public.contact_roles (category_id, name, sort_order)
+select id, 'Plasterer', 3 from public.contact_categories where name = 'Building contractors';
+insert into public.contacts (name, company, phone, mobile) values ('Kev Doyle', 'Doyle Plastering', '02 4455 1234', '0412 345 678')
+returning id as plasterer_id \gset
+insert into public.contact_role_links (contact_id, role_id)
+select :'plasterer_id', id from public.contact_roles where name = 'Plasterer';
+select wellco_test.ok('8g. phone and mobile are separate',
+  (select phone = '02 4455 1234' and mobile = '0412 345 678' from public.contacts where id = :'plasterer_id'));
+update public.contact_roles set name = 'Plastering' where name = 'Plasterer';
+select wellco_test.ok('8g. role renamed "Plasterer" -> "Plastering"; the contact follows',
+  (select role_names from public.v_contacts where id = :'plasterer_id') = array['Plastering']);
+select wellco_test.expect_error('8g. a role in use cannot be deleted without moving its contacts',
+  $$select public.delete_contact_role((select id from public.contact_roles where name = 'Plastering'))$$);
+select public.delete_contact_role((select id from public.contact_roles where name = 'Plastering'),
+                                  (select id from public.contact_roles where name = 'Trades / subcontractor')) \g /dev/null
+select wellco_test.ok('8g. role deleted after moving its contact to "Trades / subcontractor"',
+  not exists (select 1 from public.contact_roles where name = 'Plastering')
+  and (select role_names from public.v_contacts where id = :'plasterer_id') = array['Trades / subcontractor']);
+insert into public.contact_roles (category_id, name)
+select id, 'Pool builder' from public.contact_categories where name = 'Building contractors';
+select public.delete_contact_role((select id from public.contact_roles where name = 'Pool builder')) \g /dev/null
+select wellco_test.ok('8g. an unused role deletes straight away',
+  not exists (select 1 from public.contact_roles where name = 'Pool builder'));
+insert into public.contacts (name, company) values ('Amy Abbott', null), ('Zac', 'Zenith Planning');
+select wellco_test.ok('8g. contacts list alphabetically (by company, else name; any case)',
+  (select string_agg(coalesce(company, name), ' | ' order by sort_name, name) from public.v_contacts)
+  = 'Amy Abbott | Coastal Civil Group Pty Ltd | Doyle Plastering | Shoalhaven City Council | Zenith Planning',
+  (select string_agg(coalesce(company, name), ' | ' order by sort_name, name) from public.v_contacts));
+
+
+-- =============================================================================
+-- 9. A second login sees none of Dan's data.
 -- =============================================================================
 select set_config('request.jwt.claim.sub', :'other', false) \g /dev/null
 
@@ -571,17 +859,17 @@ begin
     total := total + n; tables := tables + 1;
     if n > 0 then seen := seen || t || '=' || n || ' '; end if;
   end loop;
-  perform wellco_test.ok(format('8. second user sees 0 of Dan''s rows across all %s tables', tables),
+  perform wellco_test.ok(format('9. second user sees 0 of Dan''s rows across all %s tables', tables),
                          total = 0, nullif(seen, ''));
 end $$;
 
-select wellco_test.ok('8. second user: 0 projects, stages, tasks, documents, contacts, bills, bill lines, deals, log rows',
+select wellco_test.ok('9. second user: 0 projects, stages, tasks, documents, contacts, bills, bill lines, deals, log rows',
   (select count(*) from public.projects) + (select count(*) from public.project_stages)
   + (select count(*) from public.tasks) + (select count(*) from public.documents)
   + (select count(*) from public.contacts) + (select count(*) from public.invoices_in)
   + (select count(*) from public.invoice_in_lines) + (select count(*) from public.deals)
   + (select count(*) from public.activity_log) = 0);
-select wellco_test.ok('8. second user: every view is empty',
+select wellco_test.ok('9. second user: every view is empty',
   (select count(*) from public.v_project_summary) + (select count(*) from public.v_project_stages)
   + (select count(*) from public.v_bas_summary) + (select count(*) from public.v_bas_by_project)
   + (select count(*) from public.v_bas_company_quarters) + (select count(*) from public.v_project_issuer)
@@ -589,23 +877,25 @@ select wellco_test.ok('8. second user: every view is empty',
   + (select count(*) from public.v_funds_needed) + (select count(*) from public.v_funds_needed_items)
   + (select count(*) from public.v_contacts) + (select count(*) from public.v_contacts_by_category)
   + (select count(*) from public.v_documents) + (select count(*) from public.v_needs_attention)
-  + (select count(*) from public.v_rfq_status) + (select count(*) from public.v_engagement_progress) = 0);
-select wellco_test.ok('8. second user: no files visible in storage',
+  + (select count(*) from public.v_rfq_status) + (select count(*) from public.v_engagement_progress)
+  + (select count(*) from public.v_deal_feasos) + (select count(*) from public.v_offer_letters)
+  + (select count(*) from public.v_deals) = 0);
+select wellco_test.ok('9. second user: no files visible in storage',
   (select count(*) from storage.objects) = 0);
 update public.projects set name = 'hijacked' where project_id = 'CROOBYAR';
-select wellco_test.expect_error('8. second user cannot upload into Dan''s project folder',
+select wellco_test.expect_error('9. second user cannot upload into Dan''s project folder',
   $$insert into storage.objects (bucket_id, name) values ('project-documents', 'CROOBYAR/contract/x.pdf')$$);
-select wellco_test.expect_error('8. second user cannot upload into Dan''s deal folder',
+select wellco_test.expect_error('9. second user cannot upload into Dan''s deal folder',
   format($$insert into storage.objects (bucket_id, name) values ('project-documents', 'deals/%s/contract/x.pdf')$$, :'deal_id'));
 select public.create_project_from_template('OTHER-1', 'Somewhere', 'Lot 1 DP 1') \g /dev/null
-select wellco_test.ok('8. second user has their own defaults (9 stages from their own template)',
+select wellco_test.ok('9. second user has their own defaults (9 stages from their own template)',
   (select count(*) from public.project_stages where project_id = 'OTHER-1') = 9);
 
 -- back to Dan: his project name was not changed by the second user
 select set_config('request.jwt.claim.sub', :'dan', false) \g /dev/null
-select wellco_test.ok('8. Dan''s project untouched by the second user''s update',
+select wellco_test.ok('9. Dan''s project untouched by the second user''s update',
   (select name from public.projects where project_id = 'CROOBYAR') = 'Croobyar Rd, Milton');
-select wellco_test.ok('8. Dan sees none of the second user''s project',
+select wellco_test.ok('9. Dan sees none of the second user''s project',
   (select count(*) from public.projects where project_id = 'OTHER-1') = 0);
 
 

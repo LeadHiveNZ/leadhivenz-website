@@ -1,5 +1,5 @@
 -- =============================================================================
---  WELLCO PROJECT BRAIN  -  Supabase database schema  (v2, 16 Nov 2026)
+--  WELLCO PROJECT BRAIN  -  Supabase database schema  (v3, 17 Nov 2026)
 --  Client : Wellco Developments Pty Ltd (Dan Wellman), Milton NSW
 --  Built by: Joe Ingram, LeadHive
 -- =============================================================================
@@ -76,7 +76,25 @@
 --       projects.owner_company_id is blank while the offer is in "Dan Wellman
 --       and/or nominee".  v_bas_summary is now per company per quarter, and
 --       v_bas_company_quarters lists companies with nothing to lodge.
---  This v2 file replaces v1 outright: nothing had been loaded into Dan's
+--
+--  CHANGES IN v3 (Dan's feedback on draft 2, 17 Nov 2026, see changes-2026-11-17.md):
+--    8. Addresses are street / suburb / state / postcode on deals, projects and
+--       companies (address is a generated display column); lot_plan kept.
+--    9. Deals capture zoning (zonings list Dan edits), land area, minimum lot
+--       size, yield (lots / factory units / units) and purchase tax type, and
+--       all of it carries into the project on convert, with the notes, the
+--       documents, the latest feaso and the accepted offer.
+--   10. Quick Feaso: deal_feasos (versioned per deal, his spreadsheet's inputs)
+--       + v_deal_feasos (his outputs, worked exactly as his sheet does).
+--   11. Make Offer: deal_offers (several per deal, one accepted) + offer_terms
+--       (his term bank, seeded from his Word template) + v_offer_letters.
+--   12. Contacts have a mobile; roles can be renamed and deleted (moving any
+--       contacts to another role first: delete_contact_role()).
+--   13. Task due dates (due_on) are editable, and can follow another task or a
+--       project milestone (exchange, DD expiry, unconditional, DA approval,
+--       settlement) by N days; changes ripple to the tasks that follow.
+--   14. Document types and zonings are per-user lists: add, rename, delete if unused.
+--  Each version replaces the last outright: nothing has been loaded into Dan's
 --  Supabase yet, so there is no data migration, just run this on a fresh project.
 -- =============================================================================
 
@@ -150,6 +168,13 @@ create type public.project_status    as enum ('live', 'closed');
 create type public.feaso_result      as enum ('pending', 'go', 'no_go');
 create type public.company_status    as enum ('to_be_formed', 'active', 'dormant', 'closed');
 create type public.bas_cycle         as enum ('quarterly', 'not_lodging');   -- add 'monthly' with ALTER TYPE if ever needed
+create type public.yield_unit        as enum ('lots', 'factory_units', 'units');
+create type public.purchase_tax_type as enum ('gst', 'margin_scheme', 'gst_exempt');   -- how the LAND purchase is taxed (from the contract)
+create type public.sales_gst_method  as enum ('margin_scheme', 'full_gst', 'none');    -- Quick Feaso: GST on the lot sales
+create type public.offer_status      as enum ('draft', 'sent', 'countered', 'accepted', 'declined', 'withdrawn');
+create type public.offer_term_field  as enum ('deposit', 'due_diligence', 'settlement', 'condition', 'solicitor');
+create type public.task_milestone    as enum ('exchange', 'dd_expiry', 'unconditional', 'da_approval', 'settlement');
+create type public.task_anchor       as enum ('due', 'done');   -- follow the other task's due date, or the date it was ticked off
 
 create type public.gst_treatment as enum (
   'taxable',        -- standard 10% GST (most consultants and contractors)
@@ -181,6 +206,16 @@ create type public.invoice_out_kind  as enum ('lot_deposit', 'lot_settlement', '
 create type public.money_flag as enum ('intercompany_loan', 'distribution_to_trust', 'management_fee');
 
 create type public.approval_status as enum ('pending', 'approved', 'rejected');
+
+-- One-line address for display, documents and file names:
+--   '21 Tynan Road, Tabletop NSW 2640'
+create or replace function public.format_address(p_street text, p_suburb text, p_state public.au_state, p_postcode text)
+returns text
+language sql immutable parallel safe
+as $$
+  select nullif(concat_ws(', ', nullif(trim(p_street), ''),
+                          nullif(trim(concat_ws(' ', nullif(trim(p_suburb), ''), p_state::text, nullif(trim(p_postcode), ''))), '')), '')
+$$;
 create type public.approval_kind as enum (
   'send_rfq', 'chase_quote', 'issue_engagement', 'approve_invoice_in',
   'pay_invoice_in', 'issue_invoice_out', 'send_email', 'other'
@@ -265,8 +300,15 @@ create table public.stage_template_tasks (
   lead_time_days     integer check (lead_time_days >= 0),
   warning            text,
   sort_order         integer not null default 0,
+  -- default date rule, copied onto the project task (see tasks)
+  depends_on_template_task_id  uuid references public.stage_template_tasks (id) on delete set null,
+  anchor_milestone   public.task_milestone,
+  anchor_on          public.task_anchor not null default 'due',
+  offset_days        integer not null default 0,
   created_at         timestamptz not null default now(),
-  updated_at         timestamptz not null default now()
+  updated_at         timestamptz not null default now(),
+  constraint stage_template_tasks_one_anchor check (depends_on_template_task_id is null or anchor_milestone is null),
+  constraint stage_template_tasks_not_self   check (depends_on_template_task_id is distinct from id)
 );
 comment on table public.stage_template_tasks is 'Default checklist items per template stage. Dan can add or reword them.';
 
@@ -313,7 +355,37 @@ create table public.document_types (
   primary key (owner_id, code),
   unique (owner_id, name)
 );
-comment on table public.document_types is 'Document types for filing (Contract, Plans, Sales evidence, Bill...). Dan can add more.';
+comment on table public.document_types is 'Document types for filing (Contract, Plans, Sales evidence, Bill...). Dan can add, rename, and delete unused ones.';
+
+-- ZONINGS: the zoning pick-list on "Log a site" (Settings: add, edit, delete
+-- if unused).  NSW zones have a code (R2, RU4, E4...); QLD scheme zones mostly don't.
+create table public.zonings (
+  id          uuid primary key default gen_random_uuid(),
+  owner_id    uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  state       public.au_state,                       -- null = any state
+  code        text,                                  -- 'R2'
+  name        text not null check (trim(name) <> ''),-- 'Low Density Residential'
+  sort_order  integer not null default 0,
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now(),
+  unique nulls not distinct (owner_id, state, name),
+  unique (id, owner_id)
+);
+comment on table public.zonings is 'Zoning pick-list for deals and projects. Dan''s own list, seeded with common NSW and QLD zones.';
+
+-- OFFER TERMS: the term bank behind Make Offer (page 2 of Dan's Word letter of
+-- offer), one row per option, by field.  Seeded with his exact wording.
+create table public.offer_terms (
+  id          uuid primary key default gen_random_uuid(),
+  owner_id    uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  field       public.offer_term_field not null,
+  wording     text not null check (trim(wording) <> ''),
+  sort_order  integer not null default 0,
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now(),
+  unique (owner_id, field, wording)
+);
+comment on table public.offer_terms is 'Term bank for letters of offer (deposit, due diligence, settlement, conditions, solicitor). Dan adds his own.';
 
 -- ---- Registers -------------------------------------------------------------
 
@@ -325,7 +397,8 @@ create table public.contacts (
   name              text not null,                     -- person
   company           text,                              -- business name
   email             text,
-  phone             text,
+  phone             text,                              -- landline / office
+  mobile            text,
   abn               text check (abn is null or regexp_replace(abn, '\s', '', 'g') ~ '^\d{11}$'),
   licence_number    text,
   licence_expiry    date,
@@ -381,7 +454,12 @@ create table public.companies (
   short_name           text,                                           -- 'Peel St'
   abn                  text check (abn is null or regexp_replace(abn, '\s', '', 'g') ~ '^\d{11}$'),
   acn                  text check (acn is null or regexp_replace(acn, '\s', '', 'g') ~ '^\d{9}$'),
-  registered_address   text,
+  registered_street    text,
+  registered_suburb    text,
+  registered_state     public.au_state,
+  registered_postcode  text check (registered_postcode is null or registered_postcode ~ '^\d{4}$'),
+  registered_address   text generated always as
+                       (public.format_address(registered_street, registered_suburb, registered_state, registered_postcode)) stored,
   gst_registered       boolean not null default false,
   gst_registered_from  date,
   bas_cycle            public.bas_cycle not null default 'not_lodging',  -- 'quarterly' once it starts lodging
@@ -411,12 +489,30 @@ create table public.projects (
                        check (project_id ~ '^[A-Z0-9][A-Z0-9-]{1,39}$'),  -- e.g. 'CROOBYAR', 'ULLADULLA-IND'
   owner_id             uuid not null default auth.uid() references auth.users (id) on delete cascade,
   name                 text not null,                  -- 'Croobyar Rd, Milton'
-  address              text,
-  lot_plan             text not null,                  -- 'Lot 12 DP 1187234' (NSW) or 'Lot 2 SP 301887' (QLD)
+  street               text,                           -- '21 Tynan Road'
+  suburb               text,
   state                public.au_state not null default 'NSW',
+  postcode             text check (postcode is null or postcode ~ '^\d{4}$'),
+  address              text generated always as (public.format_address(street, suburb, state, postcode)) stored,
+  lot_plan             text not null,                  -- 'Lot 12 DP 1187234' (NSW) or 'Lot 2 SP 301887' (QLD)
   project_type         text not null default 'land_subdivision',
-  lots_or_units        integer check (lots_or_units >= 0),
   description          text,                           -- '14-lot residential subdivision'
+  -- the site (carried over from the deal; editable)
+  zoning_id            uuid,
+  land_area_m2         numeric(12,2) check (land_area_m2 >= 0),
+  min_lot_size_m2      numeric(12,2) check (min_lot_size_m2 >= 0),
+  yield_count          integer check (yield_count >= 0),
+  yield_unit           public.yield_unit not null default 'lots',
+  purchase_tax_type    public.purchase_tax_type,
+  purchase_price       numeric(14,2) check (purchase_price >= 0),   -- from the accepted offer
+  feaso_id             uuid,                           -- the deal feaso it was bought on (FK below)
+  accepted_offer_id    uuid,                           -- the accepted letter of offer (FK below)
+  -- key dates that task due dates can follow (tasks.anchor_milestone)
+  exchange_on          date,
+  dd_expiry_on         date,
+  unconditional_on     date,
+  da_approval_on       date,
+  settlement_on        date,
   -- who owns it: the project company (own ABN, GST, bank, books; see companies).
   -- Blank while the offer is in Dan's name "and/or nominee"; set it once the
   -- company is registered and every transaction moves to it (logged).
@@ -432,7 +528,8 @@ create table public.projects (
   created_at           timestamptz not null default now(),
   updated_at           timestamptz not null default now(),
   foreign key (owner_id, project_type) references public.project_types (owner_id, code) on update cascade,
-  foreign key (owner_company_id, owner_id) references public.companies (id, owner_id)
+  foreign key (owner_company_id, owner_id) references public.companies (id, owner_id),
+  foreign key (zoning_id, owner_id) references public.zonings (id, owner_id)
 );
 comment on table public.projects is 'Master project register. Owned by one company (owner_company_id). Project ID = location ref (lot/plan held separately).';
 
@@ -466,16 +563,22 @@ alter table public.projects
 create table public.deals (
   id                 uuid primary key default gen_random_uuid(),
   owner_id           uuid not null default auth.uid() references auth.users (id) on delete cascade,
-  address            text not null,
+  street             text not null,                    -- '21 Tynan Road'
+  suburb             text,                             -- 'Tabletop'
   state              public.au_state not null default 'NSW',
-  lot_plan           text,
+  postcode           text check (postcode is null or postcode ~ '^\d{4}$'),
+  address            text generated always as (public.format_address(street, suburb, state, postcode)) stored,
+  lot_plan           text,                             -- 'Lot 1 DP 1017395'
   project_type       text,                             -- what it would be; used when converting
   source             text,                             -- 'realestate.com.au', 'Ray White Commercial', 'off-market'
   source_contact_id  uuid references public.contacts (id) on delete set null,  -- buyer's agent / listing agent
   asking_price       numeric(14,2),
-  site_area_m2       numeric(12,2),
-  lot_yield          integer,
-  zoning             text,
+  zoning_id          uuid,
+  land_area_m2       numeric(12,2) check (land_area_m2 >= 0),          -- original land size
+  min_lot_size_m2    numeric(12,2) check (min_lot_size_m2 >= 0),
+  yield_count        integer check (yield_count >= 0),                 -- number of lots / factory units / units
+  yield_unit         public.yield_unit not null default 'lots',
+  purchase_tax_type  public.purchase_tax_type,                         -- GST / margin scheme / GST exempt (from the contract)
   feaso_result       public.feaso_result not null default 'pending',
   feaso_link         text,                             -- link to the Feasely study
   notes              text,
@@ -483,28 +586,139 @@ create table public.deals (
   project_id         text references public.projects (project_id) on delete set null,  -- set by convert_deal_to_project
   created_at         timestamptz not null default now(),
   updated_at         timestamptz not null default now(),
-  foreign key (owner_id, project_type) references public.project_types (owner_id, code) on update cascade
+  foreign key (owner_id, project_type) references public.project_types (owner_id, code) on update cascade,
+  foreign key (zoning_id, owner_id) references public.zonings (id, owner_id)
 );
 comment on table public.deals is 'Sourcing pipeline: every site looked at, with feaso result and its documents. A Go site becomes a project.';
 
+-- QUICK FEASO: Dan's back-of-envelope spreadsheet ("Quick Feso Subdivision.xlsx"),
+-- one row per saved version per deal.  Inputs only; the results are worked out
+-- in v_deal_feasos exactly as his sheet does.  Blank lots / land price / sales
+-- GST method are filled from the deal when saved; every other default is the
+-- figure in his sheet.  Save a new version rather than editing an old one.
+create table public.deal_feasos (
+  id                          uuid primary key default gen_random_uuid(),
+  owner_id                    uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  deal_id                     uuid not null references public.deals (id) on delete cascade,
+  version                     integer not null,                       -- 1, 2, 3... (automatic)
+  label                       text,                                   -- 'Agent''s price', 'At 28 lots'
+  -- revenue
+  lots                        integer not null check (lots > 0),      -- from deal.yield_count
+  price_per_lot               numeric(14,2) not null default 300000 check (price_per_lot >= 0),
+  agency_pct                  numeric(7,5)  not null default 0.025,
+  legal_per_lot               numeric(14,2) not null default 3000,
+  sales_gst_method            public.sales_gst_method not null,       -- margin scheme unless the land was bought with GST
+  -- land
+  land_price                  numeric(14,2) not null check (land_price >= 0),   -- from deal.asking_price
+  stamp_duty_pct              numeric(7,5)  not null default 0.05,
+  land_legals                 numeric(14,2) not null default 5000,
+  -- construction (per lot)
+  electrics_comms_per_lot     numeric(14,2) not null default 18000,
+  civils_per_lot              numeric(14,2) not null default 100000,
+  landscaping_per_lot         numeric(14,2) not null default 5000,
+  contingency_pct             numeric(7,5)  not null default 0.05,
+  -- consultants
+  electrical_design           numeric(14,2) not null default 20000,
+  consultants_other           numeric(14,2) not null default 30000,
+  engineer                    numeric(14,2) not null default 50000,
+  surveyor_per_lot            numeric(14,2) not null default 3000,
+  planning                    numeric(14,2) not null default 30000,
+  -- fees
+  marketing                   numeric(14,2) not null default 10000,
+  pm_fee_per_month            numeric(14,2) not null default 5000,
+  pm_months                   numeric(6,2)  not null default 18,
+  bond_pct_of_civils          numeric(7,5)  not null default 0.01,
+  accounting_admin            numeric(14,2) not null default 10000,
+  holding                     numeric(14,2) not null default 20000,
+  council_cc_fee              numeric(14,2) not null default 20000,
+  s94_per_lot                 numeric(14,2) not null default 20000,   -- s94 / s7.11 contributions per lot
+  existing_lot_credit         integer       not null default 1 check (existing_lot_credit >= 0),  -- lots already on title (no s94)
+  -- finance
+  equity                      numeric(14,2) not null default 0 check (equity >= 0),
+  land_interest_rate          numeric(7,5)  not null default 0.08,
+  construction_interest_rate  numeric(7,5)  not null default 0.08,
+  establishment_fee_pct       numeric(7,5)  not null default 0.015,
+  notes                       text,
+  created_at                  timestamptz not null default now(),
+  updated_at                  timestamptz not null default now(),
+  unique (deal_id, version)
+);
+comment on table public.deal_feasos is 'Quick Feaso inputs, versioned per deal. Results in v_deal_feasos (his spreadsheet''s formulas).';
+
+-- OFFERS: letters of offer on a deal ("sometimes there will be several offers
+-- made to suit both parties").  Terms are free text, usually picked from
+-- offer_terms; conditions are an ordered list (numbered on the letter).
+-- Only one offer per deal can be accepted.  v_offer_letters lays it out like
+-- his Word template; document_id points at the generated letter once saved.
+create table public.deal_offers (
+  id             uuid primary key default gen_random_uuid(),
+  owner_id       uuid not null default auth.uid() references auth.users (id) on delete cascade,
+  deal_id        uuid not null references public.deals (id) on delete cascade,
+  offer_no       integer not null,                          -- 1, 2, 3... per deal (automatic)
+  status         public.offer_status not null default 'draft',
+  property_text  text,                                      -- 'Proposed Lot 1 - part 21 Tynan Road...' (blank = deal address + lot/DP)
+  price          numeric(14,2) check (price >= 0),
+  gst_wording    text,                                      -- '+ GST (Contract noted no taxable supply...)'
+  purchaser      text not null default 'Daniel Wellman or Nominee (TBC)',
+  deposit        text,
+  due_diligence  text,
+  settlement     text,
+  conditions     text[] not null default '{}',              -- in order: 1., 2., 3....
+  solicitor      text,
+  sent_on        date,
+  accepted_on    date,
+  exchange_on    date,                                      -- contracts exchanged (becomes the project's exchange date)
+  document_id    uuid,                                      -- the generated letter (FK added after documents)
+  notes          text,
+  created_at     timestamptz not null default now(),
+  updated_at     timestamptz not null default now(),
+  unique (deal_id, offer_no),
+  constraint deal_offers_accepted_has_date check (status <> 'accepted' or accepted_on is not null),
+  constraint deal_offers_exchange_only_if_accepted check (exchange_on is null or status = 'accepted')
+);
+comment on table public.deal_offers is 'Letters of offer per deal (several allowed, one accepted). Layout in v_offer_letters.';
+
+alter table public.projects
+  add constraint projects_feaso_fk foreign key (feaso_id) references public.deal_feasos (id),
+  add constraint projects_accepted_offer_fk foreign key (accepted_offer_id) references public.deal_offers (id);
+
 -- TASKS: the per-stage checklist for each project ("have I chased that up?").
+-- due_on is Dan's to edit.  A task can also FOLLOW something, N days after it:
+--   * another task (depends_on_task_id), on its due date or the date it was
+--     ticked off (anchor_on), or
+--   * a project milestone (anchor_milestone: exchange, dd_expiry,
+--     unconditional, da_approval, settlement -> projects.<milestone>_on).
+-- When the thing it follows moves, its due date moves too, and so on down the
+-- chain.  Typing a date on a following task sets manual_override (it then
+-- stays put); clear manual_override to make it follow again.  Loops are refused.
 create table public.tasks (
   id              uuid primary key default gen_random_uuid(),
   owner_id        uuid not null default auth.uid() references auth.users (id) on delete cascade,
   project_id      text not null references public.projects (project_id) on delete cascade,
-  stage_id        uuid not null,
-  title           text not null,
-  notes           text,
-  due_date        date,
-  done            boolean not null default false,
-  done_at         timestamptz,
-  lead_time_days  integer check (lead_time_days >= 0),  -- e.g. 90 for an Endeavour Energy connection application
-  warning         text,                                 -- e.g. '3-month lead time: apply as soon as DA lands'
-  sort_order      integer not null default 0,
-  created_at      timestamptz not null default now(),
-  updated_at      timestamptz not null default now(),
+  stage_id            uuid not null,
+  title               text not null,
+  notes               text,
+  due_on              date,
+  done                boolean not null default false,
+  done_at             timestamptz,
+  lead_time_days      integer check (lead_time_days >= 0),  -- e.g. 90 for an Endeavour Energy connection application
+  warning             text,                                 -- e.g. '3-month lead time: apply as soon as DA lands'
+  sort_order          integer not null default 0,
+  template_task_id    uuid references public.stage_template_tasks (id) on delete set null,
+  depends_on_task_id  uuid,                                 -- follow this task...
+  anchor_milestone    public.task_milestone,                -- ...or this project date
+  anchor_on           public.task_anchor not null default 'due',
+  offset_days         integer not null default 0,           -- negative = before
+  manual_override     boolean not null default false,       -- Dan typed the date: don't move it
+  created_at          timestamptz not null default now(),
+  updated_at          timestamptz not null default now(),
+  unique (id, project_id),
   -- the stage must be one of THIS project's stages; a stage with tasks can't be deleted
-  foreign key (stage_id, project_id) references public.project_stages (id, project_id)
+  foreign key (stage_id, project_id) references public.project_stages (id, project_id),
+  -- a task can only follow a task in the same project; if that task is deleted, this one stops following
+  foreign key (depends_on_task_id, project_id) references public.tasks (id, project_id) on delete set null (depends_on_task_id),
+  constraint tasks_one_anchor check (depends_on_task_id is null or anchor_milestone is null),
+  constraint tasks_not_self   check (depends_on_task_id is distinct from id)
 );
 comment on table public.tasks is 'Stage checklist per project with due dates, lead-time warnings and done ticks.';
 
@@ -530,7 +744,7 @@ comment on table public.budget_lines is 'Feaso budget per project by category. C
 -- project.  Inside a project it is filed by stage and by document type.
 -- Naming convention (set automatically): [ProjectID]_[DocType]_[Party]_[Date]
 --   e.g. CROOBYAR_Quote_SouthcoastCivil_2026-10-14
---   On a deal: Deal-<Address>_[DocType]_[Party]_[Date], renamed to the project
+--   On a deal: Deal-<StreetSuburb>_[DocType]_[Party]_[Date], renamed to the project
 --   form when the deal is converted.
 -- Storage path (set automatically if the app doesn't send one, then fixed):
 --   project-documents/<ProjectID>/<doc_type>/<standard_name>.<ext>
@@ -565,6 +779,8 @@ create table public.documents (
   constraint documents_deal_has_no_stage check (deal_id is null or stage_id is null),
   constraint documents_file_ext_ok       check (file_ext is null or file_ext ~ '^[a-z0-9]{1,10}$')
 );
+alter table public.deal_offers
+  add constraint deal_offers_document_fk foreign key (document_id) references public.documents (id) on delete set null;
 comment on table public.documents is 'File register for the project-documents bucket. On a deal or a project (exactly one). Name = [ProjectID]_[DocType]_[Party]_[Date].';
 
 -- RFQ SCOPES: one per thing being priced ('Civil works', 'Town planning').
@@ -889,9 +1105,18 @@ create index contact_role_links_role_idx   on public.contact_role_links (role_id
 create index contact_extra_cat_cat_idx     on public.contact_extra_categories (category_id);
 create index deals_owner_result_idx        on public.deals (owner_id, feaso_result);
 create index deals_project_idx             on public.deals (project_id);
-create index tasks_project_open_idx        on public.tasks (project_id, done, due_date);
+create index tasks_project_open_idx        on public.tasks (project_id, done, due_on);
 create index tasks_stage_idx               on public.tasks (stage_id, sort_order);
-create index tasks_open_due_idx            on public.tasks (due_date) where not done;
+create index tasks_open_due_idx            on public.tasks (due_on) where not done;
+create index tasks_depends_on_idx          on public.tasks (depends_on_task_id) where depends_on_task_id is not null;
+create index tasks_milestone_idx           on public.tasks (project_id, anchor_milestone) where anchor_milestone is not null;
+create index deal_feasos_deal_idx          on public.deal_feasos (deal_id, version desc);
+create index deal_offers_deal_idx          on public.deal_offers (deal_id, offer_no);
+create unique index deal_offers_one_accepted_uidx on public.deal_offers (deal_id) where status = 'accepted';   -- only one accepted offer per deal
+create index deals_zoning_idx              on public.deals (zoning_id);
+create index projects_zoning_idx           on public.projects (zoning_id);
+create index offer_terms_field_idx         on public.offer_terms (owner_id, field, sort_order);
+create index contacts_sort_idx             on public.contacts (owner_id, lower(coalesce(nullif(trim(company), ''), name)), lower(name));
 create index budget_lines_project_idx      on public.budget_lines (project_id, category);
 create index documents_project_stage_type_idx on public.documents (project_id, stage_id, doc_type);
 create index documents_deal_idx            on public.documents (deal_id) where deal_id is not null;
@@ -947,6 +1172,7 @@ declare t text;
 begin
   foreach t in array array['wellco_settings', 'project_types', 'stage_templates', 'stage_template_tasks',
                            'contact_categories', 'contact_roles', 'document_types', 'companies',
+                           'zonings', 'offer_terms', 'deal_feasos', 'deal_offers',
                            'contacts', 'projects', 'project_stages', 'deals', 'tasks', 'budget_lines',
                            'documents', 'rfq_scopes', 'quotes', 'engagements', 'invoices_in',
                            'invoice_in_lines', 'invoices_out', 'invoice_out_lines', 'funds_needed', 'approvals']
@@ -1043,7 +1269,7 @@ begin
   if new.project_id is not null then
     v_prefix := new.project_id;
   else
-    select 'Deal-' || left(regexp_replace(d.address, '[^A-Za-z0-9]+', '', 'g'), 24) into v_prefix
+    select 'Deal-' || left(regexp_replace(concat(d.street, d.suburb), '[^A-Za-z0-9]+', '', 'g'), 24) into v_prefix
     from public.deals d where d.id = new.deal_id;
     v_prefix := coalesce(nullif(v_prefix, 'Deal-'), 'Deal');
   end if;
@@ -1169,7 +1395,8 @@ do $$
 declare t text;
 begin
   foreach t in array array['project_types', 'stage_templates', 'stage_template_tasks', 'contact_categories',
-                           'contact_roles', 'document_types', 'companies',
+                           'contact_roles', 'document_types', 'companies', 'zonings', 'offer_terms',
+                           'deal_feasos', 'deal_offers',
                            'projects', 'project_stages', 'contacts', 'deals', 'tasks', 'budget_lines', 'documents',
                            'rfq_scopes', 'quotes', 'engagements', 'invoices_in', 'invoice_in_lines',
                            'invoices_out', 'invoice_out_lines', 'funds_needed', 'approvals']
@@ -1408,11 +1635,21 @@ begin
     from src
     returning id, template_stage_id
   )
-  insert into public.tasks (owner_id, project_id, stage_id, title, notes, lead_time_days, warning, sort_order)
-  select p.owner_id, p.project_id, ins.id, tt.title, tt.notes, tt.lead_time_days, tt.warning, tt.sort_order
+  insert into public.tasks (owner_id, project_id, stage_id, title, notes, lead_time_days, warning, sort_order,
+                            template_task_id, anchor_milestone, anchor_on, offset_days)
+  select p.owner_id, p.project_id, ins.id, tt.title, tt.notes, tt.lead_time_days, tt.warning, tt.sort_order,
+         tt.id, tt.anchor_milestone, tt.anchor_on, tt.offset_days
   from ins
   join public.stage_template_tasks tt on tt.stage_template_id = ins.template_stage_id;
   get diagnostics v_tasks = row_count;
+
+  -- "follows another template task" -> follows the matching task on this project
+  update public.tasks t
+     set depends_on_task_id = dep.id
+    from public.stage_template_tasks tt
+    join public.tasks dep on dep.template_task_id = tt.depends_on_template_task_id
+   where t.project_id = p.project_id and dep.project_id = p.project_id
+     and t.template_task_id = tt.id and tt.depends_on_template_task_id is not null;
 
   select count(*) into v_stages from public.project_stages ps where ps.project_id = p.project_id;
   select ps.id into v_first from public.project_stages ps where ps.project_id = p.project_id order by ps.position limit 1;
@@ -1456,7 +1693,9 @@ create or replace function public.create_project_from_template(
   p_lot_plan          text,
   p_project_type      text             default 'land_subdivision',
   p_state             public.au_state  default 'NSW',
-  p_address           text             default null,
+  p_street            text             default null,
+  p_suburb            text             default null,
+  p_postcode          text             default null,
   p_owner_company_id  uuid             default null,
   p_owner_id          uuid             default null      -- only needed in the SQL editor (not logged in)
 )
@@ -1470,8 +1709,10 @@ begin
   if not exists (select 1 from public.project_types pt where pt.owner_id = v_owner and pt.code = p_project_type) then
     raise exception 'Unknown project type "%". Add it in Settings first.', p_project_type;
   end if;
-  insert into public.projects (project_id, owner_id, name, lot_plan, project_type, state, address, owner_company_id)
-  values (v_id, v_owner, p_name, p_lot_plan, p_project_type, p_state, p_address, p_owner_company_id);
+  insert into public.projects (project_id, owner_id, name, lot_plan, project_type, state, street, suburb, postcode,
+                               owner_company_id)
+  values (v_id, v_owner, p_name, p_lot_plan, p_project_type, p_state, p_street, p_suburb, p_postcode,
+          p_owner_company_id);
   return v_id;
 end;
 $$;
@@ -1539,8 +1780,15 @@ $$;
 
 -- CONVERT A DEAL INTO A PROJECT.
 --   * Creates the project from its type's template (deal.project_type, or the
---     one passed in, else land subdivision).  Name / address / lot-plan / state
---     come from the deal unless given.
+--     one passed in, else land subdivision).  Name ('<street>, <suburb>'),
+--     street / suburb / state / postcode and lot-plan come from the deal unless given.
+--   * Copies the site details: zoning, land area, minimum lot size, yield and
+--     unit, purchase tax type, and the deal notes.
+--   * Links the latest Quick Feaso (projects.feaso_id; its total cost inc
+--     finance becomes the headline budget) and the accepted offer
+--     (projects.accepted_offer_id; its price becomes purchase_price and its
+--     exchange date the project's exchange date, which moves the task dates
+--     that follow exchange).
 --   * Moves every document on the deal to the new project, filed under stage
 --     p_docs_stage (1 = Sourcing, the default, or 2 = Feasibility), and renames
 --     them to the project's naming.  The files stay where they are in storage
@@ -1571,6 +1819,8 @@ declare
   v_start      public.project_stages%rowtype;
   v_docs       integer;
   v_doc_list   jsonb;
+  v_feaso      record;
+  v_offer      public.deal_offers%rowtype;
 begin
   select * into d from public.deals where id = p_deal_id for update;
   if not found then raise exception 'Deal % not found', p_deal_id; end if;
@@ -1585,9 +1835,13 @@ begin
   end if;
 
   v_pid := public.create_project_from_template(
-             p_project_id, coalesce(p_name, d.address), coalesce(p_lot_plan, d.lot_plan),
-             coalesce(p_project_type, d.project_type, 'land_subdivision'), d.state, d.address,
+             p_project_id, coalesce(p_name, concat_ws(', ', d.street, d.suburb)), coalesce(p_lot_plan, d.lot_plan),
+             coalesce(p_project_type, d.project_type, 'land_subdivision'), d.state, d.street, d.suburb, d.postcode,
              p_owner_company_id, d.owner_id);
+
+  select vf.feaso_id, vf.version, vf.total_cost_inc_finance into v_feaso
+  from public.v_deal_feasos vf where vf.deal_id = p_deal_id order by vf.version desc limit 1;
+  select * into v_offer from public.deal_offers o where o.deal_id = p_deal_id and o.status = 'accepted';
 
   select ps.id, ps.name into v_stage_id, v_stage_name
   from public.project_stages ps where ps.project_id = v_pid
@@ -1607,6 +1861,21 @@ begin
 
   update public.deals set project_id = v_pid where id = p_deal_id;
 
+  update public.projects
+     set zoning_id         = d.zoning_id,
+         land_area_m2      = d.land_area_m2,
+         min_lot_size_m2   = d.min_lot_size_m2,
+         yield_count       = d.yield_count,
+         yield_unit        = d.yield_unit,
+         purchase_tax_type = d.purchase_tax_type,
+         notes             = d.notes,
+         feaso_id          = v_feaso.feaso_id,
+         budget            = v_feaso.total_cost_inc_finance,
+         accepted_offer_id = v_offer.id,
+         purchase_price    = v_offer.price,
+         exchange_on       = v_offer.exchange_on
+   where project_id = v_pid;
+
   if d.feaso_result = 'go' then
     select * into v_start from public.project_stages ps where ps.project_id = v_pid and ps.stage_key = 'acquisition';
     if found then
@@ -1621,9 +1890,12 @@ begin
 
   insert into public.activity_log (owner_id, project_id, action, entity_type, entity_id, summary, details, source)
   values (d.owner_id, v_pid, 'deal.converted', 'deals', p_deal_id::text,
-          format('Project created from deal: %s. %s document(s) moved to stage %s (%s)',
-                 d.address, v_docs, p_docs_stage, v_stage_name),
-          jsonb_build_object('deal_id', p_deal_id, 'documents', v_doc_list, 'stage_id', v_stage_id),
+          format('Project created from deal: %s. %s document(s) moved to stage %s (%s)%s%s',
+                 d.address, v_docs, p_docs_stage, v_stage_name,
+                 case when v_feaso.feaso_id is not null then format('; Quick Feaso v%s attached', v_feaso.version) else '' end,
+                 case when v_offer.id is not null then format('; accepted offer %s attached', v_offer.offer_no) else '' end),
+          jsonb_build_object('deal_id', p_deal_id, 'documents', v_doc_list, 'stage_id', v_stage_id,
+                             'feaso_id', v_feaso.feaso_id, 'offer_id', v_offer.id),
           'auto');
   return v_pid;
 end;
@@ -1651,6 +1923,268 @@ $$;
 
 create trigger funds_needed_defaults before insert or update on public.funds_needed
   for each row execute function public.funds_needed_defaults();
+
+-- (i2) TASK DATES THAT FOLLOW SOMETHING (see the tasks table comment).
+
+-- The date a task follows: the other task's due date or tick-off date, or the
+-- project's milestone date.  Null = not known yet (the due date is left alone).
+create or replace function public.task_anchor_date(p_depends_on uuid, p_milestone public.task_milestone,
+                                                   p_anchor_on public.task_anchor, p_project_id text)
+returns date
+language sql stable
+as $$
+  select case
+    when p_depends_on is not null then
+      (select case when p_anchor_on = 'done' then (t.done_at at time zone 'Australia/Sydney')::date else t.due_on end
+         from public.tasks t where t.id = p_depends_on)
+    when p_milestone is not null then
+      (select case p_milestone
+                when 'exchange'      then p.exchange_on
+                when 'dd_expiry'     then p.dd_expiry_on
+                when 'unconditional' then p.unconditional_on
+                when 'da_approval'   then p.da_approval_on
+                when 'settlement'    then p.settlement_on end
+         from public.projects p where p.project_id = p_project_id)
+  end
+$$;
+
+-- BEFORE insert / update on tasks: refuse loops, keep Dan's typed dates,
+-- otherwise work out due_on = anchor date + offset_days.
+create or replace function public.tasks_follow_anchor()
+returns trigger
+language plpgsql
+as $$
+declare
+  v_anchor date;
+  v_ripple boolean := coalesce(current_setting('wellco.task_ripple', true), '') = 'on';
+begin
+  if new.depends_on_task_id is not null
+     and (tg_op = 'INSERT' or new.depends_on_task_id is distinct from old.depends_on_task_id) then
+    if exists (
+      with recursive chain (id, depth) as (
+        select t.depends_on_task_id, 1 from public.tasks t where t.id = new.depends_on_task_id
+        union all
+        select t.depends_on_task_id, c.depth + 1
+        from public.tasks t join chain c on t.id = c.id
+        where c.depth < 1000
+      )
+      select 1 from chain where chain.id = new.id
+    ) then
+      raise exception 'That would make a loop: "%" can''t follow a task that (eventually) follows it.', new.title
+        using errcode = 'check_violation';
+    end if;
+  end if;
+
+  if new.depends_on_task_id is null and new.anchor_milestone is null then
+    return new;                                   -- a plain task: due_on is whatever Dan sets
+  end if;
+
+  -- Dan typed a date on a following task (and didn't change the rule): keep it
+  if tg_op = 'UPDATE' and not v_ripple
+     and new.due_on is distinct from old.due_on
+     and new.manual_override = old.manual_override
+     and new.depends_on_task_id is not distinct from old.depends_on_task_id
+     and new.anchor_milestone is not distinct from old.anchor_milestone
+     and new.anchor_on = old.anchor_on
+     and new.offset_days = old.offset_days then
+    new.manual_override := true;
+    return new;
+  end if;
+
+  if not new.manual_override then
+    v_anchor := public.task_anchor_date(new.depends_on_task_id, new.anchor_milestone, new.anchor_on, new.project_id);
+    if v_anchor is not null then
+      new.due_on := v_anchor + new.offset_days;
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+create trigger tasks_follow_anchor before insert or update on public.tasks
+  for each row execute function public.tasks_follow_anchor();
+
+-- AFTER a task's due date or tick-off changes: move the tasks that follow it
+-- (each of those then moves its own followers, and so on down the chain).
+create or replace function public.tasks_ripple()
+returns trigger
+language plpgsql
+as $$
+declare v_prev text := coalesce(current_setting('wellco.task_ripple', true), '');
+begin
+  perform set_config('wellco.task_ripple', 'on', true);
+  update public.tasks set updated_at = now()
+   where depends_on_task_id = new.id and not manual_override;
+  perform set_config('wellco.task_ripple', v_prev, true);
+  return null;
+end;
+$$;
+
+create trigger tasks_ripple after update on public.tasks
+  for each row when (old.due_on is distinct from new.due_on or old.done_at is distinct from new.done_at)
+  execute function public.tasks_ripple();
+
+-- AFTER a project's milestone date changes: move the tasks that follow it.
+create or replace function public.projects_milestone_ripple()
+returns trigger
+language plpgsql
+as $$
+declare v_prev text := coalesce(current_setting('wellco.task_ripple', true), '');
+begin
+  perform set_config('wellco.task_ripple', 'on', true);
+  update public.tasks set updated_at = now()
+   where project_id = new.project_id and anchor_milestone is not null and not manual_override;
+  perform set_config('wellco.task_ripple', v_prev, true);
+  return null;
+end;
+$$;
+
+create trigger projects_milestone_ripple after update on public.projects
+  for each row when (old.exchange_on      is distinct from new.exchange_on
+                  or old.dd_expiry_on     is distinct from new.dd_expiry_on
+                  or old.unconditional_on is distinct from new.unconditional_on
+                  or old.da_approval_on   is distinct from new.da_approval_on
+                  or old.settlement_on    is distinct from new.settlement_on)
+  execute function public.projects_milestone_ripple();
+
+-- Template tasks: same loop check for the default rules.
+create or replace function public.stage_template_tasks_no_loop()
+returns trigger
+language plpgsql
+as $$
+begin
+  if new.depends_on_template_task_id is not null and exists (
+    with recursive chain (id, depth) as (
+      select t.depends_on_template_task_id, 1 from public.stage_template_tasks t where t.id = new.depends_on_template_task_id
+      union all
+      select t.depends_on_template_task_id, c.depth + 1
+      from public.stage_template_tasks t join chain c on t.id = c.id
+      where c.depth < 1000
+    )
+    select 1 from chain where chain.id = new.id
+  ) then
+    raise exception 'That would make a loop in the template: "%"', new.title using errcode = 'check_violation';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger stage_template_tasks_no_loop before insert or update of depends_on_template_task_id
+  on public.stage_template_tasks
+  for each row execute function public.stage_template_tasks_no_loop();
+
+-- (i3) DEALS: Quick Feaso versions, offers, and keeping converted deals.
+
+-- New feaso version: number it, and fill blanks from the deal (lots from the
+-- yield, land price from the asking price, sales GST method from how the land
+-- is being bought: margin scheme unless the purchase carries GST; confirm with
+-- the accountant).
+create or replace function public.deal_feasos_defaults()
+returns trigger
+language plpgsql
+as $$
+declare d public.deals%rowtype;
+begin
+  select * into d from public.deals where id = new.deal_id;
+  if tg_op = 'INSERT' then
+    new.version := coalesce((select max(f.version) from public.deal_feasos f where f.deal_id = new.deal_id), 0) + 1;
+    new.owner_id := coalesce(new.owner_id, d.owner_id);
+  end if;
+  new.lots             := coalesce(new.lots, d.yield_count);
+  new.land_price       := coalesce(new.land_price, d.asking_price);
+  new.sales_gst_method := coalesce(new.sales_gst_method,
+                                   case when d.purchase_tax_type = 'gst' then 'full_gst'::public.sales_gst_method
+                                        else 'margin_scheme'::public.sales_gst_method end);
+  if new.lots is null or new.land_price is null then
+    raise exception 'Quick Feaso needs the number of lots and the land price (set them on the deal or in the feaso)';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger deal_feasos_defaults before insert or update on public.deal_feasos
+  for each row execute function public.deal_feasos_defaults();
+
+-- New offer: number it per deal and start the property line from the deal.
+create or replace function public.deal_offers_defaults()
+returns trigger
+language plpgsql
+as $$
+declare d public.deals%rowtype;
+begin
+  select * into d from public.deals where id = new.deal_id;
+  if tg_op = 'INSERT' then
+    new.offer_no := coalesce((select max(o.offer_no) from public.deal_offers o where o.deal_id = new.deal_id), 0) + 1;
+    new.owner_id := coalesce(new.owner_id, d.owner_id);
+    new.property_text := coalesce(nullif(trim(new.property_text), ''),
+                                  concat_ws(E'\n', d.address, nullif('(' || d.lot_plan || ')', '()')));
+  end if;
+  if new.status = 'accepted' then
+    new.accepted_on := coalesce(new.accepted_on, public.today_syd());
+  end if;
+  if new.status in ('sent', 'countered', 'accepted') then
+    new.sent_on := coalesce(new.sent_on, new.accepted_on, public.today_syd());
+  end if;
+  return new;
+end;
+$$;
+
+create trigger deal_offers_defaults before insert or update on public.deal_offers
+  for each row execute function public.deal_offers_defaults();
+
+-- A deal that became a project is the project's history (its feaso and offer
+-- are linked from the project): it can't be deleted.
+create or replace function public.deals_keep_converted()
+returns trigger
+language plpgsql
+as $$
+begin
+  if old.project_id is not null then
+    raise exception 'Deal "%" became project %, so it is kept as that project''s history.', old.address, old.project_id
+      using errcode = 'check_violation';
+  end if;
+  return old;
+end;
+$$;
+
+create trigger deals_keep_converted before delete on public.deals
+  for each row execute function public.deals_keep_converted();
+
+-- (i4) CONTACT ROLES: rename = a plain UPDATE of name (contacts link by id,
+-- so they follow).  Delete: refused while contacts use it, unless you name a
+-- role to move them to.
+--   select public.delete_contact_role('<Plasterer id>', '<Plastering id>');
+create or replace function public.delete_contact_role(p_role_id uuid, p_move_to_role_id uuid default null)
+returns integer      -- contacts moved
+language plpgsql
+as $$
+declare
+  v_name  text;
+  v_used  integer;
+  v_moved integer := 0;
+begin
+  select name into v_name from public.contact_roles where id = p_role_id;
+  if not found then raise exception 'Role % not found', p_role_id; end if;
+  select count(*) into v_used from public.contact_role_links where role_id = p_role_id;
+  if v_used > 0 and p_move_to_role_id is null then
+    raise exception 'Role "%" is used by % contact(s). Choose a role to move them to first.', v_name, v_used
+      using errcode = 'foreign_key_violation';
+  end if;
+  if p_move_to_role_id = p_role_id then
+    raise exception 'Pick a different role to move the contacts to';
+  end if;
+  if v_used > 0 then
+    insert into public.contact_role_links (contact_id, role_id, owner_id)
+    select l.contact_id, p_move_to_role_id, l.owner_id
+    from public.contact_role_links l where l.role_id = p_role_id
+    on conflict do nothing;
+    get diagnostics v_moved = row_count;
+    delete from public.contact_role_links where role_id = p_role_id;
+  end if;
+  delete from public.contact_roles where id = p_role_id;
+  return v_moved;
+end;
+$$;
 
 -- (j) COMPANIES: who owns a project, and closing a company.
 
@@ -1857,6 +2391,105 @@ begin
         or (k.applies_to = 'R' and st.project_type = 'residential_build'))
   where not exists (select 1 from public.stage_template_tasks x where x.stage_template_id = st.id);
 
+  -- default date rules on template tasks (Dan edits these in Settings):
+  --   DD ends 60 days after exchange; settlement 120 days after DD ends
+  --   (his most common terms); electricity application as soon as DA lands.
+  update public.stage_template_tasks tt
+     set anchor_milestone = r.milestone::public.task_milestone, offset_days = r.offset_days
+    from public.stage_templates st,
+         (values ('acquisition', 'Due diligence: title, contamination, services, flooding, bushfire', 'exchange',    60),
+                 ('approval',    'Apply for electricity connection',                                'da_approval',  0),
+                 ('approval',    'Review DA conditions and add tasks for them',                     'da_approval',  7),
+                 ('approval',    'Apply for electricity and water connections',                     'da_approval',  0)
+         ) r(stage_key, title, milestone, offset_days)
+   where st.id = tt.stage_template_id and st.owner_id = p_owner
+     and st.stage_key = r.stage_key and tt.title = r.title
+     and tt.anchor_milestone is null and tt.depends_on_template_task_id is null;
+
+  update public.stage_template_tasks tt
+     set depends_on_template_task_id = dd.id, anchor_on = 'due', offset_days = 120
+    from public.stage_template_tasks dd
+   where tt.owner_id = p_owner and dd.stage_template_id = tt.stage_template_id
+     and dd.title = 'Due diligence: title, contamination, services, flooding, bushfire'
+     and tt.title = 'Settlement'
+     and tt.anchor_milestone is null and tt.depends_on_template_task_id is null;
+
+  -- zonings (only if Dan has none yet): common NSW Standard Instrument zones
+  -- and Queensland planning scheme zones
+  if not exists (select 1 from public.zonings z where z.owner_id = p_owner) then
+    insert into public.zonings (owner_id, state, code, name, sort_order) values
+      (p_owner, 'NSW', 'RU1', 'Primary Production',               1),
+      (p_owner, 'NSW', 'RU2', 'Rural Landscape',                  2),
+      (p_owner, 'NSW', 'RU4', 'Primary Production Small Lots',    3),
+      (p_owner, 'NSW', 'RU5', 'Village',                          4),
+      (p_owner, 'NSW', 'R1',  'General Residential',              5),
+      (p_owner, 'NSW', 'R2',  'Low Density Residential',          6),
+      (p_owner, 'NSW', 'R3',  'Medium Density Residential',       7),
+      (p_owner, 'NSW', 'R5',  'Large Lot Residential',            8),
+      (p_owner, 'NSW', 'E1',  'Local Centre',                     9),
+      (p_owner, 'NSW', 'E3',  'Productivity Support',            10),
+      (p_owner, 'NSW', 'E4',  'General Industrial',              11),
+      (p_owner, 'NSW', 'E5',  'Heavy Industrial',                12),
+      (p_owner, 'NSW', 'MU1', 'Mixed Use',                       13),
+      (p_owner, 'NSW', 'C4',  'Environmental Living',            14),
+      (p_owner, 'QLD', null,  'Low density residential',         21),
+      (p_owner, 'QLD', null,  'Low-medium density residential',  22),
+      (p_owner, 'QLD', null,  'Medium density residential',      23),
+      (p_owner, 'QLD', null,  'Rural residential',               24),
+      (p_owner, 'QLD', null,  'Emerging community',              25),
+      (p_owner, 'QLD', null,  'Mixed use',                       26),
+      (p_owner, 'QLD', null,  'Low impact industry',             27),
+      (p_owner, 'QLD', null,  'Medium impact industry',          28),
+      (p_owner, 'QLD', null,  'Rural',                           29);
+  end if;
+
+  -- offer term bank (only if Dan has none yet): his exact wording from page 2
+  -- ("Term Bank") of "Letter of Offer template (21 Table top).docx".
+  if not exists (select 1 from public.offer_terms t where t.owner_id = p_owner) then
+    insert into public.offer_terms (owner_id, field, sort_order, wording) values
+    (p_owner, 'deposit', 1, '$50,000 paid on contract exchange – refundable prior to satisfaction of DD. Balance to 5% upon satisfaction of DD.'),
+    (p_owner, 'deposit', 2, '$10,000 paid on contract exchange – refundable prior to satisfaction of DD. Balance to 5% upon satisfaction of DD.'),
+    (p_owner, 'deposit', 3, '$100,000 paid on contract exchange – refundable prior to satisfaction of DD. Balance to 10% upon satisfaction of DD.'),
+    (p_owner, 'deposit', 4, '5% deposit paid in full on contract exchange – released to vendor only on satisfaction of DD.'),
+    (p_owner, 'deposit', 5, '10% deposit on contract exchange – deposit bond acceptable to the vendor.'),
+    (p_owner, 'deposit', 6, '$1 deposit on exchange (option structure), balance to 5% on satisfaction of DD.'),
+    (p_owner, 'due_diligence', 1, '60 days from contract exchange date.'),
+    (p_owner, 'due_diligence', 2, '60 days from the later of Contract exchange date, or receipt of all requested and relevant documents.'),
+    (p_owner, 'due_diligence', 3, '90 days from the later of Contract exchange date, or receipt of all requested and relevant documents.'),
+    (p_owner, 'due_diligence', 4, '120 days from the later of Contract exchange date, or receipt of all requested and relevant documents.'),
+    (p_owner, 'due_diligence', 5, '30 days from Contract exchange date.'),
+    (p_owner, 'due_diligence', 6, '60 days from Contract exchange date, with one 30-day extension at the purchaser’s election.'),
+    (p_owner, 'due_diligence', 7, '60 days from exchange, expiring no earlier than 14 days after receipt of the final survey, geotechnical and contamination reports.'),
+    (p_owner, 'due_diligence', 8, 'DD satisfied on exchange – due diligence completed prior to offer.'),
+    (p_owner, 'settlement', 1, '120 days from Contract Unconditional date'),
+    (p_owner, 'settlement', 2, '90 days from Contract Unconditional date'),
+    (p_owner, 'settlement', 3, '180 days from Contract Unconditional date'),
+    (p_owner, 'settlement', 4, '60 days from Contract Unconditional date'),
+    (p_owner, 'settlement', 5, 'The later of 120 days from Contract Unconditional date, or determination of the DA'),
+    (p_owner, 'settlement', 6, '14 days from registration of the plan of subdivision'),
+    (p_owner, 'settlement', 7, 'Staged settlement – 50% at [stage 1], balance at [stage 2]'),
+    (p_owner, 'settlement', 8, '60 Days from Satisfaction of DA Approval'),
+    (p_owner, 'settlement', 9, '60 Days From issued of DA and Subdivision works Certificate or 12 Months from date of Exchange.'),
+    (p_owner, 'condition', 1, 'Settlement is subject to receipt of satisfactory DA approval.'),
+    (p_owner, 'condition', 2, 'Purchaser to have 7 days to review and advise of satisfaction of DA.'),
+    (p_owner, 'condition', 3, 'Vendor to provide signed “owners consent to lodge DA” as part of contract exchange documentation.'),
+    (p_owner, 'condition', 4, 'Vendor to allow Marketing Signage to be erected after satisfaction of Due Diligence.'),
+    (p_owner, 'condition', 5, 'Access to site for purchaser’s consultants post exchange'),
+    (p_owner, 'condition', 6, 'Receipt of all relevant reports and approvals on exchange of contract'),
+    (p_owner, 'condition', 7, 'Comprehensive list of all consultants on contract exchange'),
+    (p_owner, 'condition', 8, 'Vendor to provide all existing survey, geotechnical and contamination reports'),
+    (p_owner, 'condition', 9, 'Subject to purchaser obtaining development consent for not less than XX lots'),
+    (p_owner, 'condition', 10, 'Subject to satisfactory geotechnical and contamination investigation'),
+    (p_owner, 'condition', 11, 'Subject to confirmation of servicing capacity – water, sewer, power and NBN'),
+    (p_owner, 'condition', 12, 'Subject to purchaser’s finance approval'),
+    (p_owner, 'condition', 13, 'Vendor to maintain the land in its current condition until settlement'),
+    (p_owner, 'condition', 14, 'Contract to include a licence for early works following DA approval'),
+    (p_owner, 'condition', 15, 'Subject to registration of the plan of subdivision for the balance land'),
+    (p_owner, 'condition', 16, 'No further encumbrances or leases to be registered on title after exchange'),
+    (p_owner, 'condition', 17, 'Contract Sunset date; 18 Month from Satisfaction of DA date with option in favour of Purchaser to extend Sunset Period an Extra 6 Months due to delays from 3rd Party authorities such as, but not limited to, (add Council) . Purchaser to pay additional $10,000, and released to Vendor, if an extension is Sought.'),
+    (p_owner, 'solicitor', 1, 'To be advised once agreed.');
+  end if;
+
   -- contact categories and roles (only if Dan has none yet)
   if not exists (select 1 from public.contact_categories c where c.owner_id = p_owner) then
     insert into public.contact_categories (owner_id, name, sort_order) values
@@ -1966,6 +2599,170 @@ select public.seed_owner_defaults(u.id) from auth.users u;
 --      tables underneath, so it only ever shows the logged-in owner's rows.
 --      Every money view adds up BILL LINES, not bill headers.
 -- -----------------------------------------------------------------------------
+
+-- QUICK FEASO RESULTS: Dan's "Quick Feso Subdivision" spreadsheet, row for row.
+-- Everything is worked at full precision and rounded only at the end (money to
+-- the cent, margin on cost to 4 places), like Excel showing his sheet.
+-- His sheet's fixed 30s and 29 now follow the lot count (and existing-lot credit).
+--   Revenue:  lots x price; less agency %, legal per lot, GST on sales
+--             (margin scheme = (revenue - land price) / 11).
+--   Land:     price + stamp duty % + legals            = acquisition
+--   Build:    (electrics + civils + landscaping) per lot x lots, + contingency %
+--   Consult.: electrical design + other + engineer + surveyor per lot x lots + planning
+--   Fees:     marketing + PM (monthly x months) + bond (% of civils) + accounting
+--             + holding + council CC fee + s94 per lot x (lots - existing-lot credit)
+--   Finance:  land debt = acquisition - equity, at the land rate;
+--             construction debt = (total cost - equity) - land debt, at the
+--             construction rate on half (average draw); establishment fee on both.
+--   Net profit = net revenue - total cost inc finance; MoC = net profit / that.
+-- Where his sheet would go below zero (equity bigger than the land cost, land
+-- dearer than revenue) the debts / margin GST stop at $0.
+create view public.v_deal_feasos
+with (security_invoker = true) as
+select
+  f.id                                                             as feaso_id,
+  f.deal_id,
+  f.version,
+  f.label,
+  f.version = max(f.version) over (partition by f.deal_id)         as is_latest,
+  f.created_at,
+  f.lots,
+  f.price_per_lot,
+  f.sales_gst_method,
+  -- revenue
+  round(r.revenue, 2)                                              as revenue,
+  round(r.agency, 2)                                               as agency,
+  round(r.legal, 2)                                                as legal,
+  round(r.gst_on_sales, 2)                                         as gst_on_sales,
+  round(r.net_revenue, 2)                                          as net_revenue,
+  -- costs
+  round(c.stamp_duty, 2)                                           as stamp_duty,
+  round(c.acquisition, 2)                                          as acquisition,
+  round(c.construction_subtotal, 2)                                as construction_subtotal,
+  round(c.contingency, 2)                                          as contingency,
+  round(c.total_construction, 2)                                   as total_construction,
+  round(c.surveyor, 2)                                             as surveyor,
+  round(c.total_consultants, 2)                                    as total_consultants,
+  round(c.project_mgmt, 2)                                         as project_mgmt,
+  round(c.bond, 2)                                                 as bond,
+  c.s94_lots,
+  round(c.s94, 2)                                                  as s94,
+  round(c.total_fees, 2)                                           as total_fees,
+  round(c.total_cost, 2)                                           as total_cost,
+  round(r.net_revenue - c.total_cost, 2)                           as gross_profit_before_finance,
+  -- finance
+  f.equity,
+  round(fi.funds_to_complete, 2)                                   as funds_to_complete,
+  round(fi.land_debt, 2)                                           as land_debt,
+  round(fi.land_interest, 2)                                       as land_interest,
+  round(fi.construction_debt, 2)                                   as construction_debt,
+  round(fi.construction_interest, 2)                               as construction_interest,
+  round(fi.establishment_fee, 2)                                   as establishment_fee,
+  round(fi.finance_costs, 2)                                       as finance_costs,
+  round(c.total_cost + fi.finance_costs, 2)                        as total_cost_inc_finance,
+  round(r.net_revenue - c.total_cost - fi.finance_costs, 2)        as net_profit,
+  round((r.net_revenue - c.total_cost - fi.finance_costs) / nullif(c.total_cost + fi.finance_costs, 0), 4) as margin_on_cost,
+  -- per lot (his column E)
+  round(r.net_revenue / f.lots, 2)                                 as net_revenue_per_lot,
+  round(c.acquisition / f.lots, 2)                                 as acquisition_per_lot,
+  round(c.total_construction / f.lots, 2)                          as construction_per_lot,
+  round(c.total_consultants / f.lots, 2)                           as consultants_per_lot,
+  round((c.total_cost - c.acquisition) / f.lots, 2)                as cost_to_complete_per_lot,   -- his "Total cost" per lot: excludes the land
+  round((c.total_cost + fi.finance_costs) / f.lots, 2)             as total_cost_inc_finance_per_lot,
+  round((r.net_revenue - c.total_cost - fi.finance_costs) / f.lots, 2) as net_profit_per_lot
+from public.deal_feasos f
+cross join lateral (
+  select x.revenue, x.agency, x.legal, x.gst_on_sales,
+         x.revenue - x.agency - x.legal - x.gst_on_sales as net_revenue
+  from (select f.lots * f.price_per_lot                              as revenue,
+               f.agency_pct * f.lots * f.price_per_lot               as agency,
+               f.legal_per_lot * f.lots                              as legal,
+               case f.sales_gst_method
+                 when 'margin_scheme' then greatest(f.lots * f.price_per_lot - f.land_price, 0) / 11
+                 when 'full_gst'      then f.lots * f.price_per_lot / 11
+                 else 0 end                                          as gst_on_sales) x
+) r
+cross join lateral (
+  select y.*, y.acquisition + y.total_construction + y.total_consultants + y.total_fees as total_cost
+  from (select
+          f.land_price * f.stamp_duty_pct                                            as stamp_duty,
+          f.land_price + f.land_price * f.stamp_duty_pct + f.land_legals             as acquisition,
+          (f.electrics_comms_per_lot + f.civils_per_lot + f.landscaping_per_lot) * f.lots as construction_subtotal,
+          (f.electrics_comms_per_lot + f.civils_per_lot + f.landscaping_per_lot) * f.lots * f.contingency_pct as contingency,
+          (f.electrics_comms_per_lot + f.civils_per_lot + f.landscaping_per_lot) * f.lots * (1 + f.contingency_pct) as total_construction,
+          f.surveyor_per_lot * f.lots                                                as surveyor,
+          f.electrical_design + f.consultants_other + f.engineer
+            + f.surveyor_per_lot * f.lots + f.planning                               as total_consultants,
+          f.pm_fee_per_month * f.pm_months                                           as project_mgmt,
+          f.civils_per_lot * f.lots * f.bond_pct_of_civils                           as bond,
+          greatest(f.lots - f.existing_lot_credit, 0)                                as s94_lots,
+          f.s94_per_lot * greatest(f.lots - f.existing_lot_credit, 0)                as s94,
+          f.marketing + f.pm_fee_per_month * f.pm_months + f.civils_per_lot * f.lots * f.bond_pct_of_civils
+            + f.accounting_admin + f.holding + f.council_cc_fee
+            + f.s94_per_lot * greatest(f.lots - f.existing_lot_credit, 0)            as total_fees) y
+) c
+cross join lateral (
+  select w.*,
+         w.land_interest + w.construction_interest + w.establishment_fee as finance_costs
+  from (select v.*,
+               f.land_interest_rate * v.land_debt                        as land_interest,
+               v.construction_debt * f.construction_interest_rate / 2    as construction_interest,
+               f.establishment_fee_pct * (v.construction_debt + v.land_debt) as establishment_fee
+        from (select c.total_cost - f.equity                                         as funds_to_complete,
+                     greatest(c.acquisition - f.equity, 0)                           as land_debt,
+                     greatest(c.total_cost - f.equity - greatest(c.acquisition - f.equity, 0), 0) as construction_debt) v
+       ) w
+) fi;
+
+-- LETTER OF OFFER, laid out like Dan's Word template (page 1).
+create view public.v_offer_letters
+with (security_invoker = true) as
+select
+  o.id                                                              as offer_id,
+  o.deal_id,
+  o.offer_no,
+  o.status,
+  coalesce(o.sent_on, public.today_syd())                           as letter_date,
+  'WELLCO DEVELOPMENTS'::text                                       as letterhead,
+  'Letter of Offer'::text                                           as title,
+  o.property_text                                                   as property_address,
+  case when o.price is not null
+       then '$ ' || to_char(o.price, 'FM999,999,999,990') || coalesce(' ' || nullif(trim(o.gst_wording), ''), '')
+  end                                                               as price_line,
+  o.purchaser,
+  o.deposit,
+  o.due_diligence,
+  o.settlement,
+  (select string_agg(u.n || '. ' || u.c, E'\n' order by u.n)
+     from unnest(o.conditions) with ordinality as u(c, n))          as conditions_numbered,
+  o.solicitor                                                       as purchaser_solicitor,
+  'Dan Wellman'::text                                               as signatory_name,
+  'Director'::text                                                  as signatory_title,
+  'Wellco Developments PL'::text                                    as signatory_company,
+  o.document_id
+from public.deal_offers o;
+
+-- DEALS LIST: each deal with its zoning, latest Quick Feaso headline and offers.
+create view public.v_deals
+with (security_invoker = true) as
+select
+  d.*,
+  concat_ws(' ', z.code, z.name)                                    as zoning_label,
+  lf.version                                                        as feaso_version,
+  lf.net_profit                                                     as feaso_net_profit,
+  lf.margin_on_cost                                                 as feaso_margin_on_cost,
+  coalesce(oc.offers, 0)                                            as offers,
+  ao.offer_no                                                       as accepted_offer_no,
+  ao.price                                                          as accepted_price,
+  ao.exchange_on
+from public.deals d
+left join public.zonings z on z.id = d.zoning_id
+left join lateral (
+  select vf.version, vf.net_profit, vf.margin_on_cost
+  from public.v_deal_feasos vf where vf.deal_id = d.id order by vf.version desc limit 1
+) lf on true
+left join lateral (select count(*) as offers from public.deal_offers o where o.deal_id = d.id) oc on true
+left join public.deal_offers ao on ao.deal_id = d.id and ao.status = 'accepted';
 
 -- STAGE STEPPER: a project's stages in order, numbered 1..n, with progress.
 create view public.v_project_stages
@@ -2080,7 +2877,7 @@ select
   coalesce(nullif(b.budget_ex_gst, 0), p.budget, 0)
     - (coalesce(e.engaged_ex_gst, 0) + coalesce(i.direct_ex_gst, 0)) as uncommitted_ex_gst,
   coalesce(fn.still_to_find, 0)                                   as funds_still_to_find,
-  nt.due_date                                                     as next_deadline,
+  nt.due_on                                                       as next_deadline,
   nt.title                                                        as next_task,
   coalesce(t.open_tasks, 0)                                       as open_tasks,
   coalesce(t.overdue_tasks, 0)                                    as overdue_tasks,
@@ -2117,16 +2914,16 @@ left join lateral (
 left join public.v_funds_needed fn on fn.project_id = p.project_id
 left join lateral (
   select count(*) filter (where not tk.done)                                                          as open_tasks,
-         count(*) filter (where not tk.done and tk.due_date < public.today_syd())                     as overdue_tasks,
+         count(*) filter (where not tk.done and tk.due_on < public.today_syd())                     as overdue_tasks,
          count(*) filter (where not tk.done and tk.lead_time_days is not null
-                            and tk.due_date - tk.lead_time_days <= public.today_syd() + 7)            as lead_time_alerts
+                            and tk.due_on - tk.lead_time_days <= public.today_syd() + 7)            as lead_time_alerts
   from public.tasks tk where tk.project_id = p.project_id
 ) t on true
 left join lateral (
-  select tk.due_date, tk.title
+  select tk.due_on, tk.title
   from public.tasks tk
-  where tk.project_id = p.project_id and not tk.done and tk.due_date is not null
-  order by tk.due_date, tk.sort_order
+  where tk.project_id = p.project_id and not tk.done and tk.due_on is not null
+  order by tk.due_on, tk.sort_order
   limit 1
 ) nt on true
 left join lateral (
@@ -2372,10 +3169,12 @@ left join lateral (
 ) x on true;
 
 -- CONTACTS: roles, categories, projects worked on + licence / insurance expiring within 60 days.
+-- List them alphabetically:  order by sort_name, name
 create view public.v_contacts
 with (security_invoker = true) as
 select
   c.*,
+  lower(coalesce(nullif(trim(c.company), ''), c.name))               as sort_name,
   coalesce((
     select array_agg(r.name order by cc.sort_order, r.sort_order)
     from public.contact_role_links crl
@@ -2421,6 +3220,7 @@ select
   c.id                                                         as contact_id,
   c.name,
   c.company,
+  lower(coalesce(nullif(trim(c.company), ''), c.name))           as sort_name,
   coalesce(array_agg(distinct r.name) filter (where r.id is not null), '{}') as roles_in_category,
   bool_or(x.via_extra)                                         as added_directly
 from (
@@ -2444,21 +3244,21 @@ select 1 as priority, 'approval'::text as item_type, ap.project_id, ap.title,
 from public.approvals ap where ap.status = 'pending'
 union all
 -- overdue tasks
-select 2, 'overdue_task', tk.project_id, tk.title, tk.warning, tk.due_date, 'tasks', tk.id
-from public.tasks tk where not tk.done and tk.due_date < public.today_syd()
+select 2, 'overdue_task', tk.project_id, tk.title, tk.warning, tk.due_on, 'tasks', tk.id
+from public.tasks tk where not tk.done and tk.due_on < public.today_syd()
 union all
 -- lead-time warnings: time to start (due date minus lead time is within 7 days)
 select 3, 'lead_time', tk.project_id, tk.title,
        coalesce(tk.warning, tk.lead_time_days || '-day lead time'),
-       tk.due_date - tk.lead_time_days, 'tasks', tk.id
+       tk.due_on - tk.lead_time_days, 'tasks', tk.id
 from public.tasks tk
-where not tk.done and tk.lead_time_days is not null and tk.due_date >= public.today_syd()
-  and tk.due_date - tk.lead_time_days <= public.today_syd() + 7
+where not tk.done and tk.lead_time_days is not null and tk.due_on >= public.today_syd()
+  and tk.due_on - tk.lead_time_days <= public.today_syd() + 7
 union all
 -- tasks due in the next 7 days
-select 4, 'due_soon', tk.project_id, tk.title, tk.warning, tk.due_date, 'tasks', tk.id
+select 4, 'due_soon', tk.project_id, tk.title, tk.warning, tk.due_on, 'tasks', tk.id
 from public.tasks tk
-where not tk.done and tk.due_date between public.today_syd() and public.today_syd() + 7
+where not tk.done and tk.due_on between public.today_syd() and public.today_syd() + 7
   and tk.lead_time_days is null
 union all
 -- quotes requested more than 7 days ago with no reply (and not chased in the last 7 days)
@@ -2511,6 +3311,7 @@ declare t text;
 begin
   foreach t in array array['wellco_settings', 'project_types', 'stage_templates', 'stage_template_tasks',
                            'contact_categories', 'contact_roles', 'document_types', 'companies',
+                           'zonings', 'offer_terms', 'deal_feasos', 'deal_offers',
                            'contacts', 'contact_role_links', 'contact_extra_categories',
                            'projects', 'project_stages', 'deals', 'tasks', 'budget_lines',
                            'documents', 'rfq_scopes', 'quotes', 'engagements', 'invoices_in',
@@ -2605,6 +3406,7 @@ commit;
 --    select project_type, count(*) from stage_templates group by 1 order by 1;
 --        -- commercial_industrial 9 | land_subdivision 9 | residential_build 8
 --    select name from contact_categories order by sort_order;     -- 6 rows
+--    select field, count(*) from offer_terms group by 1;          -- condition 17, deposit 6, due_diligence 8, settlement 9, solicitor 1
 --    select public.au_fy('2026-11-02'), public.au_bas_quarter('2026-11-02');  -- FY2026-27 | Q2
 --  Tests: supabase-tests.sql (local Postgres only, not on Dan's live project).
 -- =============================================================================
