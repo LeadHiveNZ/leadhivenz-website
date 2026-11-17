@@ -4,10 +4,11 @@ import { addHours, addMinutes, now } from "@/lib/clock";
 import type { Db } from "@/lib/db/types";
 import { baseUrl } from "@/lib/env";
 import { loadContext, ownerJobUrl } from "@/lib/jobs/context";
-import { refundSplit } from "@/lib/jobs/pricing";
+import { refundSplit, taxPortion } from "@/lib/jobs/pricing";
 import { getJobForStaff, lockJob } from "@/lib/jobs/store";
 import type { Job } from "@/lib/jobs/types";
 import { getMarket } from "@/lib/markets/store";
+import { formatMoney } from "@/lib/money";
 import { texts } from "@/lib/notify/messages";
 import { enqueue } from "@/lib/notify/outbox";
 import { raiseException, resolveExceptionsFor } from "@/lib/ops/exceptions";
@@ -22,7 +23,9 @@ import { formatDeadline, monthKey, monthLabel } from "@/lib/time";
  *   24 hours on   the tradie's share is sent, unless the owner has raised a problem
  *   a problem     pauses the tradie's money and puts the job in front of the dispatcher
  *   a refund      comes off the platform's share and the tradie's share in proportion
- *   missed promise  the month's membership is credited, once per property per month
+ *   missed promise  the call-out portion of that job is on us (the market's
+ *                   diagnosis fee, capped at the job's price), once per
+ *                   property per month. It comes off that job's charge.
  *
  * Each function follows the same three beats so that a crash or a repeat can
  * never charge or pay twice:
@@ -54,12 +57,34 @@ type PayoutRow = {
 export async function openSettlement(db: Db, job: Job, market: Market): Promise<void> {
   const at = job.completedAt ?? now();
   const billing = await getBilling(db, job.ownerId, market.country);
-  if (job.ownerTotalCents > 0) {
+
+  // A missed promise on this job: its call-out portion comes off this charge
+  // (DECISIONS.md, 2026-11-17). The tradie is still paid in full below.
+  let chargeCents = job.ownerTotalCents;
+  const credit = (await db.query<{ id: string; amount_cents: number }>(
+    "select id, amount_cents from public.credits where job_id = $1::uuid and reason = 'missed_window' and status = 'pending' for update",
+    [job.id],
+  ))[0];
+  if (credit && chargeCents > 0) {
+    const off = Math.min(Number(credit.amount_cents), chargeCents);
+    chargeCents -= off;
+    await db.query(
+      "update public.credits set status = 'applied', provider_ref = $2, note = $3 where id = $1::uuid and status = 'pending'",
+      [credit.id, `job:${job.id}`, `Taken off job ${job.number}`],
+    );
+    await audit(db, {
+      actor: "system", action: "credit.applied", entity: "job", entityId: job.id, amount: off, currency: job.currency,
+      detail: { reason: "missed_window", credit: credit.id, charged: chargeCents }, dedupeKey: `credit.applied:${credit.id}`,
+    });
+  }
+  const taxCents = chargeCents === job.ownerTotalCents ? job.taxCents : job.taxCents > 0 ? taxPortion(chargeCents, market.taxRate) : 0;
+
+  if (chargeCents > 0) {
     await db.query(
       `insert into public.payments (created_at, job_id, owner_id, amount_cents, tax_cents, currency, status, provider)
        values ($1::timestamptz, $2::uuid, $3::uuid, $4, $5, $6, 'pending', $7)
        on conflict (job_id) do nothing`,
-      [at.toISOString(), job.id, job.ownerId, job.ownerTotalCents, job.taxCents, job.currency, billing?.provider ?? "stripe"],
+      [at.toISOString(), job.id, job.ownerId, chargeCents, taxCents, job.currency, billing?.provider ?? "stripe"],
     );
   }
   if (job.tradieTotalCents > 0 && job.tradieId) {
@@ -70,7 +95,7 @@ export async function openSettlement(db: Db, job: Job, market: Market): Promise<
       [
         at.toISOString(), job.id, job.tradieId, job.tradieTotalCents, job.currency,
         // With nothing to charge the owner there is nothing to wait for.
-        job.ownerTotalCents > 0 ? "waiting" : "scheduled", addHours(at, market.payoutHoldHours).toISOString(),
+        chargeCents > 0 ? "waiting" : "scheduled", addHours(at, market.payoutHoldHours).toISOString(),
       ],
     );
   }
@@ -393,7 +418,9 @@ export async function resolveDispute(db: Db, gatewayFor: GatewayFor, disputeId: 
   }
   const payouts = await db.query<PayoutRow>("select * from public.payouts where job_id = $1::uuid", [job.id]);
   const payout = payouts[0] ?? null;
-  const split = refundSplit({ ownerCents: payment.amount_cents, tradieCents: payout?.amount_cents ?? 0 }, refundCents);
+  // In proportion to the job's full price: when a missed-promise credit took the call-out off the charge, the
+  // platform already wore that part, so the tradie's share of a refund is worked out from what the job was worth.
+  const split = refundSplit({ ownerCents: Math.max(payment.amount_cents, job.ownerTotalCents), tradieCents: payout?.amount_cents ?? 0 }, refundCents);
 
   const gateway = gatewayFor(market.country);
   if (!gateway) return { ok: false, message: "Payments are not set up for this country." };
@@ -460,8 +487,9 @@ export async function resolveDispute(db: Db, gatewayFor: GatewayFor, disputeId: 
 
 /**
  * Run by the timer. For every job whose promised time has passed with no
- * tradie on site: mark the miss, credit the owner that month's membership
- * (once per property per calendar month), tell them, and tell the dispatcher.
+ * tradie on site: mark the miss, credit the owner the call-out portion of that
+ * job (once per property per calendar month), tell them, and tell the
+ * dispatcher. The credit comes off that job's charge (openSettlement).
  */
 export async function creditMissedWindows(db: Db): Promise<{ missed: number; credited: number }> {
   const at = now();
@@ -485,17 +513,21 @@ export async function creditMissedWindows(db: Db): Promise<{ missed: number; cre
 
       const month = monthKey(job.respondBy, market.timezone);
       let credited = false;
-      // A Portfolio property is covered by one retainer for the whole account,
-      // so "that month's membership" has no amount of its own. What to credit
-      // is an owner decision still outstanding (DECISIONS.md): nothing is
-      // credited automatically, and a person decides from the queue.
+      // The call-out portion of this job is on us: the market's diagnosis fee,
+      // never more than the job's own price (DECISIONS.md, 2026-11-17). It
+      // comes off this job's charge when the job is done; the tradie is paid
+      // in full and the platform wears it.
+      // A Portfolio property: what to credit is an owner decision still
+      // outstanding (DECISIONS.md). Nothing is credited automatically, and a
+      // person decides from the queue.
       const portfolio = Boolean(property.portfolioId);
-      if (!portfolio && tier && tier.monthlyPriceCents > 0) {
+      const amount = Math.min(market.diagnosisFeeCents, job.ownerTotalCents);
+      if (!portfolio && tier && amount > 0) {
         const inserted = await tx.query(
           `insert into public.credits (created_at, owner_id, property_id, job_id, reason, amount_cents, currency, month, status, note, created_by)
            values ($1::timestamptz, $2::uuid, $3::uuid, $4::uuid, 'missed_window', $5, $6, $7, 'pending', $8, 'system')
            on conflict do nothing returning id`,
-          [at.toISOString(), job.ownerId, property.id, job.id, tier.monthlyPriceCents, market.currency, month, `Job ${job.number}: nobody on site by the promised time`],
+          [at.toISOString(), job.ownerId, property.id, job.id, amount, market.currency, month, `Job ${job.number}: nobody on site by the promised time`],
         );
         credited = inserted.length > 0;
       }
@@ -503,13 +535,13 @@ export async function creditMissedWindows(db: Db): Promise<{ missed: number; cre
         actor: "system", action: "job.window_missed", entity: "job", entityId: job.id,
         detail: { promised: job.respondBy.toISOString(), credited, capped: !credited && !portfolio && Boolean(tier), portfolio, status: job.status },
       });
-      if (credited && tier) {
+      if (credited) {
         result.credited += 1;
-        await audit(tx, { actor: "system", action: "credit.created", entity: "job", entityId: job.id, amount: tier.monthlyPriceCents, currency: market.currency, detail: { reason: "missed_window", month } });
+        await audit(tx, { actor: "system", action: "credit.created", entity: "job", entityId: job.id, amount, currency: market.currency, detail: { reason: "missed_window", month } });
         if (owner.phone) {
           await enqueue(tx, {
             channel: "sms", to: owner.phone, template: "window_missed", audience: "owner", jobId: job.id, userId: owner.userId,
-            body: texts.windowMissed({ property: property.name, month: monthLabel(month).split(" ")[0]!, amountCents: tier.monthlyPriceCents, currency: market.currency }),
+            body: texts.windowMissed({ property: property.name, amountCents: amount, currency: market.currency }),
             dedupeKey: `window_missed:${job.id}`,
           });
         }
@@ -518,7 +550,7 @@ export async function creditMissedWindows(db: Db): Promise<{ missed: number; cre
         kind: "missed_window", market: job.market, jobId: job.id,
         summary: portfolio
           ? `Missed window on a Portfolio property. Job ${job.number}: no tradie on site at ${property.name} by ${formatDeadline(job.respondBy, at, market.timezone)}. Nothing was credited automatically: decide what to credit and add it on the owner's page under Owners.`
-          : `Job ${job.number}: no tradie on site at ${property.name} by ${formatDeadline(job.respondBy, at, market.timezone)}. ${credited ? "The month's membership has been credited." : "No credit this time (one per property per month)."}`,
+          : `Job ${job.number}: no tradie on site at ${property.name} by ${formatDeadline(job.respondBy, at, market.timezone)}. ${credited ? `The call-out portion (${formatMoney(amount, market.currency)}) comes off this job's charge.` : "No credit this time (one per property per month)."}`,
         dedupeKey: `missed_window:${job.id}`,
       });
     });
@@ -560,7 +592,10 @@ export async function applyPendingCredits(db: Db, gatewayFor: GatewayFor): Promi
        from public.credits c
        left join public.properties p on p.id = c.property_id
        join public.markets m on m.slug = coalesce(p.market, (select slug from public.markets where currency = c.currency order by created_at limit 1))
-      where c.status = 'pending' order by c.created_at limit 50`,
+      where c.status = 'pending'
+        -- A missed-promise credit on a job comes off that job's own charge (openSettlement), never the next membership payment.
+        and not (c.reason = 'missed_window' and c.job_id is not null)
+      order by c.created_at limit 50`,
   );
   let applied = 0;
   for (const credit of pending) {

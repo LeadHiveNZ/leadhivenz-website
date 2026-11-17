@@ -3,6 +3,7 @@ import { findTrade, trades as tradeList } from "@config/trades";
 import { audit } from "@/lib/audit";
 import { createUser, type User } from "@/lib/auth/users";
 import { now } from "@/lib/clock";
+import { dateKey } from "@/lib/time";
 import type { Db } from "@/lib/db/types";
 import type { Provider } from "@/lib/payments/gateway";
 
@@ -12,7 +13,10 @@ import type { Provider } from "@/lib/payments/gateway";
  *
  * The licence rule lives here, in one query: a job that needs a licence is
  * only ever offered to a tradie whose licence for that trade has a number on
- * file and an expiry date that has not passed.
+ * file and an expiry date that has not passed. The insurance rule sits in the
+ * same query: no tradie is offered anything without public liability
+ * insurance on file (insurer, policy number and an expiry date that has not
+ * passed), DECISIONS.md 2026-11-17.
  */
 
 export type TradieStatus = "applied" | "approved" | "paused" | "removed";
@@ -33,6 +37,9 @@ export type Tradie = {
   afterHours: boolean;
   gstRegistered: boolean;
   gstNumber: string | null;
+  /** Public liability insurance: who insures them, the policy number and when it runs out ("2027-03-31"). */
+  insurer: string | null;
+  insurancePolicyNumber: string | null;
   insuranceExpiresOn: string | null;
   payoutProvider: Provider | null;
   payoutAccountId: string | null;
@@ -55,12 +62,13 @@ type TradieRow = {
   id: string; created_at: Date; user_id: string; name: string; phone: string | null; email: string | null; market: string;
   business_name: string; trades: string[]; status: TradieStatus; approved_at: Date | null; days_available: string[];
   after_hours: boolean; gst_registered: boolean; gst_number: string | null; insurance_expires_on: string | null;
+  insurer: string | null; insurance_policy_number: string | null;
   payout_provider: Provider | null; payout_account_id: string | null; payouts_enabled: boolean; notes: string;
 };
 
 const TRADIE_SELECT = `select t.id, t.created_at, t.user_id, u.name, u.phone, u.email, t.market, t.business_name, t.trades, t.status,
                               t.approved_at, t.days_available, t.after_hours, t.gst_registered, t.gst_number, t.insurance_expires_on,
-                              t.payout_provider, t.payout_account_id, t.payouts_enabled, t.notes
+                              t.insurer, t.insurance_policy_number, t.payout_provider, t.payout_account_id, t.payouts_enabled, t.notes
                          from public.tradies t join public.users u on u.id = t.user_id`;
 
 function rowToTradie(row: TradieRow): Tradie {
@@ -68,7 +76,9 @@ function rowToTradie(row: TradieRow): Tradie {
     id: row.id, createdAt: new Date(row.created_at), userId: row.user_id, name: row.name, phone: row.phone, email: row.email,
     market: row.market, businessName: row.business_name, trades: row.trades, status: row.status,
     approvedAt: row.approved_at ? new Date(row.approved_at) : null, daysAvailable: row.days_available, afterHours: row.after_hours,
-    gstRegistered: row.gst_registered, gstNumber: row.gst_number, insuranceExpiresOn: row.insurance_expires_on,
+    gstRegistered: row.gst_registered, gstNumber: row.gst_number,
+    insurer: row.insurer ?? null, insurancePolicyNumber: row.insurance_policy_number ?? null,
+    insuranceExpiresOn: row.insurance_expires_on ? String(row.insurance_expires_on).slice(0, 10) : null,
     payoutProvider: row.payout_provider, payoutAccountId: row.payout_account_id, payoutsEnabled: row.payouts_enabled, notes: row.notes,
   };
 }
@@ -150,8 +160,28 @@ export type TradiePatch = {
   afterHours?: boolean;
   gstRegistered?: boolean;
   gstNumber?: string | null;
+  insurer?: string | null;
+  insurancePolicyNumber?: string | null;
   insuranceExpiresOn?: string | null;
 };
+
+/**
+ * Why this tradie cannot be approved or offered work for want of insurance,
+ * in plain words, or null when their public liability insurance is on file
+ * and current. "today" is the market's own date, "2026-11-17".
+ */
+export function insuranceProblem(tradie: Pick<Tradie, "insurer" | "insurancePolicyNumber" | "insuranceExpiresOn">, today: string): string | null {
+  const missing = [
+    !tradie.insurer?.trim() && "the insurer",
+    !tradie.insurancePolicyNumber?.trim() && "the policy number",
+    !tradie.insuranceExpiresOn && "the expiry date",
+  ].filter(Boolean) as string[];
+  if (missing.length > 0) {
+    return `Their public liability insurance is not complete: add ${missing.join(", ").replace(/, ([^,]*)$/, " and $1")} on their page first. We can't offer them jobs without it.`;
+  }
+  if (tradie.insuranceExpiresOn! < today) return "Their public liability insurance has run out. Add the renewed policy and its new expiry date on their page first.";
+  return null;
+}
 
 export async function updateTradie(db: Db, tradieId: string, patch: TradiePatch, actor: string): Promise<Tradie | null> {
   const current = await getTradie(db, tradieId);
@@ -160,13 +190,15 @@ export async function updateTradie(db: Db, tradieId: string, patch: TradiePatch,
   if (chosen.length === 0) throw new TradieError("Choose at least one trade.");
   await db.query(
     `update public.tradies set business_name = $2, trades = $3::text[], days_available = $4::text[], after_hours = $5,
-            gst_registered = $6, gst_number = $7, insurance_expires_on = $8::date
+            gst_registered = $6, gst_number = $7, insurance_expires_on = $8::date, insurer = $9, insurance_policy_number = $10
       where id = $1::uuid`,
     [
       tradieId, patch.businessName?.trim() || current.businessName, chosen, patch.daysAvailable ?? current.daysAvailable,
       patch.afterHours ?? current.afterHours, patch.gstRegistered ?? current.gstRegistered,
       patch.gstNumber === undefined ? current.gstNumber : patch.gstNumber?.trim() || null,
       patch.insuranceExpiresOn === undefined ? current.insuranceExpiresOn : patch.insuranceExpiresOn || null,
+      patch.insurer === undefined ? current.insurer : patch.insurer?.trim().slice(0, 120) || null,
+      patch.insurancePolicyNumber === undefined ? current.insurancePolicyNumber : patch.insurancePolicyNumber?.trim().slice(0, 80) || null,
     ],
   );
   // A slot for a trade they no longer do is given up.
@@ -175,8 +207,19 @@ export async function updateTradie(db: Db, tradieId: string, patch: TradiePatch,
   return getTradie(db, tradieId);
 }
 
-/** Staff decisions about a tradie. Removing or pausing takes them out of every slot's rotation at once. */
+/**
+ * Staff decisions about a tradie. Removing or pausing takes them out of every
+ * slot's rotation at once. Approving needs current public liability insurance
+ * on file: insurer, policy number and an expiry date that has not passed.
+ */
 export async function setTradieStatus(db: Db, tradieId: string, status: TradieStatus, actor: string): Promise<Tradie | null> {
+  if (status === "approved") {
+    const tradie = await getTradie(db, tradieId);
+    if (!tradie) return null;
+    const zone = (await db.query<{ timezone: string }>("select timezone from public.markets where slug = $1", [tradie.market]))[0]?.timezone ?? "UTC";
+    const problem = insuranceProblem(tradie, dateKey(now(), zone));
+    if (problem) throw new TradieError(`Not approved. ${problem}`);
+  }
   const at = now().toISOString();
   const rows = await db.query(
     `update public.tradies set status = $2,
@@ -295,6 +338,7 @@ export type OfferCriteria = {
  * Every tradie who may be offered this job, first choice first. This one
  * query is the whole eligibility rule:
  *  - approved, in this market, does this trade, has a mobile, can be paid
+ *  - public liability insurance on file (insurer, policy number) that has not expired
  *  - if the job needs a licence: has one for this trade that has not expired
  *  - if it is after hours: has said they take after-hours work
  *  - if it is urgent: works today
@@ -310,6 +354,9 @@ export async function eligibleTradies(db: Db, criteria: OfferCriteria): Promise<
         and u.disabled_at is null
         and u.phone is not null
         and t.payouts_enabled
+        and char_length(coalesce(t.insurer, '')) >= 1
+        and char_length(coalesce(t.insurance_policy_number, '')) >= 1
+        and t.insurance_expires_on >= $6::date
         and (not $3::boolean or exists (
               select 1 from public.tradie_licences l
                where l.tradie_id = t.id and l.trade = $2
@@ -331,6 +378,8 @@ export async function canStillTake(db: Db, tradieId: string, job: { market: stri
   const rows = await db.query(
     `select 1 from public.tradies t join public.users u on u.id = t.user_id
       where t.id = $1::uuid and t.market = $2 and t.status = 'approved' and $3 = any(t.trades) and u.disabled_at is null
+        and char_length(coalesce(t.insurer, '')) >= 1 and char_length(coalesce(t.insurance_policy_number, '')) >= 1
+        and t.insurance_expires_on >= $5::date
         and (not $4::boolean or exists (
               select 1 from public.tradie_licences l
                where l.tradie_id = t.id and l.trade = $3 and char_length(l.licence_number) >= 2 and l.expires_on >= $5::date))`,

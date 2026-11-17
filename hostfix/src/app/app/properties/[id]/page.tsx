@@ -21,7 +21,7 @@ import { baseUrl } from "@/lib/env";
 import { listUploads } from "@/lib/files/uploads";
 import { centsToDollars } from "@/lib/forms";
 import { listJobsForOwner } from "@/lib/jobs/store";
-import { tierLine } from "@/lib/markets/display";
+import { tierLine, tierPriceLabel } from "@/lib/markets/display";
 import { getMarket, listTiers } from "@/lib/markets/store";
 import { formatMoney } from "@/lib/money";
 import { getBilling, unusedDeposit } from "@/lib/owners/service";
@@ -55,6 +55,8 @@ export default async function PropertyPage({ params, searchParams }: { params: P
   const portfolio = property.portfolioId ? await getPortfolio(db, viewer.ownerId, property.portfolioId) : await openPortfolio(db, viewer.ownerId, market.slug);
   const onPortfolio = Boolean(property.portfolioId);
   const billing = await getBilling(db, viewer.ownerId, market.country);
+  // Free to join (DECISIONS.md, 2026-11-17): when every membership on offer here is free, the start step only asks for a card.
+  const allFree = tiers.filter((candidate) => candidate.active).every((candidate) => candidate.monthlyPriceCents === 0);
   const deposit = property.status === "setup" || property.status === "cancelled" ? await unusedDeposit(db, viewer.ownerId, market.currency) : null;
   const jobs = await listJobsForOwner(db, viewer.ownerId, { propertyId: property.id, limit: 6 });
   const photos = await listUploads(db, { propertyId: property.id, kinds: ["property"] });
@@ -73,7 +75,11 @@ export default async function PropertyPage({ params, searchParams }: { params: P
 
       {query.added && property.status === "setup" && (
         <Notice tone="good" title="Saved. One step left">
-          {portfolio ? "This property is on your Portfolio. Start the retainer on the Billing page and it is covered." : "Start the membership below and this property is covered."}
+          {portfolio
+            ? "This property is on your Portfolio. Start the retainer on the Billing page and it is covered."
+            : allFree
+              ? "Add a card below and this property is covered. Nothing is charged until a job is done."
+              : "Start the membership below and this property is covered."}
         </Notice>
       )}
       {query.member && member && (
@@ -128,7 +134,7 @@ export default async function PropertyPage({ params, searchParams }: { params: P
       {/* NOT A MEMBER YET: starting the membership comes first */}
       {!member && !portfolio && (
         <Card className="border-brand/30 sm:p-6">
-          <SectionTitle>{property.status === "cancelled" ? "Start the membership again" : "Start the membership"}</SectionTitle>
+          <SectionTitle>{allFree ? (property.status === "cancelled" ? "Cover this property again" : "Cover this property") : property.status === "cancelled" ? "Start the membership again" : "Start the membership"}</SectionTitle>
           {notReady ? (
             <Notice tone="warn" title="Card payments are not switched on yet">
               Memberships cannot start until they are. Nothing has been charged.
@@ -144,21 +150,29 @@ export default async function PropertyPage({ params, searchParams }: { params: P
                   value: candidate.id,
                   title: candidate.name,
                   detail: tierLine(candidate, market),
-                  right: `${money(candidate.monthlyPriceCents)} a month`,
+                  right: tierPriceLabel(candidate, market.currency),
                 }))}
               />
-              {deposit && (
+              {deposit && !allFree && (
                 <p className="rounded-xl bg-done-soft px-4 py-3 text-sm font-semibold text-done">
                   Your {money(deposit.amountCents)} founding member deposit comes off the first month.
                 </p>
               )}
-              <p className="text-sm text-muted">
-                {cardLine
-                  ? `Charged to your ${cardLine} today, then monthly. Cancel any time and stay covered until the month you paid for ends.`
-                  : "You add your card on the next page. Charged today, then monthly. Cancel any time and stay covered until the month you paid for ends."}
-              </p>
+              {allFree ? (
+                <p className="text-sm text-muted">
+                  {cardLine
+                    ? `Free to join. Nothing is charged today. Your ${cardLine} is charged the fixed price of each job, when it is done. Leave any time.`
+                    : "Free to join. You add a card on the next page and nothing is charged today. The card is charged the fixed price of each job, when it is done. Leave any time."}
+                </p>
+              ) : (
+                <p className="text-sm text-muted">
+                  {cardLine
+                    ? `Charged to your ${cardLine} today, then monthly. Cancel any time and stay covered until the month you paid for ends.`
+                    : "You add your card on the next page. Charged today, then monthly. Cancel any time and stay covered until the month you paid for ends."}
+                </p>
+              )}
               <SubmitButton pendingLabel="Starting..." className="w-full">
-                {cardLine ? "Start membership" : "Continue to payment"}
+                {allFree ? (cardLine ? "Cover this property" : "Add a card") : cardLine ? "Start membership" : "Continue to payment"}
               </SubmitButton>
             </ActionForm>
           )}
@@ -271,12 +285,14 @@ export default async function PropertyPage({ params, searchParams }: { params: P
                 label: "Plan",
                 value: onPortfolio
                   ? `${tier?.name ?? "Portfolio"}: covered by your one monthly retainer`
-                  : tier ? `${tier.name}, ${money(tier.monthlyPriceCents)} a month` : "None",
+                  : tier ? `${tier.name}: ${tierPriceLabel(tier, market.currency)}` : "None",
               },
-              {
-                label: property.cancelAtPeriodEnd ? "Covered until" : "Next payment",
-                value: property.currentPeriodEnd ? formatDate(property.currentPeriodEnd, market.timezone) : "Soon",
-              },
+              ...(property.subscriptionId || onPortfolio
+                ? [{
+                    label: property.cancelAtPeriodEnd ? "Covered until" : "Next payment",
+                    value: property.currentPeriodEnd ? formatDate(property.currentPeriodEnd, market.timezone) : "Soon",
+                  }]
+                : [{ label: "You pay", value: "The fixed price of each job, when it is done" }]),
               ...(cardLine ? [{ label: "Card", value: cardLine }] : []),
             ]}
           />
@@ -318,10 +334,14 @@ export default async function PropertyPage({ params, searchParams }: { params: P
                         value: candidate.id,
                         title: candidate.name,
                         detail: tierLine(candidate, market),
-                        right: `${money(candidate.monthlyPriceCents)} a month`,
+                        right: tierPriceLabel(candidate, market.currency),
                       }))}
                     />
-                    <p className="text-sm text-muted">The new price starts with your next monthly payment.</p>
+                    <p className="text-sm text-muted">
+                      {property.subscriptionId
+                        ? "The new price starts with your next monthly payment."
+                        : "A paid plan starts today on the card you have on file, then monthly."}
+                    </p>
                     <SubmitButton variant="secondary" pendingLabel="Changing...">
                       Change plan
                     </SubmitButton>
@@ -331,10 +351,14 @@ export default async function PropertyPage({ params, searchParams }: { params: P
               <Reveal label="Cancel membership" tone="alert">
                 <ActionForm action={endMembership} className="space-y-3">
                   <input type="hidden" name="propertyId" value={property.id} />
-                  <p className="text-muted">
-                    The property stays covered until {property.currentPeriodEnd ? formatDate(property.currentPeriodEnd, market.timezone) : "the end of the month you paid for"}. After that no tradies can be sent here and the report links
-                    stop working. No further payments are taken.
-                  </p>
+                  {property.subscriptionId ? (
+                    <p className="text-muted">
+                      The property stays covered until {property.currentPeriodEnd ? formatDate(property.currentPeriodEnd, market.timezone) : "the end of the month you paid for"}. After that no tradies can be sent here and the report links
+                      stop working. No further payments are taken.
+                    </p>
+                  ) : (
+                    <p className="text-muted">It stops being covered now: no tradies can be sent here and the report links stop working. There is nothing to pay to leave.</p>
+                  )}
                   <SubmitButton variant="danger" pendingLabel="Cancelling...">
                     Yes, cancel the membership
                   </SubmitButton>

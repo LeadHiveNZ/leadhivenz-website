@@ -2,16 +2,18 @@ import { expect, test, type APIRequestContext, type Page } from "@playwright/tes
 import Stripe from "stripe";
 import { E2E } from "../playwright.config";
 import { createLeadToken } from "../src/lib/auth/lead-token";
-import { fillOwnerForm, leadCard, ownerDetails, signIn, submitOwnerLead, uniqueIp, waitLikeAPerson, type OwnerDetails } from "./helpers";
+import { leadCard, ownerDetails, signIn, submitOwnerLead, uniqueIp, type OwnerDetails } from "./helpers";
 
 /**
- * The founding spot, end to end, against a stand-in Stripe
- * (e2e/fake-stripe.mjs). No real money and no real network.
+ * The founding deposit after the move to free to join (DECISIONS.md,
+ * 2026-11-17), against a stand-in Stripe (e2e/fake-stripe.mjs). No real money
+ * and no real network.
  *
- * Queenstown's founding offer (config/markets.ts): 25 spots, a NZ$99
- * refundable deposit. The owner can take a spot straight from the form, or
- * ask for the price list and take one later from the thank-you page or the
- * link in the price list email.
+ * The deposit is never offered any more: the owner form has one button, "Send
+ * me the price list", even with card payments connected (this copy of the site
+ * has them). Deposits paid before the change still arrive from Stripe and are
+ * still recorded, shown and refunded, so those paths are tested by making the
+ * payment at the stand-in Stripe directly, as an old card page would have.
  */
 
 const BASE = E2E.paymentsUrl;
@@ -35,83 +37,95 @@ async function postWebhook(request: APIRequestContext, event: unknown, secret?: 
   return request.post(`${BASE}/api/stripe/webhook`, { data: payload, headers: signedHeaders(payload, secret) });
 }
 
-/** Fills in the owner form and presses the founding spot button. Ends on the pretend card page. */
-async function goToCardPage(page: Page, owner: OwnerDetails): Promise<string> {
-  await page.goto(`${BASE}/owners`);
-  await fillOwnerForm(page, owner);
-  await waitLikeAPerson(page);
-  await page.getByRole("button", { name: "Take a founding spot · NZ$99 deposit" }).click();
-  await page.waitForURL(/localhost:3299\/pay\/cs_test_/);
-  return new URL(page.url()).pathname.split("/").pop()!;
+/**
+ * A founding deposit card page, as the site made them before it was free to join: created at the stand-in
+ * Stripe for this lead, NZ$99 (config/markets.ts, 9900 cents). Returns the card page's id.
+ */
+async function oldCardPage(request: APIRequestContext, leadId: string, email: string): Promise<string> {
+  const form = new URLSearchParams({
+    mode: "payment",
+    client_reference_id: leadId,
+    customer_email: email,
+    "line_items[0][quantity]": "1",
+    "line_items[0][price_data][currency]": "nzd",
+    "line_items[0][price_data][unit_amount]": "9900",
+    "metadata[lead_id]": leadId,
+    "metadata[market]": "queenstown",
+    "metadata[purpose]": "founding_deposit",
+    success_url: `${BASE}/owners/deposit/return?session_id={CHECKOUT_SESSION_ID}`,
+    cancel_url: `${BASE}/owners/thanks?deposit=cancelled`,
+  });
+  const created = await request.post(`${FAKE_STRIPE}/v1/checkout/sessions`, { data: form.toString(), headers: { "content-type": "application/x-www-form-urlencoded" } });
+  return (await created.json()).id as string;
 }
 
-test.describe("founding spot", () => {
-  test("is offered on the owner page itself, with its promises and the price list as the other choice", async ({ page }) => {
+/** An owner who asked for the price list, and the id of their lead from the leads page. */
+async function ownerLeadWithId(page: Page, admin: Page, owner: OwnerDetails): Promise<string> {
+  await submitOwnerLead(page, BASE, owner);
+  await signIn(admin, BASE);
+  const leadId = await leadCard(admin, owner.name).getAttribute("data-lead-id");
+  expect(leadId).toMatch(/^[0-9a-f-]{36}$/);
+  return leadId!;
+}
+
+/** The deposit is paid at Stripe and Stripe tells the site, the way a deposit paid before the change arrives. */
+async function payOldDeposit(request: APIRequestContext, leadId: string, email: string): Promise<string> {
+  const sessionId = await oldCardPage(request, leadId, email);
+  await request.get(`${FAKE_STRIPE}/pay/${sessionId}/confirm`, { maxRedirects: 0 });
+  const session = await (await request.get(`${FAKE_STRIPE}/v1/checkout/sessions/${sessionId}`)).json();
+  expect(session.payment_status).toBe("paid");
+  const recorded = await postWebhook(request, { id: `evt_${sessionId}`, object: "event", type: "checkout.session.completed", data: { object: session } });
+  expect(await recorded.json()).toEqual({ received: true, outcome: "recorded" });
+  return sessionId;
+}
+
+test.describe("no founding spot: free to join", () => {
+  test("the owner page offers the price list only, with no founding button, terms or spots, even with payments connected", async ({ page }) => {
     await page.goto(`${BASE}/owners`);
-    await expect(page.getByRole("heading", { name: "Take a founding spot" })).toBeVisible();
-    await expect(page.getByText("25 founding properties in Queenstown. NZ$99 deposit, refundable.")).toBeVisible();
-    for (const promise of [
-      "Half price for your first three months: $49.50 a month, then $99",
-      "Your $99 deposit comes off your first bills",
-      "Refundable any time before your first job. One email and it is back on your card",
-    ]) {
-      await expect(page.getByText(promise).first()).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Get the full price list" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Take a founding spot" })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Send me the price list" })).toBeVisible();
+    await expect(page.getByRole("button", { name: /founding spot/i })).toHaveCount(0);
+    for (const gone of ["25 founding properties", "Half price for your first three months", "Your $99 deposit comes off your first bills", "founding spot left", "We never see your card number."]) {
+      await expect(page.getByText(gone)).toHaveCount(0);
     }
-    await expect(page.getByRole("button", { name: "Take a founding spot · NZ$99 deposit" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Not yet: just send me the price list" })).toBeVisible();
-    await expect(page.getByText("We never see your card number.")).toBeVisible();
   });
 
-  test("an owner who takes the price list first is offered the spot again, next to the prices", async ({ page }) => {
+  test("the thank-you page shows the price list and no founding offer", async ({ page }) => {
     await submitOwnerLead(page, BASE, ownerDetails());
-    const offer = page.getByRole("region", { name: "Take a founding spot for NZ$99" });
-    await expect(offer).toBeVisible();
-    await expect(offer).toContainText("We're opening Queenstown with 25 founding properties.");
-    await expect(offer).toContainText("Half price for your first three months");
     await expect(page.getByRole("region", { name: "The Queenstown price list" })).toContainText("NZ$245");
-
-    await offer.getByRole("button", { name: "Take a founding spot · NZ$99" }).click();
-    await page.waitForURL(/localhost:3299\/pay\/cs_test_/);
-    await expect(page.getByTestId("amount")).toHaveText("9900 nzd");
+    await expect(page.getByRole("region", { name: /Take a founding spot/ })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: /founding spot/i })).toHaveCount(0);
+    // Even if someone comes back from an old card page they left.
+    await page.goto(`${BASE}/owners/thanks?deposit=cancelled`);
+    await expect(page.getByRole("region", { name: "The Queenstown price list" })).toBeVisible();
+    await expect(page.getByRole("button", { name: /founding spot/i })).toHaveCount(0);
   });
 
-  test("takes a deposit and shows it everywhere it should appear", async ({ page, browser }) => {
+  test("a deposit paid before the change still shows Paid on the leads page, and the owner is told it is being refunded", async ({ page, browser, request }) => {
     const owner = ownerDetails();
-    const sessionId = await goToCardPage(page, owner);
-
-    // What we asked the card page to charge.
-    await expect(page.getByTestId("amount")).toHaveText("9900 nzd");
-    await expect(page.getByTestId("email")).toHaveText(owner.email);
-
-    // Before paying, the leads list shows the deposit as started only, and which button was pressed.
     const admin = await browser.newPage();
-    await signIn(admin, BASE);
-    await expect(leadCard(admin, owner.name)).toContainText("Started, not paid");
-    await expect(leadCard(admin, owner.name)).toContainText("wants a founding spot");
-
-    await page.getByTestId("pay").click();
-    await expect(page).toHaveURL(`${BASE}/owners/founding-member`);
-    await expect(page.getByRole("heading", { name: "You're a founding member." })).toBeVisible();
-    await expect(page.getByText("Your NZ$99 deposit is confirmed")).toBeVisible();
-    // The Stripe reference is not left in the address bar.
-    expect(page.url()).not.toContain(sessionId);
+    const leadId = await ownerLeadWithId(page, admin, owner);
+    await payOldDeposit(request, leadId, owner.email);
 
     await admin.reload();
     await expect(leadCard(admin, owner.name)).toContainText("Paid NZ$99");
-    await expect(admin.locator('dl[aria-label="Totals"]')).toContainText("NZ$99");
     await admin.close();
 
-    // Going back to the thank-you page now shows a confirmation, not another pay button.
     await page.goto(`${BASE}/owners/thanks`);
-    await expect(page.getByText("Your founding spot is confirmed.")).toBeVisible();
-    await expect(page.getByRole("button", { name: /Take a founding spot/ })).toHaveCount(0);
+    await expect(page.getByText("is now free to join, so we are refunding your NZ$99 founding deposit in full")).toBeVisible();
+    await expect(page.getByRole("region", { name: "The Queenstown price list" })).toBeVisible();
+    await expect(page.getByRole("button", { name: /founding spot/i })).toHaveCount(0);
+    await page.goto(`${BASE}/owners/founding-member`);
+    await expect(page.getByText("Your NZ$99 deposit is confirmed")).toBeVisible();
   });
 
-  test("a different visitor cannot see someone else's deposit", async ({ page, browser }) => {
+  test("a different visitor cannot see someone else's deposit", async ({ page, browser, request }) => {
     const owner = ownerDetails();
-    await goToCardPage(page, owner);
-    await page.getByTestId("pay").click();
-    await expect(page.getByRole("heading", { name: "You're a founding member." })).toBeVisible();
+    const admin = await browser.newPage();
+    const leadId = await ownerLeadWithId(page, admin, owner);
+    await admin.close();
+    await payOldDeposit(request, leadId, owner.email);
 
     const stranger = await browser.newPage();
     await stranger.goto(`${BASE}/owners/founding-member`);
@@ -124,25 +138,16 @@ test.describe("founding spot", () => {
     await stranger.goto(`${BASE}/owners/founding-member`);
     await expect(stranger.getByRole("heading", { name: "We haven't seen a payment yet." })).toBeVisible();
     await stranger.goto(`${BASE}/owners/thanks`);
-    await expect(stranger.getByRole("button", { name: /Take a founding spot/ })).toHaveCount(0);
+    await expect(stranger.getByText("founding deposit")).toHaveCount(0);
     await stranger.close();
   });
 
-  test("backing out of the card page takes no money and says so", async ({ page }) => {
+  test("coming back from an old card page without paying records nothing", async ({ page, browser, request }) => {
     const owner = ownerDetails();
-    await goToCardPage(page, owner);
-    await page.getByTestId("cancel").click();
-    await expect(page).toHaveURL(`${BASE}/owners/thanks?deposit=cancelled`);
-    await expect(page.getByText("No payment was taken.")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Take a founding spot · NZ$99" })).toBeVisible();
-
-    await signIn(page, BASE);
-    await expect(leadCard(page, owner.name)).toContainText("Started, not paid");
-  });
-
-  test("coming back from the card page without paying records nothing", async ({ page }) => {
-    const owner = ownerDetails();
-    const sessionId = await goToCardPage(page, owner);
+    const admin = await browser.newPage();
+    const leadId = await ownerLeadWithId(page, admin, owner);
+    await admin.close();
+    const sessionId = await oldCardPage(request, leadId, owner.email);
     await page.goto(`${BASE}/owners/deposit/return?session_id=${sessionId}`);
     await expect(page).toHaveURL(`${BASE}/owners/founding-member`);
     await expect(page.getByRole("heading", { name: "We haven't seen a payment yet." })).toBeVisible();
@@ -156,7 +161,7 @@ test.describe("founding spot", () => {
     }
   });
 
-  test("the link in the price list email brings the owner back to their spot, on any device", async ({ page, browser }) => {
+  test("the link in the price list email brings the owner back to the price list, on any device, with no founding offer", async ({ page, browser }) => {
     const owner = ownerDetails();
     await submitOwnerLead(page, BASE, owner);
     await signIn(page, BASE);
@@ -168,7 +173,8 @@ test.describe("founding spot", () => {
     await phone.goto(`${BASE}/owners/founding/${createLeadToken(APP_SECRET, leadId!)}`);
     await expect(phone).toHaveURL(`${BASE}/owners/thanks?from=email`);
     await expect(phone.getByText(`Welcome back, ${owner.name.split(" ")[0]}.`)).toBeVisible();
-    await expect(phone.getByRole("button", { name: "Take a founding spot · NZ$99" })).toBeVisible();
+    await expect(phone.getByRole("region", { name: "The Queenstown price list" })).toBeVisible();
+    await expect(phone.getByRole("button", { name: /founding spot/i })).toHaveCount(0);
 
     // A link that has been tampered with opens nothing.
     const stranger = await browser.newPage();
@@ -180,9 +186,12 @@ test.describe("founding spot", () => {
 });
 
 test.describe("messages from Stripe", () => {
-  test("records the payment even if the owner never comes back to the site", async ({ page, request }) => {
+  test("records a deposit paid before the change, once, even if the owner never comes back to the site", async ({ page, browser, request }) => {
     const owner = ownerDetails();
-    const sessionId = await goToCardPage(page, owner);
+    const admin = await browser.newPage();
+    const leadId = await ownerLeadWithId(page, admin, owner);
+    await admin.close();
+    const sessionId = await oldCardPage(request, leadId, owner.email);
 
     // The card goes through, but the browser is closed before returning.
     await request.get(`${FAKE_STRIPE}/pay/${sessionId}/confirm`, { maxRedirects: 0 });
@@ -202,11 +211,12 @@ test.describe("messages from Stripe", () => {
     await expect(leadCard(page, owner.name)).toContainText("Paid NZ$99");
   });
 
-  test("marks the deposit refunded when you refund it in Stripe", async ({ page, request }) => {
+  test("marks the deposit refunded when you refund it in Stripe (RUNBOOK.md)", async ({ page, browser, request }) => {
     const owner = ownerDetails();
-    const sessionId = await goToCardPage(page, owner);
-    await page.getByTestId("pay").click();
-    await expect(page.getByRole("heading", { name: "You're a founding member." })).toBeVisible();
+    const admin = await browser.newPage();
+    const leadId = await ownerLeadWithId(page, admin, owner);
+    await admin.close();
+    const sessionId = await payOldDeposit(request, leadId, owner.email);
 
     const session = await (await request.get(`${FAKE_STRIPE}/v1/checkout/sessions/${sessionId}`)).json();
     const refund = {
@@ -218,8 +228,11 @@ test.describe("messages from Stripe", () => {
     expect(await (await postWebhook(request, refund)).json()).toEqual({ received: true, outcome: "refunded" });
     expect(await (await postWebhook(request, refund)).json()).toEqual({ received: true, outcome: "nothing_to_change" });
 
-    await page.reload();
+    await page.goto(`${BASE}/owners/founding-member`);
     await expect(page.getByRole("heading", { name: "Your deposit has been refunded." })).toBeVisible();
+    // Refunded: the thank-you page no longer says a refund is coming.
+    await page.goto(`${BASE}/owners/thanks`);
+    await expect(page.getByText("founding deposit in full")).toHaveCount(0);
 
     await signIn(page, BASE);
     await expect(leadCard(page, owner.name)).toContainText("Refunded NZ$99");
@@ -256,7 +269,7 @@ test.describe("messages from Stripe", () => {
 });
 
 test.describe("the demand test scorecard", () => {
-  test("starts the fourteen days and counts the owner who put a card down", async ({ page }) => {
+  test("starts the fourteen days and still counts a card put down, by the ad the owner came from", async ({ page, browser, request }) => {
     await signIn(page, BASE);
     const card = page.getByRole("region", { name: "The demand test" });
     const start = card.getByRole("button", { name: "Start the 14 days today" });
@@ -269,17 +282,15 @@ test.describe("the demand test scorecard", () => {
     await expect(card).toContainText("Day 1 of 14");
     await expect(card).toContainText("Cards down");
 
-    // An owner arrives from an ad and pays.
+    // An owner arrives from an ad and asks for the price list (the only button now). A deposit they paid
+    // before the change arrives from Stripe and still counts as a card down.
     const owner = ownerDetails();
-    const buyer = await page.context().browser()!.newPage();
-    await buyer.goto(`${BASE}/owners?utm_source=facebook&utm_medium=paid&utm_campaign=qt-demand&utm_content=ad-e2e`);
-    await fillOwnerForm(buyer, owner);
-    await waitLikeAPerson(buyer);
-    await buyer.getByRole("button", { name: "Take a founding spot · NZ$99 deposit" }).click();
-    await buyer.waitForURL(/localhost:3299\/pay\/cs_test_/);
-    await buyer.getByTestId("pay").click();
-    await expect(buyer.getByRole("heading", { name: "You're a founding member." })).toBeVisible();
+    const buyer = await browser.newPage();
+    await submitOwnerLead(buyer, BASE, owner, "?utm_source=facebook&utm_medium=paid&utm_campaign=qt-demand&utm_content=ad-e2e");
     await buyer.close();
+    await page.reload();
+    const leadId = await leadCard(page, owner.name).getAttribute("data-lead-id");
+    await payOldDeposit(request, leadId!, owner.email);
 
     await page.reload();
     await expect(card).toContainText(/[1-9]\d* of 3/);

@@ -102,7 +102,7 @@ export function OwnerJob({ view, now, code, flash = {}, prices }: Props) {
         )}
         {money.credit && (
           <p className="mt-3 rounded-xl bg-done-soft px-4 py-3 text-sm font-semibold text-done">
-            We missed the time we promised, so {fmt(money.credit.amountCents)} (this month&apos;s membership for this property) has been credited. It comes off your next membership payment.
+            We missed the time we promised, so {fmt(money.credit.amountCents)} of this job is on us. {money.credit.status === "applied" ? "It has come off the bill." : "It comes off the bill when the job is done."}
           </p>
         )}
       </Card>

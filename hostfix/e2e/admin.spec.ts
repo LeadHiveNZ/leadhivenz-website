@@ -85,10 +85,10 @@ test.describe("signed in", () => {
     await expect(checklist.locator('[data-status-key="sms"]')).toContainText("CLICKSEND_USERNAME and CLICKSEND_API_KEY are not set.");
     await expect(checklist.locator('[data-status-key="payments"]')).toContainText("STRIPE_NZ_SECRET_KEY is not set.");
     await expect(checklist.locator('[data-status-key="copy"]')).toContainText("[EDIT] placeholder");
-    await expect(checklist.locator('[data-status-key="legal"]')).toContainText("A lawyer needs to write them");
-    // The founding promises sit next to what billing actually does, until someone builds the rest.
-    await expect(checklist.locator('[data-status-key="founding-queenstown"]')).toContainText("Half price for your first three months");
-    await expect(checklist.locator('[data-status-key="founding-queenstown"]')).toContainText("Billing only does this");
+    // The legal pages are written; the checklist asks for them to be reviewed (DECISIONS.md, 2026-11-17).
+    await expect(checklist.locator('[data-status-key="legal"]')).toContainText("have Community Law (free) read them");
+    // No founding deposit is held here, so there is nothing to refund and no line for it (DECISIONS.md, 2026-11-17).
+    await expect(checklist.locator('[data-status-key="founding-queenstown"]')).toHaveCount(0);
 
     // Visiting the sign-in page while signed in goes straight to the team's queue.
     await page.goto("/admin");

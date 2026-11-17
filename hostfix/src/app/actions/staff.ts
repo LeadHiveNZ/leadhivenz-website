@@ -241,7 +241,14 @@ export async function staffSetTradieStatus(_previous: FormState, formData: FormD
   const db = await getDb();
   const before = await getTradie(db, tradieId);
   if (!before) return { message: "We could not find that tradie." };
-  const tradie = await setTradieStatus(db, tradieId, status, staff.actor);
+  let tradie;
+  try {
+    tradie = await setTradieStatus(db, tradieId, status, staff.actor);
+  } catch (error) {
+    // Approving needs current public liability insurance on file. The message says what is missing.
+    if (error instanceof TradieError) return { message: error.message };
+    throw error;
+  }
   if (tradie && status === "approved" && before.status === "applied" && tradie.phone) {
     const market = await getMarket(db, tradie.market);
     await enqueue(db, {
@@ -279,6 +286,8 @@ export async function staffSaveTradie(_previous: FormState, formData: FormData):
       businessName: text(formData, "businessName"), trades: list(formData, "trades"), daysAvailable: list(formData, "daysAvailable"),
       afterHours: ticked(formData, "afterHours"), gstRegistered: ticked(formData, "gstRegistered"), gstNumber: text(formData, "gstNumber") || null,
       insuranceExpiresOn: /^\d{4}-\d{2}-\d{2}$/.test(insurance) ? insurance : null,
+      insurer: text(formData, "insurer") || null,
+      insurancePolicyNumber: text(formData, "insurancePolicyNumber") || null,
     }, staff.actor);
     if (!saved) return { message: "We could not find that tradie." };
   } catch (error) {

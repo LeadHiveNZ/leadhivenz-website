@@ -9,9 +9,9 @@ import { metaPixelId, metaSettings } from "@/lib/meta/capi";
 import { ALERT_SMS_FORMAT_HELP, alertEmailRecipients, alertSmsNumbers } from "@/lib/notify/alerts";
 import { emailSettings, usingResendTestSender } from "@/lib/notify/email";
 import { smsSettings } from "@/lib/notify/sms";
-import { depositAvailability } from "@/lib/payments/deposit";
 import { databaseSettings, getDb } from "@/lib/db";
 import { lastTick } from "@/lib/dispatch/tick";
+import { stripeAccount } from "@/lib/payments/stripe";
 import { foundingBillingLine, foundingSpotsTaken } from "@/lib/leads/founding";
 import { listMarkets } from "@/lib/markets/store";
 import { storageSettings } from "@/lib/files/store";
@@ -119,19 +119,20 @@ export async function setupStatus(): Promise<StatusItem[]> {
   }
 
   // Card payments
-  const deposit = depositAvailability(launchMarket);
+  // Owners' cards and job payments, through the market's Stripe account. (No deposit is taken any more: DECISIONS.md, 2026-11-17.)
+  const stripe = stripeAccount(launchMarket.country);
   const country = launchMarket.country;
-  if (!deposit.available) {
-    const notStarted = /is not set|switched off/.test(deposit.reason);
-    items.push({ key: "payments", label: "Card payments", state: notStarted ? "todo" : "problem", detail: deposit.reason });
-  } else if (!deposit.account.webhookSecret) {
+  if ("problem" in stripe) {
+    const notStarted = /is not set/.test(stripe.problem);
+    items.push({ key: "payments", label: "Card payments", state: notStarted ? "todo" : "problem", detail: stripe.problem });
+  } else if (!stripe.account.webhookSecret) {
     items.push({
       key: "payments",
       label: "Card payments",
       state: "problem",
-      detail: `STRIPE_${country}_WEBHOOK_SECRET is not set. Without it, a deposit is only recorded if the owner comes back to the site after paying.`,
+      detail: `STRIPE_${country}_WEBHOOK_SECRET is not set. Without it, a saved card or a payment is only recorded if the owner comes back to the site afterwards.`,
     });
-  } else if (deposit.account.mode === "test") {
+  } else if (stripe.account.mode === "test") {
     items.push({
       key: "payments",
       label: "Card payments",

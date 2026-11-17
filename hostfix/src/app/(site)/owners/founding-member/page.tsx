@@ -81,7 +81,7 @@ async function Confirmation() {
           steps={[
             "We'll call or email you to hear about your property.",
             "You get first access when we open, before anyone else.",
-            "Your deposit comes off your first month's membership.",
+            `${brand.name} is now free to join, so there is no first bill to take it off: your deposit is refunded in full.`,
           ]}
         />
         {contact && (

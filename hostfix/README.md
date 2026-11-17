@@ -1,6 +1,6 @@
 # HostFix
 
-A maintenance network for short-stay rentals. An owner pays a monthly membership per property. When
+A maintenance network for short-stay rentals. Owners join free: a property is covered once a card is on file. When
 something breaks, the owner, their cleaner or a guest reports it from a fixed-price menu. The job is
 offered by text to a local tradie, who has 15 minutes to take it before it moves to the next one. When
 it is done the owner's card is charged, the tradie is paid, and the business keeps the difference.
@@ -13,7 +13,7 @@ Launch market: Queenstown, New Zealand. Built for many towns across New Zealand 
 is tied to one town, one currency or one tax rate.
 
 **Phases 0 to 4 are built and tested. Phase 5 is planned, not built.** The next step is the demand
-test: 14 days of ads to the owner page, which passes if three owners put a card down for a founding spot.
+test: 14 days of ads to the owner page. Owners join free and pay the fixed price per job; the scorecard counts leads and price-list requests.
 
 ## Start here
 

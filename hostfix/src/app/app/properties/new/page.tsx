@@ -6,7 +6,7 @@ import { SubmitButton } from "@/components/forms/SubmitButton";
 import { Card, Notice, PageTitle } from "@/components/ui/Bits";
 import { requireOwner } from "@/lib/auth/current";
 import { getDb } from "@/lib/db";
-import { tierLine } from "@/lib/markets/display";
+import { tierLine, tierPriceLabel } from "@/lib/markets/display";
 import { listMarkets, listTiers } from "@/lib/markets/store";
 import { formatMoney } from "@/lib/money";
 import { openPortfolio } from "@/lib/properties/portfolio";
@@ -103,7 +103,7 @@ export default async function NewPropertyPage({ searchParams }: { searchParams: 
                     value: tier.id,
                     title: tier.name,
                     detail: tierLine(tier, market),
-                    right: `${formatMoney(tier.monthlyPriceCents, market.currency)} a month`,
+                    right: tierPriceLabel(tier, market.currency),
                   })),
                   ...(portfolioOffer
                     ? [{
@@ -116,7 +116,7 @@ export default async function NewPropertyPage({ searchParams }: { searchParams: 
                 ]}
               />
               <p className="text-sm text-muted">
-                Nothing is charged yet. On the next screen you start the membership and add your card. Jobs are charged at the fixed price when they are done.
+                Nothing is charged now. On the next screen you add your card. Jobs are charged at the fixed price when they are done.
               </p>
             </>
           )}

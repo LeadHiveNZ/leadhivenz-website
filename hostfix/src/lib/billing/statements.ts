@@ -1,3 +1,4 @@
+import { formatMoney } from "@/lib/money";
 import type { Db } from "@/lib/db/types";
 import { taxPortion } from "@/lib/jobs/pricing";
 import { monthBounds } from "@/lib/time";
@@ -56,14 +57,17 @@ export async function ownerStatement(db: Db, ownerId: string, market: { slug: st
     });
   }
 
-  const jobs = await db.query<{ paid_at: Date; amount_cents: number; tax_cents: number; refunded_cents: number; number: number; title: string; property: string }>(
-    `select pay.paid_at, pay.amount_cents, pay.tax_cents, pay.refunded_cents, j.number, j.title, p.name as property
+  const jobs = await db.query<{ paid_at: Date; amount_cents: number; tax_cents: number; refunded_cents: number; number: number; title: string; property: string; callout_off: number | null }>(
+    `select pay.paid_at, pay.amount_cents, pay.tax_cents, pay.refunded_cents, j.number, j.title, p.name as property,
+            (select c.amount_cents from public.credits c where c.job_id = j.id and c.reason = 'missed_window' and c.status = 'applied') as callout_off
        from public.payments pay join public.jobs j on j.id = pay.job_id join public.properties p on p.id = j.property_id
       where pay.owner_id = $1::uuid and j.market = $2 and pay.paid_at is not null and pay.paid_at >= $3::timestamptz and pay.paid_at < $4::timestamptz`,
     range,
   );
   for (const row of jobs) {
-    lines.push({ date: new Date(row.paid_at), kind: "job", description: `Job ${Number(row.number)}: ${row.title}`, property: row.property, amountCents: row.amount_cents, taxCents: row.tax_cents });
+    // A missed promise took the call-out off this job's charge: the amount here is already the smaller one.
+    const off = row.callout_off ? ` (${formatMoney(Number(row.callout_off), market.currency)} off: we missed our promised time)` : "";
+    lines.push({ date: new Date(row.paid_at), kind: "job", description: `Job ${Number(row.number)}: ${row.title}${off}`, property: row.property, amountCents: row.amount_cents, taxCents: row.tax_cents });
     if (row.refunded_cents > 0) {
       const share = row.amount_cents > 0 ? Math.round((row.tax_cents * row.refunded_cents) / row.amount_cents) : 0;
       lines.push({ date: new Date(row.paid_at), kind: "refund", description: `Refund on job ${Number(row.number)}`, property: row.property, amountCents: -row.refunded_cents, taxCents: -share });
@@ -74,7 +78,10 @@ export async function ownerStatement(db: Db, ownerId: string, market: { slug: st
     `select c.created_at, c.amount_cents, c.reason, p.name as property
        from public.credits c left join public.properties p on p.id = c.property_id
       where c.owner_id = $1::uuid and (p.market = $2 or p.id is null) and c.status in ('applied', 'pending')
-        and c.reason <> 'founding_deposit' and c.created_at >= $3::timestamptz and c.created_at < $4::timestamptz`,
+        and c.reason <> 'founding_deposit'
+        -- A missed promise on a job comes off that job's own charge, shown on the job's line, not off a later payment.
+        and not (c.reason = 'missed_window' and c.job_id is not null)
+        and c.created_at >= $3::timestamptz and c.created_at < $4::timestamptz`,
     range,
   );
   for (const row of credits) {

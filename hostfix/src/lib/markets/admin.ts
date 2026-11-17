@@ -157,7 +157,10 @@ export async function saveTier(db: Db, market: string, input: TierInput, actor: 
   }
   // A retainer's headline price is its lowest band: what a portfolio starts from.
   const priceCents = basis === "per_account" ? lowestBand({ billingBasis: basis, bands, monthlyPriceCents: 0 })!.cents : input.priceCents;
-  if (!Number.isInteger(priceCents) || priceCents <= 0 || priceCents > 5_000_000) throw new AdminInputError("The monthly price must be more than zero.");
+  // A per-property membership may be free (DECISIONS.md, 2026-11-17): the property is covered once a card is on file.
+  // A retainer for a whole account always has a price.
+  if (!Number.isInteger(priceCents) || priceCents < 0 || priceCents > 5_000_000) throw new AdminInputError("The monthly price must be zero or more.");
+  if (basis === "per_account" && priceCents <= 0) throw new AdminInputError("A retainer for the whole account needs a monthly price more than zero.");
   if (!Number.isInteger(input.responseHours) || input.responseHours < 1 || input.responseHours > 168) throw new AdminInputError("The response promise must be between 1 and 168 hours.");
   if (!Number.isInteger(input.urgentResponseHours) || input.urgentResponseHours < 1 || input.urgentResponseHours > 48) throw new AdminInputError("The urgent response promise must be between 1 and 48 hours.");
   if (input.urgentIncludedPerMonth !== null && (!Number.isInteger(input.urgentIncludedPerMonth) || input.urgentIncludedPerMonth < 0)) {

@@ -13,8 +13,8 @@ import { createOwnerAccount, saveBilling } from "@/lib/owners/service";
 import { createDemoGateway, DEMO_CARD_DECLINES, DEMO_CARD_OK } from "@/lib/payments/demo-gateway";
 import { addMonths, type PaymentsGateway } from "@/lib/payments/gateway";
 import { openPortfolio, startPortfolio, type Portfolio } from "@/lib/properties/portfolio";
-import { activateMembership, createProperty, getProperty, type Property } from "@/lib/properties/service";
-import { createTradie, saveLicence, savePayoutAccount, setSlot, setTradieStatus } from "@/lib/tradies/service";
+import { activateFreeMembership, activateMembership, createProperty, getProperty, type Property } from "@/lib/properties/service";
+import { createTradie, saveLicence, savePayoutAccount, setSlot, setTradieStatus, updateTradie } from "@/lib/tradies/service";
 
 /**
  * Quick ways to set up people, properties and jobs for tests. Everything is
@@ -57,8 +57,23 @@ export async function makeOwner(db: Db, options: { card?: "ok" | "declines" | "n
 }
 
 /**
- * The business sells one membership, Essential. The app can hold more, and can
- * include urgent call-outs in one. Tests of those abilities add their own
+ * The business sells one membership, Essential, and it is free to join
+ * (DECISIONS.md, 2026-11-17). The app can still hold a priced per-property
+ * membership, for a paid tier later. Tests of the monthly-payment paths add one
+ * here, the way an admin would on the Markets screen. "paid" costs NZ$99 a
+ * month, the price Essential had before it was made free, and is otherwise
+ * Essential: a 24-hour promise, urgent at a surcharge.
+ */
+export async function addPaidTier(db: Db, overrides: { priceCents?: number } = {}): Promise<Tier> {
+  await saveTier(db, "queenstown", {
+    id: null, key: "paid", name: "Paid", priceCents: overrides.priceCents ?? 9900, responseHours: 24, urgentResponseHours: 4,
+    urgentIncluded: false, urgentIncludedPerMonth: null, quarterlyCheck: false, blurb: "A monthly membership.", active: true,
+  }, "test");
+  return (await listTiers(db, "queenstown")).find((tier) => tier.key === "paid")!;
+}
+
+/**
+ * The app can also include urgent call-outs in a membership. Tests of those abilities add their own
  * second membership here, the way an admin would on the Markets screen.
  * "plus" costs NZ$149 a month and includes urgent call-outs.
  */
@@ -74,17 +89,22 @@ export async function addPlusTier(db: Db, overrides: { urgentIncludedPerMonth?: 
 export async function makeProperty(
   db: Db,
   ownerId: string,
-  options: { tier?: "essential" | "plus"; member?: boolean; name?: string; referralCode?: string } = {},
+  options: { tier?: "essential" | "plus" | "paid"; member?: boolean; name?: string; referralCode?: string } = {},
 ): Promise<Property> {
   const n = next();
   const tiers = await listTiers(db, "queenstown");
   const tier = tiers.find((candidate) => candidate.key === (options.tier ?? "essential"));
-  if (!tier) throw new Error(`No "${options.tier}" membership. Call addPlusTier first.`);
+  if (!tier) throw new Error(`No "${options.tier}" membership. Call addPlusTier or addPaidTier first.`);
   const property = await createProperty(db, ownerId, {
     market: "queenstown", name: options.name ?? `Lakeview ${n}`, addressLine1: `${n} Lake Esplanade`, suburb: "Frankton", postcode: "9300",
     accessNotes: `Lockbox code ${1000 + n} by the front door.`, tierId: tier.id, referralCode: options.referralCode ?? null,
   });
   if (options.member === false) return property;
+  if (tier.monthlyPriceCents === 0) {
+    // Free to join: covered once a card is on file, with no subscription.
+    const covered = await activateFreeMembership(db, { propertyId: property.id, ownerId, provider: "demo", customerId: `demo_cus_p${n}`, card: null });
+    return covered!;
+  }
   const at = now();
   const activated = await activateMembership(db, {
     propertyId: property.id, provider: "demo", subscriptionId: `demo_sub_${n}`, periodEnd: addMonths(at, 1), customerId: `demo_cus_p${n}`, card: null,
@@ -103,6 +123,8 @@ export type TradieOptions = {
   approved?: boolean;
   payouts?: boolean;
   name?: string;
+  /** Public liability insurance: "valid" (default), "expired" or "none" (nothing on file). */
+  insurance?: "valid" | "expired" | "none";
 };
 
 export async function makeTradie(db: Db, options: TradieOptions = {}) {
@@ -117,8 +139,13 @@ export async function makeTradie(db: Db, options: TradieOptions = {}) {
   if (licence !== "none") {
     await saveLicence(db, tradieId, { trade: trades[0]!, licenceNumber: `LIC-${n}`, expiresOn: licence === "valid" ? "2030-12-31" : "2020-01-31" }, "test");
   }
+  // Approval needs current insurance, so a tradie is approved with it on file and any "expired" or "none" applied after.
+  const insurance = options.insurance ?? "valid";
+  await updateTradie(db, tradieId, { insurer: "Test Insurance Ltd", insurancePolicyNumber: `PL-${n}`, insuranceExpiresOn: "2030-12-31" }, "test");
   if (options.payouts !== false) await savePayoutAccount(db, tradieId, { provider: "demo", accountId: `demo_acct_${n}`, payoutsEnabled: true });
   if (options.approved !== false) await setTradieStatus(db, tradieId, "approved", "test");
+  if (insurance === "expired") await updateTradie(db, tradieId, { insuranceExpiresOn: "2020-01-31" }, "test");
+  if (insurance === "none") await updateTradie(db, tradieId, { insurer: null, insurancePolicyNumber: null, insuranceExpiresOn: null }, "test");
   if (options.slot) await setSlot(db, { market: "queenstown", trade: trades[0]!, rank: options.slot, tradieId }, "test");
   return { user, tradieId, phone: user.phone! };
 }

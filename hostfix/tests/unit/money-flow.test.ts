@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { addGoodwillCredit, applyPendingCredits, chargeDuePayments, chargeJob, creditMissedWindows, flagAtRisk, MAX_CHARGE_ATTEMPTS, raiseDispute, releaseDuePayouts, resolveDispute, retryPayout } from "@/lib/billing/settle";
+import { ownerStatement } from "@/lib/billing/statements";
 import { addHours, addMinutes, setTestNow } from "@/lib/clock";
+import { getMarket } from "@/lib/markets/store";
 import { acceptOffer } from "@/lib/dispatch/cascade";
 import { runTick } from "@/lib/dispatch/tick";
 import { cancelJob } from "@/lib/jobs/create";
@@ -23,7 +25,8 @@ import { addPlusTier, auditActions, gatewayFor, liveMarket, logJob, makeOwner, m
  *   A quote takes the job over the limit when quotes add up to more than 60000
  *   Parts above 15000 need the owner's yes whatever the total
  *   Off-menu labour: the tradie gets 85%. Parts pass through at cost.
- *   Essential membership 9900 a month
+ *   Essential membership: free to join (DECISIONS.md, 2026-11-17). No monthly price.
+ *   Missed promise: the call-out portion is on us, min(diagnosis fee 22500, the job's price)
  *
  * A job logged without a code is PL-01.
  *
@@ -70,6 +73,19 @@ const moneyLog = async (jobId: string) =>
   (await t.db.query<{ action: string; amount: number | null }>("select action, amount from public.audit_log where entity_id = $1 and amount is not null order by id", [jobId])).map((row) => `${row.action}:${row.amount}`);
 
 describe("a finished menu job", () => {
+  it("at a free Essential property is charged the menu price exactly as before, with no membership payment", async () => {
+    const s = await setup();
+    expect(s.property).toMatchObject({ status: "active", subscriptionId: null });
+    const job = await onSite(s, { code: "PL-01" });
+    const done = await finish(s, job.id);
+    // PL-01: owner 225 dollars, tradie 190 dollars in the menu file.
+    expect(done).toMatchObject({ ownerTotalCents: 22500, tradieTotalCents: 19000 });
+    expect(await chargeJob(t.db, gatewayFor(t.db), job.id)).toBe("succeeded");
+    expect(await payment(job.id)).toMatchObject({ status: "succeeded", amount_cents: 22500 });
+    expect(await payout(job.id)).toMatchObject({ amount_cents: 19000 });
+    expect(await t.db.query("select 1 from public.membership_invoices where property_id = $1::uuid", [s.property.id])).toEqual([]);
+  });
+
   it("charges the owner the menu price, pays the tradie the menu payout a day later, and keeps the rest", async () => {
     const s = await setup();
     const job = await onSite(s, { code: "PL-01" });
@@ -470,9 +486,12 @@ describe("when the owner says something is wrong", () => {
 });
 
 describe("the response guarantee", () => {
-  it("credits the month's membership when nobody is on site by the promised time, and logs it", async () => {
+  // The call-out portion of the job is on us: min(the market's diagnosis fee, the job's price).
+  // Queenstown's diagnosis fee is 225 dollars in the menu file ("offMenu"), so 22500 cents.
+
+  it("takes the call-out portion off a PL-01 when nobody is on site by the promised time, and pays the tradie in full", async () => {
     const s = await setup();
-    const job = await logJob(t.db, s.property);
+    const job = await logJob(t.db, s.property, { code: "PL-01" });
     const [offer] = await offersFor(t.db, job.id);
     await t.db.tx((tx) => acceptOffer(tx, offer!.id, "link"));
 
@@ -482,19 +501,79 @@ describe("the response guarantee", () => {
 
     setTestNow(addHours(MONDAY_10AM, 24));
     expect(await creditMissedWindows(t.db)).toEqual({ missed: 1, credited: 1 });
+    // PL-01 is 22500. The credit is min(22500, 22500) = 22500: the whole job.
     const credit = await t.db.query<{ amount_cents: number; month: string; status: string; reason: string }>("select amount_cents, month, status, reason from public.credits where job_id = $1::uuid", [job.id]);
-    expect(credit).toEqual([{ amount_cents: 9900, month: "2026-11", status: "pending", reason: "missed_window" }]);
+    expect(credit).toEqual([{ amount_cents: 22500, month: "2026-11", status: "pending", reason: "missed_window" }]);
     expect((await getJobForStaff(t.db, job.id))!.windowMissedAt).not.toBeNull();
     expect(await openExceptions(t.db, job.id)).toContain("missed_window");
-    expect((await textsTo(t.db, s.owner.user.phone!, "window_missed"))[0]!.body).toContain("Your November membership (NZ$99) is credited");
+    expect((await textsTo(t.db, s.owner.user.phone!, "window_missed"))[0]!.body).toContain("we missed our promised time at");
+    expect((await textsTo(t.db, s.owner.user.phone!, "window_missed"))[0]!.body).toContain("so NZ$225 of this job is on us");
     expect(await auditActions(t.db, job.id)).toEqual(expect.arrayContaining(["job.window_missed", "credit.created"]));
 
-    // Passed on to the payment company, once.
-    expect(await applyPendingCredits(t.db, gatewayFor(t.db))).toBe(1);
+    // It comes off this job's own charge, never a membership payment: nothing is passed to the payment company.
     expect(await applyPendingCredits(t.db, gatewayFor(t.db))).toBe(0);
-    expect((await t.db.query<{ status: string }>("select status from public.credits where job_id = $1::uuid", [job.id]))[0]!.status).toBe("applied");
     // Running the check again does not credit twice.
     expect(await creditMissedWindows(t.db)).toEqual({ missed: 0, credited: 0 });
+
+    // The tradie gets there late and finishes. 22500 - 22500 = 0 to charge, so there is no charge at all.
+    await markEnRoute(t.db, job.id, s.tradie.tradieId);
+    const arrived = await markArrived(t.db, job.id, s.tradie.tradieId, { lat: -45.03, lng: 168.66 });
+    if (!arrived.ok) throw new Error(arrived.message);
+    const done = await finish(s, job.id);
+    expect(done).toMatchObject({ ownerTotalCents: 22500, tradieTotalCents: 19000 });
+    expect(await payment(job.id)).toBeUndefined();
+    // The tradie is paid the full 19000, with nothing to wait for. The platform takes 0 and pays out 19000: it wears 19000 on this job.
+    expect(await payout(job.id)).toMatchObject({ status: "scheduled", amount_cents: 19000 });
+    expect((await t.db.query<{ status: string }>("select status from public.credits where job_id = $1::uuid", [job.id]))[0]!.status).toBe("applied");
+    expect(await moneyLog(job.id)).toEqual(expect.arrayContaining(["credit.applied:22500"]));
+  });
+
+  it("is capped at the job's price: HM-01 is 15500, so 15500 is on us", async () => {
+    const s = await setup({ trades: ["handyman"] });
+    const job = await logJob(t.db, s.property, { code: "HM-01" });
+    // HM-01, Shelf, hook or mirror hanging: owner 155 dollars, tradie 130 dollars in the menu file.
+    expect(job).toMatchObject({ ownerTotalCents: 15500, tradieTotalCents: 13000 });
+    setTestNow(addHours(MONDAY_10AM, 24));
+    expect(await creditMissedWindows(t.db)).toEqual({ missed: 1, credited: 1 });
+    // min(22500, 15500) = 15500.
+    expect((await t.db.query<{ amount_cents: number }>("select amount_cents from public.credits where job_id = $1::uuid", [job.id]))[0]!.amount_cents).toBe(15500);
+    expect((await textsTo(t.db, s.owner.user.phone!, "window_missed"))[0]!.body).toContain("so NZ$155 of this job is on us");
+  });
+
+  it("on a job that grows to a 60000 quote, the credit is still the 22500 call-out, and the rest is charged", async () => {
+    const s = await setup();
+    const job = await logJob(t.db, s.property, { menuItemId: null, offMenuTrade: "plumber", offMenuTitle: "Leak under the sink" });
+    // Off-menu: the job starts at the diagnosis fee, owner 22500, tradie 19000.
+    expect(job).toMatchObject({ ownerTotalCents: 22500, tradieTotalCents: 19000 });
+    const [offer] = await offersFor(t.db, job.id);
+    await t.db.tx((tx) => acceptOffer(tx, offer!.id, "link"));
+    setTestNow(addHours(MONDAY_10AM, 24));
+    expect(await creditMissedWindows(t.db)).toEqual({ missed: 1, credited: 1 });
+    // min(22500, 22500) = 22500.
+    expect((await t.db.query<{ amount_cents: number }>("select amount_cents from public.credits where job_id = $1::uuid", [job.id]))[0]!.amount_cents).toBe(22500);
+
+    // Late, the tradie arrives and quotes 52000 labour + 8000 parts = 60000, inside the 60000 limit, so it goes ahead.
+    await markEnRoute(t.db, job.id, s.tradie.tradieId);
+    const arrived = await markArrived(t.db, job.id, s.tradie.tradieId, { lat: -45.03, lng: 168.66 });
+    if (!arrived.ok) throw new Error(arrived.message);
+    const quoted = await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Replace waste trap and isolating valve", labourCents: 52000, partsCents: 8000, uploadIds: [] });
+    if (!quoted.ok) throw new Error(quoted.message);
+    const done = await finish(s, job.id);
+    // Owner: 22500 call-out + 60000 quote = 82500. Tradie: 19000 + 52000 x 0.85 (44200) + 8000 parts = 71200.
+    expect(done).toMatchObject({ ownerTotalCents: 82500, tradieTotalCents: 71200 });
+    // Charged 82500 - 22500 = 60000. The tradie still gets all 71200.
+    expect(await payment(job.id)).toMatchObject({ status: "pending", amount_cents: 60000 });
+    expect(await payout(job.id)).toMatchObject({ amount_cents: 71200 });
+    expect(await chargeJob(t.db, gatewayFor(t.db), job.id)).toBe("succeeded");
+    expect(await payment(job.id)).toMatchObject({ status: "succeeded", amount_cents: 60000 });
+
+    // The statement shows the job at what was charged, says why, and shows no credit still to come.
+    const market = (await getMarket(t.db, "queenstown"))!;
+    const statement = await ownerStatement(t.db, s.owner.ownerId, market, "2026-11");
+    expect(statement.lines.filter((line) => line.kind === "job").map((line) => [line.description, line.amountCents])).toEqual([
+      [`Job ${job.number}: Leak under the sink (NZ$225 off: we missed our promised time)`, 60000],
+    ]);
+    expect(statement).toMatchObject({ jobsCents: 60000, creditsCents: 0, membershipCents: 0, totalCents: 60000 });
   });
 
   it("does not credit when the tradie arrived in time, even by a minute", async () => {

@@ -72,7 +72,7 @@ function TierForm({ slug, currency, tier }: { slug: string; currency: string; ti
           inputMode="decimal"
           maxLength={8}
           defaultValue={tier && tier.billingBasis === "per_property" ? centsToDollars(tier.monthlyPriceCents) : ""}
-          hint="Per-property memberships only. A retainer's price comes from its bands below."
+          hint="Per-property memberships only. 0 means free to join: covered once a card is on file. A retainer's price comes from its bands below."
         />
         <Field label="Promise for a normal job (hours)" name={`responseHours-${key}`} required inputMode="numeric" maxLength={3} defaultValue={String(tier?.responseHours ?? 24)} />
         <Field label="Promise for an urgent job (hours)" name={`urgentHours-${key}`} required inputMode="numeric" maxLength={2} defaultValue={String(tier?.urgentResponseHours ?? 4)} />
@@ -292,7 +292,7 @@ export default async function MarketPage({ params, searchParams }: { params: Pro
               key={tier.id}
               label={
                 <span>
-                  {tier.name} <span className="font-normal text-muted">· {tier.billingBasis === "per_account" ? `one retainer: ${bandSummary(tier, money)}` : `${money(tier.monthlyPriceCents)} a month per property`} · {tier.responseHours} h, urgent {tier.urgentResponseHours} h{tier.urgentIncluded ? ", urgent included" : ""}{tier.active ? "" : " · not offered"}</span>
+                  {tier.name} <span className="font-normal text-muted">· {tier.billingBasis === "per_account" ? `one retainer: ${bandSummary(tier, money)}` : tier.monthlyPriceCents === 0 ? "free to join (card on file)" : `${money(tier.monthlyPriceCents)} a month per property`} · {tier.responseHours} h, urgent {tier.urgentResponseHours} h{tier.urgentIncluded ? ", urgent included" : ""}{tier.active ? "" : " · not offered"}</span>
                 </span>
               }
             >

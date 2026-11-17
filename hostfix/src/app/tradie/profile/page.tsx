@@ -10,7 +10,7 @@ import { now } from "@/lib/clock";
 import { getDb } from "@/lib/db";
 import { getMarket } from "@/lib/markets/store";
 import { displayPhone } from "@/lib/phone";
-import { getTradie, listLicences } from "@/lib/tradies/service";
+import { getTradie, insuranceProblem, listLicences } from "@/lib/tradies/service";
 import { dateKey } from "@/lib/time";
 import { WEEKDAY_OPTIONS } from "@/lib/weekdays";
 import { payTiming } from "@/lib/markets/display";
@@ -76,7 +76,16 @@ export default async function TradieProfilePage({ searchParams }: { searchParams
           <Tick name="afterHours" label="I take after-hours call-outs" hint={`Outside ${workingHours(market)}. You get the full after-hours surcharge.`} defaultChecked={tradie.afterHours} />
           <Tick name="gstRegistered" label={`I am registered for ${market.taxName}`} defaultChecked={tradie.gstRegistered} />
           <Field label={`${market.taxName} number (if registered)`} name="gstNumber" maxLength={20} defaultValue={tradie.gstNumber ?? ""} />
-          <Field label="Public liability insurance runs out on" name="insuranceExpiresOn" type="date" defaultValue={tradie.insuranceExpiresOn ?? ""} hint="Owners are told every tradie on the network is insured, so we check this date." />
+          <fieldset className="space-y-4 rounded-2xl border border-line p-4">
+            <legend className="flex items-center gap-2 px-1 font-semibold text-ink">
+              Public liability insurance
+              <Chip tone={insuranceProblem(tradie, today) ? "alert" : "done"}>{insuranceProblem(tradie, today) ? "Needed" : "In date"}</Chip>
+            </legend>
+            <p className="text-sm text-muted">Public liability insurance: insurer, policy number, expiry date. We can&apos;t offer you jobs without it.</p>
+            <Field label="Insurer" name="insurer" maxLength={120} defaultValue={tradie.insurer ?? ""} />
+            <Field label="Policy number" name="insurancePolicyNumber" maxLength={80} defaultValue={tradie.insurancePolicyNumber ?? ""} />
+            <Field label="Expiry date" name="insuranceExpiresOn" type="date" defaultValue={tradie.insuranceExpiresOn ?? ""} hint="When it runs out, jobs stop being offered to you until you add the renewed policy." />
+          </fieldset>
           <SubmitButton variant="secondary" pendingLabel="Saving...">
             Save
           </SubmitButton>

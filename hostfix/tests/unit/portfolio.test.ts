@@ -28,7 +28,8 @@ import { gatewayFor, liveMarket, logJob, makeOwner, makePortfolio, makeProperty,
  *     25-49 properties   90000  (NZ$900)
  *     50-99 properties  120000  (NZ$1,200)
  *     100 and more       by arrangement: the app never sets it
- *   Essential, per property, per month: 9900 (NZ$99)
+ *   Essential, per property, per month: 0 (free to join, DECISIONS.md 2026-11-17)
+ *   A paid per-property tier, where a test needs one: 9900 (NZ$99), the price Essential had before
  *   PL-01 from seed/menu-queenstown.json: owner 22500, tradie 19000, we keep 3500 (15% of the job, rounded
  *   by the menu to the nearest NZ$5). The same in both tiers.
  */
@@ -80,9 +81,11 @@ describe("the band for a number of properties", () => {
 
   it("is the price times the count for a per-property membership", () => {
     const essential = launchMarket.tiers.find((tier) => tier.key === "essential")!;
-    // 3 properties at NZ$99 each.
-    expect(bandFor(essential, 3)).toEqual({ cents: 29700, label: "3 properties" });
+    // Essential is free: 3 properties at 0 each is 0.
+    expect(bandFor(essential, 3)).toEqual({ cents: 0, label: "3 properties" });
     expect(minimumProperties(essential)).toBe(1);
+    // A paid per-property tier: 3 properties at NZ$99 each, 3 x 9900 = 29700.
+    expect(bandFor({ ...essential, monthlyPriceCents: 9900 }, 3)).toEqual({ cents: 29700, label: "3 properties" });
   });
 
   it("must be lowest first, with no gaps or overlaps, and only the top band open or by arrangement", () => {
@@ -362,9 +365,9 @@ describe("the numbers and the statement", () => {
     const manager = await makeOwner(t.db);
     await makePortfolio(t.db, manager.ownerId, 12);
     const numbers = await marketNumbers(t.db, "queenstown");
-    // One Essential property at 9900, plus one retainer for 12 properties on the 10-24 band at 60000:
-    // 9900 + 60000 = 69900. Thirteen properties are covered.
-    expect(numbers).toMatchObject({ mrrCents: 69900, properties: 13, portfolios: 1 });
+    // One Essential property, free to join so 0 a month, plus one retainer for 12 properties on the 10-24
+    // band at 60000: 0 + 60000 = 60000. Thirteen properties are covered.
+    expect(numbers).toMatchObject({ mrrCents: 60000, properties: 13, portfolios: 1 });
 
     const market = (await getMarket(t.db, "queenstown"))!;
     const statement = await ownerStatement(t.db, manager.ownerId, market, "2026-11");
@@ -379,7 +382,8 @@ describe("the database change", () => {
     await t.db.exec(fs.readFileSync(file, "utf8"));
     await t.db.exec(fs.readFileSync(file, "utf8"));
     const tiers = await listTiers(t.db, "queenstown");
-    expect(tiers.map((tier) => [tier.key, tier.billingBasis, tier.monthlyPriceCents])).toEqual([["essential", "per_property", 9900], ["portfolio", "per_account", 60000]]);
+    // Essential is 0 here: the database is built from config/markets.ts, which is free to join.
+    expect(tiers.map((tier) => [tier.key, tier.billingBasis, tier.monthlyPriceCents])).toEqual([["essential", "per_property", 0], ["portfolio", "per_account", 60000]]);
     expect(tiers[1]!.bands).toEqual(PORTFOLIO.bands);
   });
 

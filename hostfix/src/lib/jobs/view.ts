@@ -103,7 +103,7 @@ function describe(row: AuditRow, audience: Audience, job: Job, market: Market): 
     case "refund.issued":
       return audience === "tradie" ? null : entry(`Refunded ${amount}`, "done");
     case "job.window_missed":
-      return audience === "tradie" ? null : entry("We missed the promised time", "alert", d.credited ? "The month's membership has been credited." : audience === "staff" ? "No credit: already credited this month." : null);
+      return audience === "tradie" ? null : entry("We missed the promised time", "alert", d.credited ? "The call-out portion of this job is on us." : audience === "staff" ? "No credit: already credited this month." : null);
     case "job.cancelled":
       return entry("Cancelled", "quiet", audience === "staff" ? str(d.reason) : null);
     case "exception.raised":

@@ -28,14 +28,14 @@ export default async function NewJobPage({ searchParams }: { searchParams: Searc
         <PageTitle title="Report a problem" back={{ href: "/app", label: "Home" }} />
         <EmptyState
           icon="shield"
-          title={properties.length === 0 ? "Add a property first" : waiting?.status === "past_due" ? "Your card needs fixing first" : "Start a membership first"}
+          title={properties.length === 0 ? "Add a property first" : waiting?.status === "past_due" ? "Your card needs fixing first" : "Add a card to cover your property first"}
           action={
             <Link href={properties.length === 0 ? "/app/properties/new" : waiting?.status === "past_due" ? "/app/billing" : `/app/properties/${waiting?.id ?? properties[0]!.id}`} className={buttonClass}>
               {properties.length === 0 ? "Add a property" : waiting?.status === "past_due" ? "Update my card" : "Finish setting up"}
             </Link>
           }
         >
-          Tradies are sent to properties with a membership.
+          Tradies are sent to covered properties. It is free to join: a property is covered once a card is on file.
         </EmptyState>
       </div>
     );

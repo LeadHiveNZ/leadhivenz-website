@@ -26,6 +26,11 @@ import { stripeClient, type StripeAccount } from "./stripe";
  *    Stripe's own hosted pages collect their bank and identity details.
  *  - A credit is a negative "customer balance transaction": Stripe takes it
  *    off the owner's next invoice by itself.
+ *  - A free membership saves a card without charging it: Checkout in "setup"
+ *    mode, with the customer and a currency. The finished page holds a
+ *    SetupIntent, and the SetupIntent holds the saved card (payment_method).
+ *    Stripe sends checkout.session.completed for it, as for a paid page
+ *    (docs.stripe.com, "Set up future payments" with Checkout, read Nov 2026).
  *  - Every call that moves money carries an idempotency key, so a repeat of
  *    the same call can never charge or pay twice.
  *
@@ -139,6 +144,35 @@ export async function membershipFromCheckout(account: StripeAccount, sessionId: 
     invoice: invoice && invoice.status === "paid" ? invoiceSummary(invoice) : null,
     card,
   };
+}
+
+export type StripeCardSetup = {
+  propertyId: string;
+  ownerId: string | null;
+  customerId: string;
+  card: CardSummary;
+};
+
+/**
+ * Reads a finished "save your card" page for a free membership. Called when
+ * the owner comes back to the site and again when Stripe tells us in the
+ * background, whichever is first. Returns null unless a card was saved and
+ * the page is one of ours.
+ */
+export async function cardFromSetupCheckout(account: StripeAccount, sessionId: string): Promise<StripeCardSetup | null> {
+  const stripe = stripeClient(account);
+  const session = await stripe.checkout.sessions.retrieve(sessionId, { expand: ["setup_intent.payment_method"] });
+  if (session.mode !== "setup" || session.metadata?.hostfix_purpose !== "card_setup") return null;
+  if (session.status !== "complete" || !session.setup_intent || typeof session.setup_intent === "string") return null;
+  const intent = session.setup_intent;
+  if (intent.status !== "succeeded") return null;
+  const propertyId = session.metadata?.hostfix_property ?? session.client_reference_id;
+  const customerId = typeof session.customer === "string" ? session.customer : session.customer?.id;
+  const card = cardOf(intent.payment_method as Stripe.PaymentMethod | string | null);
+  if (!propertyId || !customerId || !card) return null;
+  // Make it the owner's default, so finished jobs can be charged to it.
+  await stripe.customers.update(customerId, { invoice_settings: { default_payment_method: card.paymentMethodId } });
+  return { propertyId, ownerId: session.metadata?.hostfix_owner ?? null, customerId, card };
 }
 
 /** The card an owner has chosen as their default, for after they change it on Stripe's page. */
@@ -256,6 +290,29 @@ export function createStripeGateway(account: StripeAccount): PaymentsGateway {
         if (error instanceof Stripe.errors.StripeCardError) return cardPage();
         throw error;
       }
+    },
+
+    async startCardSetup(input) {
+      const metadata = { hostfix_purpose: "card_setup", hostfix_property: input.propertyId, hostfix_owner: input.ownerId };
+      const session = await stripe.checkout.sessions.create({
+        mode: "setup",
+        customer: input.customerId,
+        // Setup mode needs a currency when the payment methods are not listed one by one.
+        currency: input.market.currency.toLowerCase(),
+        client_reference_id: input.propertyId,
+        metadata,
+        setup_intent_data: { metadata, description: `${brand.name} card on file: ${input.propertyName}`.slice(0, 500) },
+        custom_text: {
+          submit: {
+            // What the saved card will be used for. Keep this in step with the terms your lawyer writes.
+            message: `Nothing is charged now. Your card is saved and charged the fixed price of each job logged for ${input.propertyName}, when that job is finished.`.slice(0, 1200),
+          },
+        },
+        success_url: `${input.successUrl}${input.successUrl.includes("?") ? "&" : "?"}session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: input.cancelUrl,
+      });
+      if (!session.url) throw new Error("Stripe did not return a card page address.");
+      return { url: session.url };
     },
 
     async cancelMembership(subscriptionId) {

@@ -21,6 +21,41 @@ export default async function DemoCheckoutPage({ params }: { params: Promise<{ i
   const today = Math.max(0, checkout.priceCents - checkout.discountCents);
   const back = checkout.cancelUrl.replace(/^https?:\/\/[^/]+/, "") || "/app";
 
+  if (checkout.setupOnly) {
+    // A free membership: the page only saves a card.
+    return (
+      <div className="mx-auto max-w-md space-y-5">
+        <Notice tone="warn" title="Pretend card page">
+          On the live site the owner types their card into Stripe&apos;s own secure page at this point. In the demo, nothing is saved or charged.
+        </Notice>
+        <Card className="sm:p-6">
+          <h1 className="display text-3xl text-ink">Add a card</h1>
+          <p className="mt-1 text-muted">{checkout.propertyName}</p>
+          <div className="mt-4">
+            <Facts
+              rows={[
+                { label: "Charged today", value: <span className="text-xl">{money(0)}</span> },
+                { label: "Charged later", value: "The fixed price of each job, when it is done" },
+                { label: "Card", value: "Visa ending 4242 (pretend)" },
+              ]}
+            />
+          </div>
+          <ActionForm action={payDemoCheckout} className="mt-5 space-y-3">
+            <input type="hidden" name="checkoutId" value={checkout.id} />
+            <SubmitButton pendingLabel="Saving..." className="w-full">
+              Save card
+            </SubmitButton>
+          </ActionForm>
+          <p className="mt-3 text-center text-sm">
+            <Link href={back} className="font-semibold text-muted underline underline-offset-2">
+              Go back without saving
+            </Link>
+          </p>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-md space-y-5">
       <Notice tone="warn" title="Pretend card page">

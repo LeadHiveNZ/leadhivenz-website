@@ -12,7 +12,7 @@ import { handleProductMessage, type ProductDeps } from "@/lib/payments/product-e
 import type { StripeAccount } from "@/lib/payments/stripe";
 import { activateMembership, getProperty } from "@/lib/properties/service";
 import { testDb } from "./db";
-import { gatewayFor, liveMarket, logJob, makeOwner, makeProperty, makeTradie, menuItem, MONDAY_10AM, offersFor, photo, textsTo } from "./factory";
+import { addPaidTier, gatewayFor, liveMarket, logJob, makeOwner, makeProperty, makeTradie, menuItem, MONDAY_10AM, offersFor, photo, textsTo } from "./factory";
 
 /**
  * WHAT STRIPE TELLS US, and what the app does about it. These use made-up
@@ -43,11 +43,15 @@ function invoice(id: string, subscriptionId: string, amount: number, start: Date
   } as unknown as Stripe.Invoice;
 }
 
-/** An owner whose property is a member through Stripe (rather than the pretend payment company). */
+/**
+ * An owner whose property is a member through Stripe (rather than the pretend payment company), on a
+ * priced per-property membership (NZ$99 a month): Essential is free to join, and has no monthly payments.
+ */
 async function stripeMember() {
   await liveMarket(t.db);
+  await addPaidTier(t.db);
   const owner = await makeOwner(t.db, { card: "none" });
-  const property = await makeProperty(t.db, owner.ownerId, { member: false });
+  const property = await makeProperty(t.db, owner.ownerId, { tier: "paid", member: false });
   return { owner, property };
 }
 
@@ -63,6 +67,38 @@ async function activeStripeMember() {
 
 const invoices = () => t.db.query<{ provider_invoice_id: string; status: string; amount_cents: number }>("select provider_invoice_id, status, amount_cents from public.membership_invoices order by created_at, id");
 const queue = async () => (await t.db.query<{ kind: string; summary: string }>("select kind, summary from public.exceptions where status = 'open' order by created_at")).map((row) => row);
+
+describe("a free membership's save-your-card page is completed", () => {
+  const card = { paymentMethodId: "pm_free", brand: "visa", last4: "1881", expMonth: 3, expYear: 2031 };
+  const session = { id: "cs_setup_1", mode: "setup", metadata: { hostfix_purpose: "card_setup" } };
+
+  it("saves the card and covers the property, with no subscription and nothing charged, once however many times Stripe says so", async () => {
+    await liveMarket(t.db);
+    const owner = await makeOwner(t.db, { card: "none" });
+    const property = await makeProperty(t.db, owner.ownerId, { member: false });
+    // The site saved who the owner is at Stripe before sending them to the page.
+    await saveBilling(t.db, { ownerId: owner.ownerId, country: "NZ", provider: "stripe", customerId: "cus_free" });
+    const deps: ProductDeps = { cardFromSetupCheckout: async () => ({ propertyId: property.id, ownerId: owner.ownerId, customerId: "cus_free", card }) };
+
+    expect(await handleProductMessage(t.db, event("checkout.session.completed", session), account, deps)).toEqual({ handled: true, outcome: "free_membership_started" });
+    expect(await handleProductMessage(t.db, event("checkout.session.completed", session), account, deps)).toEqual({ handled: true, outcome: "free_membership_started" });
+    expect(await getProperty(t.db, owner.ownerId, property.id)).toMatchObject({ status: "active", subscriptionId: null, currentPeriodEnd: null });
+    expect(await getBilling(t.db, owner.ownerId, "NZ")).toMatchObject({ provider: "stripe", customerId: "cus_free", paymentMethodId: "pm_free", cardLast4: "1881" });
+    expect(await invoices()).toEqual([]);
+    const started = await t.db.query("select 1 from public.audit_log where entity_id = $1 and action = 'membership.started'", [property.id]);
+    expect(started).toHaveLength(1);
+  });
+
+  it("does nothing when no card was saved, or for a customer it does not know", async () => {
+    await liveMarket(t.db);
+    const owner = await makeOwner(t.db, { card: "none" });
+    const property = await makeProperty(t.db, owner.ownerId, { member: false });
+    expect(await handleProductMessage(t.db, event("checkout.session.completed", session), account, { cardFromSetupCheckout: async () => null })).toEqual({ handled: true, outcome: "card_not_saved" });
+    const stranger: ProductDeps = { cardFromSetupCheckout: async () => ({ propertyId: property.id, ownerId: null, customerId: "cus_nobody", card }) };
+    expect(await handleProductMessage(t.db, event("checkout.session.completed", session), account, stranger)).toEqual({ handled: true, outcome: "property_missing" });
+    expect((await getProperty(t.db, owner.ownerId, property.id))!.status).toBe("setup");
+  });
+});
 
 describe("a membership card page is completed", () => {
   const deps = (propertyId: string): ProductDeps => ({

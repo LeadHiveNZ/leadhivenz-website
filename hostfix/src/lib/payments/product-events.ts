@@ -7,10 +7,10 @@ import { formatMoney } from "@/lib/money";
 import { raiseException } from "@/lib/ops/exceptions";
 import { findOwnerByCustomer, saveBilling } from "@/lib/owners/service";
 import { activatePortfolio } from "@/lib/properties/portfolio";
-import { activateMembership, endMembership, recordMembershipPaymentFailed, recordRenewal } from "@/lib/properties/service";
+import { activateFreeMembership, activateMembership, endMembership, recordMembershipPaymentFailed, recordRenewal } from "@/lib/properties/service";
 import type { StripeMessage } from "./deposit";
 import { stripeClient, type StripeAccount } from "./stripe";
-import { defaultCard, invoiceSubscriptionId, invoiceSummary, membershipFromCheckout } from "./stripe-gateway";
+import { cardFromSetupCheckout, defaultCard, invoiceSubscriptionId, invoiceSummary, membershipFromCheckout } from "./stripe-gateway";
 
 /**
  * WHAT STRIPE TELLS US ABOUT MEMBERSHIPS AND JOB PAYMENTS.
@@ -40,6 +40,7 @@ export type ProductDeps = {
   /** Replaced in tests. */
   fetch?: Partial<Fetchers>;
   membershipFromCheckout?: typeof membershipFromCheckout;
+  cardFromSetupCheckout?: typeof cardFromSetupCheckout;
   defaultCard?: typeof defaultCard;
 };
 
@@ -94,6 +95,15 @@ export async function handleProductMessage(db: Db, message: StripeMessage, accou
     case "checkout.session.completed":
     case "checkout.session.async_payment_succeeded": {
       const session = event.object as Stripe.Checkout.Session;
+      // A free membership: the page only saved a card, and the property is covered once it has.
+      if (session.mode === "setup" && session.metadata?.hostfix_purpose === "card_setup") {
+        const saved = await (deps.cardFromSetupCheckout ?? cardFromSetupCheckout)(account, session.id);
+        if (!saved) return { handled: true, outcome: "card_not_saved" };
+        const owner = await findOwnerByCustomer(db, "stripe", saved.customerId);
+        if (!owner) return { handled: true, outcome: "property_missing" };
+        const property = await activateFreeMembership(db, { propertyId: saved.propertyId, ownerId: owner.ownerId, provider: "stripe", customerId: saved.customerId, card: saved.card });
+        return { handled: true, outcome: property ? "free_membership_started" : "property_missing" };
+      }
       if (session.mode !== "subscription" || session.metadata?.hostfix_purpose !== "membership") return null;
       const membership = await (deps.membershipFromCheckout ?? membershipFromCheckout)(account, session.id);
       if (!membership) return { handled: true, outcome: "membership_not_paid" };

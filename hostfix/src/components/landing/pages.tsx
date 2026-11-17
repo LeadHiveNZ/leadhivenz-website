@@ -10,11 +10,8 @@ import { buttonClass } from "@/components/forms/styles";
 import { FormHeader, LandingPage, type MenuPreview } from "@/components/LandingPage";
 import { Icon } from "@/components/ui/Icon";
 import { loadLanding, plainText, type LandingContent } from "@/lib/content";
-import { getDb } from "@/lib/db";
-import { foundingSpotsTaken, SHOW_SPOTS_LEFT_AT, spotsLeft } from "@/lib/leads/founding";
-import type { PublicMarket } from "@/lib/markets/public";
+import { publicMarketNow, type PublicMarket } from "@/lib/markets/public";
 import { formatMoney } from "@/lib/money";
-import { depositAvailability } from "@/lib/payments/deposit";
 import { OwnerPhone, TradiePhone } from "./PhoneMock";
 
 /** The owner and tradie landing pages for one market. The words live in /content. */
@@ -62,7 +59,7 @@ function JoinPanel({ marketSlug, marketName }: { marketSlug: string; marketName:
   return (
     <div className="space-y-4">
       <ul className="space-y-2.5 text-[0.98rem] text-muted">
-        {["Add your property and choose a membership", "Get a link and QR code for your cleaner and guests", "The first time something breaks, it is already sorted"].map((line) => (
+        {["Add your property and a card. Free to join", "Get a link and QR code for your cleaner and guests", "The first time something breaks, it is already sorted"].map((line) => (
           <li key={line} className="flex gap-2.5">
             <Icon name="check" size={18} className="mt-1 text-done" />
             {line}
@@ -98,77 +95,44 @@ function forOpenMarket(content: LandingContent): LandingContent {
   };
 }
 
-/** The deposit as shown, or null when the founding offer is switched off. */
-function depositLabel(market: Market): string | null {
-  return market.stage === "waitlist" && market.foundingDeposit.enabled ? formatMoney(market.foundingDeposit.amountCents, market.currency) : null;
-}
-
-/** The founding offer's promises, as set on the admin screen, above the form. */
-function FoundingTerms({ market, note }: { market: Market; note?: React.ReactNode }) {
-  if (market.foundingDeposit.terms.length === 0 && !note) return null;
-  return (
-    <div className="mb-5 rounded-2xl bg-tint px-4 py-3.5">
-      {note}
-      {market.foundingDeposit.terms.length > 0 && (
-        <ul className="space-y-1.5 text-[0.95rem] text-ink">
-          {market.foundingDeposit.terms.map((term) => (
-            <li key={term} className="flex gap-2">
-              <Icon name="check" size={18} className="mt-0.5 shrink-0 text-done" />
-              {term}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
-  );
-}
-
 /**
- * The form, worked out on each visit: whether the card page can be opened
- * (payments switched on) and how many founding spots are left. The page
- * around it is built once and kept.
+ * The owner form before a market opens: one button, "Send me the price list".
+ * HostFix is free to join (DECISIONS.md, 2026-11-17), so there is no founding
+ * deposit, no founding terms and no count of spots left.
  */
-async function LiveOwnerForm({ market }: { market: Market }) {
-  await connection();
-  const label = depositLabel(market);
-  let left: number | null = null;
-  if (label) {
-    try {
-      left = spotsLeft(market, await foundingSpotsTaken(await getDb(), market.slug));
-    } catch {
-      left = null;
-    }
-  }
-  const canTake = label !== null && depositAvailability(market).available && left !== 0;
-  const note =
-    label && left === 0 ? (
-      <p className="mb-2 font-bold text-ink">All the founding spots have been taken. Leave your details for the price list and we will let you know when we open.</p>
-    ) : canTake && left !== null && left <= SHOW_SPOTS_LEFT_AT ? (
-      <p className="mb-2 font-bold text-ink">
-        Only {left} founding {left === 1 ? "spot" : "spots"} left in {market.name}.
-      </p>
-    ) : null;
+function OwnerForm({ market }: { market: Market }) {
   return (
     <>
-      <OwnerFormHeader market={market} deposit={canTake ? label : null} />
+      <FormHeader title="Get the full price list" note="Every price on the menu, sent to you now. Free to join, and no payment needed." />
       <div className="mt-5">
-        {canTake || note ? <FoundingTerms market={market} note={note} /> : null}
-        <OwnerLeadForm marketName={market.name} brandName={brand.name} deposit={canTake ? label : null} />
+        <OwnerLeadForm marketName={market.name} brandName={brand.name} />
       </div>
     </>
   );
 }
 
-/** "Take a founding spot" only when the form below has that button. */
-function OwnerFormHeader({ market, deposit }: { market: Market; deposit: string | null }) {
-  const spots = market.foundingDeposit.spots;
-  return deposit ? (
-    <FormHeader
-      title="Take a founding spot"
-      note={`${spots ? `${spots} founding properties in ${market.name}.` : `Founding properties in ${market.name}.`} ${deposit} deposit, refundable.`}
-    />
-  ) : (
-    <FormHeader title="Get the full price list" note="Every price on the menu, sent to you now. No payment needed." />
+/**
+ * The form, worked out on each visit. The page around it is built once and
+ * kept, and the build cannot always know whether the market has opened (the
+ * demo build pretends it has). So the choice between "send me the price list"
+ * and "join now" is made from the market as it is this instant, after the
+ * request is touched, inside Suspense. The kept copy is the fallback.
+ */
+async function OwnerFormSlot({ data }: { data: PublicMarket }) {
+  await connection();
+  const market = (await publicMarketNow(data.market.slug))?.market ?? data.market;
+  if (market.stage !== "live") return <OwnerForm market={market} />;
+  const tier = market.tiers[0];
+  return (
+    <>
+      <FormHeader
+        title={`Join ${brand.name}`}
+        note={tier && tier.monthlyPriceCents > 0 ? `${formatMoney(tier.monthlyPriceCents, market.currency)} a month per property. Cancel any time.` : "Free to join. You pay the fixed price when a job is done."}
+      />
+      <div className="mt-5">
+        <JoinPanel marketSlug={market.slug} marketName={market.name} />
+      </div>
+    </>
   );
 }
 
@@ -179,53 +143,37 @@ export function OwnerLanding({ data }: { data: PublicMarket }) {
   const tier = market.tiers[0];
   const items = featured(data, 12);
   const money = (cents: number) => formatMoney(cents, market.currency);
-  const deposit = depositLabel(market);
-  const spots = market.foundingDeposit.spots;
   const menu: MenuPreview | null =
     items.length > 0
       ? {
           title: "Fixed prices for the common jobs",
-          note: `What your card is charged when the job is done, ${market.taxName} included. No call-out fee on top. ${data.menu.length > items.length ? `These are ${items.length} of the ${data.menu.length} jobs on the menu: the full list comes with your founding spot, or as soon as you ask for it.` : ""}`.trim(),
+          note: `What your card is charged when the job is done, ${market.taxName} included. No call-out fee on top. ${data.menu.length > items.length ? `These are ${items.length} of the ${data.menu.length} jobs on the menu: the full list comes as soon as you ask for it.` : ""}`.trim(),
           currency: market.currency,
           showPrices: true,
           priceLabel: `Prices include ${market.taxName}`,
           items: items.map((item) => ({ name: item.name, cents: item.ownerPriceCents })),
         }
       : null;
-  const cta = live ? "Join now" : deposit ? "Take a founding spot" : "Get the price list";
-  const form = live ? (
-    <JoinPanel marketSlug={market.slug} marketName={market.name} />
-  ) : (
-    <Suspense
-      fallback={
-        <>
-          <OwnerFormHeader market={market} deposit={deposit} />
-          <div className="mt-5">
-            {deposit && <FoundingTerms market={market} />}
-            <OwnerLeadForm marketName={market.name} brandName={brand.name} deposit={deposit} />
-          </div>
-        </>
-      }
-    >
-      <LiveOwnerForm market={market} />
+  const cta = live ? "Join now" : "Get the price list";
+  const form = (
+    <Suspense fallback={<OwnerForm market={market} />}>
+      <OwnerFormSlot data={data} />
     </Suspense>
   );
   return (
     <LandingPage
       content={content}
       eyebrow={`${market.name}, ${market.countryName}`}
-      formTitle={live ? `Join ${brand.name}` : undefined}
-      formNote={live ? `${tier ? money(tier.monthlyPriceCents) : ""} a month per property. Cancel any time.` : undefined}
       form={form}
       ctaLabel={cta}
       closingTitle={live ? `Sort it once in ${market.name}` : `Be one of the first in ${market.name}`}
       closingNote={
         live
           ? "Add your property today. The next time something breaks, you will not need to make a single call."
-          : `${spots ? `${spots} founding properties` : "Founding properties"}, set up first when we open. Or just take the price list and decide later.`
+          : "Free to join. Take the price list now, and we will let you know the day we open."
       }
       proof={[
-        { value: `${tier?.responseHours ?? 24}h`, label: "A tradie on site, or that month's membership is credited" },
+        { value: `${tier?.responseHours ?? 24}h`, label: "A tradie on site, or the call-out is on us" },
         { value: String(data.menu.length || 25), label: "Common jobs at a fixed price, shown before you book" },
         { value: `${tier?.urgentResponseHours ?? 4}h`, label: `When it is urgent, for ${money(market.urgentSurchargeCents)} more` },
       ]}

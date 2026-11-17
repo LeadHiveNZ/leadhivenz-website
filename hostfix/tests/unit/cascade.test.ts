@@ -4,6 +4,8 @@ import { acceptOffer, advanceCascade, assignTradie, expireDueOffers, passOffer, 
 import { approveGuestReport, cancelJob, createJob } from "@/lib/jobs/create";
 import { getJobForStaff } from "@/lib/jobs/store";
 import { listExceptions, raiseException } from "@/lib/ops/exceptions";
+import { runTick } from "@/lib/dispatch/tick";
+import { getTradie, setTradieStatus, updateTradie } from "@/lib/tradies/service";
 import { testDb } from "./db";
 import { auditActions, liveMarket, logJob, makeOwner, makeProperty, makeTradie, menuItem, MONDAY_10AM, MONDAY_9PM, offersFor, openExceptions, textsTo } from "./factory";
 
@@ -353,6 +355,91 @@ describe("licensed work", () => {
     const result = await t.db.tx((tx) => assignTradie(tx, job.id, unlicensed.tradieId, "staff:test"));
     expect(result.result).toBe("not_eligible");
     expect((await status(job.id)).tradieId).toBeNull();
+  });
+});
+
+describe("public liability insurance (DECISIONS.md, 2026-11-17)", () => {
+  it("a tradie with no insurance on file is offered nothing, not even work that needs no licence", async () => {
+    const { property } = await member();
+    const uninsured = await makeTradie(t.db, { trades: ["handyman"], licence: "none", slot: 1, insurance: "none" });
+    const job = await logJob(t.db, property, { code: "HM-01" });
+    expect(await offersFor(t.db, job.id)).toHaveLength(0);
+    expect((await status(job.id)).status).toBe("unfilled");
+    expect(await textsTo(t.db, uninsured.phone, "offer")).toHaveLength(0);
+  });
+
+  it("a tradie whose insurance has expired is offered nothing", async () => {
+    const { property } = await member();
+    const expired = await makeTradie(t.db, { slot: 1, insurance: "expired" });
+    const job = await logJob(t.db, property, { code: "PL-01" });
+    expect(await offersFor(t.db, job.id)).toHaveLength(0);
+    expect(await textsTo(t.db, expired.phone, "offer")).toHaveLength(0);
+  });
+
+  it("a tradie with current insurance is offered the job, and insurance that runs out today still counts", async () => {
+    const { property } = await member();
+    const insured = await makeTradie(t.db, { slot: 1 });
+    const today = await makeTradie(t.db, { slot: 2 });
+    const yesterday = await makeTradie(t.db);
+    // MONDAY_10AM is Mon 16 Nov 2026 in Queenstown.
+    await t.db.query("update public.tradies set insurance_expires_on = '2026-11-16' where id = $1::uuid", [today.tradieId]);
+    await t.db.query("update public.tradies set insurance_expires_on = '2026-11-15' where id = $1::uuid", [yesterday.tradieId]);
+    const job = await logJob(t.db, property, { code: "PL-01" });
+    expect((await offersFor(t.db, job.id)).map((o) => o.tradie_id)).toEqual([insured.tradieId]);
+    // The first choice passes: the backup, insured to today, is next. The one that ran out yesterday never is.
+    const [first] = await offersFor(t.db, job.id);
+    await t.db.tx((tx) => passOffer(tx, first!.id, "link"));
+    expect((await offersFor(t.db, job.id)).map((o) => o.tradie_id)).toEqual([insured.tradieId, today.tradieId]);
+  });
+
+  it("is checked again at the moment of accepting, and the dispatcher cannot override it", async () => {
+    const { property } = await member();
+    const tradie = await makeTradie(t.db, { slot: 1 });
+    const job = await logJob(t.db, property, { code: "PL-01" });
+    const [offer] = await offersFor(t.db, job.id);
+    await t.db.query("update public.tradies set insurance_expires_on = '2026-11-01' where id = $1::uuid", [tradie.tradieId]);
+    expect((await t.db.tx((tx) => acceptOffer(tx, offer!.id, "link"))).result).toBe("not_eligible");
+    const uninsured = await makeTradie(t.db, { insurance: "none" });
+    expect((await t.db.tx((tx) => assignTradie(tx, job.id, uninsured.tradieId, "staff:test"))).result).toBe("not_eligible");
+    expect((await status(job.id)).tradieId).toBeNull();
+  });
+
+  it("is needed before a tradie can be approved: insurer, policy number and an expiry that has not passed", async () => {
+    await liveMarket(t.db);
+    const waiting = await makeTradie(t.db, { approved: false, insurance: "none" });
+    await t.db.query("update public.tradies set insurer = null, insurance_policy_number = null, insurance_expires_on = null where id = $1::uuid", [waiting.tradieId]);
+    await expect(setTradieStatus(t.db, waiting.tradieId, "approved", "staff:test")).rejects.toThrow(
+      "Not approved. Their public liability insurance is not complete: add the insurer, the policy number and the expiry date on their page first.",
+    );
+    await updateTradie(t.db, waiting.tradieId, { insurer: "Test Insurance Ltd", insurancePolicyNumber: "PL-77" }, "test");
+    await expect(setTradieStatus(t.db, waiting.tradieId, "approved", "staff:test")).rejects.toThrow("add the expiry date");
+    await updateTradie(t.db, waiting.tradieId, { insuranceExpiresOn: "2026-11-15" }, "test");
+    await expect(setTradieStatus(t.db, waiting.tradieId, "approved", "staff:test")).rejects.toThrow("has run out");
+    expect((await getTradie(t.db, waiting.tradieId))!.status).toBe("applied");
+    await updateTradie(t.db, waiting.tradieId, { insuranceExpiresOn: "2027-11-15" }, "test");
+    expect((await setTradieStatus(t.db, waiting.tradieId, "approved", "staff:test"))!.status).toBe("approved");
+  });
+
+  it("running out is flagged to the dispatcher and the tradie 30 days ahead, once", async () => {
+    await liveMarket(t.db);
+    const tradie = await makeTradie(t.db);
+    // 16 Dec 2026 is exactly 30 days after Mon 16 Nov 2026.
+    await t.db.query("update public.tradies set insurance_expires_on = '2026-12-16' where id = $1::uuid", [tradie.tradieId]);
+    const report = await runTick(t.db, { gatewayFor: () => null, log: { error: () => {} } });
+    expect(report.insurance_warned).toBe(1);
+    expect((await runTick(t.db, { gatewayFor: () => null, log: { error: () => {} } })).insurance_warned).toBe(0);
+    const queue = await listExceptions(t.db, { status: "open" });
+    expect(queue.filter((item) => item.kind === "insurance_expiring").map((item) => item.summary)).toEqual([
+      expect.stringContaining("public liability insurance runs out on 16 Dec 2026"),
+    ]);
+    expect((await textsTo(t.db, tradie.phone, "insurance_expiring"))[0]!.body).toContain("your public liability insurance on file runs out on 16 Dec 2026");
+  });
+
+  it("is not flagged 31 days ahead", async () => {
+    await liveMarket(t.db);
+    const tradie = await makeTradie(t.db);
+    await t.db.query("update public.tradies set insurance_expires_on = '2026-12-17' where id = $1::uuid", [tradie.tradieId]);
+    expect((await runTick(t.db, { gatewayFor: () => null, log: { error: () => {} } })).insurance_warned).toBe(0);
   });
 });
 

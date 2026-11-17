@@ -354,7 +354,7 @@ test("an admin changes a price and owners see it straight away; jobs already log
   await expect(shown(page, "NZ$255")).toHaveCount(0);
 });
 
-test("a new owner joins, pays for a membership and gets their QR card", async ({ page }) => {
+test("a new owner joins free, adds a card and gets their QR card", async ({ page }) => {
   // Saving the market's settings also refreshes the public pages, which were built before the market opened.
   await be(page, "Admin (you)");
   await open(page, "/admin/markets/queenstown");
@@ -392,31 +392,35 @@ test("a new owner joins, pays for a membership and gets their QR card", async ({
   await page.waitForURL(/added=1/);
   await ready(page);
 
-  // Not a member yet: jobs cannot be logged.
+  // Not covered yet: jobs cannot be logged.
   await open(page, "/app/jobs/new");
-  await expect(shown(page, "Start a membership first").first()).toBeVisible();
+  await expect(shown(page, "Add a card to cover your property first").first()).toBeVisible();
   await page.getByRole("link", { name: "Finish setting up" }).click();
   await ready(page);
 
-  await page.getByRole("button", { name: "Continue to payment" }).click();
+  // Free to join (DECISIONS.md, 2026-11-17): the only step is a card, and nothing is charged.
+  await expect(shown(page, /Free to join\. You add a card on the next page and nothing is charged today\./).first()).toBeVisible();
+  await page.getByRole("button", { name: "Add a card" }).click();
   await page.waitForURL(/demo\/checkout/);
   await ready(page);
-  await expect(shown(page, "Essential membership").first()).toBeVisible();
-  await expect(shown(page, "NZ$99").first().first()).toBeVisible();
-  await page.getByRole("button", { name: "Pay NZ$99 and start" }).click();
+  await expect(page.getByRole("heading", { name: "Add a card" })).toBeVisible();
+  await expect(shown(page, "NZ$0").first()).toBeVisible();
+  await expect(page.getByRole("button", { name: /^Pay/ })).toHaveCount(0);
+  await page.getByRole("button", { name: "Save card" }).click();
   await page.waitForURL(/member=1/);
   await ready(page);
   await expect(shown(page, "You are covered").first()).toBeVisible();
   await expect(page.getByRole("link", { name: "Print the QR card" })).toBeVisible();
-  await expect(shown(page, "Essential, NZ$99 a month").first()).toBeVisible();
+  await expect(shown(page, "Essential: Free to join").first()).toBeVisible();
+  await expect(shown(page, "The fixed price of each job, when it is done").first()).toBeVisible();
 
-  // The statement shows the first month.
+  // The card is on file for jobs, and no membership payment was taken.
   await open(page, "/app/billing");
-  await expect(shown(page, "Monthly membership").first()).toBeVisible();
   await expect(shown(page, "Visa").first().first()).toBeVisible();
+  await expect(shown(page, "Monthly membership")).toHaveCount(0);
 });
 
-test("a tradie signs in with their mobile, adds a licence and bank details", async ({ page }) => {
+test("a tradie signs in with their mobile, adds bank details and their insurance", async ({ page }) => {
   await open(page, "/sign-in?next=/tradie/profile");
   await page.getByLabel(/Email or mobile/).fill("021 123 4506");
   await page.getByRole("button", { name: "Send me a code" }).click();
@@ -436,6 +440,16 @@ test("a tradie signs in with their mobile, adds a licence and bank details", asy
   await page.waitForURL(/payouts=done/);
   await ready(page);
   await expect(shown(page, "Bank details set up. You can be paid.").first()).toBeVisible();
+
+  // Public liability insurance: no offers without it (DECISIONS.md, 2026-11-17).
+  const insurance = page.locator("form").filter({ has: page.getByLabel("Policy number") });
+  await expect(insurance.getByText("Public liability insurance: insurer, policy number, expiry date. We can't offer you jobs without it.")).toBeVisible();
+  await insurance.getByLabel("Insurer").fill("Southern Cover Ltd");
+  await insurance.getByLabel("Policy number").fill("PL-445566");
+  await insurance.getByLabel("Expiry date").fill("2027-06-30");
+  await insurance.getByRole("button", { name: "Save", exact: true }).click();
+  await expect(shown(page, "Saved.").first()).toBeVisible();
+  await expect(insurance.getByLabel("Policy number")).toHaveValue("PL-445566");
 
   // Still waiting for a person on the team to approve them, so no offers yet.
   await open(page, "/tradie");

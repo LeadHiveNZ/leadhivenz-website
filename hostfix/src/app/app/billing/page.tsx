@@ -16,6 +16,7 @@ import { listMarkets, listTiers } from "@/lib/markets/store";
 import { formatMoney } from "@/lib/money";
 import { isMonthKey, shiftMonth } from "@/lib/months";
 import { getBilling } from "@/lib/owners/service";
+import { tierPriceLabel } from "@/lib/markets/display";
 import { membershipLabel } from "@/lib/properties/display";
 import { minimumProperties } from "@/lib/markets/bands";
 import { countPortfolioProperties, listPortfolios, retainerFor } from "@/lib/properties/portfolio";
@@ -201,7 +202,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Sear
                 </ActionForm>
               </>
             ) : (
-              <p className="text-muted">No card yet. It is added when you start a membership.</p>
+              <p className="text-muted">No card yet. It is added when you cover your first property.</p>
             )}
           </Card>
         ))}
@@ -222,7 +223,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Sear
                     {property.portfolioId
                       ? `On your Portfolio${property.status === "active" ? "" : `. ${label.label}`}`
                       : property.status === "active" && tier
-                      ? `${tier.name}, ${formatMoney(tier.monthlyPriceCents, allMarkets.find((candidate) => candidate.slug === property.market)?.currency ?? market.currency)} a month`
+                      ? `${tier.name}: ${tierPriceLabel(tier, allMarkets.find((candidate) => candidate.slug === property.market)?.currency ?? market.currency)}`
                       : label.label}
                     {property.status === "active" && property.currentPeriodEnd && !property.portfolioId ? `. ${property.cancelAtPeriodEnd ? "Ends" : "Next payment"} ${formatDate(property.currentPeriodEnd, zone)}` : ""}
                   </span>
@@ -289,7 +290,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Sear
             <div className="mt-2 border-t-2 border-ink pt-3">
               <Facts
                 rows={[
-                  { label: "Memberships", value: money(statement.membershipCents) },
+                  ...(statement.membershipCents !== 0 ? [{ label: "Memberships", value: money(statement.membershipCents) }] : []),
                   { label: "Jobs", value: money(statement.jobsCents) },
                   ...(statement.refundsCents !== 0 ? [{ label: "Refunds", value: `-${money(-statement.refundsCents)}` }] : []),
                   { label: "Total charged to your card", value: <span className="text-xl">{money(statement.totalCents)}</span> },

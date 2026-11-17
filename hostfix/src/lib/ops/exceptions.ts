@@ -21,6 +21,8 @@ export type ExceptionKind =
   | "payout_failed"
   | "quote_waiting"
   | "licence_expiring"
+  /** A tradie's public liability insurance runs out within 30 days, or has run out. */
+  | "insurance_expiring"
   | "message_failed"
   | "referral_due"
   | "chargeback"
@@ -193,6 +195,7 @@ export const EXCEPTION_LABELS: Record<ExceptionKind, string> = {
   payout_failed: "Could not pay the tradie",
   quote_waiting: "Quote waiting on the owner",
   licence_expiring: "Licence running out",
+  insurance_expiring: "Insurance running out",
   message_failed: "A text or email did not send",
   referral_due: "Referral reward to pay",
   chargeback: "Bank dispute (chargeback)",
@@ -205,12 +208,13 @@ export const EXCEPTION_LABELS: Record<ExceptionKind, string> = {
 export const EXCEPTION_ACTIONS: Record<ExceptionKind, string> = {
   nobody_accepted: "Ring a tradie who does this trade. If they say yes, assign them on the job page. Or start the offers again.",
   at_risk: "The promised time is close. Ring the tradie and check they are on their way.",
-  missed_window: "On Essential the month's membership has already been credited. On a Portfolio property nothing was credited: ask the admin what to credit. Ring the owner to say sorry, and make sure a tradie is going.",
+  missed_window: "On Essential the call-out portion of the job comes off the owner's bill by itself. On a Portfolio property nothing was credited: ask the admin what to credit. Ring the owner to say sorry, and make sure a tradie is going.",
   dispute: "Read what the owner said, look at the photos, ring both sides, then settle it on the job page.",
   payment_failed: "The owner's card was declined. It is tried again each day. Ask them to update their card, then try again on the job page.",
   payout_failed: "The tradie could not be paid. Ask them to check their bank details in their profile, then try again on the job page.",
   quote_waiting: "The owner has not answered a quote and the tradie is waiting. Ring the owner, then record their answer on the job page.",
   licence_expiring: "Ask the tradie for their renewed licence, check it on the public register, and update it on their page.",
+  insurance_expiring: "Ask the tradie for their renewed public liability policy and add the insurer, policy number and new expiry date on their page. No jobs are offered once it runs out.",
   message_failed: "A text or email did not arrive. Check the number or address, and contact the person another way.",
   referral_due: "Pay the reward by bank transfer, then mark it as paid under More, Referrals.",
   chargeback: "The owner's bank has reversed a payment. Tell the admin today: the bank sets a deadline to answer.",

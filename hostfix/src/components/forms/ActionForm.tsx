@@ -146,13 +146,16 @@ export function RadioCards({ name, legend, options, defaultValue, hint }: { name
           >
             <input type="radio" name={name} value={option.value} defaultChecked={chosen === option.value} required className="mt-1 h-5 w-5 shrink-0 accent-[var(--hf-brand)]" />
             <span className="min-w-0 flex-1">
-              <span className="flex flex-wrap items-center gap-2">
-                <span className="font-bold text-ink">{option.title}</span>
-                {option.badge && <span className="rounded-full bg-accent px-2 py-0.5 text-[0.7rem] font-bold tracking-wide text-brand-dark uppercase">{option.badge}</span>}
+              {/* The price sits beside the title, and drops under it on a narrow phone rather than squeezing the words into a column. */}
+              <span className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+                <span className="flex flex-wrap items-center gap-2">
+                  <span className="font-bold text-ink">{option.title}</span>
+                  {option.badge && <span className="rounded-full bg-accent px-2 py-0.5 text-[0.7rem] font-bold tracking-wide text-brand-dark uppercase">{option.badge}</span>}
+                </span>
+                {option.right && <span className="tabular font-bold whitespace-nowrap text-ink">{option.right}</span>}
               </span>
               {option.detail && <span className="mt-0.5 block text-sm text-muted">{option.detail}</span>}
             </span>
-            {option.right && <span className="tabular shrink-0 text-right font-bold text-ink">{option.right}</span>}
           </label>
         ))}
       </div>

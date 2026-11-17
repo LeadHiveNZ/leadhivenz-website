@@ -13,9 +13,9 @@ import { demoModeAllowed } from "@/lib/env";
 import { text, type FormState } from "@/lib/forms";
 import { handleInboundSms } from "@/lib/notify/inbound";
 import { saveBilling } from "@/lib/owners/service";
-import { completeDemoCheckout, DEMO_CARD_DECLINES, DEMO_CARD_OK, getDemoCheckout } from "@/lib/payments/demo-gateway";
+import { completeDemoCardSetup, completeDemoCheckout, DEMO_CARD_DECLINES, DEMO_CARD_OK, getDemoCheckout } from "@/lib/payments/demo-gateway";
 import { activatePortfolio } from "@/lib/properties/portfolio";
-import { activateMembership } from "@/lib/properties/service";
+import { activateFreeMembership, activateMembership } from "@/lib/properties/service";
 import { getTradie, savePayoutAccount } from "@/lib/tradies/service";
 
 /**
@@ -67,6 +67,14 @@ export async function payDemoCheckout(_previous: FormState, formData: FormData):
   if (!checkout || !viewer?.ownerId || viewer.ownerId !== checkout.ownerId) return { message: "That payment page is not yours, or has run out. Go back and start again." };
   const after = checkout.portfolioId || !checkout.propertyId ? "/app/billing?member=1" : `/app/properties/${checkout.propertyId}?member=1`;
   if (checkout.completed) redirect(after);
+  if (checkout.setupOnly && checkout.propertyId) {
+    // A free membership: the card is saved, nothing is charged, and the property is covered.
+    const saved = await completeDemoCardSetup(db, id);
+    if (!saved) return { message: "That card page has already been used." };
+    await activateFreeMembership(db, { propertyId: checkout.propertyId, ownerId: checkout.ownerId, provider: "demo", customerId: checkout.customerId, card: saved.card });
+    await sendQueued(db);
+    redirect(after);
+  }
   const paid = await completeDemoCheckout(db, id);
   if (!paid) return { message: "That payment page has already been used." };
   if (checkout.portfolioId || !checkout.propertyId) {

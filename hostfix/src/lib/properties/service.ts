@@ -243,9 +243,16 @@ export type MembershipStartResult =
   | { kind: "error"; message: string };
 
 /**
- * Starts the monthly membership for a property. The first time, the owner is
- * sent to a card page. After that their saved card is used and the property
- * is a member straight away.
+ * Starts the membership for a property.
+ *
+ * A free membership (price 0, DECISIONS.md 2026-11-17) is "card on file": no
+ * subscription and no monthly payment. With a card already saved the property
+ * is covered at once. Without one, the owner is sent to the payment company's
+ * page to save a card, with nothing charged, and covered when they come back.
+ *
+ * A priced membership: the first time, the owner is sent to a card page.
+ * After that their saved card is used and the property is a member straight
+ * away.
  */
 export async function startMembership(
   db: Db,
@@ -275,6 +282,23 @@ export async function startMembership(
 
   const existing = await getBilling(db, input.ownerId, market.country);
   const usable = existing && existing.provider === gateway.provider ? existing : null;
+
+  if (tier.monthlyPriceCents === 0) {
+    // Free to join: a saved card is all it takes.
+    if (usable?.paymentMethodId) {
+      const covered = await activateFreeMembership(db, { propertyId: property.id, ownerId: owner.id, provider: gateway.provider, customerId: usable.customerId, card: null });
+      return covered ? { kind: "active", property: covered } : { kind: "error", message: "The property could not be covered just now. Please try again." };
+    }
+    const customerId = await gateway.ensureCustomer({
+      ownerId: owner.id, name: owner.name, email: owner.email, phone: owner.phone, existingCustomerId: usable?.customerId ?? null,
+    });
+    await saveBilling(db, { ownerId: owner.id, country: market.country, provider: gateway.provider, customerId });
+    const page = await gateway.startCardSetup({
+      customerId, ownerId: owner.id, propertyId: property.id, propertyName: property.name, market, successUrl: input.successUrl, cancelUrl: input.cancelUrl,
+    });
+    return { kind: "redirect", url: page.url };
+  }
+
   const customerId = await gateway.ensureCustomer({
     ownerId: owner.id, name: owner.name, email: owner.email, phone: owner.phone, existingCustomerId: usable?.customerId ?? null,
   });
@@ -306,6 +330,55 @@ export async function startMembership(
     invoice: started.invoice, card: started.card, customerId,
   });
   return activated ? { kind: "active", property: activated } : { kind: "error", message: "The membership could not be started. Please try again." };
+}
+
+/**
+ * A free membership starts: the owner has a card on file, so the property is
+ * covered from now. No subscription, no period end and no invoice. The card,
+ * when the payment company has just saved it, is kept for finished jobs.
+ * Safe to call twice: the second call finds the property already covered.
+ */
+export async function activateFreeMembership(
+  db: Db,
+  input: { propertyId: string; ownerId: string; provider: Provider; customerId: string; card: CardSummary | null },
+): Promise<Property | null> {
+  return db.tx(async (tx) => {
+    const locked = await tx.query<PropertyRow>("select * from public.properties where id = $1::uuid and owner_id = $2::uuid for update", [input.propertyId, input.ownerId]);
+    const row = locked[0];
+    if (!row || row.portfolio_id) return null;
+    const market = await getMarket(tx, row.market);
+    const tier = row.tier_id ? await getTier(tx, row.tier_id) : null;
+    if (!market || !tier || tier.monthlyPriceCents !== 0) return null;
+
+    await saveBilling(tx, { ownerId: row.owner_id, country: market.country, provider: input.provider, customerId: input.customerId, card: input.card });
+    if (row.status === "active" || row.status === "past_due") return rowToProperty(row);
+
+    const at = now();
+    const updated = await tx.query<PropertyRow>(
+      `update public.properties set
+          status = 'active', subscription_provider = null, subscription_id = null, current_period_end = null,
+          cancel_at_period_end = false, cancelled_at = null, member_since = $2::timestamptz
+        where id = $1::uuid returning *`,
+      [input.propertyId, at.toISOString()],
+    );
+    const property = rowToProperty(updated[0]!);
+    await audit(tx, {
+      actor: `owner:${row.owner_id}`, action: "membership.started", entity: "property", entityId: property.id,
+      amount: 0, currency: market.currency, detail: { tier: tier.key, free: true, provider: input.provider },
+      dedupeKey: `membership.started:free:${property.id}:${at.toISOString()}`,
+    });
+    // The cleaner or co-host who sent this owner is written down, so nobody's referral is lost. A free
+    // property never pays a monthly bill, so the reward never falls due by itself: what earns it on the
+    // free model is still to be decided (DECISIONS.md), and a person pays it until then.
+    if (row.referrer_id) {
+      await tx.query(
+        `insert into public.referrals (created_at, referrer_id, property_id, reward_cents, currency)
+         values ($1::timestamptz, $2::uuid, $3::uuid, $4, $5) on conflict (property_id) do nothing`,
+        [at.toISOString(), row.referrer_id, property.id, market.referralRewardCents, market.currency],
+      );
+    }
+    return property;
+  });
 }
 
 export type Activation = {
@@ -504,6 +577,18 @@ export async function requestCancel(db: Db, gateway: PaymentsGateway | null, own
     return getProperty(db, ownerId, propertyId);
   }
   if (property.status === "cancelled" || property.cancelAtPeriodEnd) return property;
+  if (!property.subscriptionId) {
+    // A free membership: nothing paid in advance, so it ends now.
+    const ended = await db.query(
+      "update public.properties set status = 'cancelled', cancelled_at = $3::timestamptz, cancel_at_period_end = false, current_period_end = null where id = $1::uuid and owner_id = $2::uuid and status <> 'cancelled' returning id",
+      [propertyId, ownerId, now().toISOString()],
+    );
+    if (ended.length > 0) {
+      await db.query("update public.referrals set status = 'void' where property_id = $1::uuid and status = 'pending'", [propertyId]);
+      await audit(db, { actor: `owner:${ownerId}`, action: "membership.ended", entity: "property", entityId: propertyId, detail: { free: true } });
+    }
+    return getProperty(db, ownerId, propertyId);
+  }
   if (property.subscriptionId && gateway && gateway.provider === property.subscriptionProvider) {
     await gateway.cancelMembership(property.subscriptionId);
   }
@@ -512,7 +597,13 @@ export async function requestCancel(db: Db, gateway: PaymentsGateway | null, own
   return getProperty(db, ownerId, propertyId);
 }
 
-/** Moves a property to another tier. The new price starts with the next monthly payment. */
+/**
+ * Moves a property to another tier. Between two priced tiers the new price
+ * starts with the next monthly payment. A covered property moving from a free
+ * tier to a priced one starts paying now, on the saved card. One moving from
+ * a priced tier to a free one stops paying: its subscription ends with the
+ * month already paid for, and it stays covered with its card on file.
+ */
 export async function changeTier(db: Db, gateway: PaymentsGateway | null, ownerId: string, propertyId: string, tierId: string): Promise<Property | null> {
   const property = await getProperty(db, ownerId, propertyId);
   if (!property) return null;
@@ -521,6 +612,51 @@ export async function changeTier(db: Db, gateway: PaymentsGateway | null, ownerI
   if (tier.billingBasis === "per_account") throw new PropertyError("Portfolio is chosen once for your whole account, on the Billing page.");
   const market = await getMarket(db, property.market);
   if (!market) return null;
+  const covered = property.status === "active" || property.status === "past_due";
+
+  // Free to priced, while covered: start the monthly payment on the saved card.
+  if (covered && !property.subscriptionId && tier.monthlyPriceCents > 0) {
+    if (!gateway) throw new PropertyError("Card payments are not switched on yet, so this membership cannot start. Please try again soon.");
+    const billing = await getBilling(db, ownerId, market.country);
+    if (!billing || billing.provider !== gateway.provider || !billing.paymentMethodId) {
+      throw new PropertyError("There is no card on file to pay for this membership. Add one on the Billing page, then try again.");
+    }
+    const owner = await getOwner(db, ownerId);
+    if (!owner) return null;
+    const started = await gateway.startMembership({
+      customerId: billing.customerId, paymentMethodId: billing.paymentMethodId, ownerId, propertyId: property.id, propertyName: property.name,
+      tier: { id: tier.id, key: tier.key, name: tier.name, priceCents: tier.monthlyPriceCents, providerProductId: tier.providerProductId },
+      market, discountCents: 0, discountLabel: null, successUrl: `/app/properties/${property.id}`, cancelUrl: `/app/properties/${property.id}`,
+    });
+    if (started.providerProductId && started.providerProductId !== tier.providerProductId) {
+      await db.query("update public.membership_tiers set provider_product_id = $2 where id = $1::uuid", [tier.id, started.providerProductId]);
+    }
+    if (started.kind !== "active") throw new PropertyError("Your saved card did not go through. Update it on the Billing page, then try again. Nothing has changed.");
+    await db.query("update public.properties set tier_id = $3::uuid where id = $1::uuid and owner_id = $2::uuid", [propertyId, ownerId, tierId]);
+    await activateMembership(db, {
+      propertyId, provider: gateway.provider, subscriptionId: started.subscriptionId, periodEnd: started.periodEnd, invoice: started.invoice, card: started.card,
+      customerId: billing.customerId,
+    });
+    await audit(db, { actor: `owner:${ownerId}`, action: "membership.tier_changed", entity: "property", entityId: propertyId, amount: tier.monthlyPriceCents, currency: market.currency, detail: { tier: tier.key } });
+    return getProperty(db, ownerId, propertyId);
+  }
+
+  // Priced to free: stop the monthly payment. The property stays covered on its card.
+  if (property.subscriptionId && tier.monthlyPriceCents === 0 && property.status !== "cancelled") {
+    if (gateway && gateway.provider === property.subscriptionProvider) await gateway.cancelMembership(property.subscriptionId);
+    await db.query(
+      `update public.properties set tier_id = $3::uuid, subscription_provider = null, subscription_id = null, current_period_end = null, cancel_at_period_end = false,
+              status = case when status = 'past_due' then 'active' else status end
+        where id = $1::uuid and owner_id = $2::uuid`,
+      [propertyId, ownerId, tierId],
+    );
+    await audit(db, {
+      actor: `owner:${ownerId}`, action: "membership.tier_changed", entity: "property", entityId: propertyId, amount: 0, currency: market.currency,
+      detail: { tier: tier.key, subscription_stopped: property.subscriptionId },
+    });
+    return getProperty(db, ownerId, propertyId);
+  }
+
   if (property.subscriptionId && gateway && gateway.provider === property.subscriptionProvider && property.status !== "cancelled") {
     const changed = await gateway.changeMembershipTier({
       subscriptionId: property.subscriptionId,

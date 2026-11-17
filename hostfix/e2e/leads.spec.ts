@@ -13,8 +13,9 @@ test.describe("owner landing page on a phone", () => {
   test("shows the headline, the price and the form without sideways scrolling", async ({ page }) => {
     await page.goto("/owners");
     await expect(page.getByRole("heading", { level: 1 })).toContainText("Queenstown");
-    await expect(page.getByText("NZ$99 a month per property").first()).toBeVisible();
-    // Card payments are not connected on this copy of the site, so the form offers the price list only.
+    // HostFix is free to join (DECISIONS.md, 2026-11-17): no monthly price, and the form offers the price list only.
+    await expect(page.getByText("Free to join. Jobs at fixed prices, charged only when something is fixed").first()).toBeVisible();
+    await expect(page.getByText("NZ$99 a month")).toHaveCount(0);
     await expect(page.getByRole("heading", { name: "Get the full price list" })).toBeVisible();
     await expect(page.getByRole("heading", { name: "Take a founding spot" })).toHaveCount(0);
     await expect(page.getByLabel("Your name")).toBeVisible();
@@ -97,7 +98,7 @@ test.describe("owner landing page on a phone", () => {
     await expect(page).toHaveURL(`${BASE}/owners/thanks`);
   });
 
-  test("shows the full price list straight after the form, and no deposit when card payments are not connected", async ({ page }) => {
+  test("shows the full price list straight after the form, and no deposit", async ({ page }) => {
     await page.goto("/owners");
     await expect(page.getByRole("button", { name: /founding spot/i })).toHaveCount(0);
     await submitOwnerLead(page, BASE, ownerDetails());
@@ -107,7 +108,7 @@ test.describe("owner landing page on a phone", () => {
     const prices = page.getByRole("region", { name: "The Queenstown price list" });
     await expect(prices).toContainText("Blocked toilet, sink or shower drain");
     await expect(prices).toContainText("NZ$245");
-    await expect(prices).toContainText("Membership NZ$99 a month per property.");
+    await expect(prices).toContainText("Free to join: you only pay the fixed price when a job is done.");
     // Every other charge, from the market's own settings.
     await expect(prices).toContainText("Add NZ$90, plus NZ$140 outside working hours (7am to 4:30pm, Monday to Friday)");
     await expect(prices).toContainText("NZ$225 for a tradie to come and look");

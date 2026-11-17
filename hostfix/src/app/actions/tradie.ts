@@ -171,6 +171,8 @@ export async function saveTradieProfile(_previous: FormState, formData: FormData
       gstRegistered: ticked(formData, "gstRegistered"),
       gstNumber: text(formData, "gstNumber") || null,
       insuranceExpiresOn: insurance || null,
+      insurer: text(formData, "insurer") || null,
+      insurancePolicyNumber: text(formData, "insurancePolicyNumber") || null,
     }, `tradie:${viewer.tradieId}`);
   } catch (error) {
     if (error instanceof TradieError) return problem(formData, error.message);

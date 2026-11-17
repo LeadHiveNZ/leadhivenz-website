@@ -31,3 +31,11 @@ export function payTiming(market: Pick<Market, "country" | "payoutHoldHours">): 
 export function tierLine(tier: MembershipTier, market: Pick<Market, "currency" | "urgentSurchargeCents">): string {
   return `${tierPoints(tier, market).join(". ")}.`;
 }
+
+/**
+ * What a per-property membership costs, in the words shown beside it: "Free to
+ * join" for a free one (DECISIONS.md, 2026-11-17), "NZ$99 a month" otherwise.
+ */
+export function tierPriceLabel(tier: Pick<MembershipTier, "monthlyPriceCents">, currency: string): string {
+  return tier.monthlyPriceCents === 0 ? "Free to join" : `${formatMoney(tier.monthlyPriceCents, currency)} a month`;
+}

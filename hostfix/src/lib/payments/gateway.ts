@@ -78,6 +78,21 @@ export interface PaymentsGateway {
     cancelUrl: string;
   }): Promise<MembershipStart & { providerProductId?: string | null }>;
 
+  /**
+   * For a free membership: sends the owner to the payment company's own page
+   * to save a card, with nothing charged. They come back to successUrl, and
+   * the property is covered once the card is saved.
+   */
+  startCardSetup(input: {
+    customerId: string;
+    ownerId: string;
+    propertyId: string;
+    propertyName: string;
+    market: Market;
+    successUrl: string;
+    cancelUrl: string;
+  }): Promise<{ url: string }>;
+
   /** Stops the membership at the end of the month already paid for. */
   cancelMembership(subscriptionId: string): Promise<{ endsAt: Date | null }>;
   /** Moves a membership to another tier from the next payment. */

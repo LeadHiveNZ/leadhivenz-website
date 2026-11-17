@@ -32,7 +32,10 @@ export default async function SignUpPage({ searchParams }: { searchParams: Searc
       ) : (
         <>
           <p className="mt-2 text-muted">
-            Create your account, then add your property. {cheapest ? `Membership is from ${formatMoney(cheapest.cents, cheapest.currency)} a month per property.` : ""} Nothing is charged until you choose a membership.
+            Create your account, then add your property.{" "}
+            {cheapest && cheapest.cents > 0
+              ? `Membership is from ${formatMoney(cheapest.cents, cheapest.currency)} a month per property. Nothing is charged until you choose a membership.`
+              : "It is free to join. You add a card, and it is only charged the fixed price when a job is done."}
           </p>
           <div className="mt-6 rounded-3xl border border-line bg-surface p-5 shadow-sm sm:p-7">
             <ActionForm action={startOwnerSignUp}>

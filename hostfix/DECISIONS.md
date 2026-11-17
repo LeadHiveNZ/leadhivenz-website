@@ -24,8 +24,10 @@ friction as $99.
   put a card on file, and pay the fixed menu price when a job is done. The 15%
   platform fee is inside every menu price, as it always was.
 - **Managers pay nothing to join either.** The Portfolio retainer stays built and
-  switched off. A manager is asked to start with 10 properties for 60 days so
-  the tradies can handle the volume: that is capacity, not price.
+  is not pushed: it is still a choice on the add-property and Billing screens
+  for a manager who wants one bill, and one tick on More > Markets hides it.
+  A manager is asked to start with 10 properties for 60 days so the tradies
+  can handle the volume: that is capacity, not price.
 - **The response promise stays: on site within 24 hours, or 4 when urgent.** The
   "that month's membership is free" credit has nothing to credit. Replaced by:
   miss the time and the owner is not charged the call-out portion of that job
@@ -69,6 +71,8 @@ towns have properties waiting.
   `docs/LEGAL-TODO.md`, agreed to in the app with the time recorded. Owner
   terms likewise. Reviewed by Community Law before the first job, and by a
   lawyer at around 100 properties.
+
+Built on 2026-11-17: everything above except the legal pages
 
 ---
 

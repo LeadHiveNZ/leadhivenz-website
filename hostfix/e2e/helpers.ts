@@ -45,10 +45,7 @@ export async function fillOwnerForm(page: Page, details: OwnerDetails) {
   await page.getByLabel("Where do you live?").fill(details.location);
 }
 
-/**
- * The owner form's price list button. With card payments connected the form has two buttons and this
- * is the second ("Not yet: just send me the price list"). Without, it is the only one.
- */
+/** The owner form's one button, "Send me the price list". HostFix is free to join, so there is no deposit button. */
 export function priceListButton(page: Page) {
   return page.getByRole("button", { name: /send me the price list/i });
 }

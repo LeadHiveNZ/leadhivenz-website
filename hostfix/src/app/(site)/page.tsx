@@ -18,7 +18,7 @@ const choices: { href: string; title: string; text: string; icon: IconName; cta:
 const points: { icon: IconName; title: string; text: string }[] = [
   { icon: "menu", title: "Fixed prices", text: "The common jobs are on a menu. You see the price before anyone is sent. No quotes, no invoices." },
   { icon: "bolt", title: "Offered in minutes", text: "Each job goes straight to an approved local tradie. If they cannot take it, it moves to the next one." },
-  { icon: "shield", title: "A promise with teeth", text: "A tradie on site inside your response window, or that month's membership is credited. Automatically." },
+  { icon: "shield", title: "A promise with teeth", text: "A tradie on site inside your response window, or the call-out portion of that job is on us. Automatically." },
 ];
 
 export default async function HomePage() {

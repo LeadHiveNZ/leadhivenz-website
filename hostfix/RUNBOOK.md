@@ -62,9 +62,11 @@ told you are finding someone by hand. The promised time is still running.
 passes. If no tradie is booked at all, treat it as "Nobody accepted". It closes when the tradie arrives.
 
 ### Missed the promise
-**Means.** Nobody was on site by the promised time. The owner's membership for that month has
-**already been credited automatically** and they have been texted. (One credit per property per month:
-a second miss in the same month is not credited again.)
+**Means.** Nobody was on site by the promised time. The call-out portion of that job (the market's
+call-out fee, NZ$225 in Queenstown, or the job's price if that is less) has **already been credited
+automatically** and the owner has been texted. It comes off that job's charge when the job is done; the
+tradie is still paid in full. (One credit per property per month: a second miss in the same month is not
+credited again.)
 
 On a **Portfolio** property (a manager's account) nothing is credited automatically: the note says
 "Missed window on a Portfolio property". Ask the admin what to credit, then give it with **Give the
@@ -118,6 +120,14 @@ They have been texted. Once it has run out they are **not offered licensed jobs 
 Gasfitters and Drainlayers Board, or the Electrical Workers Registration Board). On their page, enter
 the new date, press **Save licence**, then **I have checked this on the register**. Mark as dealt with.
 
+### Insurance running out
+**Means.** A tradie's public liability insurance runs out within 30 days, or already has. Once it has run
+out they are offered no jobs at all.
+
+**Do.** Ask them for the renewed policy. On their page, under **Edit details**, enter the insurer, the
+policy number and the new expiry date, and press **Save**. They can also do it themselves on their profile.
+Mark as dealt with.
+
 ### A text or email did not send
 **Means.** A message did not reach someone. The item says who and why.
 
@@ -167,8 +177,16 @@ they have told you is fine.
 **Cancel a job.** Job page > **Cancel this job**, with the reason. Nothing is charged. Both sides are texted.
 
 **A new tradie.** Tradies > **Add a tradie** (or More > Leads > **Make a tradie**, admin only). Enter
-each licence number and its end date, check it on the register, then press **Approve**. That texts them
+each licence number and its end date, check it on the register, and their public liability insurance
+(insurer, policy number and expiry date: **Approve** is refused without all three, or if it has run out),
+then press **Approve**. That texts them
 a link to sign in and add their bank details. Their page shows "Getting offers" once everything is in.
+
+**Refunding the founding deposits.** HostFix is free to join (DECISIONS.md, 17 Nov 2026), so every
+founding deposit already paid is refunded in full. In the Stripe dashboard: **Payments**, find the
+deposit (search the owner's email), open it, press **Refund**, full amount. You do not need to change
+anything on the site: Stripe tells it, and the lead shows **Refunded** on the Leads page by itself. The
+Leads page shows who still has **Paid**: work down that list.
 
 **A tradie is letting people down.** The Tradies page shows each one's accepted and on-time figures
 for the last 30 days. Under 80% shows in red, and the page suggests swapping first choice and backup.

@@ -59,6 +59,9 @@ export const texts = {
   licenceExpiring: (o: { trade: string; date: string; link: string }) =>
     `${B}: your ${o.trade} licence on file runs out on ${o.date}. Update it to keep getting offers: ${o.link}`,
 
+  insuranceExpiring: (o: { date: string; link: string }) =>
+    `${B}: your public liability insurance on file runs out on ${o.date}. Add your renewed policy to keep getting offers: ${o.link}`,
+
   // ---- to owners --------------------------------------------------------
   guestReport: (o: { property: string; title: string; link: string }) =>
     `${B}: a guest at ${clip(o.property, 28)} reported "${clip(o.title, 40)}". See it and tell us whether to send someone: ${o.link}`,
@@ -92,8 +95,8 @@ export const texts = {
   paymentFailed: (o: { amountCents: number; currency: string; number: number; link: string }) =>
     `${B}: we could not charge your card ${money(o.amountCents, o.currency)} for job ${o.number}. Please update your card: ${o.link}`,
 
-  windowMissed: (o: { property: string; month: string; amountCents: number; currency: string }) =>
-    `${B}: we missed our response promise at ${clip(o.property, 28)}. Your ${o.month} membership (${money(o.amountCents, o.currency)}) is credited. We are sorry, and we are still on it.`,
+  windowMissed: (o: { property: string; amountCents: number; currency: string }) =>
+    `${B}: we missed our promised time at ${clip(o.property, 28)}, so ${money(o.amountCents, o.currency)} of this job is on us. It comes off the bill when the job is done. We are sorry, and we are still on it.`,
 
   membershipFailed: (o: { property: string; link: string }) =>
     `${B}: your membership payment for ${clip(o.property, 28)} did not go through. Update your card to keep your cover: ${o.link}`,

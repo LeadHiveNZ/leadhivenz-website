@@ -9,7 +9,7 @@ import {
   sendAlert,
 } from "@/lib/notify/alerts";
 import type { Lead, LeadStore } from "@/lib/store/types";
-import { stripeAccount, stripeClient, type StripeAccount } from "./stripe";
+import { stripeClient, type StripeAccount } from "./stripe";
 
 /**
  * THE FOUNDING MEMBER DEPOSIT
@@ -25,6 +25,12 @@ import { stripeAccount, stripeClient, type StripeAccount } from "./stripe";
  *
  * Refunds are made by you in the Stripe dashboard. Stripe then tells the
  * webhook and the lead is marked refunded.
+ *
+ * NO LONGER OFFERED (DECISIONS.md, 2026-11-17, "Free to join"). HostFix is
+ * free to join, so no new deposit is ever taken: depositAvailability always
+ * says no, and the form only offers the price list. The rest of this file
+ * stays, because deposits already paid are refunded and Stripe's messages
+ * about them (paid, refunded) must still be recorded. RUNBOOK.md says how.
  */
 
 export const DEPOSIT_PURPOSE = "founding_deposit";
@@ -43,15 +49,9 @@ export type DepositDeps = {
 export function depositAvailability(
   market: Market,
 ): { available: true; account: StripeAccount } | { available: false; reason: string } {
-  if (!market.foundingDeposit.enabled) {
-    return { available: false, reason: `The deposit offer is switched off for ${market.name}.` };
-  }
-  if (!Number.isInteger(market.foundingDeposit.amountCents) || market.foundingDeposit.amountCents < 100) {
-    return { available: false, reason: `The deposit amount for ${market.name} is not a valid number of cents.` };
-  }
-  const result = stripeAccount(market.country);
-  if ("problem" in result) return { available: false, reason: result.problem };
-  return { available: true, account: result.account };
+  // Free to join: a deposit is never offered or started, whatever the market's settings say.
+  void market;
+  return { available: false, reason: `Deposits are no longer taken: ${brand.name} is free to join.` };
 }
 
 /** Exactly what we ask Stripe to charge. Kept separate so it can be tested. */

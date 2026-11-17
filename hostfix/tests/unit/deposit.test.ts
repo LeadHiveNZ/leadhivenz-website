@@ -129,24 +129,16 @@ describe("what we ask Stripe to charge", () => {
 });
 
 describe("whether the deposit can be offered", () => {
-  it("needs the Stripe key for the market's country", () => {
-    expect(depositAvailability(market)).toEqual({ available: false, reason: "STRIPE_NZ_SECRET_KEY is not set." });
-    vi.stubEnv("STRIPE_AU_SECRET_KEY", "sk_test_au");
-    expect(depositAvailability(market)).toEqual({ available: false, reason: "STRIPE_NZ_SECRET_KEY is not set." });
+  // DECISIONS.md, 2026-11-17: HostFix is free to join, so the founding deposit is never offered again. The code that
+  // records paid deposits and their refunds stays (below), because deposits already paid are being refunded.
+  it("never, whatever the market's settings and keys say", () => {
+    const reason = "Deposits are no longer taken: HostFix is free to join.";
+    expect(depositAvailability(market)).toEqual({ available: false, reason });
     vi.stubEnv("STRIPE_NZ_SECRET_KEY", "sk_test_nz");
-    expect(depositAvailability(market)).toMatchObject({ available: true, account: { country: "NZ", mode: "test" } });
-  });
-
-  it("can be switched off per market", () => {
-    vi.stubEnv("STRIPE_NZ_SECRET_KEY", "sk_test_nz");
-    const off: Market = { ...market, foundingDeposit: { ...market.foundingDeposit, enabled: false } };
-    expect(depositAvailability(off)).toEqual({ available: false, reason: "The deposit offer is switched off for Queenstown." });
-  });
-
-  it("refuses a deposit amount that is not whole cents", () => {
-    vi.stubEnv("STRIPE_NZ_SECRET_KEY", "sk_test_nz");
-    const bad: Market = { ...market, foundingDeposit: { ...market.foundingDeposit, amountCents: 49.5 } };
-    expect(depositAvailability(bad).available).toBe(false);
+    vi.stubEnv("STRIPE_NZ_WEBHOOK_SECRET", "whsec_abc");
+    expect(depositAvailability(market)).toEqual({ available: false, reason });
+    const on: Market = { ...market, stage: "waitlist", foundingDeposit: { ...market.foundingDeposit, enabled: true, amountCents: 9900 } };
+    expect(depositAvailability(on)).toEqual({ available: false, reason });
   });
 
   it("spots the wrong kind of key", () => {
@@ -172,26 +164,16 @@ describe("starting the card payment", () => {
     return { stripe: { checkout: { sessions: { create } } } as unknown as Stripe, create };
   }
 
-  it("creates the card page and marks the lead as started", async () => {
+  it("never creates a card page now, even with payments connected, and leaves the lead as it was", async () => {
     vi.stubEnv("STRIPE_NZ_SECRET_KEY", "sk_test_nz");
     const store = await freshStore();
     const lead = await store.insertLead(ownerLead());
     const { stripe, create } = fakeStripe();
-
-    const result = await startDepositCheckout(lead, market, BASE, { store, stripe, now: () => 1_700_000_000_000 });
-
-    expect(result).toEqual({ url: "https://checkout.stripe.com/c/pay/cs_test_new", sessionId: "cs_test_new" });
-    expect(create).toHaveBeenCalledTimes(1);
-    const [params, options] = create.mock.calls[0] as unknown as [Stripe.Checkout.SessionCreateParams, { idempotencyKey: string }];
-    expect(params.line_items?.[0]?.price_data?.unit_amount).toBe(9900);
-    expect(options.idempotencyKey).toBe(`hostfix-deposit-${lead.id}-${Math.floor(1_700_000_000_000 / 60_000)}`);
-    expect(await store.getLead(lead.id)).toMatchObject({
-      depositStatus: "started",
-      depositAmount: 9900,
-      depositCurrency: "NZD",
-      stripeAccount: "NZ",
-      stripeCheckoutSessionId: "cs_test_new",
-    });
+    await expect(startDepositCheckout(lead, market, BASE, { store, stripe, now: () => 1_700_000_000_000 })).rejects.toThrow(
+      new DepositNotAllowedError("Deposits are no longer taken: HostFix is free to join."),
+    );
+    expect(create).not.toHaveBeenCalled();
+    expect(await store.getLead(lead.id)).toMatchObject({ depositStatus: "none", stripeCheckoutSessionId: null });
   });
 
   it("will not start a second payment for someone who has paid", async () => {
@@ -204,11 +186,11 @@ describe("starting the card payment", () => {
     expect(create).not.toHaveBeenCalled();
   });
 
-  it("will not start when card payments are not connected", async () => {
+  it("will not start when card payments are not connected either", async () => {
     const store = await freshStore();
     const lead = await store.insertLead(ownerLead());
     const { stripe, create } = fakeStripe();
-    await expect(startDepositCheckout(lead, market, BASE, { store, stripe })).rejects.toThrow("STRIPE_NZ_SECRET_KEY is not set.");
+    await expect(startDepositCheckout(lead, market, BASE, { store, stripe })).rejects.toBeInstanceOf(DepositNotAllowedError);
     expect(create).not.toHaveBeenCalled();
   });
 });

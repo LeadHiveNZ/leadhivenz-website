@@ -17,8 +17,8 @@ import { createOwnerAccount, saveBilling } from "@/lib/owners/service";
 import { createDemoGateway, DEMO_CARD_DECLINES, DEMO_CARD_OK } from "@/lib/payments/demo-gateway";
 import { addMonths } from "@/lib/payments/gateway";
 import { openPortfolio, startPortfolio } from "@/lib/properties/portfolio";
-import { activateMembership, createProperty, type Property } from "@/lib/properties/service";
-import { createTradie, listLicences, markLicenceVerified, saveLicence, savePayoutAccount, setSlot, setTradieStatus } from "@/lib/tradies/service";
+import { activateFreeMembership, activateMembership, createProperty, type Property } from "@/lib/properties/service";
+import { createTradie, listLicences, markLicenceVerified, saveLicence, savePayoutAccount, setSlot, setTradieStatus, updateTradie } from "@/lib/tradies/service";
 import { demoPhoto } from "./png";
 
 /**
@@ -68,7 +68,7 @@ async function property(
   ctx: Ctx, ownerId: string,
   input: { name: string; address: string; suburb: string; postcode: string; access: string; referralCode?: string },
 ): Promise<Property> {
-  // Owners are on Essential, priced per property (DECISIONS.md).
+  // Owners are on Essential, free to join (DECISIONS.md, 2026-11-17): covered once a card is on file.
   const tier = ctx.tiers.get("essential")!;
   const created = await createProperty(ctx.db, ownerId, {
     market: MARKET, name: input.name, addressLine1: input.address, suburb: input.suburb, postcode: input.postcode, accessNotes: input.access,
@@ -76,6 +76,12 @@ async function property(
   });
   const at = new Date(ctx.real.getTime() - 20 * DAY);
   setTestNow(at);
+  if (tier.priceCents === 0) {
+    const covered = await activateFreeMembership(ctx.db, {
+      propertyId: created.id, ownerId, provider: "demo", customerId: `demo_cus_${ownerId.replace(/-/g, "").slice(0, 16)}`, card: null,
+    });
+    return covered!;
+  }
   const activated = await activateMembership(ctx.db, {
     propertyId: created.id, provider: "demo", subscriptionId: `demo_sub_${created.id.replace(/-/g, "").slice(0, 14)}`, periodEnd: addMonths(at, 1),
     customerId: `demo_cus_${ownerId.replace(/-/g, "").slice(0, 16)}`, card: null,
@@ -95,6 +101,10 @@ async function tradie(
   for (const [trade, expiresOn] of Object.entries(input.licences ?? {})) {
     await saveLicence(ctx.db, created.tradieId, { trade, licenceNumber: `${trade.slice(0, 2).toUpperCase()}${Math.abs(hash(input.phone + trade)) % 90000 + 10000}`, expiresOn }, "admin");
   }
+  // Every tradie on the network has public liability insurance on file (DECISIONS.md, 2026-11-17).
+  await updateTradie(ctx.db, created.tradieId, {
+    insurer: "Sample Insurance Co", insurancePolicyNumber: `PL${Math.abs(hash(input.phone)) % 900000 + 100000}`, insuranceExpiresOn: "2027-09-30",
+  }, "admin");
   if (input.approve !== false) {
     for (const licence of await listLicences(ctx.db, created.tradieId)) await markLicenceVerified(ctx.db, licence.id, "admin");
     await savePayoutAccount(ctx.db, created.tradieId, { provider: "demo", accountId: `demo_acct_${created.tradieId.replace(/-/g, "").slice(0, 16)}`, payoutsEnabled: true });

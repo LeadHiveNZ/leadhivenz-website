@@ -28,7 +28,8 @@ describe("markets", () => {
     expect(market.tiers.map((t) => [t.key, t.billingBasis])).toEqual([["essential", "per_property"], ["portfolio", "per_account"]]);
     for (const tier of market.tiers) {
       expect(Number.isInteger(tier.monthlyPriceCents)).toBe(true);
-      expect(tier.monthlyPriceCents).toBeGreaterThan(0);
+      // Essential is free to join (DECISIONS.md, 2026-11-17). A retainer for a whole account always has a price.
+      expect(tier.monthlyPriceCents).toBeGreaterThanOrEqual(tier.billingBasis === "per_account" ? 1 : 0);
       expect(tier.urgentIncluded).toBe(false);
       expect(tier.quarterlyCheck).toBe(false);
     }
@@ -36,9 +37,10 @@ describe("markets", () => {
     expect(market.foundingDeposit.amountCents).toBeGreaterThanOrEqual(100);
   });
 
-  it("the launch market is Queenstown: Essential at NZ$99, Portfolio from NZ$600, on site in 24 hours, 4 hours when urgent", () => {
+  it("the launch market is Queenstown: Essential free to join, Portfolio from NZ$600, on site in 24 hours, 4 hours when urgent", () => {
     expect(launchMarket).toMatchObject({ slug: "queenstown", country: "NZ", currency: "NZD", taxRate: 0.15 });
-    expect(launchMarket.tiers.map((t) => [t.key, t.monthlyPriceCents, t.responseHours, t.urgentResponseHours])).toEqual([["essential", 9900, 24, 4], ["portfolio", 60000, 24, 4]]);
+    expect(launchMarket.tiers.map((t) => [t.key, t.monthlyPriceCents, t.responseHours, t.urgentResponseHours])).toEqual([["essential", 0, 24, 4], ["portfolio", 60000, 24, 4]]);
+    expect(launchMarket.tiers[0]!.blurb).toBe("Free to join. Fixed prices, charged only when something is fixed. A tradie on site within 24 hours, or 4 when it's urgent.");
     // Portfolio's bands, from DECISIONS.md (2026-11-17): 10-24 $600, 25-49 $900, 50-99 $1,200, 100+ by arrangement.
     expect(launchMarket.tiers[1]!.bands).toEqual([
       { from: 10, to: 24, cents: 60000 },

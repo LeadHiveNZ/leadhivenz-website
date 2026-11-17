@@ -25,7 +25,7 @@ import { expireDueOffers } from "./cascade";
  *   offers that have run out          on to the next tradie
  *   guest reports nobody answered     a reminder, then cancelled after a day
  *   jobs close to their promised time into the dispatcher's queue
- *   promises missed                   the month's membership credited
+ *   promises missed                   the call-out portion of the job credited
  *   cards to try again, payouts due   charged and paid
  *   quotes nobody answered            a reminder, then the dispatcher
  *   licences running out              the tradie and the admin told
@@ -128,6 +128,45 @@ async function warnExpiringLicences(db: Db): Promise<number> {
   return warned;
 }
 
+/**
+ * A tradie's public liability insurance running out: the dispatcher and the
+ * tradie are told 30 days before, and again once it has run out (from then on
+ * the tradie is offered nothing). The same rule as licences.
+ */
+async function warnExpiringInsurance(db: Db): Promise<number> {
+  const at = now();
+  const rows = await db.query<{ id: string; insurance_expires_on: string; business_name: string; market: string; timezone: string; phone: string | null; user_id: string }>(
+    `select t.id, t.insurance_expires_on, t.business_name, t.market, m.timezone, u.phone, u.id as user_id
+       from public.tradies t
+       join public.markets m on m.slug = t.market
+       join public.users u on u.id = t.user_id
+      where t.status in ('approved', 'paused') and t.insurance_expires_on is not null
+        and t.insurance_expires_on <= (($1::timestamptz at time zone m.timezone)::date + 30)
+      limit 200`,
+    [at.toISOString()],
+  );
+  let warned = 0;
+  for (const row of rows) {
+    const expires = String(row.insurance_expires_on).slice(0, 10);
+    const expired = expires < dateKey(at, row.timezone);
+    const date = formatDate(new Date(`${expires}T12:00:00Z`), "UTC");
+    const fresh = await raiseException(db, {
+      kind: "insurance_expiring", market: row.market, tradieId: row.id,
+      summary: `${row.business_name}'s public liability insurance ${expired ? "ran out" : "runs out"} on ${date}. ${expired ? "They are no longer offered any jobs." : "After that they will not be offered any jobs."}`,
+      dedupeKey: `insurance_expiring:${row.id}:${expires}:${expired ? "expired" : "soon"}`,
+    });
+    if (fresh && row.phone) {
+      await enqueue(db, {
+        channel: "sms", to: row.phone, template: "insurance_expiring", audience: "tradie", userId: row.user_id,
+        body: texts.insuranceExpiring({ date, link: `${baseUrl()}/tradie/profile` }),
+        dedupeKey: `insurance_expiring_sms:${row.id}:${expires}:${expired ? "expired" : "soon"}`,
+      });
+      warned += 1;
+    }
+  }
+  return warned;
+}
+
 /** Demo memberships have no payment company to renew them, so the timer does it. */
 async function renewDemoMemberships(db: Db): Promise<number> {
   const at = now();
@@ -150,7 +189,7 @@ async function renewDemoMemberships(db: Db): Promise<number> {
     // Credits given since the last payment come off this one, as they would with a real payment company.
     const credits = await db.query<{ total: number }>(
       `select coalesce(sum(amount_cents), 0) as total from public.credits
-        where property_id = $1::uuid and status = 'applied' and reason <> 'founding_deposit' and created_at > $2::timestamptz and created_at <= $3::timestamptz`,
+        where property_id = $1::uuid and status = 'applied' and reason <> 'founding_deposit' and not (reason = 'missed_window' and job_id is not null) and created_at > $2::timestamptz and created_at <= $3::timestamptz`,
       [row.id, addMonths(start, -1).toISOString(), start.toISOString()],
     );
     const amount = Math.max(0, row.price_cents - Number(credits[0]?.total ?? 0));
@@ -260,6 +299,7 @@ export async function runTick(db: Db, deps: TickDeps): Promise<TickReport> {
   await step("payouts_sent", () => releaseDuePayouts(db, deps.gatewayFor));
   await step("quotes_chased", () => chaseQuotes(db));
   await step("licences_warned", () => warnExpiringLicences(db));
+  await step("insurance_warned", () => warnExpiringInsurance(db));
   await step("demo_renewals", () => renewDemoMemberships(db));
   await step("payout_accounts", () => refreshPayoutAccounts(db, deps.gatewayFor));
   await step("files_cleared", () => tidyUp(db, deps));

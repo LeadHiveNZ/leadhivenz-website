@@ -34,7 +34,7 @@ export default async function OwnerHome() {
         <ol className="mt-6 space-y-3">
           {[
             ["Add your property", "The address and how a tradie gets in."],
-            ["Choose a membership", "Add your card. Cancel any time."],
+            ["Add a card", "Free to join. Nothing is charged until a job is done."],
             ["Put the QR card in the property", "Your cleaner and your guests can report a problem in under a minute."],
           ].map(([title, detail], index) => (
             <li key={title} className="flex gap-4 rounded-2xl border border-line bg-surface p-4">
@@ -89,7 +89,7 @@ export default async function OwnerHome() {
       ))}
       {notStarted.map((property) => (
         <Notice key={property.id} tone="warn" title={`${property.name} is not covered yet`}>
-          Start the membership to be able to send tradies there.{" "}
+          Add a card to be able to send tradies there.{" "}
           <Link href={`/app/properties/${property.id}`} className="font-semibold underline underline-offset-2">
             Finish setting up
           </Link>

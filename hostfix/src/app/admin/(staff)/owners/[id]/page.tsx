@@ -14,6 +14,7 @@ import { now } from "@/lib/clock";
 import { getDb } from "@/lib/db";
 import { listJobsForOwner } from "@/lib/jobs/store";
 import { listMarkets, listTiers } from "@/lib/markets/store";
+import { tierPriceLabel } from "@/lib/markets/display";
 import { formatMoney } from "@/lib/money";
 import { getOwner, listCredits } from "@/lib/owners/service";
 import { displayPhone } from "@/lib/phone";
@@ -138,7 +139,7 @@ export default async function StaffOwnerPage({ params }: { params: Promise<{ id:
                   <p className="mt-2 text-sm text-muted">
                     {property.portfolioId
                       ? "On their Portfolio (covered by the one retainer)"
-                      : tier && market ? `${tier.name}, ${formatMoney(tier.monthlyPriceCents, market.currency)} a month` : "No membership chosen"}
+                      : tier && market ? `${tier.name}: ${tierPriceLabel(tier, market.currency)}` : "No membership chosen"}
                     {property.memberSince ? ` · member since ${formatDate(property.memberSince, zone(property.market))}` : ""}
                     {property.currentPeriodEnd && property.status === "active" ? ` · ${property.cancelAtPeriodEnd ? "ends" : "next payment"} ${formatDate(property.currentPeriodEnd, zone(property.market))}` : ""}
                   </p>

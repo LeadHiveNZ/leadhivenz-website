@@ -2,8 +2,8 @@
 
 One place for every trade your holiday home needs. A checked local tradie on site within 24 hours, or 4 hours when it's urgent, at a fixed price you see before you book.
 
-- {{essential}} a month per property. Jobs at fixed prices, charged only when something needs fixing
-- A tradie on site within 24 hours, or that month's membership is credited
+- Free to join. Jobs at fixed prices, charged only when something is fixed
+- A tradie on site within 24 hours, or 4 when it's urgent. Miss it and the call-out is on us
 - Your cleaner and your guests can report a problem from their phone
 
 ## Sound familiar?
@@ -21,21 +21,17 @@ One place for every trade your holiday home needs. A checked local tradie on sit
 
 ## What it costs
 
-### Membership: {{essential}} per property, per month
+### Free to join. Pay per job.
 
 A tradie on site within 24 hours, at the fixed menu price. Need someone within 4 hours? Add {{urgent}} on the day, plus {{after_hours}} outside working hours. Both go to the tradie in full.
-
-### Managing 10 or more?
-
-Portfolio: one monthly retainer from {{portfolio_from}}, banded by how many properties, plus the same fixed job prices. Pilot on 10 properties first.
 
 ---
 
 Jobs are charged at the fixed price when the job is done, GST included. Small parts are in the price, and bigger parts are charged at cost. Not on the menu? {{callout}} for a tradie to come and look, then a quote. Nothing over {{approval_limit}} starts without your yes.
 
-## If we miss, the month is free
+## If we miss, the call-out is on us
 
-> A tradie on site within 24 hours, or 4 hours when it's urgent. Miss it and that month's membership is credited to you automatically. You don't have to ask.
+> A tradie on site within 24 hours, or 4 hours when it's urgent. Miss it and the call-out portion of that job, up to {{callout}}, comes off your bill automatically. You don't have to ask.
 
 ## Who this is not for
 
@@ -51,13 +47,13 @@ This is for owners who look after their own holiday home, often from another cit
 
 Keep him. We're who you call when he doesn't pick up on a Saturday in July.
 
-### {{essential}} a month, and nothing breaks?
+### What does it cost to join?
 
-It buys a tradie on the hook within 24 hours, at prices you know in advance, with the month free if we miss. For most holiday homes it's less than one night's booking.
+Nothing. You add your property and a card, and you only pay the fixed price when a job is done.
 
 ### Are jobs dearer through you?
 
-No. The menu is priced from what {{market}} tradies charge for a call-out and the first hour, and the price already includes the call-out. The membership pays for the guarantee and for never ringing round, not for a markup on the work.
+No. The menu is priced from what {{market}} tradies charge for a call-out and the first hour, and the price already includes the call-out. Our share comes out of that price, not on top of it.
 
 ### Who are your tradies?
 
@@ -71,13 +67,9 @@ It's shown only to the tradie who accepts a job at your place, and to our small 
 
 Anything over {{approval_limit}} stops and comes back to you as a quote before any work starts. You say yes or no.
 
-### What does the founding deposit do?
-
-It holds one of the founding spots. It comes off your first bills, and if you change your mind before your first job, we refund it in full.
-
 ### When do you start?
 
-We open {{market}} once our founding tradies are signed up. Founding members are set up first, and we'll call you before then.
+We open {{market}} once our tradies are signed up. Leave your details and we'll call you before then.
 
 ### I'm in Wānaka or Arrowtown.
 

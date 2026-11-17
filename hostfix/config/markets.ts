@@ -45,6 +45,8 @@ export type MembershipTier = {
   name: string;
   /**
    * per_property: the price per property, per month, in cents, including tax.
+   * Zero means free to join: the property is covered once a card is on file,
+   * with no subscription and no monthly payment.
    * per_account: the lowest band, the retainer a Portfolio starts from. The
    * bands below decide what each account actually pays.
    */
@@ -209,14 +211,15 @@ export const markets: Market[] = [
     country: "NZ",
     timezone: "Pacific/Auckland",
     tiers: [
-      // Essential, for owners. Urgent response is an add-on the owner pays for
-      // on the day, never an inclusion. Priority was dropped because
-      // delivering it cost more than it charged (DECISIONS.md).
+      // Essential, for owners. Free to join (DECISIONS.md, 2026-11-17, "Free
+      // to join"): a property is covered as soon as a card is on file, and the
+      // money is the 15% inside every fixed job price. Urgent response is an
+      // add-on the owner pays for on the day, never an inclusion.
       {
         key: "essential",
         name: "Essential",
-        monthlyPriceCents: 9900,
-        blurb: "A tradie on site within 24 hours. Urgent 4-hour response when you need it, for a surcharge.",
+        monthlyPriceCents: 0,
+        blurb: "Free to join. Fixed prices, charged only when something is fixed. A tradie on site within 24 hours, or 4 when it's urgent.",
       },
       // For property managers with 10 or more properties (DECISIONS.md,
       // 2026-11-17): one monthly retainer for the whole account, banded by how
@@ -237,12 +240,12 @@ export const markets: Market[] = [
         blurb: "For managers with 10 or more properties. One monthly retainer for the whole portfolio, plus the same fixed job prices.",
       },
     ],
-    // The demand test (DECISIONS.md): 25 founding properties, a $99 deposit
-    // that is refundable and comes off the first bills, and half price for
-    // the first three months. The words are promises: change them on the
-    // admin screen (More > Markets) if the offer changes.
+    // The founding deposit from the first demand test. Switched off since
+    // HostFix became free to join (DECISIONS.md, 2026-11-17): no new deposit
+    // is taken, and the ones paid are refunded by hand. The words stay so the
+    // checklist can show what those owners were promised.
     foundingDeposit: {
-      enabled: true,
+      enabled: false,
       amountCents: 9900,
       spots: 25,
       terms: [

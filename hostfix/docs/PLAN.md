@@ -32,6 +32,11 @@
 >   16 Nov 2026). Priority was removed because delivering it cost more than it charged, so everything below
 >   about Priority, its included urgent call-outs and its quarterly check is history. Urgent is always an
 >   add-on the owner pays for, and the whole surcharge goes to the tradie.
+> - **Free to join** (`DECISIONS.md`, 17 Nov 2026): Essential is NZ$0, a property is covered as soon as a
+>   card is on file (no subscription, no monthly invoice), and the money is the 15% inside every menu price.
+>   A missed promise takes the call-out portion of that job off its charge. Tradies need public liability
+>   insurance on file to be approved or offered work. The founding deposit is no longer offered; paid ones
+>   are refunded. The Essential-at-NZ$99 line above is history.
 > - **The real Queenstown prices are loaded** (59 researched jobs, `seed/menu-queenstown.json`): urgent
 >   NZ$90, after hours NZ$140, NZ$225 to come and look at something off the menu, owner's yes needed above
 >   NZ$600. After-hours is before 7am, from 4:30pm and all weekend.

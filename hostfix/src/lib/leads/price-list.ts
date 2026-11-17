@@ -80,9 +80,11 @@ export function priceListEmail(input: PriceListEmailInput): Pick<EmailMessage, "
   const subject = `Your ${brand.name} price list for ${market.name}`;
 
   const intro = `Hi ${firstName(input.lead.name)}, here is the full ${brand.name} price list for ${market.name}: ${list.count} jobs at a fixed price.`;
-  const membershipLine = membership
-    ? `The membership is ${money(membership.monthlyPriceCents)} a month per property: a tradie on site within ${membership.responseHours} hours, or that month's membership is credited back to you automatically.`
-    : "";
+  const membershipLine = !membership
+    ? ""
+    : membership.monthlyPriceCents === 0
+      ? `It is free to join: you only pay the fixed price when a job is done. A tradie on site within ${membership.responseHours} hours, or ${membership.urgentResponseHours} when it's urgent. Miss it and the call-out portion of that job, up to ${money(market.diagnosisFeeCents)}, is on us.`
+      : `The membership is ${money(membership.monthlyPriceCents)} a month per property: a tradie on site within ${membership.responseHours} hours, or the call-out portion of that job, up to ${money(market.diagnosisFeeCents)}, is on us.`;
   const foundingLines = founding
     ? [
         `${spots ? `We are taking ${spots} founding properties in ${market.name}.` : `We are taking founding properties in ${market.name}.`} A founding spot takes a ${deposit} deposit:`,

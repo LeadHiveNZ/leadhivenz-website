@@ -34,6 +34,8 @@ export type DemoCheckout = {
   successUrl: string;
   cancelUrl: string;
   completed: boolean;
+  /** True for a free membership: the page only saves a card, and nothing is charged. */
+  setupOnly?: boolean;
 };
 
 const checkoutKey = (id: string) => `demo_checkout:${id}`;
@@ -62,10 +64,18 @@ export async function completeDemoCheckout(
   id: string,
 ): Promise<{ checkout: DemoCheckout; subscriptionId: string; periodEnd: Date; invoice: InvoiceSummary; card: CardSummary } | null> {
   const checkout = await getDemoCheckout(db, id);
-  if (!checkout || checkout.completed) return null;
+  if (!checkout || checkout.completed || checkout.setupOnly) return null;
   await saveDemoCheckout(db, { ...checkout, completed: true });
   const invoice = demoInvoice(Math.max(0, checkout.priceCents - checkout.discountCents), checkout.currency);
   return { checkout, subscriptionId: `demo_sub_${randomToken(14)}`, periodEnd: invoice.periodEnd, invoice, card: DEMO_CARD_OK };
+}
+
+/** The owner pressed "Save card" on the pretend card page for a free membership. Nothing is charged. */
+export async function completeDemoCardSetup(db: Db, id: string): Promise<{ checkout: DemoCheckout; card: CardSummary } | null> {
+  const checkout = await getDemoCheckout(db, id);
+  if (!checkout || checkout.completed || !checkout.setupOnly) return null;
+  await saveDemoCheckout(db, { ...checkout, completed: true });
+  return { checkout, card: DEMO_CARD_OK };
 }
 
 export function createDemoGateway(db: Db, country: CountryCode): PaymentsGateway {
@@ -105,6 +115,29 @@ export function createDemoGateway(db: Db, country: CountryCode): PaymentsGateway
       }
       const invoice = demoInvoice(Math.max(0, input.tier.priceCents - input.discountCents), input.market.currency);
       return { kind: "active", subscriptionId: `demo_sub_${randomToken(14)}`, periodEnd: invoice.periodEnd, invoice, card: null };
+    },
+
+    async startCardSetup(input) {
+      const checkout: DemoCheckout = {
+        id: randomToken(16),
+        ownerId: input.ownerId,
+        propertyId: input.propertyId,
+        portfolioId: null,
+        propertyName: input.propertyName,
+        tierId: "",
+        tierName: "Free",
+        priceCents: 0,
+        discountCents: 0,
+        discountLabel: null,
+        currency: input.market.currency,
+        customerId: input.customerId,
+        successUrl: input.successUrl,
+        cancelUrl: input.cancelUrl,
+        completed: false,
+        setupOnly: true,
+      };
+      await saveDemoCheckout(db, checkout);
+      return { url: `/demo/checkout/${checkout.id}` };
     },
 
     async cancelMembership() {

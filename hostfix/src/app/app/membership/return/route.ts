@@ -4,14 +4,15 @@ import { currentViewer } from "@/lib/auth/current";
 import { getDb } from "@/lib/db";
 import { getMarket } from "@/lib/markets/store";
 import { stripeAccount } from "@/lib/payments/stripe";
-import { membershipFromCheckout } from "@/lib/payments/stripe-gateway";
+import { cardFromSetupCheckout, membershipFromCheckout } from "@/lib/payments/stripe-gateway";
 import { activatePortfolio, getPortfolio } from "@/lib/properties/portfolio";
-import { activateMembership, getProperty } from "@/lib/properties/service";
+import { activateFreeMembership, activateMembership, getProperty } from "@/lib/properties/service";
 
 /**
- * Where the card page sends an owner back to. If the payment went through,
- * the property becomes a member here and now, rather than waiting for the
- * payment company to tell us in the background (which it also does).
+ * Where the card page sends an owner back to. If the payment went through
+ * (or, for a free membership, the card was saved), the property becomes a
+ * member here and now, rather than waiting for the payment company to tell us
+ * in the background (which it also does).
  */
 export async function GET(request: NextRequest) {
   const to = (path: string) => NextResponse.redirect(new URL(path, request.url), 303);
@@ -56,6 +57,15 @@ export async function GET(request: NextRequest) {
   const stripe = market ? stripeAccount(market.country) : null;
   if (sessionId && stripe && "account" in stripe) {
     try {
+      // A free membership: the page only saved a card.
+      const saved = await cardFromSetupCheckout(stripe.account, sessionId);
+      if (saved) {
+        // Only for this owner's own property, whatever the link says.
+        if (saved.propertyId !== property.id) return to(`/app/properties/${property.id}?pending=1`);
+        const covered = await activateFreeMembership(db, { propertyId: property.id, ownerId: viewer.ownerId, provider: "stripe", customerId: saved.customerId, card: saved.card });
+        await sendQueued(db);
+        return to(covered ? `/app/properties/${property.id}?member=1` : `/app/properties/${property.id}?pending=1`);
+      }
       const membership = await membershipFromCheckout(stripe.account, sessionId);
       // Only for this owner's own property, whatever the link says.
       if (membership && membership.propertyId === property.id) {

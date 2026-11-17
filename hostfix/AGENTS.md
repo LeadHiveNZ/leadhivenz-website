@@ -54,14 +54,19 @@ it when you change one.
   are worked out by hand from the menu file, never pasted from what the code returns.
 - **Every promise on a public page must be something the code does today**, or be tracked as owed in
   `DECISIONS.md` and on the go-live checklist (the founding half price is one). No unsourced statistics.
-- **The demand test's pass mark is three owners with a card down** (`src/lib/leads/demand-test.ts`). The
-  owner page's two buttons are the measurement: keep "take a founding spot" and "send me the price list"
-  as separate, recorded choices (`leads.intent`).
-- **Two tiers, one fee.** Essential for owners, priced per property. Portfolio for managers with 10+
-  properties, priced as a retainer banded by portfolio size (`DECISIONS.md`). The platform fee is 15% of
-  every job in both, and never varies. Urgent response is an add-on the owner pays for, never an
-  inclusion; Priority was removed because delivering it cost more than it charged. A surcharge always
-  goes to the tradie in full.
+- **Free to join; the money is the 15% inside every fixed job price** (`DECISIONS.md`, 2026-11-17).
+  Essential costs NZ$0: a property is covered once a card is on file, with no subscription. The founding
+  deposit is no longer offered (paid ones are refunded by hand); the lead form has one button, "send me
+  the price list". The demand test's scorecard still counts leads and any deposits paid before the change.
+- **Two tiers, one fee.** Essential (free) for owners. Portfolio for managers with 10+ properties, a
+  retainer banded by portfolio size, built and switched off for now. The platform fee is 15% of every job
+  in both, and never varies. Urgent response is an add-on the owner pays for, never an inclusion; Priority
+  was removed because delivering it cost more than it charged. A surcharge always goes to the tradie in full.
+- **Miss the promised time and the call-out portion of that job is on us** (the market's diagnosis fee,
+  capped at the job's price), taken off that job's charge, once per property per month. The tradie is
+  still paid in full.
+- **No insurance, no jobs.** A tradie needs public liability insurance (insurer, policy number, expiry) on
+  file before approval, and the offer query skips anyone whose insurance has run out, the same as licences.
 - **Urgent work is never discounted.** Whatever rate a tradie is on for booked work, same-day, urgent
   and after-hours jobs pay the full card rate. A discounted urgent rate puts the network last in a cold
   snap, which is when the response guarantee is actually tested.
@@ -73,8 +78,10 @@ it when you change one.
 - **Plain language on every screen.** No jargon. Error messages say what to do next.
 - **Never promise tradies money in the bank faster than Stripe pays it** (`payoutArrival` in
   `config/markets.ts`). A test fails if "48 hours" returns to the tradie page.
-- **No legal wording.** Terms, privacy, tradie agreement and insurance stay as placeholders until a lawyer
-  writes them (`docs/LEGAL-TODO.md`).
+- **The legal pages say only what the app does.** Terms, privacy, the tradie agreement and insurance are
+  written in plain English from the code's behaviour (`docs/LEGAL-TODO.md`). Change the page when the
+  behaviour changes, and never promise more than the code keeps. Community Law reads them before the
+  first job; a lawyer at around 100 properties.
 - **Secrets only in environment variables.** Add new ones to `.env.example`, `SETUP.md`, `tests/setup.ts`,
   `playwright.config.ts` and the setup checklist (`src/lib/status.ts`).
 - **People only see their own data.** Every query for an owner or tradie takes their id. Private pages

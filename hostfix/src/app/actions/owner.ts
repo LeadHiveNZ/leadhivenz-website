@@ -141,7 +141,7 @@ export async function saveProperty(_previous: FormState, formData: FormData): Pr
   return { done: "Saved." };
 }
 
-/** Starts the monthly membership. Sends the owner to the card page the first time. */
+/** Starts the membership: for a free one, the card on file (or the card page); for a paid one, the monthly payment. */
 export async function beginMembership(_previous: FormState, formData: FormData): Promise<FormState> {
   const viewer = await requireOwner();
   const propertyId = text(formData, "propertyId");

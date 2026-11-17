@@ -15,7 +15,7 @@ import { listJobsForTradie } from "@/lib/jobs/store";
 import { getMarket } from "@/lib/markets/store";
 import { displayPhone } from "@/lib/phone";
 import { SCORE_DAYS, scorecards } from "@/lib/tradies/scorecard";
-import { getTradie, listLicences, listSlots } from "@/lib/tradies/service";
+import { getTradie, listLicences, listSlots, insuranceProblem } from "@/lib/tradies/service";
 import { dateKey, formatDate } from "@/lib/time";
 import { WEEKDAY_OPTIONS } from "@/lib/weekdays";
 
@@ -54,13 +54,18 @@ export default async function StaffTradiePage({ params, searchParams }: { params
     { ok: tradie.status === "approved", label: "Approved by the team", fix: tradie.status === "applied" ? "Approve them below once their details check out." : tradie.status === "paused" ? "They are paused." : "They have been removed." },
     { ok: Boolean(tradie.phone), label: "Mobile number on file", fix: "Offers are sent by text. They need a mobile number." },
     { ok: tradie.payoutsEnabled, label: "Bank details set up", fix: "They do this themselves: sign in, Profile, Add bank details. Text them the link below." },
+    {
+      ok: insuranceProblem(tradie, today) === null,
+      label: "Public liability insurance on file, in date",
+      fix: "Insurer, policy number and expiry date, under Edit details below or by them on their profile. No jobs are offered without it.",
+    },
     ...licensed.map((key) => ({
       ok: licenceOk(key),
       label: `${findTrade(key)?.label ?? key} licence, in date`,
       fix: `Without it they are not offered ${findTrade(key)?.label.toLowerCase() ?? key} jobs. Other work is not affected.`,
     })),
   ];
-  const blocking = checks.slice(0, 3).filter((check) => !check.ok);
+  const blocking = checks.slice(0, 4).filter((check) => !check.ok);
 
   return (
     <div className="mx-auto max-w-3xl space-y-5">
@@ -74,7 +79,7 @@ export default async function StaffTradiePage({ params, searchParams }: { params
       {typeof query.did === "string" && DID[query.did] && <Notice tone="good" title={DID[query.did]} />}
       {query.added && (
         <Notice tone="good" title="Added">
-          Next: add and check their licences, then approve them.
+          Next: add their insurance and check their licences, then approve them.
         </Notice>
       )}
 
@@ -224,7 +229,9 @@ export default async function StaffTradiePage({ params, searchParams }: { params
           <Tick name="afterHours" label="Takes after-hours call-outs" defaultChecked={tradie.afterHours} />
           <Tick name="gstRegistered" label={`Registered for ${market.taxName}`} defaultChecked={tradie.gstRegistered} />
           <Field label={`${market.taxName} number`} name="gstNumber" maxLength={20} defaultValue={tradie.gstNumber ?? ""} />
-          <Field label="Public liability insurance runs out on" name="insuranceExpiresOn" type="date" defaultValue={tradie.insuranceExpiresOn ?? ""} />
+          <Field label="Public liability insurer" name="insurer" maxLength={120} defaultValue={tradie.insurer ?? ""} />
+          <Field label="Insurance policy number" name="insurancePolicyNumber" maxLength={80} defaultValue={tradie.insurancePolicyNumber ?? ""} />
+          <Field label="Public liability insurance runs out on" name="insuranceExpiresOn" type="date" defaultValue={tradie.insuranceExpiresOn ?? ""} hint="All three are needed before they can be approved, and no jobs are offered once it runs out." />
           <Area label="Notes (only the team sees these)" name="notes" rows={3} maxLength={2000} defaultValue={tradie.notes} />
           <SubmitButton variant="secondary" pendingLabel="Saving...">
             Save

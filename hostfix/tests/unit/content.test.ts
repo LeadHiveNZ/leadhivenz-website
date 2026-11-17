@@ -147,14 +147,15 @@ describe("mistakes in the copy are caught with a clear message", () => {
 
 describe("placeholders", () => {
   it("come from the market and brand settings, so nothing is tied to one town or currency", () => {
-    // Queenstown's starting values (config/markets.ts and DECISIONS.md): $99 a month, $99 founding deposit,
-    // urgent $90, after hours $140, $225 to come and look at something off the menu, quotes over $600 need a yes.
+    // Queenstown's starting values (config/markets.ts and DECISIONS.md): Essential free to join ($0 a month, 2026-11-17),
+    // the old $99 founding deposit (no longer offered, kept for the record), urgent $90, after hours $140, $225 to come and
+    // look at something off the menu, quotes over $600 need a yes.
     expect(contentTokens(launchMarket)).toEqual({
       brand: "HostFix",
       market: "Queenstown",
       country: "New Zealand",
       deposit: "NZ$99",
-      essential: "NZ$99",
+      essential: "NZ$0",
       // Portfolio's lowest band, 10-24 properties: NZ$600 a month (DECISIONS.md, 2026-11-17).
       portfolio_from: "NZ$600",
       urgent: "NZ$90",
@@ -184,18 +185,19 @@ describe("placeholders", () => {
     const repriced = { ...launchMarket, tiers: [{ ...essential!, key: "essential_2027", monthlyPriceCents: 11900 }] };
     expect(contentTokens(repriced)).toMatchObject({ essential: "NZ$119" });
     // Short codes that match nothing: the cheapest one on offer stands in.
-    const renamed = { ...launchMarket, tiers: [{ ...essential!, key: "gold", monthlyPriceCents: 14900 }, { ...essential!, key: "basic" }] };
+    const renamed = { ...launchMarket, tiers: [{ ...essential!, key: "gold", monthlyPriceCents: 14900 }, { ...essential!, key: "basic", monthlyPriceCents: 9900 }] };
     expect(contentTokens(renamed)).toMatchObject({ essential: "NZ$99" });
-    // The one called "essential" wins over a cheaper one with another name.
+    // The one called "essential" wins over another with another name, even when Essential is the free one.
     const both = { ...launchMarket, tiers: [{ ...essential!, key: "trial", monthlyPriceCents: 4900 }, essential!] };
-    expect(contentTokens(both)).toMatchObject({ essential: "NZ$99" });
+    expect(contentTokens(both)).toMatchObject({ essential: "NZ$0" });
     // None at all cannot show a price, and says what to do.
     expect(() => contentTokens({ ...launchMarket, tiers: [] })).toThrow('The market "Queenstown" has no membership on offer');
   });
 
   it("are filled in wherever they appear, with or without spaces", () => {
-    expect(fillTokens("{{brand}} in {{ market }} from {{essential}}", contentTokens(launchMarket), "x.md")).toBe(
-      "HostFix in Queenstown from NZ$99",
+    // Essential is free to join, so its price fills in as NZ$0 rather than breaking the page.
+    expect(fillTokens("{{brand}} in {{ market }} from {{essential}}, call-out {{callout}}", contentTokens(launchMarket), "x.md")).toBe(
+      "HostFix in Queenstown from NZ$0, call-out NZ$225",
     );
   });
 
@@ -215,25 +217,48 @@ describe("the real landing page files", () => {
     for (const section of content.sections) expect(section.blocks.length).toBeGreaterThan(0);
   });
 
-  it("the owner page shows the Essential card and the Portfolio card for managers, with the note about job charges below both", () => {
+  it("the owner page shows one card, free to join and pay per job, with the note about job charges below it", () => {
+    // DECISIONS.md, 2026-11-17: free to join. The Portfolio retainer is built but switched off, so it is not sold here.
     const pricing = loadLanding("owner", launchMarket).sections.find((s) => s.id === "what-it-costs");
-    expect(pricing?.blocks.map((b) => b.type)).toEqual(["card", "card", "paragraph"]);
-    const managers = JSON.stringify(pricing?.blocks[1]);
-    // From the lowest band (10-24 properties, NZ$600), and the pilot on 10 properties: nothing more is promised.
-    expect(managers).toContain("Managing 10 or more?");
-    expect(managers).toContain("one monthly retainer from NZ$600");
-    expect(managers).toContain("Pilot on 10 properties first.");
+    expect(pricing?.blocks.map((b) => b.type)).toEqual(["card", "paragraph"]);
+    const card = pricing?.blocks[0];
+    expect(card?.type === "card" && plainText(card.title)).toBe("Free to join. Pay per job.");
+    // Urgent NZ$90 and after hours NZ$140, both to the tradie in full.
+    expect(JSON.stringify(card)).toContain("Need someone within 4 hours? Add NZ$90 on the day, plus NZ$140 outside working hours. Both go to the tradie in full.");
+    expect(JSON.stringify(pricing)).not.toContain("Managing 10 or more?");
+  });
+
+  it("the owner page says joining is free, and the missed promise takes the call-out off", () => {
+    const content = loadLanding("owner", launchMarket);
+    expect(content.intro.flatMap((block) => (block.type === "list" ? block.items.map(plainText) : []))).toEqual([
+      "Free to join. Jobs at fixed prices, charged only when something is fixed",
+      "A tradie on site within 24 hours, or 4 when it's urgent. Miss it and the call-out is on us",
+      "Your cleaner and your guests can report a problem from their phone",
+    ]);
+    const missed = content.sections.find((section) => plainText(section.title) === "If we miss, the call-out is on us");
+    // The call-out is the market's diagnosis fee, NZ$225 in Queenstown.
+    expect(JSON.stringify(missed)).toContain("Miss it and the call-out portion of that job, up to NZ$225, comes off your bill automatically.");
+    const questions = content.sections.find((section) => section.id === "questions")!;
+    const asked = questions.blocks.map((block) => (block.type === "card" ? plainText(block.title) : ""));
+    expect(asked).toContain("What does it cost to join?");
+    expect(JSON.stringify(questions)).toContain("Nothing. You add your property and a card, and you only pay the fixed price when a job is done.");
+    const text = JSON.stringify(content).toLowerCase();
+    expect(text).not.toContain("founding deposit");
+    expect(text).not.toContain("month's membership");
   });
 
   it("a market with no Portfolio on offer shows an [EDIT] marker where its price would be, rather than breaking the page", () => {
     const essentialOnly = { ...launchMarket, tiers: launchMarket.tiers.filter((tier) => tier.billingBasis === "per_property") };
     expect(contentTokens(essentialOnly).portfolio_from).toMatch(/^\[EDIT/);
-    expect(contentTokens(essentialOnly).essential).toBe("NZ$99");
+    expect(contentTokens(essentialOnly).essential).toBe("NZ$0");
   });
 
   it("the owner page states the real prices from the market settings, and no second membership", () => {
     const text = JSON.stringify(loadLanding("owner", launchMarket));
-    for (const price of ["NZ$99", "NZ$90", "NZ$140", "NZ$225", "NZ$600"]) expect(text).toContain(price);
+    // Urgent NZ$90, after hours NZ$140, the call-out NZ$225 and the quote limit NZ$600. No monthly price: it is free to join.
+    for (const price of ["NZ$90", "NZ$140", "NZ$225", "NZ$600"]) expect(text).toContain(price);
+    expect(text).not.toContain("NZ$99");
+    expect(text).not.toContain("NZ$0");
     // Priority was removed (DECISIONS.md): its old price and name must not come back.
     expect(text).not.toContain("NZ$149");
     expect(text).not.toMatch(/priority/i);

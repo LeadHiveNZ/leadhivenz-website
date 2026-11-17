@@ -139,7 +139,7 @@ describe("founding spots", () => {
     expect(log.error).toHaveBeenCalledTimes(1);
   });
 
-  it("when all are gone, nobody is sent to the card page", async () => {
+  it("nobody is sent to the card page, with spots left or not: HostFix is free to join (DECISIONS.md, 2026-11-17)", async () => {
     vi.stubEnv("STRIPE_NZ_SECRET_KEY", "sk_test_nz");
     const lead = await store().insertLead(ownerLead({ phone: nextPhone() }));
     const create = vi.fn(async () => ({ id: "cs_test_1", url: "https://checkout.stripe.com/c/pay/cs_test_1" }));
@@ -149,9 +149,11 @@ describe("founding spots", () => {
     expect(create).not.toHaveBeenCalled();
     expect((await store().getLead(lead.id))?.depositStatus).toBe("none");
 
-    // With one spot left it goes ahead.
-    await startDepositCheckout(lead, launchMarket, "https://hostfix.example", { store: store(), stripe, spotsLeft: 1 });
-    expect(create).toHaveBeenCalledTimes(1);
+    // With a spot left it is refused too: no deposit is taken any more.
+    await expect(startDepositCheckout(lead, launchMarket, "https://hostfix.example", { store: store(), stripe, spotsLeft: 1 })).rejects.toThrow(
+      "Deposits are no longer taken: HostFix is free to join.",
+    );
+    expect(create).not.toHaveBeenCalled();
   });
 });
 
@@ -259,24 +261,26 @@ describe("the price list", () => {
     ]);
   });
 
-  it("emails the list with a way back to a founding spot, and nothing an owner typed can break the email", async () => {
+  it("emails the list with no founding spot, even when handed a link, and nothing an owner typed can break the email", async () => {
     const list = await priceListFor(t.db, "queenstown");
     const email = priceListEmail({ lead: { name: "<b>Olive</b> Owner" }, market: launchMarket, list, foundingUrl: "https://hostfix.example/owners/founding/abc", spotsLeft: 25 });
     expect(email.subject).toBe("Your HostFix price list for Queenstown");
     expect(email.text).toContain("Blocked toilet, sink or shower drain: NZ$245");
-    expect(email.text).toContain("Take a founding spot: https://hostfix.example/owners/founding/abc");
-    for (const term of launchMarket.foundingDeposit.terms) expect(email.text).toContain(`- ${term}`);
+    expect(email.text).toContain("It is free to join");
+    expect(email.text).not.toMatch(/founding/i);
+    expect(email.html).not.toMatch(/founding/i);
     expect(email.html).toContain("&lt;b&gt;Olive&lt;/b&gt;");
     expect(email.html).not.toContain("<b>Olive</b>");
-    expect(email.html).toContain('href="https://hostfix.example/owners/founding/abc"');
   });
 
-  it("leaves the founding spot out when there is no link or no spot left", async () => {
+  it("only ever offered a founding spot while the market's deposit switch was on", async () => {
     const list = await priceListFor(t.db, "queenstown");
+    const withDeposit = { ...launchMarket, foundingDeposit: { ...launchMarket.foundingDeposit, enabled: true } };
+    const on = priceListEmail({ lead: { name: "Olive" }, market: withDeposit, list, foundingUrl: "https://hostfix.example/owners/founding/abc", spotsLeft: 25 });
+    expect(on.text).toContain("Take a founding spot: https://hostfix.example/owners/founding/abc");
     for (const [foundingUrl, left] of [[null, 25], ["https://hostfix.example/owners/founding/abc", 0]] as const) {
-      const email = priceListEmail({ lead: { name: "Olive" }, market: launchMarket, list, foundingUrl, spotsLeft: left });
+      const email = priceListEmail({ lead: { name: "Olive" }, market: withDeposit, list, foundingUrl, spotsLeft: left });
       expect(email.text).not.toMatch(/founding/i);
-      expect(email.html).not.toMatch(/founding/i);
     }
   });
 });
@@ -293,7 +297,7 @@ describe("sending the price list", () => {
     return (await store().listNotifications([leadId])).filter((n) => n.template === "price_list");
   }
 
-  it("sends it to the owner, with a link back to a founding spot, and records that it went", async () => {
+  it("sends it to the owner, says it is free to join with no founding link, and records that it went", async () => {
     vi.stubEnv("STRIPE_NZ_SECRET_KEY", "sk_test_nz");
     const lead = await store().insertLead(ownerLead({ phone: nextPhone() }));
     const web = fakeFetch([jsonReply({ id: "em_123" })]);
@@ -305,7 +309,9 @@ describe("sending the price list", () => {
     const body = JSON.parse(web.requests[0]!.body) as { to: string[]; subject: string; text: string };
     expect(body.to).toEqual(["olive@example.com"]);
     expect(body.subject).toBe("Your HostFix price list for Queenstown");
-    expect(body.text).toMatch(/Take a founding spot: https:\/\/hostfix\.example\/owners\/founding\/\S+/);
+    expect(body.text).not.toContain("/owners/founding/");
+    // The call-out is the market's diagnosis fee, NZ$225 in Queenstown.
+    expect(body.text).toContain("It is free to join: you only pay the fixed price when a job is done. A tradie on site within 24 hours, or 4 when it's urgent. Miss it and the call-out portion of that job, up to NZ$225, is on us.");
     expect(web.requests[0]!.headers["idempotency-key"]).toBe(`hostfix-price-list-${lead.id}`);
     expect(await recorded(lead.id)).toMatchObject([{ status: "sent", providerMessageId: "em_123" }]);
   });
@@ -352,27 +358,29 @@ describe("sending the price list", () => {
   });
 });
 
-describe("the go-live line for founding billing", () => {
-  const market = (stage: Market["stage"], terms = launchMarket.foundingDeposit.terms, enabled = true) => ({
-    name: "Queenstown", stage, foundingDeposit: { ...launchMarket.foundingDeposit, enabled, terms },
+describe("the go-live line for founding deposits", () => {
+  const market = (stage: Market["stage"], terms = launchMarket.foundingDeposit.terms) => ({
+    name: "Queenstown", stage, foundingDeposit: { ...launchMarket.foundingDeposit, terms },
   });
 
-  it("puts the promises next to what billing does while the waiting list is open", () => {
+  it("says to refund each deposit still held, and what those owners were promised", () => {
     const line = foundingBillingLine(market("waitlist"), 2);
     expect(line?.state).toBe("todo");
+    expect(line?.detail).toContain("2 founding deposits are still held in Queenstown.");
+    expect(line?.detail).toContain("refunded in full in Stripe");
     expect(line?.detail).toContain('"Half price for your first three months: $49.50 a month, then $99"');
-    expect(line?.detail).toContain("the deposit comes off the first month's bill (up to one month's price), then the membership is full price");
-    expect(line?.detail).toContain("2 founding spots taken so far.");
   });
 
-  it("is a problem once the market is live with founding members to bill", () => {
-    expect(foundingBillingLine(market("live"), 1)).toMatchObject({ state: "problem", detail: expect.stringContaining("1 founding spot taken so far.") });
-    expect(foundingBillingLine(market("live"), 0)?.state).toBe("todo");
+  it("is a problem once the market is live with a deposit still held", () => {
+    const line = foundingBillingLine(market("live"), 1);
+    expect(line).toMatchObject({ state: "problem", detail: expect.stringContaining("1 founding deposit is still held in Queenstown.") });
+    expect(line?.detail).toContain("before their first job is charged");
   });
 
-  it("is not shown when nothing was promised", () => {
-    expect(foundingBillingLine(market("waitlist", []), 3)).toBeNull();
-    expect(foundingBillingLine(market("waitlist", launchMarket.foundingDeposit.terms, false), 0)).toBeNull();
+  it("is not shown once nothing is held, whatever was promised", () => {
+    expect(foundingBillingLine(market("waitlist"), 0)).toBeNull();
+    expect(foundingBillingLine(market("live"), 0)).toBeNull();
+    expect(foundingBillingLine(market("waitlist", []), 3)?.detail).not.toContain("promised");
   });
 });
 
