@@ -1,9 +1,10 @@
 # HostFix landing page (for ads)
 
-The page Facebook ads point to: lead form first, then the Loom video, the $50 founding deposit,
-prices and questions. Built here, hosted on Lovable (project "HostFix Queenstown").
+The page Facebook ads point to: lead form first, then the Loom video, the deal (free to join,
+fixed prices, pay when it's fixed), prices and questions. Nothing is sold on the page: the next step
+is a phone call. Built here, hosted on Lovable (project "HostFix Queenstown").
 
-- `src/HostFixLanding.tsx`: the whole page. The Loom and Stripe links are the two constants at the top.
+- `src/HostFixLanding.tsx`: the whole page. The Loom link is the one constant at the top.
 - `src/hostfix.css`: its styles.
 - `lovable/index.tsx`: the Lovable page route; its form posts to `/api/public/leads`.
 - `lovable/api-public-leads.ts`: saves each lead, then emails it to hello@leadhivenz.com through Resend (needs the `RESEND_API_KEY` secret in Lovable).

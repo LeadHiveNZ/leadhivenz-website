@@ -1,17 +1,28 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 
 /**
- * HostFix founding-owner landing page.
+ * HostFix owner landing page (free to join).
  * Flow: the ad brings an owner here -> they leave their details -> the page unlocks
- * the 2-minute Loom, the founding offer (Stripe deposit), prices and answers.
+ * the 2-minute Loom, the deal (free to join, fixed prices), prices and answers.
+ * Nothing is sold on this page: the next step is a phone call.
  *
- * Change these two lines only:
+ * Change this line only:
  */
 export const LOOM_EMBED_URL = "https://www.loom.com/embed/57e1c68fba1c472aa84bff7c41da6766";
-export const STRIPE_DEPOSIT_URL = "https://buy.stripe.com/REPLACE";
 
-const paymentsOpen = !STRIPE_DEPOSIT_URL.includes("REPLACE");
 const UNLOCK_KEY = "hostfix_lead_submitted";
+
+declare global {
+  interface Window {
+    fbq?: ((...args: unknown[]) => void) & { callMethod?: (...args: unknown[]) => void; queue?: unknown[] };
+  }
+}
+
+/** Tells the Meta pixel a lead was saved, once, only when the pixel is on the page. */
+function trackLead() {
+  if (typeof window === "undefined" || typeof window.fbq !== "function") return;
+  window.fbq("track", "Lead", { content_name: "HostFix owner lead", value: 0, currency: "NZD" });
+}
 
 export type Lead = {
   name: string;
@@ -68,12 +79,12 @@ export function HostFixLanding({ saveLead }: Props) {
               </h1>
               <p className="hf-lead">
                 Tap what's broken, see the fixed price, and a checked local handyman, sparky or plumber is on site within
-                24 hours. Leave your details to watch how it works.
+                24 hours. Free to join. Leave your details to watch how it works.
               </p>
               <ul className="hf-ticks">
-                <li>Fixed prices, GST in, no call-out fee</li>
+                <li>Free to join. No monthly fee</li>
+                <li>Fixed prices, GST in. Pay only when it's fixed</li>
                 <li>Your cleaner and guests can report it</li>
-                <li>Miss the time, your month is free</li>
               </ul>
             </div>
 
@@ -81,7 +92,7 @@ export function HostFixLanding({ saveLead }: Props) {
               {unlocked ? (
                 <div className="hf-card hf-done">
                   <p className="hf-done-title">You're in.</p>
-                  <p>Watch the 2-minute video below. We'll give you a quick call soon.</p>
+                  <p>Watch the 2-minute video below. We'll give you a quick call to set you up. It's free.</p>
                   <button type="button" className="hf-btn hf-btn-plum" onClick={() => videoRef.current?.scrollIntoView({ behavior: "smooth" })}>
                     Watch the video
                   </button>
@@ -104,7 +115,7 @@ export function HostFixLanding({ saveLead }: Props) {
                 <span className="hf-play" />
               </div>
               <div className="hf-founding hf-founding-fake">
-                <p className="hf-h2-light">Founding partner: 25 properties only</p>
+                <p className="hf-h2-light">Free to join. The first 25 Queenstown properties.</p>
               </div>
             </div>
             <div className="hf-lock-note">
@@ -123,12 +134,6 @@ export function HostFixLanding({ saveLead }: Props) {
           <span>Queenstown · Questions? We'll call you.</span>
         </div>
       </footer>
-
-      {unlocked && (
-        <div className="hf-sticky">
-          <DepositButton label="Hold my spot · $50" />
-        </div>
-      )}
     </div>
   );
 }
@@ -189,6 +194,7 @@ function LeadForm({ saveLead, onDone }: { saveLead: Props["saveLead"]; onDone: (
       setFailed(true);
       return;
     }
+    trackLead();
     onDone();
   }
 
@@ -218,12 +224,12 @@ function LeadForm({ saveLead, onDone }: { saveLead: Props["saveLead"]; onDone: (
         {sending ? "Unlocking…" : "Watch how it works"}
         {!sending && <Arrow />}
       </button>
-      <p className="hf-fine">We'll give you a quick call. No spam, ever.</p>
+      <p className="hf-fine">Free to join. We'll give you a quick call. No spam, ever.</p>
     </form>
   );
 }
 
-function Field({ id, label, error, children }: { id: string; label: string; error?: string; children: React.ReactNode }) {
+function Field({ id, label, error, children }: { id: string; label: string; error?: string | undefined; children: React.ReactNode }) {
   return (
     <label className={`hf-field ${error ? "hf-field-error" : ""}`} htmlFor={id}>
       <span className="hf-label">{label}</span>
@@ -241,27 +247,11 @@ function Arrow() {
   );
 }
 
-function DepositButton({ label }: { label: string }) {
-  if (!paymentsOpen) {
-    return (
-      <button type="button" className="hf-btn hf-btn-lime hf-btn-full" disabled>
-        Deposits open soon
-      </button>
-    );
-  }
-  return (
-    <a href={STRIPE_DEPOSIT_URL} target="_blank" rel="noopener noreferrer" className="hf-btn hf-btn-lime hf-btn-full">
-      {label}
-      <Arrow />
-    </a>
-  );
-}
-
 const STEPS: [string, string][] = [
   ["Anyone can report it", "You, your cleaner from a link on their phone, or your guest from a QR card in the house. A photo and a minute."],
   ["We find the tradie, not you", "It goes to our first-choice local tradie for that trade. If they can't take it, it moves to the next one. You get a text at each step."],
   ["They get in without you", "Your lockbox code is only shown to the tradie who accepts the job."],
-  ["Photos and a fixed price", "Your card is charged the menu price when the job is done. One statement a month."],
+  ["Photos and a fixed price", "Your card is charged the menu price when the job is done. Nothing before that. One statement a month."],
 ];
 
 const PRICES: [string, number][] = [
@@ -281,11 +271,13 @@ const PRICES: [string, number][] = [
 
 const FAQS: [string, string][] = [
   ["I already have a guy.", "Keep him. We're who you call when he doesn't pick up on a Saturday in July."],
+  ["What does it cost to join?", "Nothing. No joining fee, no monthly fee, no minimum. You add your property and a card, and the card is only charged the fixed price when a job is done."],
+  ["So how do you make money?", "A small margin inside each fixed price. You pay the menu price and nothing more. The tradie gets steady work without quoting; you get a fixed price without chasing."],
   ["Are jobs dearer through you?", "No. Prices are set from what Queenstown tradies charge for a call-out and the first hour, and the call-out is included."],
-  ["Who are your tradies?", "Local tradies we've checked and approved. Plumbing, gas and electrical work only goes to a tradie whose licence is on file and in date."],
-  ["When do you start?", "We're opening Queenstown once our founding tradies are signed. Founding members are set up first, and we'll call you before then."],
-  ["Is there a contract?", "Founding partners sign up for a 3-month minimum at half price. After that it's month to month, and you can cancel any time."],
-  ["What if I change my mind?", "Your $50 deposit is refunded in full any time before your first job. One email."],
+  ["Who are your tradies?", "Local tradies we've checked and approved, each with their own public liability insurance on file. Plumbing, gas and electrical work only goes to a tradie whose licence is on file and in date."],
+  ["What if the tradie is late?", "A tradie is on site within 24 hours, or 4 when it's urgent. Miss that and the call-out portion of that job is on us."],
+  ["When do you start?", "We're opening Queenstown once our first tradies are signed. The first 25 properties are set up personally, and we'll call you before then."],
+  ["What if I change my mind?", "Nothing to cancel and nothing to refund, because you haven't paid anything. Remove your property any time."],
   ["I'm in Wānaka or Arrowtown.", "Leave your details anyway. We'll tell you when we open there."],
 ];
 
@@ -306,22 +298,21 @@ function Unlocked({ videoRef }: { videoRef: React.RefObject<HTMLElement | null> 
         <div className="hf-wrap">
           <div className="hf-founding">
             <div>
-              <p className="hf-kicker hf-kicker-lime">Step 2 · Hold your spot</p>
-              <h2 className="hf-h2-light">Founding partner: 25 properties only</h2>
+              <p className="hf-kicker hf-kicker-lime">Step 2 · We call you</p>
+              <h2 className="hf-h2-light">Free to join. The first 25 Queenstown properties.</h2>
               <ul className="hf-founding-list">
-                <li><strong>$50 deposit</strong> holds your spot</li>
-                <li><strong>Half price</strong> for your first three months: $49.50 a month, then $99</li>
-                <li><strong>3-month minimum</strong> as a founding partner, then month to month</li>
-                <li>Your deposit <strong>comes off your first bill</strong></li>
-                <li><strong>Fully refundable</strong> any time before your first job</li>
+                <li><strong>$0 to join.</strong> No monthly fee, no minimum, no contract</li>
+                <li><strong>Fixed prices</strong> you see before you say yes, GST included</li>
+                <li>Your card is charged <strong>only when a job is done</strong></li>
+                <li><strong>On site within 24 hours</strong>, or 4 when it's urgent. Miss it and the call-out's on us</li>
+                <li>The first 25 properties are <strong>set up personally</strong>: we call you, add your property, and you're covered</li>
               </ul>
             </div>
             <div className="hf-founding-cta">
               <p className="hf-big-price">
-                $50<span>deposit</span>
+                $0<span>to join</span>
               </p>
-              <DepositButton label="Hold my spot · $50 deposit" />
-              <p className="hf-fine hf-fine-light">Paid securely through Stripe. We never see your card number.</p>
+              <p className="hf-fine hf-fine-light">You've left your details. We'll call you to set you up. No card needed until then.</p>
             </div>
           </div>
         </div>
@@ -347,14 +338,14 @@ function Unlocked({ videoRef }: { videoRef: React.RefObject<HTMLElement | null> 
         <div className="hf-wrap hf-price-grid">
           <div>
             <p className="hf-kicker">Prices</p>
-            <h2 className="hf-h2">Fixed prices. GST included. No call-out fee.</h2>
+            <h2 className="hf-h2">Fixed prices. GST included. No call-out fee on top.</h2>
             <div className="hf-member">
               <p className="hf-member-price">
-                $99<span>/month per property</span>
+                $0<span>/month. Free to join</span>
               </p>
               <p>
-                A tradie on site within 24 hours, or 4 hours when it's urgent. Miss it and that month's membership is credited to you
-                automatically.
+                You pay the fixed price when a job is done, and nothing else. A tradie on site within 24 hours, or 4 hours when it's
+                urgent. Miss it and the call-out portion of that job is on us.
               </p>
             </div>
             <p className="hf-note">
@@ -412,11 +403,8 @@ function Unlocked({ videoRef }: { videoRef: React.RefObject<HTMLElement | null> 
 
       <section className="hf-section hf-final">
         <div className="hf-wrap hf-final-inner">
-          <h2 className="hf-h2-light">25 founding spots in Queenstown.</h2>
-          <p>Half price for three months. $50 deposit, fully refundable before your first job.</p>
-          <div className="hf-final-cta">
-            <DepositButton label="Hold my spot · $50 deposit" />
-          </div>
+          <h2 className="hf-h2-light">The first 25 Queenstown properties.</h2>
+          <p>Free to join. Fixed prices. Pay only when it's fixed. You've left your details, so expect a call from us.</p>
         </div>
       </section>
     </main>
