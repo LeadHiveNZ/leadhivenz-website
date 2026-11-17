@@ -18,6 +18,13 @@ const nextConfig: NextConfig = {
   // The copy of Postgres used in demo mode and tests loads its own data files
   // from its folder, so it must be left as it is rather than repackaged.
   serverExternalPackages: ["@electric-sql/pglite"],
+  // The public liability certificate is sent with the profile and sign-up
+  // forms themselves (it may be a PDF). The file limit is 4 MB
+  // (MAX_UPLOAD_BYTES), so the form may be a little over that. The default
+  // for a form is 1 MB.
+  experimental: {
+    serverActions: { bodySizeLimit: "5mb" },
+  },
   // The landing page copy lives in /content as Markdown files. Make sure those
   // files travel with the app when it is deployed.
   // The health check compares the database with the list of database changes,

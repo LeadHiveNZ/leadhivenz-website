@@ -7,6 +7,8 @@ import { brand } from "@config/brand";
 import { launchMarket } from "@config/markets";
 import { createLeadToken, LEAD_COOKIE, LEAD_COOKIE_SECONDS } from "@/lib/auth/lead-token";
 import { getDb } from "@/lib/db";
+import { getFileStore } from "@/lib/files/store";
+import { checkFile } from "@/lib/files/uploads";
 import { appSecret, baseUrl } from "@/lib/env";
 import { currentMarket, foundingSpotsTaken, spotsLeft } from "@/lib/leads/founding";
 import { HONEYPOT_FIELD, type LeadFormState } from "@/lib/leads/form-state";
@@ -17,6 +19,7 @@ import { leadAlertContent, sendAlert } from "@/lib/notify/alerts";
 import { DepositNotAllowedError, startDepositCheckout } from "@/lib/payments/deposit";
 import { clientIp, ipKey } from "@/lib/request";
 import { getStore } from "@/lib/store";
+import { fileFromForm, saveInsuranceCertificate } from "@/lib/tradies/certificate";
 import type { Lead, LeadType } from "@/lib/store/types";
 
 /**
@@ -58,8 +61,17 @@ async function handle(leadType: LeadType, formData: FormData): Promise<LeadFormS
           phone: text(formData, "phone"),
           trade: text(formData, "trade"),
           licenceNumber: text(formData, "licenceNumber"),
+          lbpNumber: text(formData, "lbpNumber"),
           daysAvailable: formData.getAll("daysAvailable").filter((v): v is string => typeof v === "string"),
         };
+
+  // The insurance certificate, if one was chosen. Checked before anything is
+  // saved, so a wrong file can be fixed. It is stored once the lead is saved.
+  const certificate = leadType === "tradie" ? await fileFromForm(formData, "certificate") : null;
+  if (certificate) {
+    const checked = checkFile("insurance_certificate", certificate.contentType, certificate.bytes);
+    if (!checked.ok) return { fieldErrors: { certificate: checked.reason }, values: fields, message: "Please check the certificate. Choose the file again." };
+  }
 
   const result = await submitLead(
     leadType,
@@ -106,6 +118,18 @@ async function handle(leadType: LeadType, formData: FormData): Promise<LeadFormS
         });
       }
       if (!result.duplicate) trackLeadWithMeta(lead, headerList, cookieStore);
+      if (certificate && result.saved) {
+        // Kept with the lead until staff turn it into a tradie. A failure here
+        // never loses the lead: they can add the certificate from their profile.
+        try {
+          const saved = await saveInsuranceCertificate(await getDb(), getFileStore(), { leadId: lead.id }, {
+            ...certificate, uploadedBy: `lead:${lead.id}`, actor: `lead:${lead.id}`,
+          });
+          if (!saved.ok) console.error("[certificate] a sign-up certificate was not kept:", saved.reason);
+        } catch (error) {
+          console.error("[certificate] a sign-up certificate was not kept:", error instanceof Error ? error.message : error);
+        }
+      }
       if (leadType === "owner" && result.saved) {
         if (lead.intent === "deposit") return redirect(await depositDestination(lead, headerList, cookieStore));
         if (lead.intent === "pricelist" && !result.duplicate) {

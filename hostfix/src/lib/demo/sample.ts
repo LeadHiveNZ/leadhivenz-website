@@ -19,6 +19,7 @@ import { addMonths } from "@/lib/payments/gateway";
 import { openPortfolio, startPortfolio } from "@/lib/properties/portfolio";
 import { activateFreeMembership, activateMembership, createProperty, type Property } from "@/lib/properties/service";
 import { createTradie, listLicences, markLicenceVerified, saveLicence, savePayoutAccount, setSlot, setTradieStatus, updateTradie } from "@/lib/tradies/service";
+import { recordInsuranceCertificate } from "@/lib/tradies/certificate";
 import { demoPhoto } from "./png";
 
 /**
@@ -105,6 +106,16 @@ async function tradie(
   await updateTradie(ctx.db, created.tradieId, {
     insurer: "Sample Insurance Co", insurancePolicyNumber: `PL${Math.abs(hash(input.phone)) % 900000 + 100000}`, insuranceExpiresOn: "2027-09-30",
   }, "admin");
+  // And, for everyone already approved, the certificate from their insurer uploaded (a stand-in
+  // picture in the demo). A tradie still waiting shows the admin what is missing.
+  if (input.approve !== false) {
+    const certificateBytes = demoPhoto("found");
+    const certificateKey = newStorageKey("insurance_certificate", "png");
+    await ctx.files?.put(certificateKey, certificateBytes, "image/png");
+    await recordInsuranceCertificate(ctx.db, { tradieId: created.tradieId }, {
+      storageKey: certificateKey, contentType: "image/png", bytes: certificateBytes.byteLength, uploadedBy: `tradie:${created.tradieId}`, actor: `tradie:${created.tradieId}`,
+    });
+  }
   if (input.approve !== false) {
     for (const licence of await listLicences(ctx.db, created.tradieId)) await markLicenceVerified(ctx.db, licence.id, "admin");
     await savePayoutAccount(ctx.db, created.tradieId, { provider: "demo", accountId: `demo_acct_${created.tradieId.replace(/-/g, "").slice(0, 16)}`, payoutsEnabled: true });

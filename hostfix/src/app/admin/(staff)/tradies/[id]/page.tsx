@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { inviteTradie, staffSaveLicence, staffSaveTradie, staffSetTradieStatus, verifyLicence } from "@/app/actions/staff";
-import { ActionForm, Area, CheckList, Checks, Field, Tick } from "@/components/forms/ActionForm";
+import { inviteTradie, staffSaveLicence, staffSaveTradie, staffSetTradieStatus, staffUploadCertificate, verifyLicence } from "@/app/actions/staff";
+import { ActionForm, Area, CheckList, Checks, Field, FileInput, Tick } from "@/components/forms/ActionForm";
+import { CERTIFICATE_ACCEPT } from "@/components/forms/Fields";
+import { CertificateList } from "@/components/ui/CertificateList";
 import { SubmitButton } from "@/components/forms/SubmitButton";
 import { JobRow } from "@/components/jobs/JobRow";
 import { Card, Chip, Facts, Notice, PageTitle, SectionTitle, Stat } from "@/components/ui/Bits";
@@ -11,6 +13,8 @@ import { findTrade, trades } from "@config/trades";
 import { requireStaff } from "@/lib/auth/current";
 import { now } from "@/lib/clock";
 import { getDb } from "@/lib/db";
+import { fileStoreReady } from "@/lib/files/store";
+import { listInsuranceCertificates } from "@/lib/tradies/certificate";
 import { listJobsForTradie } from "@/lib/jobs/store";
 import { getMarket } from "@/lib/markets/store";
 import { displayPhone } from "@/lib/phone";
@@ -22,6 +26,9 @@ import { WEEKDAY_OPTIONS } from "@/lib/weekdays";
 export const metadata: Metadata = { title: "Tradie" };
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
+
+/** The public register of Licensed Building Practitioners, as linked from www.lbp.govt.nz (checked 17 Nov 2026). */
+const LBP_REGISTER = "https://kete-lbp.mbie.govt.nz/advanced-building-practitioner-search/";
 
 const pct = (rate: number | null) => (rate === null ? "No history" : `${Math.round(rate * 100)}%`);
 
@@ -42,6 +49,7 @@ export default async function StaffTradiePage({ params, searchParams }: { params
   const market = await getMarket(db, tradie.market);
   if (!market) notFound();
   const licences = await listLicences(db, tradie.id);
+  const certificates = await listInsuranceCertificates(db, tradie.id);
   const slots = (await listSlots(db, market.slug)).filter((slot) => slot.tradieId === tradie.id);
   const card = (await scorecards(db, market.slug)).find((candidate) => candidate.tradieId === tradie.id);
   const jobs = await listJobsForTradie(db, tradie.id, { limit: 12 });
@@ -57,7 +65,9 @@ export default async function StaffTradiePage({ params, searchParams }: { params
     {
       ok: insuranceProblem(tradie, today) === null,
       label: "Public liability insurance on file, in date",
-      fix: "Insurer, policy number and expiry date, under Edit details below or by them on their profile. No jobs are offered without it.",
+      fix:
+        insuranceProblem(tradie, today) ??
+        "Insurer, policy number, expiry date and the certificate, under Insurance below or by them on their profile. No jobs are offered without it.",
     },
     ...licensed.map((key) => ({
       ok: licenceOk(key),
@@ -79,7 +89,7 @@ export default async function StaffTradiePage({ params, searchParams }: { params
       {typeof query.did === "string" && DID[query.did] && <Notice tone="good" title={DID[query.did]} />}
       {query.added && (
         <Notice tone="good" title="Added">
-          Next: add their insurance and check their licences, then approve them.
+          Next: add their insurance and certificate, and check their licences, then approve them.
         </Notice>
       )}
 
@@ -169,6 +179,47 @@ export default async function StaffTradiePage({ params, searchParams }: { params
       </div>
 
       <Card className="sm:p-6">
+        <SectionTitle action={<Chip tone={insuranceProblem(tradie, today) ? "alert" : "done"}>{insuranceProblem(tradie, today) ? "Not complete" : "In date"}</Chip>}>
+          Public liability insurance
+        </SectionTitle>
+        <Facts
+          rows={[
+            { label: "Insurer", value: tradie.insurer ?? "Not given" },
+            { label: "Policy number", value: tradie.insurancePolicyNumber ?? "Not given" },
+            { label: "Runs out on", value: tradie.insuranceExpiresOn ?? "Not given" },
+          ]}
+        />
+        <div className="mt-4 space-y-3">
+          <p className="text-sm text-muted">Open the certificate and check the insurer, policy number, expiry date and their name match what is typed in, before you approve them.</p>
+          <CertificateList certificates={certificates} timeZone={market.timezone} />
+          <ActionForm action={staffUploadCertificate} className="space-y-3">
+            <input type="hidden" name="tradieId" value={tradie.id} />
+            <FileInput
+              label="Add a certificate for them"
+              name="certificate"
+              accept={CERTIFICATE_ACCEPT}
+              ready={fileStoreReady()}
+              hint="For one they sent you. A PDF, JPG or PNG, up to 4 MB."
+              laterNote="File storage is not set up, so certificates cannot be added yet. See the setup checklist."
+            />
+            <SubmitButton variant="secondary" pendingLabel="Uploading...">
+              Upload certificate
+            </SubmitButton>
+          </ActionForm>
+        </div>
+        <div className="mt-5 border-t border-line pt-4">
+          <p className="font-semibold text-ink">Licensed Building Practitioner (LBP) number</p>
+          <p className="mt-1 text-muted">
+            {tradie.lbpNumber ?? "None given. That is fine: most jobs do not need one."}{" "}
+            <a href={LBP_REGISTER} target="_blank" rel="noopener noreferrer" className="text-brand underline underline-offset-2">
+              Search the LBP register
+            </a>
+          </p>
+          <p className="mt-1 text-sm text-muted">Optional. Nothing is held back without it.</p>
+        </div>
+      </Card>
+
+      <Card className="sm:p-6">
         <SectionTitle>Licences</SectionTitle>
         {licensed.length === 0 ? (
           <p className="text-muted">None of their work needs a licence.</p>
@@ -231,7 +282,8 @@ export default async function StaffTradiePage({ params, searchParams }: { params
           <Field label={`${market.taxName} number`} name="gstNumber" maxLength={20} defaultValue={tradie.gstNumber ?? ""} />
           <Field label="Public liability insurer" name="insurer" maxLength={120} defaultValue={tradie.insurer ?? ""} />
           <Field label="Insurance policy number" name="insurancePolicyNumber" maxLength={80} defaultValue={tradie.insurancePolicyNumber ?? ""} />
-          <Field label="Public liability insurance runs out on" name="insuranceExpiresOn" type="date" defaultValue={tradie.insuranceExpiresOn ?? ""} hint="All three are needed before they can be approved, and no jobs are offered once it runs out." />
+          <Field label="Public liability insurance runs out on" name="insuranceExpiresOn" type="date" defaultValue={tradie.insuranceExpiresOn ?? ""} hint="All three, and the certificate, are needed before they can be approved. No jobs are offered once it runs out." />
+          <Field label="Licensed Building Practitioner (LBP) number (optional)" name="lbpNumber" maxLength={40} defaultValue={tradie.lbpNumber ?? ""} />
           <Area label="Notes (only the team sees these)" name="notes" rows={3} maxLength={2000} defaultValue={tradie.notes} />
           <SubmitButton variant="secondary" pendingLabel="Saving...">
             Save

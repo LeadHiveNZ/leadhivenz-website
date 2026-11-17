@@ -15,6 +15,7 @@ import { addMonths, type PaymentsGateway } from "@/lib/payments/gateway";
 import { openPortfolio, startPortfolio, type Portfolio } from "@/lib/properties/portfolio";
 import { activateFreeMembership, activateMembership, createProperty, getProperty, type Property } from "@/lib/properties/service";
 import { createTradie, saveLicence, savePayoutAccount, setSlot, setTradieStatus, updateTradie } from "@/lib/tradies/service";
+import { recordInsuranceCertificate } from "@/lib/tradies/certificate";
 
 /**
  * Quick ways to set up people, properties and jobs for tests. Everything is
@@ -125,6 +126,8 @@ export type TradieOptions = {
   name?: string;
   /** Public liability insurance: "valid" (default), "expired" or "none" (nothing on file). */
   insurance?: "valid" | "expired" | "none";
+  /** Their public liability certificate uploaded (default true). Approval and offers need it. */
+  certificate?: boolean;
 };
 
 export async function makeTradie(db: Db, options: TradieOptions = {}) {
@@ -142,12 +145,21 @@ export async function makeTradie(db: Db, options: TradieOptions = {}) {
   // Approval needs current insurance, so a tradie is approved with it on file and any "expired" or "none" applied after.
   const insurance = options.insurance ?? "valid";
   await updateTradie(db, tradieId, { insurer: "Test Insurance Ltd", insurancePolicyNumber: `PL-${n}`, insuranceExpiresOn: "2030-12-31" }, "test");
+  await certificate(db, tradieId);
   if (options.payouts !== false) await savePayoutAccount(db, tradieId, { provider: "demo", accountId: `demo_acct_${n}`, payoutsEnabled: true });
   if (options.approved !== false) await setTradieStatus(db, tradieId, "approved", "test");
   if (insurance === "expired") await updateTradie(db, tradieId, { insuranceExpiresOn: "2020-01-31" }, "test");
   if (insurance === "none") await updateTradie(db, tradieId, { insurer: null, insurancePolicyNumber: null, insuranceExpiresOn: null }, "test");
+  if (options.certificate === false) await db.query("delete from public.uploads where tradie_id = $1::uuid and kind = 'insurance_certificate'", [tradieId]);
   if (options.slot) await setSlot(db, { market: "queenstown", trade: trades[0]!, rank: options.slot, tradieId }, "test");
   return { user, tradieId, phone: user.phone! };
+}
+
+/** A public liability certificate on file for this tradie, as if they had uploaded it. Returns its id. */
+export async function certificate(db: Db, tradieId: string): Promise<string> {
+  return recordInsuranceCertificate(db, { tradieId }, {
+    storageKey: `insurance_certificate/2026/11/${randomUUID()}.pdf`, contentType: "application/pdf", bytes: 2048, uploadedBy: `tradie:${tradieId}`, actor: `tradie:${tradieId}`,
+  });
 }
 
 export async function menuItem(db: Db, code: string): Promise<MenuItem> {

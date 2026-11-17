@@ -117,3 +117,8 @@ export function getFileStore(): FileStore | null {
   }
   return null;
 }
+
+/** True when files can be saved, without opening the store. Screens use it to say "add it later" instead of offering an upload that would fail. */
+export function fileStoreReady(): boolean {
+  return !("problem" in storageSettings()) || demoModeAllowed();
+}

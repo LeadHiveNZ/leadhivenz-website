@@ -35,6 +35,7 @@ type LeadRow = {
   intent: Lead["intent"];
   trade: string | null;
   licence_number: string | null;
+  lbp_number?: string | null;
   days_available: string[] | null;
   source: string;
   utm_source: string | null;
@@ -78,6 +79,7 @@ export function rowToLead(row: LeadRow): Lead {
     intent: row.intent ?? null,
     trade: row.trade,
     licenceNumber: row.licence_number,
+    lbpNumber: row.lbp_number ?? null,
     daysAvailable: row.days_available,
     source: row.source,
     utmSource: row.utm_source,
@@ -116,14 +118,15 @@ export class SqlLeadStore implements LeadStore {
       `insert into public.leads (
          lead_type, market, name, phone, email, property_count, managed_by, owner_location,
          trade, licence_number, days_available, source, utm_source, utm_medium, utm_campaign,
-         utm_content, utm_term, fbclid, gclid, ref_code, referrer, landing_path, intent
-       ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::text[], $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)
+         utm_content, utm_term, fbclid, gclid, ref_code, referrer, landing_path, intent, lbp_number
+       ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11::text[], $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24)
        returning *`,
       [
         lead.leadType, lead.market, lead.name, lead.phone, lead.email, lead.propertyCount, lead.managedBy,
         lead.ownerLocation, lead.trade, lead.licenceNumber, lead.daysAvailable, lead.source, lead.utmSource,
         lead.utmMedium, lead.utmCampaign, lead.utmContent, lead.utmTerm, lead.fbclid, lead.gclid, lead.refCode,
         lead.referrer, lead.landingPath, lead.leadType === "owner" ? (lead.intent ?? null) : null,
+        lead.leadType === "tradie" ? (lead.lbpNumber ?? null) : null,
       ],
     );
     const row = rows[0];

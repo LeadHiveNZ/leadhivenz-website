@@ -163,6 +163,7 @@ export function buildLead(
       intent: null,
       trade: parsed.data.trade,
       licenceNumber: parsed.data.licenceNumber,
+      lbpNumber: parsed.data.lbpNumber,
       daysAvailable: parsed.data.daysAvailable,
     },
   };
@@ -251,6 +252,7 @@ export async function submitLead(
   // Saving failed. The alert is now the only copy, so wait for it.
   const unsaved: Lead = {
     ...newLead,
+    lbpNumber: newLead.lbpNumber ?? null,
     id: randomUUID(),
     createdAt: now.toISOString(),
     depositStatus: "none",

@@ -47,10 +47,22 @@ export async function requireOwner(next: string = "/app"): Promise<OwnerViewer> 
   return viewer as OwnerViewer;
 }
 
-export async function requireTradie(next: string = "/tradie"): Promise<TradieViewer> {
+/**
+ * The signed-in tradie, or a redirect to sign in.
+ *
+ * A tradie still waiting for approval ("applied") has their own account but
+ * may only use their profile: insurance, certificate, licences and bank
+ * details. Every other tradie page sends them back to it. Only the profile
+ * page and its actions pass `whileWaiting: true`.
+ */
+export async function requireTradie(next: string = "/tradie", options: { whileWaiting?: boolean } = {}): Promise<TradieViewer> {
   const viewer = await currentViewer();
   if (!viewer) redirect(signInPath(next));
   if (!viewer.tradieId) redirect("/start");
+  if (!options.whileWaiting) {
+    const rows = await (await getDb()).query<{ status: string }>("select status from public.tradies where id = $1::uuid", [viewer.tradieId]);
+    if (rows[0]?.status === "applied") redirect("/tradie/profile");
+  }
   return viewer as TradieViewer;
 }
 

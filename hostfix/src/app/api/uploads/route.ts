@@ -15,9 +15,10 @@ import { ipKey } from "@/lib/request";
  * sent, and only the person who uploaded it can attach it.
  */
 
-const KINDS: UploadKind[] = ["property", "report", "completion", "quote", "receipt", "licence", "insurance", "dispute"];
+const KINDS: UploadKind[] = ["property", "report", "completion", "quote", "receipt", "licence", "dispute"];
 const OWNER_KINDS: UploadKind[] = ["property", "report", "dispute"];
-const TRADIE_KINDS: UploadKind[] = ["completion", "quote", "receipt", "licence", "insurance"];
+// The insurance certificate is not sent here: it may be a PDF, so it goes with the profile or sign-up form itself.
+const TRADIE_KINDS: UploadKind[] = ["completion", "quote", "receipt", "licence"];
 
 function refuse(status: number, message: string) {
   return NextResponse.json({ error: message }, { status });

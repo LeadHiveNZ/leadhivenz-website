@@ -124,9 +124,10 @@ the new date, press **Save licence**, then **I have checked this on the register
 **Means.** A tradie's public liability insurance runs out within 30 days, or already has. Once it has run
 out they are offered no jobs at all.
 
-**Do.** Ask them for the renewed policy. On their page, under **Edit details**, enter the insurer, the
-policy number and the new expiry date, and press **Save**. They can also do it themselves on their profile.
-Mark as dealt with.
+**Do.** Ask them for the renewed policy and its certificate. On their page, under **Edit details**, enter
+the insurer, the policy number and the new expiry date, and press **Save**. Then **Upload certificate** under
+**Public liability insurance** (the new one becomes the current one; older ones stay listed). They can
+also do both themselves on their profile. Mark as dealt with.
 
 ### A text or email did not send
 **Means.** A message did not reach someone. The item says who and why.
@@ -178,8 +179,11 @@ they have told you is fine.
 
 **A new tradie.** Tradies > **Add a tradie** (or More > Leads > **Make a tradie**, admin only). Enter
 each licence number and its end date, check it on the register, and their public liability insurance
-(insurer, policy number and expiry date: **Approve** is refused without all three, or if it has run out),
-then press **Approve**. That texts them
+(insurer, policy number and expiry date). Then check the certificate: on their page under **Public liability
+insurance**, open **Current certificate** and make sure the insurer, policy number, expiry date and their name
+match what is typed in. If they sent it to you instead, use **Upload certificate**. **Approve** is refused
+without all three details and the certificate, or if the insurance has run out. If they gave an LBP number,
+**Search the LBP register** checks it (optional: nothing waits on it). Then press **Approve**. That texts them
 a link to sign in and add their bank details. Their page shows "Getting offers" once everything is in.
 
 **Refunding the founding deposits.** HostFix is free to join (DECISIONS.md, 17 Nov 2026), so every

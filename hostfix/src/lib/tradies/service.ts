@@ -15,8 +15,12 @@ import type { Provider } from "@/lib/payments/gateway";
  * only ever offered to a tradie whose licence for that trade has a number on
  * file and an expiry date that has not passed. The insurance rule sits in the
  * same query: no tradie is offered anything without public liability
- * insurance on file (insurer, policy number and an expiry date that has not
- * passed), DECISIONS.md 2026-11-17.
+ * insurance on file (insurer, policy number, an expiry date that has not
+ * passed, and the certificate uploaded), DECISIONS.md 2026-11-17.
+ *
+ * Only staff approve a tradie (setTradieStatus, called from the admin's
+ * tradie page). A tradie can never change their own status except to pause
+ * and come back once approved (setTradiePaused).
  */
 
 export type TradieStatus = "applied" | "approved" | "paused" | "removed";
@@ -41,6 +45,10 @@ export type Tradie = {
   insurer: string | null;
   insurancePolicyNumber: string | null;
   insuranceExpiresOn: string | null;
+  /** The newest public liability certificate uploaded (the current one), or null if none is on file. */
+  insuranceCertificateId: string | null;
+  /** Licensed Building Practitioner number. Optional, shown to staff, nothing depends on it. */
+  lbpNumber: string | null;
   payoutProvider: Provider | null;
   payoutAccountId: string | null;
   payoutsEnabled: boolean;
@@ -62,13 +70,16 @@ type TradieRow = {
   id: string; created_at: Date; user_id: string; name: string; phone: string | null; email: string | null; market: string;
   business_name: string; trades: string[]; status: TradieStatus; approved_at: Date | null; days_available: string[];
   after_hours: boolean; gst_registered: boolean; gst_number: string | null; insurance_expires_on: string | null;
-  insurer: string | null; insurance_policy_number: string | null;
+  insurer: string | null; insurance_policy_number: string | null; insurance_certificate_id: string | null; lbp_number: string | null;
   payout_provider: Provider | null; payout_account_id: string | null; payouts_enabled: boolean; notes: string;
 };
 
 const TRADIE_SELECT = `select t.id, t.created_at, t.user_id, u.name, u.phone, u.email, t.market, t.business_name, t.trades, t.status,
                               t.approved_at, t.days_available, t.after_hours, t.gst_registered, t.gst_number, t.insurance_expires_on,
-                              t.insurer, t.insurance_policy_number, t.payout_provider, t.payout_account_id, t.payouts_enabled, t.notes
+                              t.insurer, t.insurance_policy_number, t.lbp_number, t.payout_provider, t.payout_account_id, t.payouts_enabled, t.notes,
+                              (select x.id from public.uploads x
+                                where x.tradie_id = t.id and x.kind = 'insurance_certificate' and x.attached
+                                order by x.created_at desc, x.id desc limit 1) as insurance_certificate_id
                          from public.tradies t join public.users u on u.id = t.user_id`;
 
 function rowToTradie(row: TradieRow): Tradie {
@@ -79,6 +90,7 @@ function rowToTradie(row: TradieRow): Tradie {
     gstRegistered: row.gst_registered, gstNumber: row.gst_number,
     insurer: row.insurer ?? null, insurancePolicyNumber: row.insurance_policy_number ?? null,
     insuranceExpiresOn: row.insurance_expires_on ? String(row.insurance_expires_on).slice(0, 10) : null,
+    insuranceCertificateId: row.insurance_certificate_id ?? null, lbpNumber: row.lbp_number ?? null,
     payoutProvider: row.payout_provider, payoutAccountId: row.payout_account_id, payoutsEnabled: row.payouts_enabled, notes: row.notes,
   };
 }
@@ -106,6 +118,8 @@ export type TradieApplication = {
   afterHours: boolean;
   gstRegistered: boolean;
   gstNumber?: string | null;
+  /** Licensed Building Practitioner number, optional. Taken from the lead when there is one and this is not given. */
+  lbpNumber?: string | null;
   licences: { trade: string; licenceNumber: string; expiresOn: string }[];
   leadId?: string | null;
 };
@@ -118,15 +132,27 @@ export async function createTradie(db: Db, input: TradieApplication): Promise<{ 
     const user = await createUser(tx, { name: input.name, email: input.email, phone: input.phone });
     const rows = await tx.query<{ id: string }>(
       `insert into public.tradies
-         (created_at, user_id, market, business_name, trades, days_available, after_hours, gst_registered, gst_number, lead_id)
-       values ($1::timestamptz, $2::uuid, $3, $4, $5::text[], $6::text[], $7, $8, $9, $10::uuid)
+         (created_at, user_id, market, business_name, trades, days_available, after_hours, gst_registered, gst_number, lead_id, lbp_number)
+       values ($1::timestamptz, $2::uuid, $3, $4, $5::text[], $6::text[], $7, $8, $9, $10::uuid,
+               coalesce($11::text, (select l.lbp_number from public.leads l where l.id = $10::uuid)))
        returning id`,
       [
         now().toISOString(), user.id, input.market, input.businessName.trim() || input.name.trim(), chosen, input.daysAvailable,
-        input.afterHours, input.gstRegistered, input.gstNumber?.trim() || null, input.leadId ?? null,
+        input.afterHours, input.gstRegistered, input.gstNumber?.trim() || null, input.leadId ?? null, cleanLbp(input.lbpNumber),
       ],
     );
     const tradieId = rows[0]!.id;
+    // A certificate sent with the sign-up form moves from the lead to the tradie.
+    if (input.leadId) {
+      const moved = await tx.query<{ id: string }>(
+        `update public.uploads set tradie_id = $2::uuid
+          where lead_id = $1::uuid and kind = 'insurance_certificate' and tradie_id is null returning id`,
+        [input.leadId, tradieId],
+      );
+      if (moved.length > 0) {
+        await audit(tx, { actor: `tradie:${tradieId}`, action: "tradie.insurance_certificate_from_lead", entity: "tradie", entityId: tradieId, detail: { leadId: input.leadId, uploads: moved.map((row) => row.id) } });
+      }
+    }
     for (const licence of input.licences) {
       if (!chosen.includes(licence.trade) || !licence.licenceNumber.trim()) continue;
       await saveLicence(tx, tradieId, licence, `tradie:${tradieId}`);
@@ -163,14 +189,23 @@ export type TradiePatch = {
   insurer?: string | null;
   insurancePolicyNumber?: string | null;
   insuranceExpiresOn?: string | null;
+  lbpNumber?: string | null;
 };
+
+/** An LBP number as typed, tidied: trimmed, at most 40 characters, null when blank. */
+function cleanLbp(value: string | null | undefined): string | null {
+  return value?.trim().slice(0, 40) || null;
+}
 
 /**
  * Why this tradie cannot be approved or offered work for want of insurance,
  * in plain words, or null when their public liability insurance is on file
  * and current. "today" is the market's own date, "2026-11-17".
  */
-export function insuranceProblem(tradie: Pick<Tradie, "insurer" | "insurancePolicyNumber" | "insuranceExpiresOn">, today: string): string | null {
+export function insuranceProblem(
+  tradie: Pick<Tradie, "insurer" | "insurancePolicyNumber" | "insuranceExpiresOn" | "insuranceCertificateId">,
+  today: string,
+): string | null {
   const missing = [
     !tradie.insurer?.trim() && "the insurer",
     !tradie.insurancePolicyNumber?.trim() && "the policy number",
@@ -178,6 +213,9 @@ export function insuranceProblem(tradie: Pick<Tradie, "insurer" | "insurancePoli
   ].filter(Boolean) as string[];
   if (missing.length > 0) {
     return `Their public liability insurance is not complete: add ${missing.join(", ").replace(/, ([^,]*)$/, " and $1")} on their page first. We can't offer them jobs without it.`;
+  }
+  if (!tradie.insuranceCertificateId) {
+    return "Their public liability certificate is not uploaded. They add it on their profile, or you add it on their page. We can't offer them jobs without it.";
   }
   if (tradie.insuranceExpiresOn! < today) return "Their public liability insurance has run out. Add the renewed policy and its new expiry date on their page first.";
   return null;
@@ -188,29 +226,38 @@ export async function updateTradie(db: Db, tradieId: string, patch: TradiePatch,
   if (!current) return null;
   const chosen = patch.trades ? validTrades(patch.trades) : current.trades;
   if (chosen.length === 0) throw new TradieError("Choose at least one trade.");
-  await db.query(
-    `update public.tradies set business_name = $2, trades = $3::text[], days_available = $4::text[], after_hours = $5,
-            gst_registered = $6, gst_number = $7, insurance_expires_on = $8::date, insurer = $9, insurance_policy_number = $10
-      where id = $1::uuid`,
-    [
-      tradieId, patch.businessName?.trim() || current.businessName, chosen, patch.daysAvailable ?? current.daysAvailable,
-      patch.afterHours ?? current.afterHours, patch.gstRegistered ?? current.gstRegistered,
-      patch.gstNumber === undefined ? current.gstNumber : patch.gstNumber?.trim() || null,
-      patch.insuranceExpiresOn === undefined ? current.insuranceExpiresOn : patch.insuranceExpiresOn || null,
-      patch.insurer === undefined ? current.insurer : patch.insurer?.trim().slice(0, 120) || null,
-      patch.insurancePolicyNumber === undefined ? current.insurancePolicyNumber : patch.insurancePolicyNumber?.trim().slice(0, 80) || null,
-    ],
-  );
-  // A slot for a trade they no longer do is given up.
-  await db.query("delete from public.tradie_slots where tradie_id = $1::uuid and not (trade = any($2::text[]))", [tradieId, chosen]);
-  await audit(db, { actor, action: "tradie.updated", entity: "tradie", entityId: tradieId, detail: { fields: Object.keys(patch) } });
-  return getTradie(db, tradieId);
+  const lbpNumber = patch.lbpNumber === undefined ? current.lbpNumber : cleanLbp(patch.lbpNumber);
+  return db.tx(async (tx) => {
+    await tx.query(
+      `update public.tradies set business_name = $2, trades = $3::text[], days_available = $4::text[], after_hours = $5,
+              gst_registered = $6, gst_number = $7, insurance_expires_on = $8::date, insurer = $9, insurance_policy_number = $10,
+              lbp_number = $11
+        where id = $1::uuid`,
+      [
+        tradieId, patch.businessName?.trim() || current.businessName, chosen, patch.daysAvailable ?? current.daysAvailable,
+        patch.afterHours ?? current.afterHours, patch.gstRegistered ?? current.gstRegistered,
+        patch.gstNumber === undefined ? current.gstNumber : patch.gstNumber?.trim() || null,
+        patch.insuranceExpiresOn === undefined ? current.insuranceExpiresOn : patch.insuranceExpiresOn || null,
+        patch.insurer === undefined ? current.insurer : patch.insurer?.trim().slice(0, 120) || null,
+        patch.insurancePolicyNumber === undefined ? current.insurancePolicyNumber : patch.insurancePolicyNumber?.trim().slice(0, 80) || null,
+        lbpNumber,
+      ],
+    );
+    // A slot for a trade they no longer do is given up.
+    await tx.query("delete from public.tradie_slots where tradie_id = $1::uuid and not (trade = any($2::text[]))", [tradieId, chosen]);
+    await audit(tx, { actor, action: "tradie.updated", entity: "tradie", entityId: tradieId, detail: { fields: Object.keys(patch) } });
+    if (lbpNumber !== current.lbpNumber) {
+      await audit(tx, { actor, action: "tradie.lbp_saved", entity: "tradie", entityId: tradieId, detail: { lbpNumber, before: current.lbpNumber } });
+    }
+    return getTradie(tx, tradieId);
+  });
 }
 
 /**
  * Staff decisions about a tradie. Removing or pausing takes them out of every
  * slot's rotation at once. Approving needs current public liability insurance
- * on file: insurer, policy number and an expiry date that has not passed.
+ * on file: insurer, policy number, an expiry date that has not passed and the
+ * certificate uploaded. Only staff actions call this.
  */
 export async function setTradieStatus(db: Db, tradieId: string, status: TradieStatus, actor: string): Promise<Tradie | null> {
   if (status === "approved") {
@@ -338,7 +385,7 @@ export type OfferCriteria = {
  * Every tradie who may be offered this job, first choice first. This one
  * query is the whole eligibility rule:
  *  - approved, in this market, does this trade, has a mobile, can be paid
- *  - public liability insurance on file (insurer, policy number) that has not expired
+ *  - public liability insurance on file (insurer, policy number, certificate uploaded) that has not expired
  *  - if the job needs a licence: has one for this trade that has not expired
  *  - if it is after hours: has said they take after-hours work
  *  - if it is urgent: works today
@@ -357,6 +404,7 @@ export async function eligibleTradies(db: Db, criteria: OfferCriteria): Promise<
         and char_length(coalesce(t.insurer, '')) >= 1
         and char_length(coalesce(t.insurance_policy_number, '')) >= 1
         and t.insurance_expires_on >= $6::date
+        and exists (select 1 from public.uploads c where c.tradie_id = t.id and c.kind = 'insurance_certificate' and c.attached)
         and (not $3::boolean or exists (
               select 1 from public.tradie_licences l
                where l.tradie_id = t.id and l.trade = $2
@@ -380,6 +428,7 @@ export async function canStillTake(db: Db, tradieId: string, job: { market: stri
       where t.id = $1::uuid and t.market = $2 and t.status = 'approved' and $3 = any(t.trades) and u.disabled_at is null
         and char_length(coalesce(t.insurer, '')) >= 1 and char_length(coalesce(t.insurance_policy_number, '')) >= 1
         and t.insurance_expires_on >= $5::date
+        and exists (select 1 from public.uploads c where c.tradie_id = t.id and c.kind = 'insurance_certificate' and c.attached)
         and (not $4::boolean or exists (
               select 1 from public.tradie_licences l
                where l.tradie_id = t.id and l.trade = $3 and char_length(l.licence_number) >= 2 and l.expires_on >= $5::date))`,

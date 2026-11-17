@@ -74,6 +74,74 @@ towns have properties waiting.
 
 Built on 2026-11-17: everything above except the legal pages
 
+### 2026-11-17 — Tradies: the insurance certificate is uploaded, the LBP number is optional, only the admin approves
+
+The founder, in his words:
+
+> "When a tradie signs up it has to have public liability insurance, and it has
+> to be a document they upload, not just typed details. A Licensed Building
+> Practitioner (LBP) number matters for some building jobs but is not needed for
+> most, so it is optional. Tradies have their own accounts, but only I (the
+> admin) can approve them; nobody is offered work until I approve."
+
+**What changed:**
+
+- **The certificate of currency is uploaded.** A PDF, JPG or PNG, up to 4 MB,
+  beside the insurer, policy number and expiry date. It is a new kind of file
+  (`insurance_certificate`) on the tradie, stored with the other photos and
+  files, and opened through `/files/[id]`, which lets only staff and that tradie
+  see it (not an owner they work for, not another tradie). The newest is the
+  current one; older ones stay listed as a record. Code:
+  `src/lib/tradies/certificate.ts`, `src/lib/files/uploads.ts`.
+- **Where it is uploaded:** the tradie's profile (Insurance section), the admin
+  tradie page (staff can open it to check it, and upload one a tradie emailed
+  in), and the public sign-up form at /tradies. A certificate sent with the
+  sign-up form is kept with the lead, seen only by staff, and moves to the
+  tradie when the lead is made a tradie. Where file storage is not set up, the
+  field still shows, with a note that it can be added later from the profile.
+- **No certificate, no approval and no offers.** `insuranceProblem()` reports
+  "certificate is not uploaded" when the three details are there but no
+  certificate is, so the admin's Approve button refuses, and the offer query and
+  the check at accept time skip anyone without one. The 30-day "insurance
+  running out" warning still goes by the expiry date; its text now asks for the
+  new certificate too.
+- **The LBP number is optional.** A text field on the profile, the sign-up form
+  and the admin page (with a link to the public LBP register search, as linked
+  from www.lbp.govt.nz). Nothing waits on it. Saved on `tradies.lbp_number`
+  and `leads.lbp_number` (migration `20261121000000_insurance_certificate.sql`).
+- **Only the admin approves.** A tradie still waiting for approval can sign in
+  to their own account, but every tradie page except their profile sends them
+  back to it, under the banner "Waiting for approval: we'll text you". No
+  offers, jobs or pay. Approval is a staff action only; a tradie's own switch
+  is pause and back, and only once approved. A test proves a waiting tradie
+  with perfect insurance and licences is never offered a job.
+- **Audit entries:** certificate uploaded (on the tradie, or on the lead from
+  the sign-up form), certificate moved from a lead, LBP number saved. Each is
+  written in the same database step as the change.
+- Legal page (tradie agreement, section 2), the tradie landing page, RUNBOOK
+  ("A new tradie", "Insurance running out") and AGENTS.md now say the same.
+
+**Decided while building, to confirm:**
+
+- **Criminal history check is the Ministry of Justice record, not police vetting.**
+  NZ Police vetting is only open to approved agencies (care of children or
+  vulnerable people, schools, law enforcement), so HostFix cannot use it. The
+  tradie agreement (section 2) now says the tradie requests their own criminal
+  record from the Ministry of Justice (free, about a week) and sends it to us
+  before their first job. Older entries below that say "police vetting" mean this.
+
+- On the public sign-up form the certificate is asked for but **not
+  required**, so no tradie is lost at the first step; it is required before
+  approval. The insurer, policy number and expiry are typed in on the profile
+  (or by staff from the certificate), not on the sign-up form.
+- Tradies already approved with no certificate on file **stop getting offers**
+  from this change until one is uploaded. The admin tradie page shows who.
+- The dispatcher's "give this job to a tradie" button now checks the tradie can
+  take it before writing anything, so a refused assignment leaves no record of
+  an offer behind.
+
+Built on 2026-11-17: all of the above.
+
 ---
 
 ## 2026-11-17 — A second tier for property managers (Portfolio)

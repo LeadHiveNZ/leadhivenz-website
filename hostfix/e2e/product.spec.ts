@@ -279,8 +279,18 @@ test("people only see their own data", async ({ page, request }) => {
   await expect(shown(page, "Lakeview Apartment")).toHaveCount(0);
   await expect(shown(page, "Fernhill Studio").first().first()).toBeVisible();
 
+  // A tradie's insurance certificate opens for them, and for nobody else but staff.
+  await be(page, "Mere (plumber)");
+  await open(page, "/tradie/profile");
+  const certificatePath = await page.getByRole("link", { name: "Current certificate" }).filter({ visible: true }).getAttribute("href");
+  expect(certificatePath).toMatch(/^\/files\/[0-9a-f-]{36}$/);
+  expect((await page.request.get(`${BASE}${certificatePath}`)).status()).toBe(200);
+  await be(page, "Sam Taylor");
+  expect((await page.request.get(`${BASE}${certificatePath}`)).status()).toBe(404);
+
   // A tradie who is not on the job cannot open it, or its photos, or an owner's or the team's pages.
   await be(page, "Lena (handyman)");
+  expect((await page.request.get(`${BASE}${certificatePath}`)).status()).toBe(404);
   await open(page, `/tradie/jobs/${jobId}`);
   await expect(page.getByRole("heading", { name: "We can't find that page." })).toBeVisible();
   expect((await page.request.get(`${BASE}${photoPath}`)).status()).toBe(404);
@@ -316,6 +326,7 @@ test("people only see their own data", async ({ page, request }) => {
     await expect(page).toHaveURL(`${BASE}/admin`);
   }
   expect((await request.get(`${BASE}${photoPath}`)).status()).toBe(404);
+  expect((await request.get(`${BASE}${certificatePath}`)).status()).toBe(404);
 
   // A one-tap link only opens with its own code. A guessed or altered one opens nothing.
   const texts = await phone(page, "sam");
@@ -431,6 +442,8 @@ test("a tradie signs in with their mobile, adds bank details and their insurance
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await page.waitForURL(/tradie\/profile/);
   await ready(page);
+  // Kiri has her own account but is not approved yet: her profile is all she can use.
+  await expect(shown(page, "Waiting for approval: we'll text you").first()).toBeVisible();
 
   await expect(page.getByText("Needed", { exact: true }).filter({ visible: true }).first()).toBeVisible();
   await page.getByRole("button", { name: "Add bank details" }).click();
@@ -441,18 +454,42 @@ test("a tradie signs in with their mobile, adds bank details and their insurance
   await ready(page);
   await expect(shown(page, "Bank details set up. You can be paid.").first()).toBeVisible();
 
-  // Public liability insurance: no offers without it (DECISIONS.md, 2026-11-17).
+  // Public liability insurance, with the certificate uploaded: no offers without it (DECISIONS.md, 2026-11-17).
   const insurance = page.locator("form").filter({ has: page.getByLabel("Policy number") });
-  await expect(insurance.getByText("Public liability insurance: insurer, policy number, expiry date. We can't offer you jobs without it.")).toBeVisible();
+  await expect(insurance.getByText(/insurer, policy number, expiry date, and the certificate from your insurer uploaded/)).toBeVisible();
+  await expect(insurance.getByText("No certificate uploaded yet.")).toBeVisible();
   await insurance.getByLabel("Insurer").fill("Southern Cover Ltd");
   await insurance.getByLabel("Policy number").fill("PL-445566");
   await insurance.getByLabel("Expiry date").fill("2027-06-30");
+  await insurance.getByLabel(/LBP/).fill("BP112233");
+  await insurance.getByLabel("Upload your certificate").setInputFiles({ ...PHOTO, name: "certificate.png" });
   await insurance.getByRole("button", { name: "Save", exact: true }).click();
-  await expect(shown(page, "Saved.").first()).toBeVisible();
+  await expect(shown(page, "Saved, with your certificate.").first()).toBeVisible();
   await expect(insurance.getByLabel("Policy number")).toHaveValue("PL-445566");
+  await expect(insurance.getByLabel(/LBP/)).toHaveValue("BP112233");
+  const certificate = insurance.getByRole("link", { name: "Current certificate" });
+  await expect(certificate).toBeVisible();
+  expect((await page.request.get(`${BASE}${await certificate.getAttribute("href")}`)).status()).toBe(200);
 
-  // Still waiting for a person on the team to approve them, so no offers yet.
-  await open(page, "/tradie");
-  await expect(shown(page, "We are checking your details").first()).toBeVisible();
-  await expect(shown(page, "No offers right now").first()).toBeVisible();
+  // Still waiting for a person on the team to approve them: no offers, no jobs, no pay. Every other page brings them back here.
+  for (const path of ["/tradie", "/tradie/jobs", "/tradie/pay"]) {
+    await page.goto(`${BASE}${path}`);
+    await page.waitForURL(`${BASE}/tradie/profile`);
+    await ready(page);
+    await expect(shown(page, "Waiting for approval: we'll text you").first()).toBeVisible();
+    await expect(shown(page, "No offers right now")).toHaveCount(0);
+  }
+
+  // The admin sees the certificate and the LBP number on her page, and can approve her now.
+  await be(page, "Admin (you)");
+  await open(page, "/admin/tradies?market=queenstown");
+  await page.getByRole("link", { name: /Kiri Electrical/ }).filter({ visible: true }).first().click();
+  await page.waitForURL(/\/admin\/tradies\/[0-9a-f-]{36}/);
+  await ready(page);
+  await expect(shown(page, "BP112233").first()).toBeVisible();
+  await expect(page.getByRole("link", { name: "Search the LBP register" })).toHaveAttribute("href", "https://kete-lbp.mbie.govt.nz/advanced-building-practitioner-search/");
+  const onFile = page.getByRole("link", { name: "Current certificate" }).filter({ visible: true });
+  expect((await page.request.get(`${BASE}${await onFile.getAttribute("href")}`)).status()).toBe(200);
+  await expect(shown(page, /certificate is not uploaded/)).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Approve" })).toBeVisible();
 });

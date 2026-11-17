@@ -158,3 +158,41 @@ export function FormMessage({ children }: { children: ReactNode }) {
     </p>
   );
 }
+
+type FileFieldProps = BaseProps & {
+  /** What may be chosen, for example ".pdf,.jpg,.jpeg,.png". */
+  accept: string;
+  required?: boolean;
+  /** False when files cannot be saved yet: the field still shows, with a note that it can be added later. */
+  ready?: boolean;
+  /** What to say when files cannot be saved yet. */
+  laterNote?: string;
+};
+
+/** Choose one file to send with the form. */
+export function FileField({ label, name, hint, error, accept, id, required, ready = true, laterNote }: FileFieldProps) {
+  const fieldId = id ?? name;
+  const shownHint = ready ? hint : laterNote;
+  return (
+    <div>
+      <label htmlFor={fieldId} className={labelClass}>
+        {label}
+      </label>
+      <input
+        id={fieldId}
+        name={name}
+        type="file"
+        accept={accept}
+        required={ready && required}
+        disabled={!ready}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={describedBy(fieldId, shownHint, error)}
+        className={`${inputClass} ${borderClass(error)} file:mr-3 file:rounded-full file:border-0 file:bg-tint file:px-3 file:py-1.5 file:text-sm file:font-semibold file:text-brand disabled:opacity-60`}
+      />
+      <FieldMessages name={fieldId} hint={shownHint} error={error} />
+    </div>
+  );
+}
+
+/** The kinds of file a public liability certificate may be. */
+export const CERTIFICATE_ACCEPT = ".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png";

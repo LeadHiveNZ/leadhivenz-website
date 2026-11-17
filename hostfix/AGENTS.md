@@ -66,7 +66,10 @@ it when you change one.
   capped at the job's price), taken off that job's charge, once per property per month. The tradie is
   still paid in full.
 - **No insurance, no jobs.** A tradie needs public liability insurance (insurer, policy number, expiry) on
-  file before approval, and the offer query skips anyone whose insurance has run out, the same as licences.
+  file and the certificate of currency uploaded (an `insurance_certificate` file, `src/lib/tradies/certificate.ts`)
+  before approval, and the offer query skips anyone whose insurance has run out or has no certificate, the
+  same as licences. The newest certificate is the current one; older ones are kept. Only staff approve.
+  A tradie waiting for approval can sign in, but only to their profile (`requireTradie`).
 - **Urgent work is never discounted.** Whatever rate a tradie is on for booked work, same-day, urgent
   and after-hours jobs pay the full card rate. A discounted urgent rate puts the network last in a cold
   snap, which is when the response guarantee is actually tested.

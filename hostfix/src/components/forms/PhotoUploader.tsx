@@ -6,7 +6,7 @@ import { Icon } from "../ui/Icon";
 type Photo = { id: string; url: string };
 
 type Props = {
-  kind: "property" | "report" | "completion" | "quote" | "receipt" | "licence" | "insurance" | "dispute";
+  kind: "property" | "report" | "completion" | "quote" | "receipt" | "licence" | "dispute";
   /** The name the photo ids are sent under when the form is submitted. */
   name?: string;
   label: string;

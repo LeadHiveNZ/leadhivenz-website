@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { saveTradieLicence, saveTradieProfile, setPaused, setUpPayouts } from "@/app/actions/tradie";
-import { ActionForm, CheckList, Checks, Field, Tick } from "@/components/forms/ActionForm";
+import { ActionForm, CheckList, Checks, Field, FileInput, Tick } from "@/components/forms/ActionForm";
+import { CERTIFICATE_ACCEPT } from "@/components/forms/Fields";
+import { CertificateList } from "@/components/ui/CertificateList";
 import { SubmitButton } from "@/components/forms/SubmitButton";
 import { Card, Chip, Notice, PageTitle, SectionTitle } from "@/components/ui/Bits";
 import { SignOut } from "@/components/ui/SignOut";
@@ -8,6 +10,8 @@ import { findTrade, trades } from "@config/trades";
 import { requireTradie } from "@/lib/auth/current";
 import { now } from "@/lib/clock";
 import { getDb } from "@/lib/db";
+import { fileStoreReady } from "@/lib/files/store";
+import { listInsuranceCertificates } from "@/lib/tradies/certificate";
 import { getMarket } from "@/lib/markets/store";
 import { displayPhone } from "@/lib/phone";
 import { getTradie, insuranceProblem, listLicences } from "@/lib/tradies/service";
@@ -21,19 +25,28 @@ export const metadata: Metadata = { title: "Profile" };
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
 export default async function TradieProfilePage({ searchParams }: { searchParams: SearchParams }) {
-  const viewer = await requireTradie("/tradie/profile");
+  const viewer = await requireTradie("/tradie/profile", { whileWaiting: true });
   const query = await searchParams;
   const db = await getDb();
   const tradie = await getTradie(db, viewer.tradieId);
   const market = tradie ? await getMarket(db, tradie.market) : null;
   if (!tradie || !market) return <Notice tone="error" title="We could not find your tradie profile" />;
   const licences = await listLicences(db, tradie.id);
+  const certificates = await listInsuranceCertificates(db, tradie.id);
+  const filesReady = fileStoreReady();
   const today = dateKey(now(), market.timezone);
   const licensed = tradie.trades.filter((key) => findTrade(key)?.licenceRequired);
 
   return (
     <div className="mx-auto max-w-2xl space-y-5">
       <PageTitle title="Profile" intro={`${tradie.name} · ${tradie.phone ? displayPhone(tradie.phone) : "no mobile"} · ${market.name}`} />
+
+      {tradie.status === "applied" && (
+        <Notice tone="warn" title="Waiting for approval: we'll text you">
+          A person on our team checks every tradie before any work is offered. Until then this page is all there is. Fill in your insurance, upload
+          your certificate, and add your licences and bank details, so we can approve you sooner.
+        </Notice>
+      )}
 
       {query.payouts === "done" && <Notice tone="good" title="Bank details set up. You can be paid." />}
       {query.payouts === "checking" && (
@@ -76,15 +89,33 @@ export default async function TradieProfilePage({ searchParams }: { searchParams
           <Tick name="afterHours" label="I take after-hours call-outs" hint={`Outside ${workingHours(market)}. You get the full after-hours surcharge.`} defaultChecked={tradie.afterHours} />
           <Tick name="gstRegistered" label={`I am registered for ${market.taxName}`} defaultChecked={tradie.gstRegistered} />
           <Field label={`${market.taxName} number (if registered)`} name="gstNumber" maxLength={20} defaultValue={tradie.gstNumber ?? ""} />
+          <Field
+            label="Licensed Building Practitioner (LBP) number (optional)"
+            name="lbpNumber"
+            maxLength={40}
+            defaultValue={tradie.lbpNumber ?? ""}
+            hint="Only if you have one. Some building work needs it. Most jobs do not."
+          />
           <fieldset className="space-y-4 rounded-2xl border border-line p-4">
             <legend className="flex items-center gap-2 px-1 font-semibold text-ink">
               Public liability insurance
               <Chip tone={insuranceProblem(tradie, today) ? "alert" : "done"}>{insuranceProblem(tradie, today) ? "Needed" : "In date"}</Chip>
             </legend>
-            <p className="text-sm text-muted">Public liability insurance: insurer, policy number, expiry date. We can&apos;t offer you jobs without it.</p>
+            <p className="text-sm text-muted">
+              Public liability insurance: insurer, policy number, expiry date, and the certificate from your insurer uploaded. We can&apos;t offer you jobs without it.
+            </p>
             <Field label="Insurer" name="insurer" maxLength={120} defaultValue={tradie.insurer ?? ""} />
             <Field label="Policy number" name="insurancePolicyNumber" maxLength={80} defaultValue={tradie.insurancePolicyNumber ?? ""} />
             <Field label="Expiry date" name="insuranceExpiresOn" type="date" defaultValue={tradie.insuranceExpiresOn ?? ""} hint="When it runs out, jobs stop being offered to you until you add the renewed policy." />
+            <CertificateList certificates={certificates} timeZone={market.timezone} />
+            <FileInput
+              label={certificates.length > 0 ? "Upload a new certificate (when you renew)" : "Upload your certificate"}
+              name="certificate"
+              accept={CERTIFICATE_ACCEPT}
+              ready={filesReady}
+              hint="The certificate of currency from your insurer. A PDF, JPG or PNG, up to 4 MB. Only our team and you can open it."
+              laterNote="Certificates can't be uploaded yet because file storage is not set up. You can add it here later. We can't approve you until it is on file."
+            />
           </fieldset>
           <SubmitButton variant="secondary" pendingLabel="Saving...">
             Save

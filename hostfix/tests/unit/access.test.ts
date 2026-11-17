@@ -8,8 +8,11 @@ import { offerLinkCode, offerLinkMatches, ownerJobLinkCode, ownerJobLinkMatches,
 import { changeTier, findPropertyByReportToken, getProperty, listProperties, requestCancel, rotateReportLink, updateProperty } from "@/lib/properties/service";
 import { createDemoGateway } from "@/lib/payments/demo-gateway";
 import { cancelPortfolio, countPortfolioProperties, getPortfolio, joinPortfolio, listPortfolios, openPortfolio, removeFromPortfolio, startPortfolio } from "@/lib/properties/portfolio";
+import type { FileStore } from "@/lib/files/store";
+import { listInsuranceCertificates, saveInsuranceCertificate } from "@/lib/tradies/certificate";
+import { createTradie, getTradie } from "@/lib/tradies/service";
 import { testDb } from "./db";
-import { liveMarket, logJob, makeOwner, makePortfolio, makeProperty, makeTradie, MONDAY_10AM, offersFor, photo } from "./factory";
+import { auditActions, certificate, liveMarket, logJob, makeOwner, makePortfolio, makeProperty, makeTradie, MONDAY_10AM, offersFor, photo } from "./factory";
 
 /**
  * PEOPLE ONLY SEE THEIR OWN DATA.
@@ -186,6 +189,86 @@ describe("photos", () => {
     // A PDF is fine for a licence, not for a job photo.
     expect(checkFile("licence", "application/pdf", pdf)).toEqual({ ok: true, ext: "pdf" });
     expect(checkFile("completion", "application/pdf", pdf)).toMatchObject({ ok: false });
+  });
+});
+
+/** A file store kept in memory, standing in for Supabase Storage. */
+function memoryStore(): FileStore & { files: Map<string, Uint8Array> } {
+  const files = new Map<string, Uint8Array>();
+  return {
+    kind: "disk", files,
+    async put(key, bytes) { files.set(key, bytes); },
+    async get(key) { return files.get(key) ?? null; },
+    async remove(keys) { for (const key of keys) files.delete(key); },
+  };
+}
+
+const PDF = new TextEncoder().encode("%PDF-1.7 certificate of currency");
+
+describe("insurance certificates", () => {
+  it("are visible only to staff and the tradie they belong to: not an owner they work for, not another tradie", async () => {
+    const { alice, mike, dave } = await twoOfEverything();
+    const id = await certificate(t.db, mike.tradieId);
+    const upload = (await getUpload(t.db, id))!;
+    expect(upload).toMatchObject({ kind: "insurance_certificate", attached: true, tradieId: mike.tradieId, jobId: null });
+
+    expect(await canView(t.db, upload, { staff: true })).toBe(true);
+    expect(await canView(t.db, upload, { tradieId: mike.tradieId, uploader: `tradie:${mike.tradieId}` })).toBe(true);
+    // Alice has a job with Mike, and still cannot see his certificate.
+    expect(await canView(t.db, upload, { ownerId: alice.ownerId })).toBe(false);
+    expect(await canView(t.db, upload, { tradieId: dave.tradieId, uploader: `tradie:${dave.tradieId}` })).toBe(false);
+    expect(await canView(t.db, upload, {})).toBe(false);
+  });
+
+  it("must be a PDF, JPG or PNG, checked by its contents", () => {
+    const jpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 0, 0, 0, 0, 0, 0, 0, 0]);
+    const png = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0]);
+    const webp = new TextEncoder().encode("RIFF\u0000\u0000\u0000\u0000WEBP");
+    expect(checkFile("insurance_certificate", "application/pdf", PDF)).toEqual({ ok: true, ext: "pdf" });
+    expect(checkFile("insurance_certificate", "image/jpeg", jpeg)).toEqual({ ok: true, ext: "jpg" });
+    expect(checkFile("insurance_certificate", "image/png", png)).toEqual({ ok: true, ext: "png" });
+    expect(checkFile("insurance_certificate", "image/webp", webp)).toEqual({ ok: false, reason: "Please send the certificate as a PDF, JPG or PNG file." });
+    expect(checkFile("insurance_certificate", "application/pdf", new TextEncoder().encode("<html>"))).toMatchObject({ ok: false });
+    expect(checkFile("insurance_certificate", "application/pdf", new Uint8Array(5 * 1024 * 1024).fill(0x25))).toMatchObject({ ok: false });
+  });
+
+  it("are stored, recorded and audited together, and nothing is recorded when there is nowhere to store them", async () => {
+    const { mike } = await twoOfEverything();
+    const before = (await listInsuranceCertificates(t.db, mike.tradieId)).length;
+    const nowhere = await saveInsuranceCertificate(t.db, null, { tradieId: mike.tradieId }, { bytes: PDF, contentType: "application/pdf", uploadedBy: `tradie:${mike.tradieId}`, actor: `tradie:${mike.tradieId}` });
+    expect(nowhere).toMatchObject({ ok: false, reason: expect.stringContaining("Add it later from your profile") });
+    expect(await listInsuranceCertificates(t.db, mike.tradieId)).toHaveLength(before);
+
+    // A minute later than the one already on file, so the new one is the newest.
+    setTestNow(new Date(MONDAY_10AM.getTime() + 60_000));
+    const store = memoryStore();
+    const saved = await saveInsuranceCertificate(t.db, store, { tradieId: mike.tradieId }, { bytes: PDF, contentType: "application/pdf", uploadedBy: `tradie:${mike.tradieId}`, actor: `tradie:${mike.tradieId}` });
+    expect(saved.ok).toBe(true);
+    expect(store.files.size).toBe(1);
+    expect((await getTradie(t.db, mike.tradieId))!.insuranceCertificateId).toBe(saved.ok ? saved.uploadId : null);
+    expect(await auditActions(t.db, mike.tradieId)).toContain("tradie.insurance_certificate_uploaded");
+  });
+
+  it("sent with the sign-up form are seen only by staff, then move to the tradie with their LBP number", async () => {
+    await liveMarket(t.db);
+    const lead = (await t.db.query<{ id: string }>(
+      "insert into public.leads (lead_type, market, name, phone, trade, lbp_number) values ('tradie', 'queenstown', 'Lena Lead', '+64220009999', 'builder', 'BP998877') returning id",
+    ))[0]!.id;
+    const saved = await saveInsuranceCertificate(t.db, memoryStore(), { leadId: lead }, { bytes: PDF, contentType: "application/pdf", uploadedBy: `lead:${lead}`, actor: `lead:${lead}` });
+    if (!saved.ok) throw new Error(saved.reason);
+    const before = (await getUpload(t.db, saved.uploadId))!;
+    expect(before).toMatchObject({ leadId: lead, tradieId: null });
+    expect(await canView(t.db, before, { staff: true })).toBe(true);
+    expect(await canView(t.db, before, { uploader: `lead:${lead}` })).toBe(false);
+    expect(await auditActions(t.db, lead)).toContain("lead.insurance_certificate_uploaded");
+
+    const { tradieId } = await createTradie(t.db, {
+      name: "Lena Lead", phone: "+64220009999", email: null, market: "queenstown", businessName: "Lena Builds", trades: ["handyman"],
+      daysAvailable: ["mon"], afterHours: false, gstRegistered: false, licences: [], leadId: lead,
+    });
+    const tradie = (await getTradie(t.db, tradieId))!;
+    expect(tradie).toMatchObject({ lbpNumber: "BP998877", insuranceCertificateId: saved.uploadId, status: "applied" });
+    expect(await canView(t.db, (await getUpload(t.db, saved.uploadId))!, { tradieId })).toBe(true);
   });
 });
 

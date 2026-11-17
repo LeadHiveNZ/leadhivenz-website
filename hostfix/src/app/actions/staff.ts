@@ -24,6 +24,8 @@ import {
   createTradie, getTradie, markLicenceVerified, saveLicence, setSlot, setTradieStatus, swapSlots, TradieError, updateTradie, type TradieStatus,
 } from "@/lib/tradies/service";
 import { isUuid } from "@/lib/uuid";
+import { getFileStore } from "@/lib/files/store";
+import { fileFromForm, saveInsuranceCertificate } from "@/lib/tradies/certificate";
 
 /**
  * WHAT THE DISPATCHER AND ADMIN CAN DO to jobs, tradies and owners. Every
@@ -288,6 +290,7 @@ export async function staffSaveTradie(_previous: FormState, formData: FormData):
       insuranceExpiresOn: /^\d{4}-\d{2}-\d{2}$/.test(insurance) ? insurance : null,
       insurer: text(formData, "insurer") || null,
       insurancePolicyNumber: text(formData, "insurancePolicyNumber") || null,
+      lbpNumber: text(formData, "lbpNumber") || null,
     }, staff.actor);
     if (!saved) return { message: "We could not find that tradie." };
   } catch (error) {
@@ -297,6 +300,20 @@ export async function staffSaveTradie(_previous: FormState, formData: FormData):
   await db.query("update public.tradies set notes = $2 where id = $1::uuid", [tradieId, text(formData, "notes").slice(0, 2000)]);
   revalidatePath(`/admin/tradies/${tradieId}`);
   return { done: "Saved." };
+}
+
+/** Staff add a tradie's public liability certificate for them, for example one they emailed in. */
+export async function staffUploadCertificate(_previous: FormState, formData: FormData): Promise<FormState> {
+  const staff = await requireStaff();
+  const tradieId = text(formData, "tradieId");
+  const db = await getDb();
+  if (!(await getTradie(db, tradieId))) return { message: "We could not find that tradie." };
+  const certificate = await fileFromForm(formData, "certificate");
+  if (!certificate) return { message: "Choose the certificate file first.", fieldErrors: { certificate: "Choose a PDF, JPG or PNG." } };
+  const saved = await saveInsuranceCertificate(db, getFileStore(), { tradieId }, { ...certificate, uploadedBy: staff.actor, actor: staff.actor });
+  if (!saved.ok) return { message: saved.reason, fieldErrors: { certificate: saved.reason } };
+  revalidatePath(`/admin/tradies/${tradieId}`);
+  return { done: "Certificate added. Open it and check the insurer, policy number and expiry match what is typed in." };
 }
 
 export async function staffSaveLicence(_previous: FormState, formData: FormData): Promise<FormState> {

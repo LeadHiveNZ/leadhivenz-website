@@ -103,6 +103,7 @@ export function leadDetailRows(lead: Lead): { label: string; value: string }[] {
   } else {
     rows.push({ label: "Trade", value: tradeLabel(lead) });
     rows.push({ label: "Licence number", value: lead.licenceNumber ?? "None given" });
+    if (lead.lbpNumber) rows.push({ label: "LBP number", value: lead.lbpNumber });
     rows.push({ label: "Days available", value: daysLabel(lead.daysAvailable) });
   }
 

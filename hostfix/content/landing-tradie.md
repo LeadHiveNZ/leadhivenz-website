@@ -23,7 +23,8 @@ We send you fixed-price maintenance jobs at holiday homes, straight to your phon
 ## Who we're looking for
 
 - Handymen, plumbers, electricians, gasfitters and appliance techs working in and around {{market}}
-- Licensed where the law requires it. We'll need your licence number and expiry date
+- Insured. You'll need public liability insurance, and to upload the certificate from your insurer (a PDF or a photo of it)
+- Licensed where the law requires it. We'll need your licence number and expiry date. An LBP number is welcome but not needed
 - Reliable. Owners are promised a response time, so we track who turns up on time
 
 ## Questions

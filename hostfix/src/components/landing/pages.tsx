@@ -10,6 +10,7 @@ import { buttonClass } from "@/components/forms/styles";
 import { FormHeader, LandingPage, type MenuPreview } from "@/components/LandingPage";
 import { Icon } from "@/components/ui/Icon";
 import { loadLanding, plainText, type LandingContent } from "@/lib/content";
+import { fileStoreReady } from "@/lib/files/store";
 import { publicMarketNow, type PublicMarket } from "@/lib/markets/public";
 import { formatMoney } from "@/lib/money";
 import { OwnerPhone, TradiePhone } from "./PhoneMock";
@@ -183,6 +184,18 @@ export function OwnerLanding({ data }: { data: PublicMarket }) {
   );
 }
 
+const tradeOptions = trades.map((trade) => ({ key: trade.key, label: trade.label }));
+
+/**
+ * The tradie form, worked out on each visit: whether the insurance
+ * certificate can be uploaded depends on file storage being set up on the
+ * running site, which the build cannot know.
+ */
+async function TradieFormSlot({ buttonLabel }: { buttonLabel: string }) {
+  await connection();
+  return <TradieLeadForm brandName={brand.name} buttonLabel={buttonLabel} trades={tradeOptions} certificateUploads={fileStoreReady()} />;
+}
+
 export function TradieLanding({ data }: { data: PublicMarket }) {
   const { market } = data;
   const live = market.stage === "live";
@@ -195,7 +208,11 @@ export function TradieLanding({ data }: { data: PublicMarket }) {
       eyebrow={`Tradies in ${market.name}`}
       formTitle="Get jobs by text"
       formNote="Takes about a minute. We'll be in touch to check your details."
-      form={<TradieLeadForm brandName={brand.name} buttonLabel={cta} trades={trades.map((trade) => ({ key: trade.key, label: trade.label }))} />}
+      form={
+        <Suspense fallback={<TradieLeadForm brandName={brand.name} buttonLabel={cta} trades={tradeOptions} />}>
+          <TradieFormSlot buttonLabel={cta} />
+        </Suspense>
+      }
       ctaLabel={cta}
       closingTitle="Fixed-price jobs, straight to your phone"
       closingNote="No quoting, no invoicing, no chasing. Leave your details and we'll be in touch."

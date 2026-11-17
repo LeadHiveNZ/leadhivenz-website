@@ -66,7 +66,12 @@ export function leadSummary(lead: Lead): string {
       .filter((part) => part !== "")
       .join(" · ");
   }
-  return [tradeLabel(lead), lead.licenceNumber ? `licence ${lead.licenceNumber}` : "no licence given", daysLabel(lead.daysAvailable)]
+  return [
+    tradeLabel(lead),
+    lead.licenceNumber ? `licence ${lead.licenceNumber}` : "no licence given",
+    lead.lbpNumber ? `LBP ${lead.lbpNumber}` : "",
+    daysLabel(lead.daysAvailable),
+  ]
     .filter((part) => part !== "")
     .join(" · ");
 }

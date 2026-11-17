@@ -38,6 +38,7 @@ function lead(overrides: Partial<Lead> = {}): Lead {
     intent: null,
     trade: null,
     licenceNumber: null,
+    lbpNumber: null,
     daysAvailable: null,
     source: "meta",
     utmSource: "facebook",

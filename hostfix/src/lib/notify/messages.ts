@@ -60,7 +60,7 @@ export const texts = {
     `${B}: your ${o.trade} licence on file runs out on ${o.date}. Update it to keep getting offers: ${o.link}`,
 
   insuranceExpiring: (o: { date: string; link: string }) =>
-    `${B}: your public liability insurance on file runs out on ${o.date}. Add your renewed policy to keep getting offers: ${o.link}`,
+    `${B}: your public liability insurance on file runs out on ${o.date}. Add your renewed policy and upload its certificate to keep getting offers: ${o.link}`,
 
   // ---- to owners --------------------------------------------------------
   guestReport: (o: { property: string; title: string; link: string }) =>

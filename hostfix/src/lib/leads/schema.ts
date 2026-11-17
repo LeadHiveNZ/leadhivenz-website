@@ -59,6 +59,12 @@ export const tradieLeadSchema = z.object({
     .max(60, "That licence number is too long. Please check it.")
     .optional()
     .transform((value) => (value === undefined || value === "" ? null : value)),
+  lbpNumber: z
+    .string()
+    .trim()
+    .max(40, "That LBP number is too long. Please check it.")
+    .optional()
+    .transform((value) => (value === undefined || value === "" ? null : value)),
   daysAvailable: z
     .array(z.enum(dayKeys, "Please tick the days you're available."), "Please tick the days you're available.")
     .min(1, "Please tick at least one day.")

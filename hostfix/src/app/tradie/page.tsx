@@ -52,15 +52,7 @@ export default async function TradieHome({ searchParams }: { searchParams: Searc
 
       {query.passed && <Notice tone="info" title="Passed. It has gone to the next tradie." />}
 
-      {tradie.status === "applied" && (
-        <Notice tone="warn" title="We are checking your details">
-          A person on our team looks at every tradie before they get offers. We will text you when you are approved. In the meantime, fill in your{" "}
-          <Link href="/tradie/profile" className="font-semibold underline underline-offset-2">
-            profile, licences and bank details
-          </Link>
-          .
-        </Notice>
-      )}
+      {/* A tradie waiting for approval never gets here: requireTradie sends them to their profile. */}
       {tradie.status === "paused" && (
         <Card className="border-wait/40 bg-wait-soft">
           <p className="font-bold text-ink">You are paused</p>

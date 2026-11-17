@@ -2,7 +2,7 @@
 
 import { createContext, useActionState, useContext, useEffect, useId, useRef, type ReactNode } from "react";
 import type { FormState } from "@/lib/forms";
-import { CheckboxGroup, FormMessage, SelectField, TextField } from "./Fields";
+import { CheckboxGroup, FileField, FormMessage, SelectField, TextField } from "./Fields";
 import { inputClass, labelClass } from "./styles";
 
 /**
@@ -55,6 +55,15 @@ export function Field(props: TextProps) {
   const state = useContext(FormContext);
   const id = useId();
   return <TextField id={id} {...props} defaultValue={saved(state, props.name) ?? props.defaultValue} error={state.fieldErrors?.[props.name]} />;
+}
+
+type FileProps = Omit<Parameters<typeof FileField>[0], "error">;
+
+/** A file to send with the form, showing its own error. A chosen file is not kept after sending: browsers do not allow it. */
+export function FileInput(props: FileProps) {
+  const state = useContext(FormContext);
+  const id = useId();
+  return <FileField id={id} {...props} error={state.fieldErrors?.[props.name]} />;
 }
 
 type SelectProps = Omit<Parameters<typeof SelectField>[0], "error">;

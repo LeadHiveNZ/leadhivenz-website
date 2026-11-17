@@ -11,7 +11,7 @@ import type { Db } from "@/lib/db/types";
  * uploaded a file can attach it.
  */
 
-export type UploadKind = "property" | "report" | "completion" | "quote" | "receipt" | "licence" | "insurance" | "dispute";
+export type UploadKind = "property" | "report" | "completion" | "quote" | "receipt" | "licence" | "insurance_certificate" | "dispute";
 
 export type Upload = {
   id: string;
@@ -23,19 +23,21 @@ export type Upload = {
   propertyId: string | null;
   jobId: string | null;
   tradieId: string | null;
+  /** A certificate sent with the public sign-up form, before the lead became a tradie. */
+  leadId: string | null;
   uploadedBy: string;
   attached: boolean;
 };
 
 type UploadRow = {
   id: string; created_at: Date; kind: UploadKind; storage_key: string; content_type: string; bytes: number;
-  property_id: string | null; job_id: string | null; tradie_id: string | null; uploaded_by: string; attached: boolean;
+  property_id: string | null; job_id: string | null; tradie_id: string | null; lead_id?: string | null; uploaded_by: string; attached: boolean;
 };
 
 function rowToUpload(row: UploadRow): Upload {
   return {
     id: row.id, createdAt: new Date(row.created_at), kind: row.kind, storageKey: row.storage_key, contentType: row.content_type,
-    bytes: row.bytes, propertyId: row.property_id, jobId: row.job_id, tradieId: row.tradie_id, uploadedBy: row.uploaded_by, attached: row.attached,
+    bytes: row.bytes, propertyId: row.property_id, jobId: row.job_id, tradieId: row.tradie_id, leadId: row.lead_id ?? null, uploadedBy: row.uploaded_by, attached: row.attached,
   };
 }
 
@@ -50,7 +52,10 @@ const TYPES: Record<string, { ext: string; magic: (bytes: Uint8Array) => boolean
 };
 
 /** Documents (a licence, an insurance certificate) may be a PDF. Everything else must be a photo. */
-const PDF_ALLOWED: UploadKind[] = ["licence", "insurance", "receipt"];
+const PDF_ALLOWED: UploadKind[] = ["licence", "insurance_certificate", "receipt"];
+
+/** The insurance certificate: a PDF, JPG or PNG, nothing else. */
+const CERTIFICATE_TYPES = ["application/pdf", "image/jpeg", "image/png"];
 
 /**
  * Checks a file is what it claims to be, by looking at its first bytes, not
@@ -58,6 +63,13 @@ const PDF_ALLOWED: UploadKind[] = ["licence", "insurance", "receipt"];
  */
 export function checkFile(kind: UploadKind, contentType: string, bytes: Uint8Array): { ok: true; ext: string } | { ok: false; reason: string } {
   const type = TYPES[contentType];
+  if (kind === "insurance_certificate") {
+    if (!type || !CERTIFICATE_TYPES.includes(contentType)) return { ok: false, reason: "Please send the certificate as a PDF, JPG or PNG file." };
+    if (bytes.byteLength === 0) return { ok: false, reason: "That file is empty." };
+    if (bytes.byteLength > MAX_UPLOAD_BYTES) return { ok: false, reason: "That file is too big. The limit is 4 MB." };
+    if (!type.magic(bytes)) return { ok: false, reason: "That file does not look like a real PDF, JPG or PNG. Try saving it again." };
+    return { ok: true, ext: type.ext };
+  }
   if (!type) return { ok: false, reason: "That kind of file cannot be used. Please send a photo (JPEG, PNG or WebP)." };
   if (contentType === "application/pdf" && !PDF_ALLOWED.includes(kind)) return { ok: false, reason: "Please send a photo, not a PDF." };
   if (bytes.byteLength === 0) return { ok: false, reason: "That file is empty." };
@@ -145,6 +157,8 @@ export async function purgeUnattached(db: Db): Promise<string[]> {
  *  - an owner: files on their own properties and jobs
  *  - a tradie: files on a job they have accepted, their own documents, and the owner's
  *    property photos while they have a job under way there
+ *  - an insurance certificate: only staff and the tradie it belongs to. Not an owner,
+ *    not another tradie, not by any job link.
  *  - whoever uploaded it, until it is attached (so they can see their own thumbnail)
  */
 export async function canView(
@@ -153,6 +167,7 @@ export async function canView(
   viewer: { ownerId?: string | null; tradieId?: string | null; staff?: boolean; uploader?: string | null },
 ): Promise<boolean> {
   if (viewer.staff) return true;
+  if (upload.kind === "insurance_certificate") return Boolean(viewer.tradieId && upload.tradieId === viewer.tradieId);
   if (viewer.uploader && viewer.uploader === upload.uploadedBy) return true;
   if (viewer.ownerId) {
     if (upload.jobId) {

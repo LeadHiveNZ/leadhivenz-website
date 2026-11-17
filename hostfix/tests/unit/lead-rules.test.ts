@@ -122,6 +122,13 @@ describe("tradie form rules", () => {
     expect(missing).toMatchObject({ lead: { licenceNumber: null } });
   });
 
+  it("takes an LBP number when given, and treats it as optional", () => {
+    expect(buildLead("tradie", form({ ...goodTradie, lbpNumber: " BP123456 " }), market)).toMatchObject({ lead: { lbpNumber: "BP123456" } });
+    expect(buildLead("tradie", form({ ...goodTradie, lbpNumber: "" }), market)).toMatchObject({ lead: { lbpNumber: null } });
+    expect(buildLead("tradie", form(goodTradie), market)).toMatchObject({ lead: { lbpNumber: null } });
+    expect(buildLead("tradie", form({ ...goodTradie, lbpNumber: "x".repeat(41) }), market)).toEqual({ fieldErrors: { lbpNumber: "That LBP number is too long. Please check it." } });
+  });
+
   it("explains each missing field in plain words", () => {
     const result = buildLead("tradie", form({ daysAvailable: [] }), market);
     expect(result).toEqual({

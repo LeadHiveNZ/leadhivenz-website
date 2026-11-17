@@ -219,6 +219,12 @@ export async function assignTradie(db: Db, jobId: string, tradieId: string, acto
   if (!job) return { result: "unknown", job: null };
   if (job.status !== "offering" && job.status !== "unfilled") return { result: job.tradieId ? "taken" : "gone", job };
   const at = now();
+  // Checked before anything is written, so a tradie who may not take it (waiting for approval,
+  // paused, removed, uninsured, unlicensed) is left with no offer row at all. acceptOffer checks again.
+  const { market } = await loadContext(db, job);
+  if (!(await canStillTake(db, tradieId, { market: job.market, trade: job.trade, licenceRequired: job.licenceRequired, today: marketToday(market, at).today }))) {
+    return { result: "not_eligible", job };
+  }
   const existing = await db.query<OfferRow>(
     "select * from public.offers where job_id = $1::uuid and tradie_id = $2::uuid and status in ('pending', 'expired') order by sent_at desc limit 1",
     [jobId, tradieId],

@@ -5,9 +5,10 @@ import { approveGuestReport, cancelJob, createJob } from "@/lib/jobs/create";
 import { getJobForStaff } from "@/lib/jobs/store";
 import { listExceptions, raiseException } from "@/lib/ops/exceptions";
 import { runTick } from "@/lib/dispatch/tick";
-import { getTradie, setTradieStatus, updateTradie } from "@/lib/tradies/service";
+import { listInsuranceCertificates } from "@/lib/tradies/certificate";
+import { canStillTake, eligibleTradies, getTradie, insuranceProblem, setTradiePaused, setTradieStatus, updateTradie } from "@/lib/tradies/service";
 import { testDb } from "./db";
-import { auditActions, liveMarket, logJob, makeOwner, makeProperty, makeTradie, menuItem, MONDAY_10AM, MONDAY_9PM, offersFor, openExceptions, textsTo } from "./factory";
+import { auditActions, certificate, liveMarket, logJob, makeOwner, makeProperty, makeTradie, menuItem, MONDAY_10AM, MONDAY_9PM, offersFor, openExceptions, textsTo } from "./factory";
 
 const t = testDb();
 
@@ -440,6 +441,110 @@ describe("public liability insurance (DECISIONS.md, 2026-11-17)", () => {
     const tradie = await makeTradie(t.db);
     await t.db.query("update public.tradies set insurance_expires_on = '2026-12-17' where id = $1::uuid", [tradie.tradieId]);
     expect((await runTick(t.db, { gatewayFor: () => null, log: { error: () => {} } })).insurance_warned).toBe(0);
+  });
+});
+
+describe("the insurance certificate (DECISIONS.md, 2026-11-17: uploaded, not just typed)", () => {
+  it("is needed before approval, even with the insurer, policy number and expiry all filled in", async () => {
+    await liveMarket(t.db);
+    const waiting = await makeTradie(t.db, { approved: false, certificate: false });
+    const tradie = (await getTradie(t.db, waiting.tradieId))!;
+    expect(tradie.insurer).toBe("Test Insurance Ltd");
+    expect(tradie.insuranceCertificateId).toBeNull();
+    expect(insuranceProblem(tradie, "2026-11-16")).toContain("certificate is not uploaded");
+    await expect(setTradieStatus(t.db, waiting.tradieId, "approved", "staff:test")).rejects.toThrow("Their public liability certificate is not uploaded");
+    expect((await getTradie(t.db, waiting.tradieId))!.status).toBe("applied");
+
+    const first = await certificate(t.db, waiting.tradieId);
+    expect((await setTradieStatus(t.db, waiting.tradieId, "approved", "staff:test"))!.status).toBe("approved");
+    expect(await auditActions(t.db, waiting.tradieId)).toContain("tradie.insurance_certificate_uploaded");
+
+    // A renewal: the newest is the current one, the older one stays on file.
+    setTestNow(addMinutes(MONDAY_10AM, 5));
+    const renewed = await certificate(t.db, waiting.tradieId);
+    expect((await getTradie(t.db, waiting.tradieId))!.insuranceCertificateId).toBe(renewed);
+    expect((await listInsuranceCertificates(t.db, waiting.tradieId)).map((upload) => upload.id)).toEqual([renewed, first]);
+  });
+
+  it("is checked when offering and when accepting: an approved tradie with no certificate gets nothing", async () => {
+    const { property } = await member();
+    const uncertified = await makeTradie(t.db, { slot: 1 });
+    const certified = await makeTradie(t.db, { slot: 2 });
+    await t.db.query("delete from public.uploads where tradie_id = $1::uuid and kind = 'insurance_certificate'", [uncertified.tradieId]);
+    const job = await logJob(t.db, property, { code: "PL-01" });
+    expect((await offersFor(t.db, job.id)).map((o) => o.tradie_id)).toEqual([certified.tradieId]);
+    expect((await t.db.tx((tx) => assignTradie(tx, job.id, uncertified.tradieId, "staff:test"))).result).toBe("not_eligible");
+  });
+
+  it("does not change the 30-day insurance warning, which goes by the expiry date", async () => {
+    await liveMarket(t.db);
+    const tradie = await makeTradie(t.db);
+    await t.db.query("update public.tradies set insurance_expires_on = '2026-12-01' where id = $1::uuid", [tradie.tradieId]);
+    expect((await runTick(t.db, { gatewayFor: () => null, log: { error: () => {} } })).insurance_warned).toBe(1);
+  });
+});
+
+describe("the LBP number (optional)", () => {
+  it("is saved with an audit entry, and nothing depends on it", async () => {
+    const { property } = await member();
+    const tradie = await makeTradie(t.db, { slot: 1 });
+    expect((await getTradie(t.db, tradie.tradieId))!.lbpNumber).toBeNull();
+    const saved = await updateTradie(t.db, tradie.tradieId, { lbpNumber: "  BP123456  " }, `tradie:${tradie.tradieId}`);
+    expect(saved!.lbpNumber).toBe("BP123456");
+    expect(await auditActions(t.db, tradie.tradieId)).toContain("tradie.lbp_saved");
+    // Saving the same number again writes no second "LBP saved".
+    await updateTradie(t.db, tradie.tradieId, { lbpNumber: "BP123456" }, `tradie:${tradie.tradieId}`);
+    expect((await auditActions(t.db, tradie.tradieId)).filter((action) => action === "tradie.lbp_saved")).toHaveLength(1);
+    // Offered the same with or without it.
+    await updateTradie(t.db, tradie.tradieId, { lbpNumber: null }, "staff:test");
+    const job = await logJob(t.db, property, { code: "PL-01" });
+    expect((await offersFor(t.db, job.id)).map((o) => o.tradie_id)).toEqual([tradie.tradieId]);
+  });
+});
+
+describe("only staff approve (DECISIONS.md, 2026-11-17)", () => {
+  const criteria = { market: "queenstown", trade: "plumber", licenceRequired: true, afterHours: false, urgent: false, today: "2026-11-16", weekday: "mon" };
+  const job = { market: "queenstown", trade: "plumber", licenceRequired: true, today: "2026-11-16" };
+
+  it("never offers a job to a tradie waiting for approval, however perfect their insurance and licences", async () => {
+    const { property } = await member();
+    const waiting = await makeTradie(t.db, { approved: false });
+    const ready = (await getTradie(t.db, waiting.tradieId))!;
+    // Everything is in order except the approval itself.
+    expect(ready.status).toBe("applied");
+    expect(insuranceProblem(ready, "2026-11-16")).toBeNull();
+    expect(ready.payoutsEnabled).toBe(true);
+
+    expect(await eligibleTradies(t.db, criteria)).toEqual([]);
+    expect(await canStillTake(t.db, waiting.tradieId, job)).toBe(false);
+    const logged = await logJob(t.db, property, { code: "PL-01" });
+    expect(await offersFor(t.db, logged.id)).toEqual([]);
+    expect((await t.db.tx((tx) => assignTradie(tx, logged.id, waiting.tradieId, "staff:test"))).result).toBe("not_eligible");
+    // Walking the cascade on through every stage never reaches them either.
+    for (let stage = 0; stage < 3; stage += 1) await t.db.tx((tx) => advanceCascade(tx, logged.id));
+    expect((await offersFor(t.db, logged.id)).map((o) => o.tradie_id)).not.toContain(waiting.tradieId);
+    expect((await t.db.query("select 1 from public.offers where tradie_id = $1::uuid", [waiting.tradieId])).length).toBe(0);
+  });
+
+  it("gives a tradie no way to approve themselves: their only switch is pause and back, once approved", async () => {
+    await liveMarket(t.db);
+    const waiting = await makeTradie(t.db, { approved: false });
+    expect((await setTradiePaused(t.db, waiting.tradieId, false))!.status).toBe("applied");
+    expect((await setTradiePaused(t.db, waiting.tradieId, true))!.status).toBe("applied");
+    const removed = await makeTradie(t.db);
+    await setTradieStatus(t.db, removed.tradieId, "removed", "staff:test");
+    expect((await setTradiePaused(t.db, removed.tradieId, false))!.status).toBe("removed");
+  });
+
+  it("leaves paused and removed tradies out at offer and at accept", async () => {
+    await liveMarket(t.db);
+    const paused = await makeTradie(t.db);
+    const removed = await makeTradie(t.db);
+    await setTradieStatus(t.db, paused.tradieId, "paused", "staff:test");
+    await setTradieStatus(t.db, removed.tradieId, "removed", "staff:test");
+    expect(await eligibleTradies(t.db, criteria)).toEqual([]);
+    expect(await canStillTake(t.db, paused.tradieId, job)).toBe(false);
+    expect(await canStillTake(t.db, removed.tradieId, job)).toBe(false);
   });
 });
 

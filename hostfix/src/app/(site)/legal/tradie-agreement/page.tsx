@@ -33,19 +33,30 @@ export default function Page() {
       <Section n={2} title="What you need before your first job">
         <ul>
           <li>
-            <strong>Public liability insurance</strong> in your own name, with the insurer, policy number and expiry date entered in your profile.
-            We do not offer jobs to anyone without current insurance, and the app stops offering you jobs the day it expires.
+            <strong>Public liability insurance</strong> in your own name, with the insurer, policy number and expiry date entered in your profile,
+            and the certificate of currency from your insurer uploaded there (a PDF, JPG or PNG). Only our team and you can open the certificate.
+            When you renew, upload the new one: we keep the earlier ones as a record. We do not approve anyone, or offer them jobs, without
+            current insurance and its certificate on file, and the app stops offering you jobs the day it expires.
           </li>
           <li>
             <strong>Current licences</strong> for any plumbing, gas or electrical work, with the number and expiry in your profile. Licensed work
             is only ever offered to someone whose licence is on file and in date. We check each one against the public register.
           </li>
           <li>
-            <strong>Police vetting</strong>, arranged by us, because you will be entering homes that may have guests in them. You agree to it as
-            part of joining.
+            <strong>Your criminal record</strong>, because you will be entering homes that may have guests in them. You request your own copy
+            from the Ministry of Justice (it is free, and usually takes about a week) and send it to us before your first job. We treat it as
+            confidential and keep only a note that we have seen it.
           </li>
           <li><strong>Bank details with Stripe</strong>, set up from your profile, so we can pay you.</li>
+          <li>
+            <strong>A Licensed Building Practitioner (LBP) number</strong> is optional. Add it to your profile if you have one: some building work
+            needs it, most jobs do not.
+          </li>
         </ul>
+        <p>
+          You can sign in to your own account as soon as you have applied, to fill these in. Only our team can approve you, and nothing is
+          offered to you until we do. We text you when you are approved.
+        </p>
         <p>Tell us within 7 days if any of these change or lapse.</p>
       </Section>
 

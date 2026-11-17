@@ -9,6 +9,8 @@ import { getDb } from "@/lib/db";
 import type { Db } from "@/lib/db/types";
 import { acceptOffer, passOffer } from "@/lib/dispatch/cascade";
 import { baseUrl } from "@/lib/env";
+import { getFileStore } from "@/lib/files/store";
+import { checkFile } from "@/lib/files/uploads";
 import { dollarsToCents, list, problem, text, ticked, type FormState } from "@/lib/forms";
 import { isUuid } from "@/lib/ids";
 import { getJobForTradie, getOffer } from "@/lib/jobs/store";
@@ -16,6 +18,7 @@ import type { Job, Offer } from "@/lib/jobs/types";
 import { completeJob, markArrived, markEnRoute, reportNoAccess, submitQuote } from "@/lib/jobs/work";
 import { getMarket } from "@/lib/markets/store";
 import { paymentsFor } from "@/lib/payments";
+import { fileFromForm, saveInsuranceCertificate } from "@/lib/tradies/certificate";
 import { getTradie, saveLicence, savePayoutAccount, setTradiePaused, TradieError, updateTradie } from "@/lib/tradies/service";
 
 /**
@@ -159,11 +162,17 @@ export async function noAccess(_previous: FormState, formData: FormData): Promis
 // ---------------------------------------------------------------------------
 
 export async function saveTradieProfile(_previous: FormState, formData: FormData): Promise<FormState> {
-  const viewer = await requireTradie("/tradie/profile");
+  const viewer = await requireTradie("/tradie/profile", { whileWaiting: true });
   const insurance = text(formData, "insuranceExpiresOn");
   if (insurance !== "" && !/^\d{4}-\d{2}-\d{2}$/.test(insurance)) return problem(formData, "Please check the insurance date.", { insuranceExpiresOn: "Choose a date." });
+  const certificate = await fileFromForm(formData, "certificate");
+  if (certificate) {
+    const checked = checkFile("insurance_certificate", certificate.contentType, certificate.bytes);
+    if (!checked.ok) return problem(formData, "Nothing was saved. Please check the certificate.", { certificate: checked.reason });
+  }
+  const db = await getDb();
   try {
-    await updateTradie(await getDb(), viewer.tradieId, {
+    await updateTradie(db, viewer.tradieId, {
       businessName: text(formData, "businessName"),
       trades: list(formData, "trades"),
       daysAvailable: list(formData, "daysAvailable"),
@@ -173,17 +182,25 @@ export async function saveTradieProfile(_previous: FormState, formData: FormData
       insuranceExpiresOn: insurance || null,
       insurer: text(formData, "insurer") || null,
       insurancePolicyNumber: text(formData, "insurancePolicyNumber") || null,
+      lbpNumber: text(formData, "lbpNumber") || null,
     }, `tradie:${viewer.tradieId}`);
   } catch (error) {
     if (error instanceof TradieError) return problem(formData, error.message);
     throw error;
   }
   revalidatePath("/tradie/profile");
+  if (certificate) {
+    const saved = await saveInsuranceCertificate(db, getFileStore(), { tradieId: viewer.tradieId }, {
+      ...certificate, uploadedBy: `tradie:${viewer.tradieId}`, actor: `tradie:${viewer.tradieId}`,
+    });
+    if (!saved.ok) return { message: `Your details were saved, but the certificate was not. ${saved.reason}`, fieldErrors: { certificate: saved.reason } };
+    return { done: "Saved, with your certificate." };
+  }
   return { done: "Saved." };
 }
 
 export async function saveTradieLicence(_previous: FormState, formData: FormData): Promise<FormState> {
-  const viewer = await requireTradie("/tradie/profile");
+  const viewer = await requireTradie("/tradie/profile", { whileWaiting: true });
   const db = await getDb();
   const tradie = await getTradie(db, viewer.tradieId);
   const trade = text(formData, "trade");
@@ -208,7 +225,7 @@ export async function setPaused(_previous: FormState, formData: FormData): Promi
 
 /** Sends the tradie to the payment company's page to enter their bank details. */
 export async function setUpPayouts(_previous: FormState, _formData: FormData): Promise<FormState> {
-  const viewer = await requireTradie("/tradie/profile");
+  const viewer = await requireTradie("/tradie/profile", { whileWaiting: true });
   const db = await getDb();
   const tradie = await getTradie(db, viewer.tradieId);
   const market = tradie ? await getMarket(db, tradie.market) : null;

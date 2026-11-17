@@ -186,6 +186,12 @@ test.describe("tradie landing page on a phone", () => {
     await page.getByLabel("Mobile number").fill(phone);
     await page.getByLabel("Your trade").selectOption("plumber");
     await page.getByLabel("Licence number").fill("PGDB 12345");
+    await page.getByLabel(/LBP number/).fill("BP445566");
+    // The public liability certificate goes with the form (DECISIONS.md, 2026-11-17).
+    await expect(page.getByText(/The certificate of currency from your insurer/)).toBeVisible();
+    await page.getByLabel("Public liability insurance certificate").setInputFiles({
+      name: "certificate.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF-1.4\n% a certificate of currency\n"),
+    });
     await page.getByText("Mon", { exact: true }).click();
     await page.getByText("Sat", { exact: true }).click();
     await waitLikeAPerson(page);
@@ -201,6 +207,7 @@ test.describe("tradie landing page on a phone", () => {
     await expect(card).toContainText("Tradie");
     await expect(card).toContainText("Plumber");
     await expect(card).toContainText("licence PGDB 12345");
+    await expect(card).toContainText("LBP BP445566");
     await expect(card).toContainText("Mon, Sat");
     await expect(card).toContainText("Flyer");
     await expect(page.locator("li[data-lead-id]").filter({ hasText: "Owner" })).toHaveCount(0);

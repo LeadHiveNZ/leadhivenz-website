@@ -26,6 +26,8 @@ export type Lead = {
 
   trade: string | null;
   licenceNumber: string | null;
+  /** Licensed Building Practitioner number, optional. Null when not given. */
+  lbpNumber: string | null;
   daysAvailable: string[] | null;
 
   source: string;
@@ -82,7 +84,7 @@ export type NewLead = Pick<
   | "refCode"
   | "referrer"
   | "landingPath"
->;
+> & { lbpNumber?: string | null };
 
 export type NotificationChannel = "sms" | "email";
 export type NotificationStatus = "queued" | "sent" | "failed" | "skipped" | "demo";
