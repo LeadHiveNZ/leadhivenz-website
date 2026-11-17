@@ -1,5 +1,5 @@
 {
- "total": 30.52,
+ "total": 30.585,
  "segments": [
   {
    "src_in": 0.58,
@@ -33,15 +33,15 @@
   },
   {
    "src_in": 33.56,
-   "src_out": 35.68,
+   "src_out": 35.745,
    "out_in": 23.77,
-   "out_out": 25.89
+   "out_out": 25.955
   },
   {
    "src_in": 38.44,
    "src_out": 43.1,
-   "out_in": 25.86,
-   "out_out": 30.52
+   "out_in": 25.925,
+   "out_out": 30.585
   }
  ],
  "sfx": [
