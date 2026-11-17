@@ -51,6 +51,11 @@ for i, w in enumerate(raw):
         txt = "app"
     st = max(st, segs[seg]["src_in"] + 0.03)
     words.append(dict(text=txt, start=to_out(min(st, segs[seg]["src_out"] - 0.05)), seg=seg))
+# the founding-properties line now ends on "properties" (the "in Queenstown at half price" tail is cut)
+words = [w for w in words if not (w["seg"] == 5 and w["text"].lower().startswith(("in", "queenstown")))]
+for w in words:
+    if w["seg"] == 5 and w["text"].lower().startswith("properties"):
+        w["text"] = "properties."
 for k in range(1, len(words)):
     if words[k]["start"] < words[k - 1]["start"] + 0.07:
         words[k]["start"] = round(words[k - 1]["start"] + 0.07, 3)
@@ -59,7 +64,7 @@ def word_t(text, seg, nth=0):
     return hits[nth]
 
 # ------------------------------------------------------------------ captions (2-3 words, key word gold)
-KEY = set("""queenstown airbnb app maintenance leaking shower power outage blocked drain price call-out fee 15 minutes cleaner qr code text step upload sorted 25 founding half link form video call""".split())
+KEY = set("""airbnb app maintenance leaking shower power outage blocked drain price call-out fee 15 minutes cleaner qr code text step upload sorted 25 founding free link form video call""".split())
 groups = []
 phrase = []                      # split at sentence/clause ends and segment changes, then chunk in threes
 for k, w in enumerate(words):
@@ -110,7 +115,7 @@ for i, sg in enumerate(segs):
     js.append(f'tl.set("#cam", {{ scale: {1.0 if i % 2 == 0 else 1.075} }}, {T(sg["out_in"])});')
 js.append(f'tl.set("#cam", {{ scale: 1.075 }}, {T(word_t("i've", 0))});')            # beats inside the longer takes
 js.append(f'tl.set("#cam", {{ scale: 1.0 }}, {T(word_t("your", 3))});')
-js.append(f'tl.set("#cam", {{ scale: 1.075 }}, {T(word_t("fill", 7))});')
+js.append(f'tl.set("#cam", {{ scale: 1.075 }}, {T(word_t("fill", 6))});')
 
 over = []   # overlay html
 def show(sel, t_in, t_out, frm="{ opacity: 0, y: 24, scale: 0.92 }", dur=0.28, ease="back.out(1.8)", out="{ opacity: 0, y: -14, duration: 0.18, ease: \"power2.in\" }"):
@@ -143,10 +148,10 @@ def ts(text, seg, nth=0):
 
 # ------------------------------------------------------------------ 1. hook (seg 0)
 s0 = segs[0]
-over.append(f'<div class="top" id="hook"><div class="pill lime" id="h1"><i>{ICON["pin"]}</i>QUEENSTOWN</div>'
-            f'<div class="pill plum" id="h2"><i class="lm">{ICON["home"]}</i>Airbnb owners</div></div>')
-show("#h1", ts("queenstown", 0) - 0.04, s0["out_out"])
-show("#h2", ts("airbnb", 0) - 0.04, s0["out_out"])
+over.append(f'<div class="top" id="hook"><div class="pill lime" id="h1"><i>{ICON["home"]}</i>AIRBNB OWNERS</div>'
+            f'<div class="pill plum" id="h2"><i class="lm">{ICON["bolt"]}</i>Built for you</div></div>')
+show("#h1", ts("airbnb", 0) - 0.04, s0["out_out"])
+show("#h2", ts("built", 0) - 0.04, s0["out_out"])
 
 # ------------------------------------------------------------------ phone B-roll helper (app screenshots)
 PH = []
@@ -204,28 +209,25 @@ js.append(f'tl.fromTo("#sring", {{ opacity: 0.9, scale: 0.8 }}, {{ opacity: 0, s
 js.append(f'tl.to("#srt", {{ opacity: 0, scale: 1.1, duration: 0.16 }}, {T(s4["out_out"] + 0.05)});')
 js.append(f'tl.set("#srt", {{ visibility: "hidden" }}, {T(s4["out_out"] + 0.22)});')
 
-# ------------------------------------------------------------------ 6. 25 founding properties, Queenstown, half price (segs 5-6)
-s5, s6 = segs[5], segs[6]
+# ------------------------------------------------------------------ 6. 25 founding properties, free subscription (seg 5)
+s5 = segs[5]
 over.append(f'<div class="top" id="fnd"><div class="ftile" id="f1"><div class="fnum" id="n25">0</div><div class="flab">FOUNDING<br>PROPERTIES</div></div>'
-            f'<div class="pill plum" id="f2"><i class="lm">{ICON["pin"]}</i>Queenstown only</div></div>'
-            f'<div class="half" id="half">HALF<br>PRICE</div>')
-show("#f1", ts("25", 5) - 0.1, s6["out_out"] + 0.1, frm="{ opacity: 0, y: 30, scale: 0.6 }", ease="back.out(2.2)")
+            f'<div class="pill plum big" id="f2"><i class="lm">{ICON["check"]}</i>Free subscription</div></div>')
+F_OUT = ts("fill", 6) - 0.15                  # hold the offer into the CTA until the steps card arrives
+show("#f1", ts("25", 5) - 0.1, F_OUT, frm="{ opacity: 0, y: 30, scale: 0.6 }", ease="back.out(2.2)")
 js.append(f'tl.to("#n25", {{ duration: 0.5, ease: "power2.out", onUpdate: countUp, onUpdateParams: ["#n25", 25] }}, {T(ts("25", 5) - 0.05)});')
-show("#f2", ts("queenstown", 5) - 0.05, s6["out_out"] + 0.1)
-js.append(f'tl.fromTo("#half", {{ opacity: 0, scale: 2.6, rotation: -24 }}, {{ opacity: 1, scale: 1, rotation: -10, duration: 0.2, ease: "power4.in" }}, {T(ts("half", 6) - 0.06)});')
-js.append(f'tl.to("#half", {{ opacity: 0, duration: 0.15 }}, {T(s6["out_out"] + 0.05)});')
-js.append(f'tl.set("#half", {{ visibility: "hidden" }}, {T(s6["out_out"] + 0.2)});')
+show("#f2", ts("founding", 5) - 0.05, F_OUT, frm="{ opacity: 0, y: 30, scale: 0.5 }", ease="back.out(2.6)")
 
-# ------------------------------------------------------------------ 7. CTA (seg 7)
-s7 = segs[7]
+# ------------------------------------------------------------------ 7. CTA (seg 6)
+s7 = segs[6]
 over.append(f'<div class="cta" id="cta"><i>{ICON["down"]}</i>LINK BELOW</div>')
-show("#cta", ts("click", 7) - 0.05, TOTAL + 0.2)
-js.append(f'tl.to("#cta i", {{ y: 10, duration: 0.3, repeat: 5, yoyo: true, ease: "sine.inOut" }}, {T(ts("click", 7) + 0.25)});')
+show("#cta", ts("click", 6) - 0.05, TOTAL + 0.2)
+js.append(f'tl.to("#cta i", {{ y: 10, duration: 0.3, repeat: 5, yoyo: true, ease: "sine.inOut" }}, {T(ts("click", 6) + 0.25)});')
 steps = [("1", "Fill out the form", "form"), ("2", "Watch how it works", "watch"), ("3", "I'll give you a call", "i'll")]
 rows = "".join(f'<div class="srow" id="st{k}"><b>{n}</b><span>{esc(t)}</span><i class="stick" id="sk{k}">{ICON["check"]}</i></div>' for k, (n, t, w) in enumerate(steps))
 over.append(f'<div class="top" id="steps"><div class="scard">{rows}</div></div>')
 for k, (n, t, w) in enumerate(steps):
-    tw = ts(w, 7)
+    tw = ts(w, 6)
     show(f"#st{k}", tw - 0.12, TOTAL + 0.2, frm="{ opacity: 0, x: -40, y: 0, scale: 1 }", ease="power3.out")
     js.append(f'tl.fromTo("#sk{k}", {{ opacity: 0, scale: 0.3 }}, {{ opacity: 1, scale: 1, duration: 0.2, ease: "back.out(3)" }}, {T(tw + 0.2)});')
 
