@@ -775,6 +775,62 @@ a.row:hover, button.row:hover { background: var(--surface-hover); }
 .wb-wrap { max-height: max(240px, calc(100vh - 300px)); overflow: auto; }
 .wb-table tr:first-child th { position: sticky; top: 0; z-index: 1; box-shadow: 0 1px 0 var(--border-secondary); }
 
+/* Task due dates (inline) */
+.t-date-wrap { display: inline-flex; }
+.input.t-date { width: 136px; min-height: 24px; height: 24px; padding: 0 6px; font-size: 12px; line-height: 16px; }
+.task.done .input.t-date { color: var(--text-secondary); }
+.t-link { display: inline-flex; align-items: center; gap: 4px; color: var(--text-secondary); }
+.t-link .icon { width: 14px; height: 14px; }
+@media (max-width: 767px) { .input.t-date { height: 32px; min-height: 32px; font-size: 16px; width: 150px; } }
+/* Quick Feaso (Dan's sheet layout) */
+.feaso-table td { vertical-align: middle; }
+.feaso-table .f-head td { background: var(--surface-secondary); font-weight: var(--fw-semibold); font-size: 12px; color: var(--text-secondary); text-transform: none; padding-top: 6px; padding-bottom: 6px; }
+.feaso-table .f-total td { font-weight: var(--fw-semibold); }
+.feaso-table .f-total td.m-title { color: var(--text); }
+.f-cell { display: inline-flex; align-items: center; gap: 4px; justify-content: flex-end; }
+.input.f-in { width: 112px; min-height: 28px; height: 28px; padding: 2px 8px; text-align: right; font-variant-numeric: tabular-nums; }
+.input.f-in.f-wide { width: 136px; }
+.input.f-sel { width: 140px; text-align: left; }
+.f-unit { color: var(--text-secondary); font-size: var(--fs-sm); }
+.f-top { gap: 8px 24px; }
+@media (max-width: 767px) {
+  .input.f-in { height: 36px; min-height: 36px; width: 128px; }
+  .stack .feaso-table tbody tr.f-head { padding-top: 8px; padding-bottom: 8px; background: var(--surface-secondary); }
+  .stack .feaso-table td.f-b:empty, .stack .feaso-table td.f-c:empty, .stack .feaso-table td.f-e:empty { display: none; }
+  .stack .feaso-table td.f-b, .stack .feaso-table td.f-c { order: 4; margin-top: 6px; }
+}
+/* Offers and the letter (laid out like Dan's Word template, Calibri where installed) */
+.kv-offer { grid-template-columns: 150px minmax(0, 1fr); gap: 8px 16px; }
+.kv-offer dt { font-size: var(--fs-body); line-height: var(--lh-body); }
+.kv-offer dd { margin: 0; }
+@media (max-width: 600px) { .kv-offer { grid-template-columns: minmax(0, 1fr); gap: 2px; } .kv-offer dd { margin-bottom: 8px; } }
+.cond-list { margin: 0; padding-left: 20px; }
+.cond-list li + li { margin-top: 4px; }
+.cond-row { display: grid; grid-template-columns: 24px minmax(0, 1fr) auto; gap: 8px; align-items: start; }
+.cond-row .cond-n { padding-top: 7px; color: var(--text-secondary); text-align: right; }
+.cond-row textarea.input { min-height: 56px; }
+.cond-btns { display: flex; flex-direction: column; gap: 4px; }
+.term-pick { margin-bottom: 6px; }
+.letter-wrap { background: var(--surface-tertiary); border-radius: var(--r-control); padding: 16px; }
+.letter { --letter-ink: #2F3316; --letter-accent: #636B2F; --letter-grey: #8A8A8A; background: #FFFFFF; color: var(--letter-ink); font-family: Calibri, Carlito, 'Segoe UI', var(--font); font-size: 14px; line-height: 1.45; padding: 28px 32px 20px; box-shadow: var(--shadow-100), 0 0 0 1px var(--border); max-width: 640px; margin: 0 auto; }
+.letter p { margin: 0; }
+.letter-logo { display: block; width: 168px; height: auto; margin: 0 auto 8px; }
+.letter-date { color: var(--letter-grey); margin: 12px 0 18px !important; }
+.letter-brand { color: var(--letter-accent); font-weight: 700; font-size: 10px; letter-spacing: 0.08em; }
+.letter-title { font-size: 26px; line-height: 1.2; font-weight: 700; margin: 2px 0 10px; color: var(--letter-ink); }
+.letter-title span { color: var(--letter-accent); }
+.letter-table { width: 100%; border-collapse: collapse; }
+.letter-table th { width: 23%; text-align: left; vertical-align: top; font-weight: 700; padding: 4px 12px 4px 0; }
+.letter-table td { vertical-align: top; padding: 4px 0; }
+.letter-table td p + p { margin-top: 2px; }
+.letter-sign { margin-top: 26px; }
+.letter-foot { margin-top: 26px !important; text-align: center; color: var(--letter-grey); font-size: 11px; }
+@media (max-width: 600px) { .letter { padding: 20px 16px; font-size: 13px; } .letter-table th { width: 34%; } .letter-wrap { padding: 8px; } }
+/* Manage categories: role rename / delete */
+.role-row .input.role-name { min-height: 28px; height: 28px; padding: 2px 8px; }
+.role-row.role-del { align-items: flex-start; background: var(--critical-surface); border-radius: var(--r-control); padding: 8px; }
+.list-edit .body { flex: 1; }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; scroll-behavior: auto !important; }
 }
@@ -1510,7 +1566,7 @@ function partyKey(c) { if (!c) return 'Party'; return String(c.company || c.name
 function docName(p, doc) { const ext = (doc.ext || 'pdf'); return `${p.id}_${doc.type}_${doc.party}_${doc.date}.${ext}`; }
 function fileExt(name) { const m = String(name || '').match(/\.([A-Za-z0-9]{1,8})$/); return m ? m[1].toLowerCase() : 'pdf'; }
 // Deals have no project ID yet, so their files use the suburb, e.g. WOOLLAMIA_Contract_Agent_2026-09-02.pdf
-function dealSlug(dl) { const rest = (dl.address.split(',')[1] || dl.address).replace(/\s+(NSW|QLD|VIC)$/, '').trim(); return rest.toUpperCase().replace(/[^A-Z0-9]/g, '') || 'DEAL'; }
+function dealSlug(dl) { const sub = dl.suburb || (dl.address.split(',')[1] || dl.address).replace(/\s+(NSW|QLD|VIC|SA|WA|TAS|ACT|NT)(\s+\d{4})?$/, ''); return String(sub).trim().toUpperCase().replace(/[^A-Z0-9]/g, '') || 'DEAL'; }
 function dealDocName(dl, doc) { return `${dealSlug(dl)}_${doc.type}_${doc.party}_${doc.date}.${doc.ext || 'pdf'}`; }
 
 /* ===== Icons ===== */
@@ -2355,7 +2411,7 @@ function viewContacts() {
     const projs = contactProjects(c.id); const ex = expiryChip(c); const cats = contactCategories(c);
     return `<tr class="contact clickable" data-action="contact-detail" data-id="${c.id}">
       <td class="m-title"><button type="button" class="row-link" data-action="contact-detail" data-id="${c.id}" aria-label="${h(c.company)}, ${h(roleText(c))}">${h(c.company)}</button></td>
-      <td class="m-sub">${h(c.name)}<span class="m-only"> · ${h(roleText(c))}</span><div class="sub d-only">${[c.mobile ? 'M ' + h(c.mobile) : '', c.phone ? 'P ' + h(c.phone) : ''].filter(Boolean).join(' · ')}</div></td>
+      <td class="m-sub">${h(c.name)}<span class="m-only"> · ${h(roleText(c))}</span><div class="sub d-only">${[c.mobile ? '<span class="nowrap">M ' + h(c.mobile) + '</span>' : '', c.phone ? '<span class="nowrap">P ' + h(c.phone) + '</span>' : ''].filter(Boolean).join(' · ')}</div></td>
       <td class="m-hide">${h(roleText(c))}<div class="sub">${h(cats.join(', '))}</div></td>
       <td class="m-hide nowrap num" style="text-align:left">${h(c.abn || '–')}</td>
       <td class="${ex ? 'm-meta m-lead' : 'm-hide'} nowrap">${ex || ((c.licenceExpiry || c.insuranceExpiry) ? '<span class="muted">Current</span>' : '<span class="muted">–</span>')}</td>
@@ -2511,10 +2567,12 @@ function viewDeal() {
   const fb = dl.feaso === 'go' ? badge('Go', 'success') : dl.feaso === 'nogo' ? badge('No-go', 'neutral') : badge('Pending', 'attention');
   const tabs = DEAL_TABS.map(([k, l]) => ptab({ href: `#/deal/${dl.id}/${k}`, label: l, current: k === tab, n: k === 'offers' ? ((dl.offers || []).length || '') : k === 'documents' ? ((dl.docs || []).length || '') : k === 'feaso' ? ((dl.feasos || []).length ? 'v' + latestFeaso(dl).v : '') : '' })).join('');
   const act = dl.projectId ? `<a class="btn" href="#/project/${h(dl.projectId)}">Open project</a>` : dl.feaso === 'go' ? `<a class="btn btn-primary" href="#/new/${dl.id}">Create project</a>` : '';
+  const acts = `<button class="btn" data-action="edit-site" data-kind="deal" data-id="${dl.id}">Edit details</button>${act}`;
   const body = { details: () => dealDetailsTab(dl), feaso: () => dealFeasoTab(dl), offers: () => dealOffersTab(dl), documents: () => dealDocsTab(dl) }[tab]();
   return `<div class="page page-full">
-    ${pageHeader({ title: dl.address, back: '#/deals', backLabel: 'Deals', badges: fb, sub: `${h(dl.lotPlan || 'Lot / DP not recorded')} · ${h(dl.type)} · ${h(dl.yield)}<span class="d-only"> · ${h(dl.zoning || 'Zoning not set')} · ${h(dl.source)}</span>`, actions: `<button class="btn" data-action="edit-site" data-kind="deal" data-id="${dl.id}">Edit details</button>${act}` })}
+    ${pageHeader({ title: dl.address, back: '#/deals', backLabel: 'Deals', badges: fb, sub: `${h(dl.lotPlan || 'Lot / DP not recorded')} · ${h(dl.yield)}<span class="d-only"> · ${h(dl.type)} · ${h(dl.zoning || 'Zoning not set')} · ${h(dl.source)}</span>`, actions: `<span class="d-only btn-group">${acts}</span>` })}
     <nav class="ptabs page-tabs proj-tabs" aria-label="Deal sections">${tabs}</nav>
+    <div class="btn-group m-only" style="margin-bottom:12px">${acts}</div>
     ${body}
   </div>`;
 }
@@ -2609,8 +2667,8 @@ const FEASO_LAYOUT = [
   ['t', 50, 'Net Profit Post Finance', { D: 'D50', E: 'E50' }],
   ['t', 51, 'Margin on Cost (MoC)', { D: 'D51' }],
 ];
-const FEASO_PCT_OUT = ['D51'];
-function feasoOut(v, key) { const x = v[key]; if (FEASO_PCT_OUT.includes(key)) return (x * 100).toFixed(2) + '%'; return fmtMoney(x, { whole: true }); }
+const FEASO_PCT_OUT = ['D51']; const FEASO_COUNT_OUT = ['C3', 'C7'];
+function feasoOut(v, key) { const x = v[key]; if (FEASO_PCT_OUT.includes(key)) return (x * 100).toFixed(2) + '%'; if (FEASO_COUNT_OUT.includes(key)) return nf0.format(x); return fmtMoney(x, { whole: true }); }
 function feasoDraft(dl) { ui.feaso = ui.feaso || {}; if (!ui.feaso[dl.id]) { const f = latestFeaso(dl); ui.feaso[dl.id] = { inputs: { ...(f ? f.inputs : feasoDealDefaults(dl)) }, from: f ? f.v : 0 }; } return ui.feaso[dl.id]; }
 function feasoInput(key, kind, val) {
   const shown = val == null ? '' : val; const step = kind === 'pct' ? '0.1' : kind === 'int' ? '1' : '1000';
@@ -2929,12 +2987,10 @@ function viewMore() {
 let wiz = null;
 function wizDefaults(dealId) {
   const dl = dealId ? state.deals.find(x => x.id === dealId) : null;
-  const base = { step: 1, dealId: dl ? dl.id : null, street: '', suburb: '', state: 'NSW', lot: '', planType: 'DP', planNo: '', type: 'Land subdivision', yield: '', id: '', owner: 'new', existingId: '', company: '', abn: '', acn: '', gst: true, bank: 'Coastal Mutual Bank', bsb: '', acc: '', price: '', stages: null, stagesFor: null, start: dl ? 3 : 1 };
+  const base = { step: 1, dealId: dl ? dl.id : null, street: '', suburb: '', state: 'NSW', postcode: '', lot: '', planType: 'DP', planNo: '', type: 'Land subdivision', yield: '', id: '', owner: 'new', existingId: '', company: '', abn: '', acn: '', gst: true, bank: 'Coastal Mutual Bank', bsb: '', acc: '', price: '', stages: null, stagesFor: null, start: dl ? 3 : 1 };
   if (dl) {
-    const [streetPart, rest] = dl.address.split(',').map(x => x.trim());
-    const sub = (rest || '').replace(/\s+(NSW|QLD|VIC)$/, '');
     const m = (dl.lotPlan || '').match(/Lot\s+(\S+)\s+(DP|SP|RP)\s+(\S+)/);
-    Object.assign(base, { street: streetPart, suburb: sub, state: /QLD/.test(dl.address) ? 'QLD' : 'NSW', lot: m ? m[1] : '', planType: m ? m[2] : 'DP', planNo: m ? m[3] : '', yield: dl.yield, type: PROJECT_TYPES.includes(dl.type) ? dl.type : (/factory|industr/i.test(dl.yield + dl.zoning) ? 'Commercial / industrial' : 'Land subdivision'), id: sub.toUpperCase().replace(/[^A-Z]/g, ''), company: sub + ' Land Pty Ltd', price: dl.asking });
+    Object.assign(base, { street: dl.street, suburb: dl.suburb, state: dl.state, postcode: dl.postcode || '', lot: m ? m[1] : '', planType: m ? m[2] : 'DP', planNo: m ? m[3] : '', yield: dl.yield, type: PROJECT_TYPES.includes(dl.type) ? dl.type : 'Land subdivision', id: dl.suburb.toUpperCase().replace(/[^A-Z]/g, ''), company: dl.suburb + ' Land Pty Ltd', price: dl.asking });
   }
   return base;
 }
@@ -2960,7 +3016,7 @@ function viewNew() {
     <div class="card-section" style="padding-top:4px"><div class="form-grid">
       <div class="field"><label for="w-street">Street</label><input class="input" id="w-street" name="street" required value="${h(w.street)}" placeholder="e.g. Woollamia Rd"></div>
       <div class="field"><label for="w-suburb">Suburb</label><input class="input" id="w-suburb" name="suburb" required value="${h(w.suburb)}" data-input="wiz-suburb"></div>
-      <div class="field"><label for="w-state">State</label><select class="input" id="w-state" name="state">${['NSW', 'QLD', 'VIC'].map(s0 => `<option ${w.state === s0 ? 'selected' : ''}>${s0}</option>`).join('')}</select></div>
+      <div class="field"><span class="label" id="w-sp">State and postcode</span><div class="hstack" style="flex-wrap:nowrap"><select class="input" id="w-state" name="state" aria-labelledby="w-sp" style="width:96px;flex:none">${AU_STATES.map(s0 => `<option ${w.state === s0 ? 'selected' : ''}>${s0}</option>`).join('')}</select><input class="input" id="w-postcode" name="postcode" value="${h(w.postcode)}" inputmode="numeric" pattern="[0-9]{4}" maxlength="4" aria-label="Postcode" placeholder="Postcode"></div></div>
       <div class="field"><label for="w-type">Project type</label><select class="input" id="w-type" name="type">${PROJECT_TYPES.map(s0 => `<option ${w.type === s0 ? 'selected' : ''}>${s0}</option>`).join('')}</select><span class="hint">Sets the stage template. You can rename stages on the next steps.</span></div>
       <div class="field"><label for="w-lot">Lot</label><input class="input" id="w-lot" name="lot" required value="${h(w.lot)}" inputmode="numeric"></div>
       <div class="field"><label for="w-plan">Plan</label><div class="hstack" style="flex-wrap:nowrap"><select class="input" id="w-plantype" name="planType" style="width:88px;flex:none" aria-label="Plan type">${['DP', 'SP', 'RP'].map(s0 => `<option ${w.planType === s0 ? 'selected' : ''}>${s0}</option>`).join('')}</select><input class="input" id="w-plan" name="planNo" required value="${h(w.planNo)}" inputmode="numeric" placeholder="1203381"></div></div>
@@ -3001,9 +3057,9 @@ function viewNew() {
     const ownerName = w.owner === 'nominee' ? 'Dan Wellman and/or nominee' : w.owner === 'existing' ? (companyById(w.existingId) || {}).name : w.company;
     const ddocs = dl ? (dl.docs || []) : [];
     body = `<div class="card"><div class="card-head"><h2 class="card-title">Confirm</h2></div>
-      <div class="card-section" style="padding-top:4px"><dl class="kv kv-inline"><dt>Project ID</dt><dd>${h(w.id)}</dd><dt>Site</dt><dd>${h(w.street)}, ${h(w.suburb)} ${h(w.state)}</dd><dt>Lot / plan</dt><dd>Lot ${h(w.lot)} ${h(w.planType)} ${h(w.planNo)}</dd><dt>Type</dt><dd>${h(w.type)}${w.yield ? ' · ' + h(w.yield) : ''}</dd><dt>Owner</dt><dd>${h(ownerName)}</dd>${w.owner === 'new' ? `<dt>ABN</dt><dd>${h(w.abn || 'Applied for')}</dd><dt>GST</dt><dd>${w.gst ? 'Registered' : 'Not registered'}</dd>` : ''}<dt>Starts at</dt><dd>Stage ${w.start}: ${h(w.stages[w.start - 1].name)}</dd></dl></div>
+      <div class="card-section" style="padding-top:4px"><dl class="kv kv-inline"><dt>Project ID</dt><dd>${h(w.id)}</dd><dt>Site</dt><dd>${h(w.street)}, ${h(w.suburb)} ${h(w.state)} ${h(w.postcode)}</dd><dt>Lot / plan</dt><dd>Lot ${h(w.lot)} ${h(w.planType)} ${h(w.planNo)}</dd><dt>Type</dt><dd>${h(w.type)}${w.yield ? ' · ' + h(w.yield) : ''}</dd><dt>Owner</dt><dd>${h(ownerName)}</dd>${w.owner === 'new' ? `<dt>ABN</dt><dd>${h(w.abn || 'Applied for')}</dd><dt>GST</dt><dd>${w.gst ? 'Registered' : 'Not registered'}</dd>` : ''}<dt>Starts at</dt><dd>Stage ${w.start}: ${h(w.stages[w.start - 1].name)}</dd></dl></div>
       <div class="card-section"><h3 class="eyebrow">This will create</h3>
-      <div class="create-list">${[`${w.stages.length}-stage checklist with ${nTasks} tasks and due dates`, 'Budget skeleton across 7 cost categories' + (w.price ? ' (land ' + fmtMoney(+w.price) + ')' : ''), `${docKeys().length} document folders named ${w.id}_DocType_Party_Date`, ...(ddocs.length ? [`${plural(ddocs.length, 'document')} from the deal, filed under stages 1 and 2`] : []), w.owner === 'nominee' ? 'Owner: Dan Wellman and/or nominee until the company is registered' : w.owner === 'new' ? `${w.company} in Our companies, with separate books: bills, invoices, GST and year-end` : `Books under ${ownerName}`, 'An entry in the project log'].map(t => `<div>${icon('check')}<span>${h(t)}</span></div>`).join('')}</div></div>
+      <div class="create-list">${[`${w.stages.length}-stage checklist with ${nTasks} tasks and due dates`, 'Budget skeleton across 7 cost categories' + (w.price ? ' (land ' + fmtMoney(+w.price) + ')' : ''), `${docKeys().length} document folders named ${w.id}_DocType_Party_Date`, ...(ddocs.length ? [`${plural(ddocs.length, 'document')} from the deal, filed under stages 1 and 2`] : []), ...(dl && latestFeaso(dl) ? [`Budget from quick feaso v${latestFeaso(dl).v}, filed as a document`] : []), ...(dl && (dl.offers || []).some(o => o.status === 'Accepted') ? ['Exchange, DD expiry and settlement dates from the accepted offer'] : []), ...(dl ? ['Site details from the deal: zoning, land and lot sizes, tax type, notes and history'] : []), w.owner === 'nominee' ? 'Owner: Dan Wellman and/or nominee until the company is registered' : w.owner === 'new' ? `${w.company} in Our companies, with separate books: bills, invoices, GST and year-end` : `Books under ${ownerName}`, 'An entry in the project log'].map(t => `<div>${icon('check')}<span>${h(t)}</span></div>`).join('')}</div></div>
       ${foot(`<button class="btn" type="button" data-action="wiz-back">Back</button>`, `<button class="btn btn-primary" type="button" data-action="wiz-create">Create project</button>`)}</div>`;
   }
   return `<div class="page page-narrow">
@@ -3014,7 +3070,7 @@ function viewNew() {
 /* ===== Render dispatcher ===== */
 const $ = (sel, root = document) => root.querySelector(sel);
 const mainEl = $('#main');
-const VIEWS = { home: viewHome, projects: viewProjects, project: viewProject, contacts: viewContacts, money: viewMoney, deals: viewDeals, exports: viewExports, settings: viewSettings, more: viewMore, new: viewNew };
+const VIEWS = { deal: viewDeal, home: viewHome, projects: viewProjects, project: viewProject, contacts: viewContacts, money: viewMoney, deals: viewDeals, exports: viewExports, settings: viewSettings, more: viewMore, new: viewNew };
 const TITLES = { home: 'Home', projects: 'Projects', contacts: 'Contacts', money: 'Money', deals: 'Deals', exports: 'Exports', settings: 'Settings', more: 'More', new: 'New project' };
 function render(routeChanged) {
   route = parseHash();
@@ -3023,7 +3079,8 @@ function render(routeChanged) {
   mainEl.classList.toggle('animate', !!routeChanged);
   renderNav();
   const p = route.name === 'project' ? getProject(route.parts[0]) : null;
-  document.title = (p ? p.id + ' · ' + p.name : TITLES[route.name] || 'Home') + ' · Wellco Project Brain';
+  const dlr = route.name === 'deal' ? state.deals.find(x => x.id === route.parts[0]) : null;
+  document.title = (p ? p.id + ' · ' + p.name : dlr ? dlr.address : TITLES[route.name] || 'Home') + ' · Wellco Project Brain';
   mainEl.querySelectorAll('.ptabs, .folders').forEach(sw => { const cur = sw.querySelector('[aria-current="page"], [aria-pressed="true"]'); if (cur && sw.scrollWidth > sw.clientWidth && cur.getBoundingClientRect().right > sw.getBoundingClientRect().right) { sw.scrollLeft = Math.max(0, cur.getBoundingClientRect().left - sw.getBoundingClientRect().left - 24); } });
   if (routeChanged) {
     window.scrollTo(0, 0);
@@ -3037,6 +3094,7 @@ function render(routeChanged) {
 function navKey() {
   const n = route.name;
   if (n === 'project' || n === 'new') return 'projects';
+  if (n === 'deal') return 'deals';
   return n;
 }
 function renderNav() {
@@ -3254,13 +3312,13 @@ async function artifactSave(filename, data, fallback) {
   catch (err) { if (err && err.code === 'declined') return; fb(); }
 }
 let wbView = null;
-function cellText(v) { return v == null ? '' : typeof v === 'number' ? String(Math.round(v * 100) / 100) : String(v); }
+function cellText(v) { if (v && typeof v === 'object') v = v.v; return v == null ? '' : typeof v === 'number' ? String(Math.round(v * 100) / 100) : String(v); }
 function sheetTSV(sh) { return sh.rows.map(r => r.map(v => cellText(v).replace(/[\t\n]/g, ' ')).join('\t')).join('\n'); }
 function workbookBody() {
   const { sheets, idx } = wbView; const sh = sheets[idx]; const w = Math.max(1, ...sh.rows.map(r => r.length));
   return `<p class="help" style="margin-bottom:12px">This preview link can't save files. In your own app this downloads as an Excel file. You can paste this straight into Excel now.</p>
     <nav class="ptabs" aria-label="Sheets" style="margin-bottom:12px">${sheets.map((x, i) => `<button type="button" class="ptab" data-action="wb-sheet" data-i="${i}" aria-pressed="${i === idx}">${h(x.name)}</button>`).join('')}</nav>
-    <div class="table-wrap wb-wrap"><table class="t wb-table"><tbody>${sh.rows.map((r, ri) => `<tr>${Array.from({ length: w }, (_, ci) => { const v = r[ci]; const tag = ri === 0 ? 'th' : 'td'; return `<${tag}${typeof v === 'number' ? '' : ' style="text-align:left"'}>${h(typeof v === 'number' ? (Math.abs(v) >= 1000 || v % 1 ? nf2.format(v) : String(v)) : cellText(v))}</${tag}>`; }).join('')}</tr>`).join('')}</tbody></table></div>
+    <div class="table-wrap wb-wrap"><table class="t wb-table"><tbody>${sh.rows.map((r, ri) => `<tr>${Array.from({ length: w }, (_, ci) => { const v0 = r[ci]; const v = v0 && typeof v0 === 'object' ? v0.v : v0; const tag = ri === 0 ? 'th' : 'td'; return `<${tag}${typeof v === 'number' ? '' : ' style="text-align:left"'}>${h(typeof v === 'number' ? (Math.abs(v) >= 1000 || v % 1 ? nf2.format(v) : String(v)) : cellText(v))}</${tag}>`; }).join('')}</tr>`).join('')}</tbody></table></div>
     <textarea id="wb-tsv" class="sr-only" aria-hidden="true" tabindex="-1" readonly>${h(sheetTSV(sh))}</textarea>`;
 }
 function showWorkbook(filename, sheets) {
@@ -3273,7 +3331,9 @@ function downloadBook(filename, sheets) {
   if (typeof XLSX !== 'undefined') {
     const wb = XLSX.utils.book_new();
     sheets.forEach(s => {
-      const ws = XLSX.utils.aoa_to_sheet(s.rows); ws['!cols'] = colWidths(s.rows);
+      const plain = s.rows.map(r => r.map(x => (x && typeof x === 'object' ? x.v : x)));
+      const ws = XLSX.utils.aoa_to_sheet(plain); ws['!cols'] = s.cols ? s.cols.map(wch => ({ wch })) : colWidths(plain);
+      s.rows.forEach((r, ri) => r.forEach((x, ci) => { if (x && typeof x === 'object') { const cell = ws[XLSX.utils.encode_cell({ r: ri, c: ci })]; if (cell) { if (x.f) cell.f = x.f; if (x.z) cell.z = x.z; } } }));
       const ref = XLSX.utils.decode_range(ws['!ref'] || 'A1');
       // Money format on any column whose header mentions ($)
       s.rows.forEach((r, ri) => r.forEach((v, ci) => { if (typeof v === 'string' && v.includes('($)')) { for (let rr = ri + 1; rr <= ref.e.r; rr++) { const cell = ws[XLSX.utils.encode_cell({ r: rr, c: ci })]; if (cell && cell.t === 'n') cell.z = '#,##0.00'; } } }));
@@ -3284,7 +3344,7 @@ function downloadBook(filename, sheets) {
     return filename;
   }
   const csvCell = (v) => { const s = String(v == null ? '' : v); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
-  const csv = sheets.map(s => `${s.name}\n` + s.rows.map(r => r.map(csvCell).join(',')).join('\n')).join('\n\n');
+  const csv = sheets.map(s => `${s.name}\n` + s.rows.map(r => r.map(x => csvCell(x && typeof x === 'object' ? x.v : x)).join(',')).join('\n')).join('\n\n');
   const name = filename.replace(/\.xlsx$/, '.csv');
   if (IN_ARTIFACT) { artifactSave(name, '﻿' + csv, sheets); return name; }
   const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
@@ -3354,8 +3414,8 @@ const ACTIONS = {
     const p = P(el); const t = p.tasks.find(x => x.id === el.dataset.id);
     // Registering the project company: pick or create the company first, then the task is ticked
     if (!t.done && isRegisterTask(t) && co(p).nominee) { openAssignCompany(p, t.id); return; }
-    t.done = !t.done; t.doneAt = t.done ? TODAY : null;
-    addLog(p, (t.done ? 'Task done: ' : 'Task reopened: ') + t.title, 'task'); commit(); toast(t.done ? 'Marked done' : 'Reopened', t.done ? 'check' : 'refresh');
+    t.done = !t.done; t.doneAt = t.done ? TODAY : null; const moved = rippleFrom(p, t);
+    addLog(p, (t.done ? 'Task done: ' : 'Task reopened: ') + t.title + (moved ? ` (${plural(moved, 'linked task')} moved)` : ''), 'task'); commit(); toast((t.done ? 'Marked done' : 'Reopened') + (moved ? ` · ${plural(moved, 'linked task')} moved` : ''), t.done ? 'check' : 'refresh');
     const btn = mainEl.querySelector(`[data-action="toggle-task"][data-id="${t.id}"]`); if (btn) btn.focus({ preventScroll: true });
   },
   'add-task': (el) => {
@@ -3594,19 +3654,10 @@ const ACTIONS = {
 
   /* Deals */
   'add-deal': () => {
-    openSheet({ title: 'Log a site', sub: 'From a listing or buyer\'s agent',
-      body: `<form id="f-deal" data-form="add-deal" class="form-grid">
-        <div class="field full"><label for="d-addr">Address</label><input class="input" id="d-addr" name="address" required placeholder="Street, Suburb NSW"></div>
-        <div class="field"><label for="d-lot">Lot / plan</label><input class="input" id="d-lot" name="lotPlan" placeholder="Lot 4 DP 123456"></div>
-        <div class="field"><label for="d-type">Project type</label><select class="input" id="d-type" name="type">${PROJECT_TYPES.map(t => `<option>${h(t)}</option>`).join('')}</select></div>
-        <div class="field"><label for="d-src">Source</label><input class="input" id="d-src" name="source" placeholder="e.g. Ray Taylor, off-market"></div>
-        <div class="field"><label for="d-ask">Asking price</label><input class="input" id="d-ask" name="asking" type="number" min="0" step="1000"></div>
-        <div class="field"><label for="d-yield">Yield</label><input class="input" id="d-yield" name="yield" placeholder="e.g. 12 lots or 1 house"></div>
-        <div class="field"><label for="d-zone">Zoning</label><input class="input" id="d-zone" name="zoning" placeholder="e.g. R2 Low Density Residential"></div>
-        <div class="field full"><label for="d-notes">Notes</label><textarea class="input" id="d-notes" name="notes" rows="3"></textarea><span class="hint">Add the contract, plans and sales stats from the Documents column once it's logged.</span></div></form>`,
-      foot: `<button type="button" class="btn btn-ghost" data-action="close-sheet">Cancel</button><button type="submit" form="f-deal" class="btn btn-primary">${icon('plus')}Log site</button>` });
+    openSheet({ title: 'Log a site', sub: 'From a listing or buyer\'s agent', body: siteFormHTML({ state: 'NSW', type: PROJECT_TYPES[0], taxType: 'gst' }, 'new'),
+      foot: `<button type="button" class="btn btn-ghost" data-action="close-sheet">Cancel</button><button type="submit" form="f-site" class="btn btn-primary">${icon('plus')}Log site</button>` });
   },
-  'feaso': (el) => { const dl = state.deals.find(x => x.id === el.dataset.id); dl.feaso = el.dataset.v; if (dl.feaso === 'go' && dl.margin == null) dl.margin = 20; commit(); toast(dl.feaso === 'go' ? 'Marked Go. Create the project when you\'re ready' : dl.feaso === 'nogo' ? 'Marked No-go' : 'Reopened'); },
+  'feaso': (el) => { const dl = state.deals.find(x => x.id === el.dataset.id); dl.feaso = el.dataset.v; dealLog(dl, el.dataset.v === 'go' ? 'Marked Go' : el.dataset.v === 'nogo' ? 'Marked No-go' : 'Reopened'); if (dl.feaso === 'go' && dl.margin == null) dl.margin = 20; commit(); toast(dl.feaso === 'go' ? 'Marked Go. Create the project when you\'re ready' : dl.feaso === 'nogo' ? 'Marked No-go' : 'Reopened'); },
   'deal-docs': (el) => {
     const dl = state.deals.find(x => x.id === el.dataset.id); dl.docs = dl.docs || [];
     openSheet({ title: 'Deal documents', sub: `${h(dl.address)} · ${plural(dl.docs.length, 'file')}`, body: dealDocsHTML(dl),
@@ -3642,6 +3693,76 @@ const ACTIONS = {
     if (!wbView) return; const sh = wbView.sheets[wbView.idx]; const tsv = sheetTSV(sh);
     const fallback = () => { const ta = $('#wb-tsv'); if (!ta) return; ta.classList.remove('sr-only'); ta.style.cssText = 'position:fixed;left:-9999px;top:0'; ta.value = tsv; ta.focus(); ta.select(); let ok = false; try { ok = document.execCommand('copy'); } catch (e) { ok = false; } ta.style.cssText = ''; ta.classList.add('sr-only'); toast(ok ? `${sh.name} copied. Paste it into Excel.` : 'Select the table and copy it with Ctrl+C (Cmd+C on a Mac).', ok ? 'check' : 'info'); };
     try { if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(tsv).then(() => toast(`${sh.name} copied. Paste it into Excel.`), fallback); else fallback(); } catch (e) { fallback(); }
+  },
+
+  /* Sites: log a site and edit details (deal or project) */
+  'edit-site': (el) => {
+    const isDeal = el.dataset.kind === 'deal'; const x = isDeal ? state.deals.find(d0 => d0.id === el.dataset.id) : getProject(el.dataset.id);
+    openSheet({ title: 'Edit details', sub: h(isDeal ? x.address : x.name), body: siteFormHTML(x, isDeal ? 'deal' : 'project'),
+      foot: `<button type="button" class="btn btn-ghost" data-action="close-sheet">Cancel</button><button type="submit" form="f-site" class="btn btn-primary">${icon('check')}Save details</button>` });
+  },
+  /* Quick Feaso */
+  'feaso-save': (el) => {
+    const dl = state.deals.find(x => x.id === el.dataset.id); const dr = feasoDraft(dl); dl.feasos = dl.feasos || [];
+    const v = feasoCalc(dr.inputs); const n = dl.feasos.length + 1;
+    dl.feasos.push({ v: n, date: TODAY, note: '', inputs: { ...FEASO_DEFAULTS, ...dr.inputs } }); dr.from = n;
+    dealLog(dl, `Quick feaso v${n}: ${(v.D51 * 100).toFixed(1)}% margin on cost, ${fmtMoney(v.D50, { whole: true })} net profit`);
+    commit(); toast(`Saved as version ${n}: ${(v.D51 * 100).toFixed(1)}% margin on cost`);
+  },
+  'feaso-reset': (el) => { const dl = state.deals.find(x => x.id === el.dataset.id); ui.feaso[dl.id] = { inputs: feasoDealDefaults(dl), from: 0 }; render(); toast('Reset to the deal and your defaults', 'refresh'); },
+  'feaso-load': (el) => { const dl = state.deals.find(x => x.id === el.dataset.id); const f = dl.feasos.find(x => x.v === +el.dataset.v); ui.feaso[dl.id] = { inputs: { ...f.inputs }, from: f.v }; render(); toast(`Version ${f.v} loaded`, 'refresh'); },
+  'feaso-export': (el) => { const dl = state.deals.find(x => x.id === el.dataset.id); const dr = feasoDraft(dl); const name = downloadBook(`${dealSlug(dl)}_QuickFeaso${dr.from ? '-v' + dr.from : ''}_${TODAY}.xlsx`, feasoBook(dl, dr.inputs)); dealLog(dl, 'Quick feaso exported to Excel'); save(); if (!IN_ARTIFACT) toast('Downloaded ' + name, 'download'); },
+  /* Offers */
+  'offer-new': (el) => {
+    const dl = state.deals.find(x => x.id === el.dataset.deal); const from = el.dataset.from ? dl.offers.find(o => o.id === el.dataset.from) : null;
+    const o = newOfferFor(dl); if (from) Object.assign(o, { price: from.price, gstWording: from.gstWording, deposit: from.deposit, dd: from.dd, settlement: from.settlement, conditions: from.conditions.slice(), solicitor: from.solicitor, addressLine: from.addressLine, titleLine: from.titleLine, purchaser: from.purchaser });
+    openOfferForm(dl, o, true);
+  },
+  'offer-edit': (el) => { const dl = state.deals.find(x => x.id === el.dataset.deal); openOfferForm(dl, dl.offers.find(o => o.id === el.dataset.id), false); },
+  'offer-preview': (el) => { const dl = state.deals.find(x => x.id === el.dataset.deal); showLetter(dl, dl.offers.find(o => o.id === el.dataset.id)); },
+  'offer-docx': (el) => {
+    const dl = state.deals.find(x => x.id === el.dataset.deal); const o = dl.offers.find(x => x.id === el.dataset.id); const name = offerFileName(dl, o);
+    let bytes; try { bytes = offerDocx(dl, o); } catch (err) { console.warn(err); toast("Couldn't build the Word file. Copy the letter instead.", 'warning'); showLetter(dl, o); return; }
+    saveFile(name, bytes, 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', () => showLetter(dl, o, "This preview link can't save files. In your own app this downloads as a Word file. Copy the letter and paste it into Word now."));
+    const docEntry = { id: 'dd-' + o.id, type: 'Offer', party: 'WellcoDevelopments', date: o.date, title: `Letter of offer ${o.n}`, ext: 'docx', size: Math.max(1, Math.round(bytes.length / 1024)), note: `${fmtMoney(o.price, { whole: true })} · ${o.status}` };
+    dl.docs = (dl.docs || []).filter(x => x.id !== docEntry.id).concat(docEntry); dealLog(dl, `Letter of offer ${o.n} saved as Word (${name})`, 'doc'); save(); render();
+  },
+  'offer-send': (el) => {
+    const dl = state.deals.find(x => x.id === el.dataset.deal); const o = dl.offers.find(x => x.id === el.dataset.id); const ag = dl.agentId ? contactById(dl.agentId) : null;
+    const body = `Hi ${ag ? ag.name.split(' ')[0] : 'there'},\n\nPlease find attached our letter of offer for ${o.addressLine}.\n\nPrice: ${offerPriceLine(o)}\nDeposit: ${o.deposit}\nDue diligence: ${o.dd}\nSettlement: ${o.settlement}\n${(o.conditions || []).length ? 'Conditions: ' + o.conditions.length + ' listed in the letter\n' : ''}\nHappy to talk it through with the vendor.\n\nThanks,\n${state.settings.signature}`;
+    openApproval({ title: `Send offer ${o.n}`, sub: `${h(dl.address)} · ${fmtMoney(o.price, { whole: true })}`,
+      preview: emailHTML({ to: ag ? recipientLine(ag.id) : 'Selling agent (from the listing)', subject: `Letter of offer: ${dl.address}`, body, attachments: [offerFileName(dl, o)] }),
+      onApprove: (edited) => { o.status = 'Sent'; o.sentAt = TODAY; dealLog(dl, `Offer ${o.n} sent${ag ? ' to ' + ag.name : ''}: ${fmtMoney(o.price, { whole: true })}. Approved by Dan${edited ? ' (email edited)' : ''}`, 'send'); addGlobalLog(`Offer ${o.n} sent on ${dl.address}`, 'send'); commit(); toast(`Offer ${o.n} sent. Demo: nothing actually sent`, 'send'); } });
+  },
+  'copy-letter': () => {
+    const ta = $('#letter-text'); if (!ta) return; const txt = ta.value;
+    const fallback = () => { ta.classList.remove('sr-only'); ta.style.cssText = 'position:fixed;left:-9999px;top:0'; ta.focus(); ta.select(); let ok = false; try { ok = document.execCommand('copy'); } catch (e) { ok = false; } ta.style.cssText = ''; ta.classList.add('sr-only'); toast(ok ? 'Letter copied. Paste it into Word.' : 'Select the letter and copy it with Ctrl+C (Cmd+C on a Mac).', ok ? 'check' : 'info'); };
+    try { if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(() => toast('Letter copied. Paste it into Word.'), fallback); else fallback(); } catch (e) { fallback(); }
+  },
+  'cond-add': () => { const sel = $('#of-addcond'); if (sel.value === '') { toast('Pick a condition first', 'info'); return; } const box = $('#of-conds'); box.insertAdjacentHTML('beforeend', condRowHTML(state.termBank.conditions[+sel.value], box.children.length)); sel.value = ''; renumberConds(); },
+  'cond-add-own': () => { const box = $('#of-conds'); box.insertAdjacentHTML('beforeend', condRowHTML('', box.children.length)); renumberConds(); box.lastElementChild.querySelector('textarea').focus(); },
+  'cond-move': (el) => { const row = el.closest('[data-cond]'); const sib = +el.dataset.dir < 0 ? row.previousElementSibling : row.nextElementSibling; if (!sib) return; if (+el.dataset.dir < 0) sib.before(row); else sib.after(row); renumberConds(); el.focus(); },
+  'cond-remove': (el) => { el.closest('[data-cond]').remove(); renumberConds(); },
+  /* Task dates */
+  'task-link': (el) => openTaskLink(P(el), P(el).tasks.find(t => t.id === el.dataset.id)),
+  'task-relink': (el) => {
+    const p = P(el); const t = p.tasks.find(x => x.id === el.dataset.id); t.dateSetByYou = false; const nd = linkDate(p, t); const old = t.due; if (nd) t.due = nd;
+    const moved = rippleFrom(p, t); addLog(p, `Due date relinked: ${t.title} follows ${linkText(p, t)} (${fmtDate(t.due)})`, 'task'); commit();
+    toast(`Relinked${old !== t.due ? ': now ' + fmtDateShort(t.due) : ''}${moved ? ` · ${plural(moved, 'linked task')} moved` : ''}`);
+  },
+  /* Roles: delete with move */
+  'role-del': (el) => { syncCatDraft(); const r = sheetCtx.catDraft.roles.find(x => String(x.key) === el.dataset.key); r.deleting = true; r.moveTo = r.moveTo || (sheetCtx.catDraft.roles.find(x => x !== r && !x.deleted && x.cat === r.cat) || sheetCtx.catDraft.roles.find(x => x !== r && !x.deleted) || {}).name; redrawCatDraft(); },
+  'role-del-confirm': (el) => { syncCatDraft(); const r = sheetCtx.catDraft.roles.find(x => String(x.key) === el.dataset.key); r.deleting = false; r.deleted = true; if (!roleUses(r.orig)) r.moveTo = null; redrawCatDraft(); },
+  'role-del-cancel': (el) => { syncCatDraft(); const r = sheetCtx.catDraft.roles.find(x => String(x.key) === el.dataset.key); r.deleting = false; redrawCatDraft(); },
+  'role-del-undo': (el) => { syncCatDraft(); const r = sheetCtx.catDraft.roles.find(x => String(x.key) === el.dataset.key); r.deleted = false; redrawCatDraft(); },
+  /* Settings › Lists */
+  'list-edit': (el) => { ui.listEdit = el.dataset.key; render(); const i = $('#lists .list-edit .input'); if (i) { i.focus(); i.select(); } },
+  'list-remove': (el) => {
+    const kind = el.dataset.kind; const i = +el.dataset.i; let label;
+    if (kind === 'zonings') { label = state.zonings.splice(i, 1)[0]; addGlobalLog(`Zoning removed from the list: ${label}`, 'note'); }
+    else if (kind === 'docTypes') { const t = state.docTypes[i]; if (t.system || docTypeInUse(t.key)) return; state.docTypes.splice(i, 1); label = t.label; addGlobalLog(`Document type removed: ${label}`, 'doc'); }
+    else { const f = kind.slice(3); label = state.termBank[f].splice(i, 1)[0]; addGlobalLog(`Term bank (${TERM_FIELDS[f]}): removed "${label.slice(0, 60)}${label.length > 60 ? '…' : ''}"`, 'note'); }
+    commit(); toast('Removed');
   },
 
   /* Exports */
@@ -3713,8 +3834,8 @@ const FORMS = {
     if (!files.length) { toast('Choose a file first', 'info'); return; }
     const c = fd.get('party') ? contactById(fd.get('party')) : null; const note = (fd.get('note') || '').trim();
     const added = files.map(file => ({ id: newId('dd'), type: fd.get('type'), party: c ? partyKey(c) : 'Agent', date: TODAY, title: file.name.replace(/\.[^.]+$/, ''), ext: fileExt(file.name), size: Math.max(1, Math.round(file.size / 1024)), note }));
-    dl.docs = (dl.docs || []).concat(added);
-    addGlobalLog(`Deal ${dl.address}: ${added.length === 1 ? 'document added, ' + dealDocName(dl, added[0]) : plural(added.length, 'document') + ' added (' + docLabel(added[0).type] + ')'}`, 'doc');
+    dl.docs = (dl.docs || []).concat(added); dealLog(dl, `${plural(added.length, 'document')} added: ${added.map(x => x.title).join(', ')}`, 'doc');
+    addGlobalLog(`Deal ${dl.address}: ${added.length === 1 ? 'document added, ' + dealDocName(dl, added[0]) : plural(added.length, 'document') + ' added (' + docLabel(added[0].type) + ')'}`, 'doc');
     commit(); sheetCtx.files = [];
     $('#sheet .sheet-body').innerHTML = dealDocsHTML(dl); $('#sheet .sheet-sub').textContent = `${dl.address} · ${plural(dl.docs.length, 'file')}`; updateDealDocPreview();
     toast(`${plural(added.length, 'file')} added to the deal`, 'upload');
@@ -3768,9 +3889,61 @@ const FORMS = {
     ui.docFolder = added[0].type; if (docStageFilter(p) !== 'all' && docStageFilter(p) !== stage) ui.docStage = String(stage);
     closeSheet(); commit(); toast(`${plural(added.length, 'file')} stored in Supabase bucket project-documents (demo)`, 'upload');
   },
-  'add-deal': (f, fd) => { const dl = { id: newId('D'), address: fd.get('address').trim(), lotPlan: fd.get('lotPlan').trim(), type: fd.get('type') || 'Land subdivision', source: fd.get('source').trim() || 'Listing', asking: +fd.get('asking') || 0, yield: fd.get('yield').trim() || 'TBC', zoning: fd.get('zoning').trim() || 'TBC', feaso: 'pending', margin: null, logged: TODAY, notes: fd.get('notes').trim(), docs: [] }; state.deals.unshift(dl); addGlobalLog(`Site logged: ${dl.address} (${dl.type})`, 'deal'); closeSheet(); commit(); toast('Site logged. Run the feaso next'); },
+  'add-deal': (f, fd) => {
+    const g = (k) => String(fd.get(k) || '').trim(); const num = (k) => (g(k) === '' ? null : +g(k));
+    const dl = { id: newId('D'), street: g('street'), suburb: g('suburb'), state: g('state'), postcode: g('postcode'), lotPlan: g('lotPlan'), type: g('type') || 'Land subdivision', zoning: g('zoning'), landSize: num('landSize'), minLotSize: num('minLotSize'), lots: num('lots'), taxType: g('taxType') || 'gst', source: g('source') || 'Listing', asking: +g('asking') || 0, feaso: 'pending', logged: TODAY, notes: g('notes'), docs: [], feasos: [], offers: [], log: [] };
+    dl.address = dealAddress(dl); dl.yield = yieldText(dl.type, dl.lots);
+    dealLog(dl, `Site logged: ${dl.address} (${dl.type}${dl.lots ? ', ' + dl.yield : ''}${dl.zoning ? ', ' + dl.zoning : ''})`);
+    state.deals.unshift(dl); addGlobalLog(`Site logged: ${dl.address} (${dl.type})`, 'deal'); closeSheet(); save(); toast('Site logged. Run the quick feaso next'); go(`#/deal/${dl.id}/feaso`);
+  },
+  'site-details': (f, fd) => {
+    const isDeal = f.dataset.kind === 'deal'; const x = isDeal ? state.deals.find(d0 => d0.id === f.dataset.id) : getProject(f.dataset.id);
+    const g = (k) => String(fd.get(k) || '').trim(); const num = (k) => (g(k) === '' ? null : +g(k));
+    const before = { ...x }; const vals = { street: g('street'), suburb: g('suburb'), state: g('state'), postcode: g('postcode'), lotPlan: g('lotPlan'), zoning: g('zoning'), landSize: num('landSize'), minLotSize: num('minLotSize'), lots: num('lots'), taxType: g('taxType'), notes: g('notes') };
+    if (isDeal) Object.assign(vals, { type: g('type'), asking: +g('asking') || 0, source: g('source') });
+    Object.assign(x, vals); x.yield = yieldText(x.type, x.lots);
+    if (isDeal) x.address = dealAddress(x); else x.name = `${x.street}, ${x.suburb}`;
+    const NAMES = { street: 'street', suburb: 'suburb', state: 'state', postcode: 'postcode', lotPlan: 'Lot / DP', zoning: 'zoning', landSize: 'land size', minLotSize: 'minimum lot size', lots: lotsLabel(x.type).toLowerCase(), taxType: 'tax type', notes: 'notes', type: 'project type', asking: 'asking price', source: 'source' };
+    const changed = Object.keys(vals).filter(k => String(before[k] ?? '') !== String(vals[k] ?? '')).map(k => NAMES[k]);
+    const text = changed.length ? `Details edited: ${changed.join(', ')}` : '';
+    if (text) { if (isDeal) dealLog(x, text); else addLog(x, text, 'note'); }
+    closeSheet(); commit(); toast(changed.length ? 'Details saved' : 'No changes', changed.length ? 'check' : 'info');
+  },
+  'offer': (f, fd) => saveOfferForm(f, fd),
+  'offer-accept': (f, fd) => {
+    const dl = state.deals.find(x => x.id === f.dataset.deal); const o = dl.offers.find(x => x.id === f.dataset.id);
+    Object.assign(o, { status: 'Accepted', exchangeDate: fd.get('exchange'), ddExpiry: fd.get('ddExpiry') || null, settlementDate: fd.get('settlement') || null, acceptedAt: TODAY });
+    dealLog(dl, `Offer ${o.n} accepted (${fmtMoney(o.price, { whole: true })}). Exchange ${fmtDate(o.exchangeDate)}, DD expiry ${o.ddExpiry ? fmtDate(o.ddExpiry) : 'to set'}, settlement ${o.settlementDate ? fmtDate(o.settlementDate) : 'to set'}`);
+    if (dl.feaso !== 'go') { dl.feaso = 'go'; dealLog(dl, 'Marked Go: offer accepted'); }
+    addGlobalLog(`Offer ${o.n} accepted on ${dl.address}`, 'deal'); closeSheet(); commit(); toast(`Offer ${o.n} accepted. Dates go to the project when you create it`);
+  },
+  'task-link': (f, fd) => {
+    const p = getProject(f.dataset.p); const t = p.tasks.find(x => x.id === f.dataset.id); const to = fd.get('to'); const old = t.due;
+    if (to) {
+      const link = { to, n: +fd.get('n') || 0, unit: fd.get('unit'), basis: fd.get('basis') || 'due' };
+      const a = anchorTask(p, link); if (!a) { toast('That milestone has no task on this project', 'info'); return; }
+      if (a === t || dependsOn(p, a, t)) { toast("That would go round in a circle. Pick another task.", 'warning'); return; }
+      t.link = link; t.dateSetByYou = false; t.due = linkDate(p, t) || t.due;
+      addLog(p, `Due date linked: ${t.title} is ${linkText(p, t)} (${fmtDate(t.due)})`, 'task');
+    } else { t.link = null; t.dateSetByYou = false; t.due = fd.get('due') || t.due; addLog(p, `Due date set: ${t.title} ${fmtDate(t.due)} (not linked)`, 'task'); }
+    const moved = rippleFrom(p, t); closeSheet(); commit(); toast(`Due ${fmtDateShort(t.due)}${moved ? ` · ${plural(moved, 'linked task')} moved` : ''}`);
+  },
+  'list-add': (f, fd) => {
+    const kind = f.dataset.kind; const text = String(fd.get('text') || '').trim(); if (!text) return;
+    if (kind === 'zonings') { if (state.zonings.some(z => z.toLowerCase() === text.toLowerCase())) { toast('That zoning is already on the list', 'info'); return; } state.zonings.push(text); addGlobalLog(`Zoning added: ${text}`, 'note'); }
+    else if (kind === 'docTypes') { if (state.docTypes.some(t => t.label.toLowerCase() === text.toLowerCase())) { toast('That document type already exists', 'info'); return; } let key = text.replace(/&/g, 'And').split(/[^A-Za-z0-9]+/).filter(Boolean).map(w => w[0].toUpperCase() + w.slice(1)).join('') || 'Other'; while (docKeys().includes(key)) key += '2'; state.docTypes.push({ key, label: text }); addGlobalLog(`Document type added: ${text}`, 'doc'); }
+    else { const fld = kind.slice(3); state.termBank[fld].push(text); addGlobalLog(`Term bank (${TERM_FIELDS[fld]}): added "${text.slice(0, 60)}${text.length > 60 ? '…' : ''}"`, 'note'); }
+    commit(); toast('Added'); const i = $('#la-new'); if (i) i.focus();
+  },
+  'list-edit': (f, fd) => {
+    const kind = f.dataset.kind; const i = +f.dataset.i; const text = String(fd.get('text') || '').trim(); ui.listEdit = ''; if (!text) { render(); return; }
+    if (kind === 'zonings') { const old = state.zonings[i]; state.zonings[i] = text; state.deals.forEach(x => { if (x.zoning === old) x.zoning = text; }); state.projects.forEach(x => { if (x.zoning === old) x.zoning = text; }); if (old !== text) addGlobalLog(`Zoning renamed: ${old} to ${text} (sites updated)`, 'note'); }
+    else if (kind === 'docTypes') { const t = state.docTypes[i]; const old = t.label; t.label = text; if (old !== text) addGlobalLog(`Document type renamed: ${old} to ${text}`, 'doc'); }
+    else { const fld = kind.slice(3); const old = state.termBank[fld][i]; state.termBank[fld][i] = text; if (old !== text) addGlobalLog(`Term bank (${TERM_FIELDS[fld]}): edited a term`, 'note'); }
+    commit(); toast('Saved');
+  },
   'settings': (f, fd) => { ['company', 'abn', 'address', 'director', 'established', 'trust', 'trustee', 'feeBasis', 'feeNote', 'signature'].forEach(k => { state.settings[k] = fd.get(k); }); state.settings.feeAmount = +fd.get('feeAmount') || 0; const m = state.companies.find(c => c.manager); if (m) { m.name = state.settings.company; m.abn = state.settings.abn; m.address = state.settings.address; } commit(); toast('Settings saved'); },
-  'wiz1': (f, fd) => { ['street', 'suburb', 'state', 'type', 'lot', 'planType', 'planNo', 'yield'].forEach(k => { wiz[k] = (fd.get(k) || '').trim(); }); wiz.id = fd.get('id').trim().toUpperCase(); if (state.projects.some(p => p.id === wiz.id)) { toast('That project ID is already used', 'warning'); return; } if (!wiz.company) wiz.company = wiz.suburb + ' Developments Pty Ltd'; wiz.step = 2; render(); },
+  'wiz1': (f, fd) => { ['street', 'suburb', 'state', 'postcode', 'type', 'lot', 'planType', 'planNo', 'yield'].forEach(k => { wiz[k] = (fd.get(k) || '').trim(); }); wiz.id = fd.get('id').trim().toUpperCase(); if (state.projects.some(p => p.id === wiz.id)) { toast('That project ID is already used', 'warning'); return; } if (!wiz.company) wiz.company = wiz.suburb + ' Developments Pty Ltd'; wiz.step = 2; render(); },
   'wiz2': (f, fd) => {
     wiz.owner = fd.get('owner') || 'new'; ['company', 'abn', 'acn', 'bank', 'bsb', 'acc', 'price', 'existingId'].forEach(k => { wiz[k] = (fd.get(k) || '').trim(); }); wiz.gst = !!fd.get('gst');
     if (wiz.owner === 'new' && !wiz.company) { toast('Enter the new company name', 'info'); return; }
@@ -3786,9 +3959,9 @@ function createProjectFromWizard() {
   if (w.owner === 'existing') companyId = w.existingId;
   else if (w.owner === 'new') { newCo = { id: newId('co'), name: w.company, short: w.suburb, abn: w.abn || 'Applied for', acn: w.acn, address: 'c/- ' + state.settings.company + ', ' + state.settings.address, gst: w.gst, gstFrom: w.gst ? TODAY : null, basCycle: w.gst ? 'quarterly' : 'none', bank: w.bank, bsb: w.bsb, acc: w.acc, status: 'Active', formed: TODAY, closed: null, notes: '' }; companyId = newCo.id; }
   const tasks = [];
-  w.stages.forEach((st, i) => wizTasksFor(st).forEach(t => { const n = i + 1; tasks.push({ id: newId('t'), stage: n, title: t.title, due: addDays(base, t.off || 0), done: n < start, doneAt: n < start ? addDays(base, t.off || 0) : null, notes: [], lead: t.lead || null }); }));
+  w.stages.forEach((st, i) => wizTasksFor(st).forEach(t => { const n = i + 1; tasks.push({ id: newId('t'), stage: n, title: t.title, due: addDays(base, t.off || 0), done: n < start, doneAt: n < start ? addDays(base, t.off || 0) : null, notes: [], lead: t.lead || null, ms: t.ms || null, link: t.link ? { basis: 'due', ...t.link } : null, dateSetByYou: false }); }));
   const p = {
-    id: w.id, name: `${w.street}, ${w.suburb}`, street: w.street, suburb: w.suburb, state: w.state, lotPlan: `Lot ${w.lot} ${w.planType} ${w.planNo}`, type: w.type, yield: w.yield || 'TBC',
+    id: w.id, name: `${w.street}, ${w.suburb}`, street: w.street, suburb: w.suburb, state: w.state, postcode: w.postcode || '', zoning: '', landSize: null, minLotSize: null, lots: parseInt(w.yield, 10) || null, taxType: 'gst', notes: '', lotPlan: `Lot ${w.lot} ${w.planType} ${w.planNo}`, type: w.type, yield: w.yield || 'TBC',
     stages: w.stages.map(st => (st.key ? { name: st.name, key: st.key } : { name: st.name })),
     status: 'live', stage: start, council: null, started: TODAY, companyId,
     stageNote: w.dealId ? 'Created from a Go deal. Next: exchange and due diligence.' : '',
@@ -3796,10 +3969,29 @@ function createProjectFromWizard() {
     tasks, rfqs: [], engagements: [], invoicesIn: [], invoicesOut: [], sales: [], trust: [], docs: [], funds: [], log: [],
   };
   if (w.dealId) {
-    const dl = state.deals.find(x => x.id === w.dealId); dl.projectId = p.id; addLog(p, `Project created from deal: ${dl.address} (feaso Go, ${dl.margin}% margin)`, 'deal');
-    // The deal's files come across, filed under Sourcing or Feasibility
-    const carried = (dl.docs || []).map(d0 => { const [type, stage] = DEAL_TO_PROJECT_DOC[d0.type] || ['Correspondence', 1]; const n = Math.min(stage, p.stages.length); return { id: newId('f'), type, party: d0.party, date: d0.date, title: d0.title, size: d0.size, tags: ['From deal'].concat(d0.note ? [d0.note] : []), ext: d0.ext || 'pdf', stage: n }; });
+    const dl = state.deals.find(x => x.id === w.dealId); dl.projectId = p.id;
+    // Everything captured on the deal comes across: site details, history, files, feaso and the accepted offer
+    Object.assign(p, { zoning: dl.zoning || '', landSize: dl.landSize || null, minLotSize: dl.minLotSize || null, lots: dl.lots || p.lots, taxType: dl.taxType || 'gst', notes: dl.notes || '', dealId: dl.id });
+    (dl.log || []).forEach(l => p.log.push({ ...l, id: newId('l'), text: 'Deal: ' + l.text }));
+    addLog(p, `Project created from deal: ${dl.address}${latestFeaso(dl) ? ` (quick feaso v${latestFeaso(dl).v}, ${(feasoCalc(latestFeaso(dl).inputs).D51 * 100).toFixed(1)}% margin on cost)` : ''}`, 'deal');
+    const carried = (dl.docs || []).map(d0 => ({ id: newId('f'), type: docKeys().includes(d0.type) ? d0.type : 'Correspondence', party: d0.party, date: d0.date, title: d0.title, size: d0.size, tags: ['From deal'].concat(d0.note ? [d0.note] : []), ext: d0.ext || 'pdf', stage: Math.min(dealDocStage(d0.type), p.stages.length) }));
     if (carried.length) { p.docs.push(...carried); const stagesUsed = [...new Set(carried.map(x => x.stage))].sort(); addLog(p, `${plural(carried.length, 'document')} carried over from the deal, filed under ${stagesUsed.map(n => stageLabel(p, n)).join(' and ')}`, 'doc'); }
+    const f = latestFeaso(dl);
+    if (f) {
+      const v = feasoCalc(f.inputs); p.budget = feasoBudget(v); p.feaso = { v: f.v, date: f.date, inputs: { ...f.inputs } };
+      p.docs.push({ id: newId('f'), type: 'Feaso', party: 'WellcoDevelopments', date: f.date, title: `Quick feaso v${f.v}: ${(v.D51 * 100).toFixed(1)}% margin on cost`, size: 38, tags: ['From deal'], ext: 'xlsx', stage: Math.min(2, p.stages.length) });
+      addLog(p, `Budget set from quick feaso v${f.v}: ${fmtMoney(sum(Object.values(p.budget)))} ex GST across ${Object.keys(p.budget).length} categories`, 'money');
+    }
+    const o = (dl.offers || []).find(x => x.status === 'Accepted');
+    if (o) {
+      p.offer = { n: o.n, price: o.price, exchangeDate: o.exchangeDate, ddExpiry: o.ddExpiry, settlementDate: o.settlementDate, dd: o.dd, settlement: o.settlement };
+      const ex = p.tasks.find(t => t.ms === 'exchange'); const dd = p.tasks.find(t => t.ms === 'ddExpiry'); const st = p.tasks.find(t => t.ms === 'settlement');
+      if (ex && o.exchangeDate) { ex.due = o.exchangeDate; ex.done = o.exchangeDate <= TODAY; ex.doneAt = ex.done ? o.exchangeDate : null; }
+      const ddT = parseTerm(o.dd); const stT = parseTerm(o.settlement);
+      if (dd && o.ddExpiry) { dd.due = o.ddExpiry; dd.link = ddT ? { to: 'm:exchange', n: ddT.n, unit: ddT.unit, basis: 'due' } : null; dd.dateSetByYou = false; dd.lead = 'From the accepted offer: ' + o.dd; }
+      if (st && o.settlementDate) { st.due = o.settlementDate; st.link = stT ? { to: stT.from === 'exchange' ? 'm:exchange' : 'm:unconditional', n: stT.n, unit: stT.unit, basis: 'due' } : null; st.dateSetByYou = false; st.lead = 'From the accepted offer: ' + o.settlement; }
+      addLog(p, `Accepted offer ${o.n} (${fmtMoney(o.price, { whole: true })}): exchange ${fmtDate(o.exchangeDate)}, DD expiry ${o.ddExpiry ? fmtDate(o.ddExpiry) : 'to set'}, settlement ${o.settlementDate ? fmtDate(o.settlementDate) : 'to set'}. Task dates linked`, 'deal');
+    }
   }
   if (newCo) { state.companies.push(newCo); addGlobalLog(`Company added: ${newCo.name} (ABN ${newCo.abn}) for ${p.id}`, 'company'); }
   if (companyId) { const reg = p.tasks.find(isRegisterTask); if (reg) { reg.done = true; reg.doneAt = TODAY; } const c = companyById(companyId); if (c.status !== 'Active') { addGlobalLog(`Company ${c.name} now Active (was ${c.status})`, 'company'); c.status = 'Active'; } addLog(p, `${c.name} is the project company, 100% held by ${state.settings.trust}. Approved by Dan`, 'company'); }
@@ -3971,7 +4163,7 @@ let tplSeq = 0;
 function tplTaskRow(i, t) {
   return `<div class="line-item tpl-task" data-tpl-task><div class="field li-desc"><label for="tt-${i}">Task</label><input class="input" id="tt-${i}" name="ttitle" required value="${h(t.title)}"></div>
     <div class="field"><label for="to-${i}">Day</label><input class="input" id="to-${i}" name="toff" type="number" min="0" step="1" value="${h(t.off)}" title="Days from project start"></div>
-    <button type="button" class="icon-btn" data-action="tpl-remove-task" aria-label="Remove task" style="align-self:end">${icon('x')}</button><input type="hidden" name="tlead" value="${h(t.lead || '')}"></div>`;
+    <button type="button" class="icon-btn" data-action="tpl-remove-task" aria-label="Remove task" style="align-self:end">${icon('x')}</button><input type="hidden" name="tlead" value="${h(t.lead || '')}"><input type="hidden" name="tmeta" value="${h(JSON.stringify({ ms: t.ms || null, link: t.link || null }))}">${t.link ? `<span class="hint" style="grid-column:1/-1">Linked: ${h(t.link.n + ' ' + t.link.unit + ' after ' + (t.link.to.startsWith('m:') ? MILESTONES[t.link.to.slice(2)] : 'another task'))}. Day is used if that task is missing.</span>` : ''}</div>`;
 }
 function openTplForm(type, i) {
   const list = tplFor(type); const isNew = i < 0; const st = isNew ? { name: '', tasks: [] } : list[i]; tplSeq = 0;
@@ -3987,8 +4179,8 @@ function openTplForm(type, i) {
 }
 function saveTplForm(f, fd) {
   const type = f.dataset.type; const list = tplFor(type); const i = +f.dataset.i; const isNew = i < 0;
-  const titles = fd.getAll('ttitle'), offs = fd.getAll('toff'), leads = fd.getAll('tlead');
-  const tasks = titles.map((t, j) => ({ title: t.trim(), off: Math.max(0, +offs[j] || 0), lead: leads[j] || null })).filter(t => t.title);
+  const titles = fd.getAll('ttitle'), offs = fd.getAll('toff'), leads = fd.getAll('tlead'), metas = fd.getAll('tmeta');
+  const tasks = titles.map((t, j) => { let m0 = {}; try { m0 = JSON.parse(metas[j] || '{}'); } catch (e) { m0 = {}; } return { title: t.trim(), off: Math.max(0, +offs[j] || 0), lead: leads[j] || null, ms: m0.ms || null, link: m0.link || null }; }).filter(t => t.title);
   const name = fd.get('name').trim(); const pos = Math.min(+fd.get('pos'), isNew ? list.length : list.length - 1);
   let st;
   if (isNew) { st = { id: newId('s'), name, tasks }; list.splice(pos, 0, st); addGlobalLog(`Stage template (${type}): added ${name} as stage ${pos + 1} with ${plural(tasks.length, 'task')}`, 'stage'); }
@@ -4008,16 +4200,112 @@ function openWelcome() {
   openSheet({ title: 'Welcome, Dan',
     body: `<div class="is-modal welcome">${logoHTML('welcome-logo')}
       <p>This is a working demo of the Wellco project brain, loaded with four sample projects: Croobyar Rd, Ulladulla, Jimboomba and Vincentia.</p>
-      <p><b>Updated after our call on 16 Nov:</b> new Certification & Registration stage, split bills, your own roles and stages, files on deals, and a register of your companies with a BAS for each.</p>
+      <p><b>Updated 17 Nov after your notes:</b> Quick Feaso, Make Offer, more deal fields, editable task dates, your own document types.</p>
       <p>Approve bills, request quotes and download the Excel workbooks. Nothing you do here is sent anywhere.</p>
       <h3 class="welcome-h">Try this</h3>
       <ul class="try">
         <li><button type="button" data-action="welcome-go" data-href="#/project/CROOBYAR/money/in${claim ? '?f=' + claim.id : ''}"><span class="try-title">Approve a progress claim</span><span class="try-sub">Southcoast Civil's claim #6 on Croobyar</span></button></li>
-        <li><button type="button" data-action="welcome-go" data-href="#/project/CROOBYAR/rfqs"><span class="try-title">Request quotes</span><span class="try-sub">Landscaping on Croobyar, from your RFQ template</span></button></li>
+        <li><button type="button" data-action="welcome-go" data-href="#/deal/D1/feaso"><span class="try-title">Run your Quick Feaso on a deal</span><span class="try-sub">Woollamia Rd, laid out like your spreadsheet</span></button></li>
+        <li><button type="button" data-action="welcome-go" data-href="#/deal/D1/offers"><span class="try-title">Make an offer</span><span class="try-sub">Your letter of offer and term bank, as a Word file</span></button></li>
         <li><button type="button" data-action="welcome-go" data-href="#/project/CROOBYAR/stage/7"><span class="try-title">See the money needed before sign-off</span><span class="try-sub">Certification & Registration on Croobyar</span></button></li>
         <li><button type="button" data-action="welcome-go" data-href="#/exports"><span class="try-title">Download a year-end workbook</span><span class="try-sub">The Excel file your accountant gets for FY2025-26</span></button></li>
       </ul></div>`,
     foot: `<button type="button" class="btn btn-primary" data-action="welcome-close">Have a look around</button>` });
+}
+
+/* ===== Offers, task links and the feaso workbook ===== */
+function openOfferForm(dl, o, isNew) {
+  openSheet({ title: isNew ? `New offer: Offer ${o.n}` : `Edit offer ${o.n}`, sub: h(dl.address), body: offerFormHTML(dl, o),
+    foot: `<button type="button" class="btn btn-ghost" data-action="close-sheet">Cancel</button><button type="submit" form="f-offer" class="btn btn-primary">${icon('check')}${isNew ? 'Save draft' : 'Save offer'}</button>`, ctx: { deal: dl.id, offer: o, isNew } });
+}
+function saveOfferForm(f, fd) {
+  const dl = state.deals.find(x => x.id === f.dataset.deal); const ctx = sheetCtx; const o = ctx.offer;
+  const g = (k) => String(fd.get(k) || '').trim();
+  Object.assign(o, { date: g('date') || TODAY, purchaser: g('purchaser'), addressLine: g('addressLine'), titleLine: g('titleLine'), price: +g('price') || 0, gstWording: g('gstWording'), deposit: g('deposit'), dd: g('dd'), settlement: g('settlement'), solicitor: g('solicitor'), conditions: fd.getAll('cond').map(x => x.trim()).filter(Boolean) });
+  dl.offers = dl.offers || [];
+  if (ctx.isNew) { dl.offers.push(o); dealLog(dl, `Offer ${o.n} drafted: ${fmtMoney(o.price, { whole: true })}, ${plural(o.conditions.length, 'condition')}`); }
+  else dealLog(dl, `Offer ${o.n} edited`);
+  closeSheet(); commit(); toast(ctx.isNew ? `Offer ${o.n} saved as a draft. Preview or send it next` : 'Offer saved');
+}
+function openAcceptOffer(dl, o) {
+  const ex = o.exchangeDate || TODAY; const dts = offerDates(o, ex);
+  const explain = (t, d0) => t ? `${t.n} ${t.unit} from ${t.from === 'exchange' ? 'exchange' : 'unconditional (DD expiry)'}${d0 ? ': ' + fmtDate(d0) : ''}` : 'No "N days from…" in this term, so set the date yourself';
+  openSheet({ title: `Offer ${o.n} accepted`, sub: `${h(dl.address)} · ${fmtMoney(o.price, { whole: true })}`,
+    body: `<form id="f-accept" data-form="offer-accept" data-deal="${dl.id}" data-id="${o.id}" class="stack" style="gap:16px">
+      <p class="help">Dates are worked out from the terms you chose. When the deal becomes a project, its DD expiry and settlement tasks take these dates and stay linked to exchange.</p>
+      <div class="field"><label for="ac-ex">Contract exchange date</label><input class="input" id="ac-ex" name="exchange" type="date" required value="${ex}" data-input="accept-ex"></div>
+      <div class="field"><label for="ac-dd">DD expiry</label><input class="input" id="ac-dd" name="ddExpiry" type="date" value="${dts.ddExpiry || ''}"><span class="hint" id="ac-dd-why">${h(o.dd)} → ${h(explain(dts.ddT, dts.ddExpiry))}</span></div>
+      <div class="field"><label for="ac-st">Settlement</label><input class="input" id="ac-st" name="settlement" type="date" value="${dts.settlement || ''}"><span class="hint" id="ac-st-why">${h(o.settlement)} → ${h(explain(dts.stT, dts.settlement))}</span></div></form>`,
+    foot: `<button type="button" class="btn btn-ghost" data-action="close-sheet">Cancel</button><button type="submit" form="f-accept" class="btn btn-primary">${icon('check')}Mark accepted</button>`, ctx: { deal: dl.id, offer: o.id } });
+}
+function openTaskLink(p, t) {
+  const l = t.link || { to: '', n: 30, unit: 'days', basis: 'due' };
+  const ms = Object.entries(MILESTONES).filter(([k]) => { const a = msTask(p, k); return a && a !== t; });
+  const others = p.tasks.filter(x => x !== t && !dependsOn(p, x, t)).sort((a, b) => a.stage - b.stage || (a.due || '').localeCompare(b.due || ''));
+  openSheet({ title: 'Due date', sub: h(t.title),
+    body: `<form id="f-tlink" data-form="task-link" data-p="${p.id}" data-id="${t.id}" class="form-grid">
+      <div class="field full"><label for="tl-to">Due relative to</label><select class="input" id="tl-to" name="to" data-input="tlink-calc"><option value="">Nothing: I'll set the date</option>
+        ${ms.length ? `<optgroup label="Milestones">${ms.map(([k, lab]) => `<option value="m:${k}" ${l.to === 'm:' + k ? 'selected' : ''}>${h(lab)} (${fmtDate(msTask(p, k).due)})</option>`).join('')}</optgroup>` : ''}
+        <optgroup label="Tasks">${others.map(x => `<option value="${x.id}" ${l.to === x.id ? 'selected' : ''}>Stage ${x.stage}: ${h(x.title.length > 60 ? x.title.slice(0, 58) + '…' : x.title)}</option>`).join('')}</optgroup></select></div>
+      <div class="field"><label for="tl-n">How long after</label><div class="hstack" style="flex-wrap:nowrap"><input class="input" id="tl-n" name="n" type="number" min="0" step="1" value="${h(l.n)}" data-input="tlink-calc" style="width:96px;flex:none"><select class="input" id="tl-unit" name="unit" aria-label="Days or months" data-input="tlink-calc"><option value="days" ${l.unit !== 'months' ? 'selected' : ''}>days</option><option value="months" ${l.unit === 'months' ? 'selected' : ''}>months</option></select></div></div>
+      <div class="field"><label for="tl-basis">Counted from</label><select class="input" id="tl-basis" name="basis" data-input="tlink-calc"><option value="due" ${l.basis !== 'done' ? 'selected' : ''}>Its due date</option><option value="done" ${l.basis === 'done' ? 'selected' : ''}>When it's ticked done</option></select></div>
+      <div class="field full"><label for="tl-due">Due date</label><input class="input" id="tl-due" name="due" type="date" value="${h(t.due || '')}"><span class="hint" id="tl-hint">${t.link ? 'Follows ' + h(linkText(p, t)) + '. Tasks that follow this one move with it.' : 'Set a date, or pick what it follows above.'}</span></div></form>`,
+    foot: `<button type="button" class="btn btn-ghost" data-action="close-sheet">Cancel</button><button type="submit" form="f-tlink" class="btn btn-primary">Save date</button>`, ctx: { p: p.id, task: t.id } });
+}
+function tlinkPreview() {
+  const f = $('#f-tlink'); if (!f) return; const p = getProject(f.dataset.p); const t = p.tasks.find(x => x.id === f.dataset.id);
+  const to = f.querySelector('[name=to]').value; const dueEl = $('#tl-due');
+  if (!to) { dueEl.disabled = false; $('#tl-hint').textContent = 'Set a date, or pick what it follows above.'; return; }
+  const link = { to, n: +f.querySelector('[name=n]').value || 0, unit: f.querySelector('[name=unit]').value, basis: f.querySelector('[name=basis]').value };
+  const nd = linkDate(p, { ...t, link }); if (nd) dueEl.value = nd; dueEl.disabled = true;
+  $('#tl-hint').textContent = `${link.n} ${link.unit} after ${anchorName(p, link)}${link.basis === 'done' ? ' is done' : ''}: ${nd ? fmtDate(nd) : 'no date yet'}`;
+}
+// Dan's sheet layout in Excel, with his formulas (lots and the s94 credit no longer hard-coded)
+function feasoBook(dl, inputs) {
+  const v = feasoCalc(inputs); const P0 = '0.0%'; const M = '#,##0'; const rows = [];
+  const set = (r, c, val) => { rows[r - 1] = rows[r - 1] || []; rows[r - 1][c] = val; };
+  const F = (key, f, z = M) => ({ v: /%/.test(z) ? v[key] : Math.round(v[key] * 100) / 100, f, z });
+  set(1, 1, 'FEASIBILITY TEMPLATE'); set(2, 1, 'Property:'); set(2, 2, dl.address); set(3, 1, 'Lots:'); set(3, 2, { v: v.C3, z: '0' }); set(3, 3, 'Price per lot'); set(3, 4, { v: v.E3, z: M });
+  [['Cost to complete', 'Rate', 'Quantity', 'Overall', 'Per Lot']].forEach(hd => hd.forEach((x, i) => set(4, i, x)));
+  const L = (r, label) => set(r, 0, label);
+  L(5, 'Total'); set(5, 3, F('D5', 'C3*E3'));
+  L(6, 'Agency'); set(6, 1, { v: v.B6, z: P0 }); set(6, 3, F('D6', 'B6*D5'));
+  L(7, 'Legal'); set(7, 1, { v: v.B7, z: M }); set(7, 2, { v: v.C7, f: 'C3', z: '0' }); set(7, 3, F('D7', 'C7*B7'));
+  L(8, inputs.gstMode === 'full' ? 'GST on sales (full)' : inputs.gstMode === 'none' ? 'GST (none)' : 'GST under margin'); set(8, 3, F('D8', inputs.gstMode === 'full' ? 'D5/11' : inputs.gstMode === 'none' ? '0' : '(D5-D12)/11'));
+  L(9, 'NET REVENUE'); set(9, 3, F('D9', 'D5-D6-D7-D8')); set(9, 4, F('E9', 'D9/C3'));
+  L(10, 'Costs'); L(11, 'Land'); L(12, 'Purchase Price'); set(12, 3, { v: v.D12, z: M });
+  L(13, 'Stamp Duty'); set(13, 1, { v: v.B13, z: P0 }); set(13, 3, F('D13', 'D12*B13'));
+  L(14, 'Legals'); set(14, 2, { v: v.C14, z: M }); set(14, 3, F('D14', 'C14'));
+  L(15, 'Acquisition'); set(15, 3, F('D15', 'SUM(D12:D14)')); set(15, 4, F('E15', 'D15/C3'));
+  L(16, 'Construction'); L(17, 'Electrics and Comms'); set(17, 2, { v: v.C17, z: M }); set(17, 3, F('D17', 'C17*C3'));
+  L(18, 'Civils'); set(18, 2, { v: v.C18, z: M }); set(18, 3, F('D18', 'C18*C3'));
+  L(19, 'Planting/landscaping'); set(19, 2, { v: v.C19, z: M }); set(19, 3, F('D19', 'C19*C3'));
+  L(20, 'Sub Total'); set(20, 3, F('D20', 'SUM(D17:D19)'));
+  L(21, 'Contingency'); set(21, 1, { v: v.B21, z: P0 }); set(21, 3, F('D21', 'D20*B21'));
+  L(22, 'Total Construction'); set(22, 3, F('D22', 'SUM(D20:D21)')); set(22, 4, F('E22', 'D22/C3'));
+  L(23, 'Consultants'); L(24, 'Electrical design'); set(24, 3, { v: v.D24, z: M }); L(25, 'Other'); set(25, 3, { v: v.D25, z: M }); L(26, 'Engineer'); set(26, 3, { v: v.D26, z: M });
+  L(27, 'Surveyor'); set(27, 2, { v: v.C27, z: M }); set(27, 3, F('D27', 'C27*C3')); L(28, 'Planning'); set(28, 3, { v: v.D28, z: M });
+  L(29, 'Total Consultants'); set(29, 3, F('D29', 'SUM(D24:D28)')); set(29, 4, F('E29', 'D29/C3'));
+  L(30, 'Fees'); L(31, 'Marketing'); set(31, 3, { v: v.D31, z: M });
+  L(32, 'Project Mgmt'); set(32, 1, { v: v.B32, z: M }); set(32, 2, { v: v.C32, z: '0' }); set(32, 3, F('D32', 'B32*C32'));
+  L(33, 'Bond'); set(33, 1, { v: v.B33, z: P0 }); set(33, 3, F('D33', 'D18*B33'));
+  L(34, 'Accounting and Admin'); set(34, 3, { v: v.D34, z: M }); L(35, 'Holding'); set(35, 3, { v: v.D35, z: M });
+  L(36, 'Fees & Levies'); L(37, 'Council CC Approval fee'); set(37, 3, { v: v.D37, z: M });
+  L(38, 's94 Costs (B = existing lots credited)'); set(38, 1, { v: v.B38, z: '0' }); set(38, 2, { v: v.C38, z: M }); set(38, 3, F('D38', 'C38*MAX(0,C3-B38)'));
+  L(39, 'Total Fees'); set(39, 3, F('D39', 'SUM(D31:D38)'));
+  L(40, 'Total cost'); set(40, 3, F('D40', 'D15+D22+D29+D39')); set(40, 4, F('E40', '(D40-D15)/C3'));
+  L(41, 'Gross Profit Before Finance'); set(41, 3, F('D41', 'D9-D40'));
+  L(42, 'Equity'); set(42, 1, { v: v.B42, z: M });
+  L(43, 'Funds to Complete'); set(43, 1, F('B43', 'D40-B42'));
+  L(44, 'Land Debt'); set(44, 1, F('B44', 'D15-B42')); set(44, 2, { v: v.C44, z: P0 }); set(44, 3, F('D44', 'C44*B44'));
+  L(45, 'Construction Debt'); set(45, 1, F('B45', 'B43-B44')); set(45, 2, { v: v.C45, z: P0 }); set(45, 3, F('D45', 'B45*C45/2'));
+  L(46, 'Establishment Fee'); set(46, 2, { v: v.C46, z: P0 }); set(46, 3, F('D46', 'C46*(B45+B44)'));
+  L(47, 'Interest Costs'); set(47, 3, F('D47', 'SUM(D44:D46)'));
+  L(48, 'Total Costs inc Finance'); set(48, 3, F('D48', 'D40+D47')); set(48, 4, F('E48', 'D48/C3'));
+  L(50, 'Net Profit Post Finance'); set(50, 3, F('D50', 'D9-D48')); set(50, 4, F('E50', 'D50/C3'));
+  set(51, 2, 'Margin on Cost (MoC)'); set(51, 3, F('D51', 'D50/D48', '0.00%'));
+  for (let r = 0; r < rows.length; r++) { rows[r] = rows[r] || []; for (let c = 0; c < 5; c++) if (rows[r][c] === undefined) rows[r][c] = ''; }
+  return [{ name: 'Sheet1', rows, cols: [36, 14, 14, 16, 14] }];
 }
 
 /* ===== Events ===== */
@@ -4034,6 +4322,8 @@ document.addEventListener('input', (e) => {
   if (k === 'inv-calc') updateInvoiceCalc();
   if (k === 'upload-preview') updateUploadPreview();
   if (k === 'dealdoc-preview') updateDealDocPreview();
+  if (k === 'feaso') feasoLiveUpdate(el);
+  if (k === 'tlink-calc') tlinkPreview();
   if (k === 'cat-name') document.querySelectorAll(`#f-cats select[data-role] option[value="${el.dataset.i}"]`).forEach(o => { o.textContent = el.value || 'New category'; });
   if (k === 'wiz-suburb' && wiz) { const idEl = $('#w-id'); if (idEl && (!idEl.value || idEl.dataset.auto)) { idEl.value = el.value.toUpperCase().replace(/[^A-Z0-9]/g, ''); idEl.dataset.auto = '1'; } }
 });
@@ -4045,6 +4335,27 @@ document.addEventListener('change', (e) => {
   if (k === 'upload-preview') updateUploadPreview();
   if (k === 'dealdoc-preview') updateDealDocPreview();
   if (k === 'contact-roles') refreshContactCats();
+  if (k === 'feaso' && el.tagName === 'SELECT') feasoLiveUpdate(el);
+  if (k === 'site-type') { const lb = $('#st-lots-label'); if (lb) lb.textContent = lotsLabel(el.value); }
+  if (k === 'term-pick' && el.value !== '') { const fld = el.id.replace('tp-', ''); const ta = $('#' + el.dataset.target); if (ta) ta.value = state.termBank[fld][+el.value]; }
+  if (k === 'gst-wording' && el.value) { $('#of-gst').value = TAX_WORDING[el.value]; }
+  if (k === 'tlink-calc') tlinkPreview();
+  if (k === 'accept-ex') { const f = $('#f-accept'); const dl = state.deals.find(x => x.id === f.dataset.deal); const o = dl.offers.find(x => x.id === f.dataset.id); const dts = offerDates(o, el.value); if (dts.ddExpiry) $('#ac-dd').value = dts.ddExpiry; if (dts.settlement) $('#ac-st').value = dts.settlement; }
+  if (k === 'offer-status') {
+    const dl = state.deals.find(x => x.id === el.dataset.deal); const o = dl.offers.find(x => x.id === el.dataset.id); const v = el.value;
+    if (v === 'Accepted') { openAcceptOffer(dl, o); el.value = o.status; return; }
+    const was = o.status; o.status = v; if (v === 'Sent' && !o.sentAt) o.sentAt = TODAY;
+    dealLog(dl, `Offer ${o.n} marked ${v} (was ${was})`); commit(); toast(`Offer ${o.n}: ${v}`);
+  }
+  if (k === 'task-due') {
+    const p = getProject(el.dataset.p); const t = p.tasks.find(x => x.id === el.dataset.id); if (!el.value || el.value === t.due) return;
+    const old = t.due; t.due = el.value; if (t.done) t.doneAt = t.doneAt === old ? el.value : t.doneAt;
+    if (t.link) t.dateSetByYou = true;
+    const moved = rippleFrom(p, t);
+    addLog(p, `Due date changed: ${t.title} ${old ? fmtDate(old) + ' to ' : ''}${fmtDate(t.due)}${t.link ? ' (set by you, no longer follows ' + anchorName(p, t.link) + ')' : ''}${moved ? `; ${plural(moved, 'linked task')} moved` : ''}`, 'task');
+    commit(); toast(`Due ${fmtDateShort(t.due)}${moved ? ` · ${plural(moved, 'linked task')} moved` : ''}`);
+    const back = $('#td-' + CSS.escape(t.id)); if (back) back.focus({ preventScroll: true });
+  }
   if (k === 'def-cat') { const prev = el.dataset.prev; document.querySelectorAll('#inv-lines [name=lcat]').forEach(x => { if (x.value === prev) x.value = el.value; }); el.dataset.prev = el.value; updateInvoiceCalc(); }
   if (k === 'wiz-owner') { wiz.owner = el.value; $('#wiz-existing').hidden = el.value !== 'existing'; $('#wiz-new').hidden = el.value !== 'new'; }
   if (k === 'assign-owner') { $('#as-existing').hidden = el.value !== 'existing'; $('#as-new').hidden = el.value !== 'new'; }
