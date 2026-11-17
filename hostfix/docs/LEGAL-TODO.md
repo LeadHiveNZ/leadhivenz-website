@@ -1,12 +1,20 @@
 # Legal: what a lawyer needs to write
 
-Nothing in this project is legal advice, and none of the legal wording has been written. The four
-pages below exist on the site as clearly marked placeholders. A lawyer who knows New Zealand consumer
-and privacy law (and later Australian law) needs to write them **before the first owner pays, the first
-tradie is approved, or an ad is run**.
+Nothing in this project is legal advice. On 17 November 2026 the four pages below were written in plain
+English from what the software actually does, under the free-to-join model (`DECISIONS.md`). They are
+live on the site. The plan: a free Community Law review before the first job, and a paid review by a
+lawyer who knows New Zealand consumer and privacy law at around 100 properties (Australian law before the
+first Australian market).
 
-This file is a brief to hand to that lawyer: what the business does, what the software actually does
-today, and the questions each document has to answer. It is a list of topics, not draft terms.
+This file is the brief for whoever reviews them: what the business does, what the software actually does
+today, and the questions each document has to answer. Where a page and this file disagree, the page is
+what customers agreed to: fix the page, then this file.
+
+Since this brief was first written, the business changed: **owners pay nothing to join and there is no
+monthly membership** (the 15% fee is inside each fixed job price); the missed-promise credit is the
+call-out portion of the job, not a month's membership; the founding deposit is no longer offered and paid
+ones are refunded; and every tradie must have public liability insurance on file. Read the membership and
+deposit paragraphs below with that in mind.
 
 ## The business in one paragraph
 

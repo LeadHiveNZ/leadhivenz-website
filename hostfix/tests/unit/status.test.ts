@@ -18,8 +18,8 @@ describe("the setup checklist", () => {
     expect(items.filter((item) => item.state === "ok")).toEqual([]);
   });
 
-  it("never claims the legal pages are done", async () => {
-    expect(await statusOf("legal")).toMatchObject({ state: "todo", detail: expect.stringContaining("A lawyer needs to write them") });
+  it("never claims the legal pages are done until a person has reviewed them", async () => {
+    expect(await statusOf("legal")).toMatchObject({ state: "todo", detail: expect.stringContaining("Community Law") });
   });
 
   it("counts the [EDIT] placeholders still in the copy and brand settings", async () => {

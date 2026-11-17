@@ -256,7 +256,8 @@ export async function setupStatus(): Promise<StatusItem[]> {
     key: "legal",
     label: "Legal pages",
     state: "todo",
-    detail: "Terms, privacy, tradie agreement and insurance are placeholders. A lawyer needs to write them before you run ads or take deposits.",
+    detail:
+      "Terms, privacy, the tradie agreement and insurance are written in plain English from what the app does. Before the first job, have Community Law (free) read them; at around 100 properties, pay a lawyer to review them. Tick this off by hand once that is done (DECISIONS.md).",
   });
 
   return items;

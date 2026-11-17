@@ -225,11 +225,20 @@ test.describe("other public pages", () => {
     await expect(page.getByRole("link", { name: /I'm a tradie/ })).toHaveAttribute("href", "/tradies");
   });
 
-  test("legal pages are clearly marked as placeholders", async ({ page }) => {
-    for (const path of ["/legal/terms", "/legal/privacy", "/legal/tradie-agreement", "/legal/insurance"]) {
+  test("the legal pages are real, in plain English, and say when they were last updated", async ({ page }) => {
+    const pages: [string, string, string][] = [
+      ["/legal/terms", "Terms of service", "Our promise, and what happens if we miss it"],
+      ["/legal/privacy", "Privacy statement", "Who sees what"],
+      ["/legal/tradie-agreement", "Tradie agreement", "The price is the price"],
+      ["/legal/insurance", "Insurance", "The tradie"],
+    ];
+    for (const [path, title, heading] of pages) {
       await page.goto(path);
-      await expect(page.getByText("Placeholder page")).toBeVisible();
-      await expect(page.locator('meta[name="robots"]')).toHaveAttribute("content", /noindex/);
+      await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
+      await expect(page.getByRole("heading", { name: new RegExp(heading) })).toBeVisible();
+      await expect(page.getByText(/Last updated \d{1,2} \w+ \d{4}/)).toBeVisible();
+      await expect(page.getByText("Placeholder page")).toHaveCount(0);
+      await expect(page.getByText("[EDIT")).toHaveCount(0);
     }
   });
 

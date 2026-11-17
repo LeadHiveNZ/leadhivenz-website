@@ -9,6 +9,69 @@ price, a fee or a promise, add a line here saying what and why.
 
 ---
 
+## 2026-11-17 — Free to join. The money is the 15% on every job.
+
+Owners who rang after the first ads all said the same thing: "$600 a year for
+maintenance isn't relevant to me." They were comparing the membership with what
+they spend on repairs, not valuing the guarantee, because nobody values a
+guarantee from a company that has never turned up for them. The friction is the
+card step before the first job, not the number on it. $1 a month has the same
+friction as $99.
+
+**The model from today:**
+
+- **Owners pay nothing to join.** No membership, no deposit. They add a property,
+  put a card on file, and pay the fixed menu price when a job is done. The 15%
+  platform fee is inside every menu price, as it always was.
+- **Managers pay nothing to join either.** The Portfolio retainer stays built and
+  switched off. A manager is asked to start with 10 properties for 60 days so
+  the tradies can handle the volume: that is capacity, not price.
+- **The response promise stays: on site within 24 hours, or 4 when urgent.** The
+  "that month's membership is free" credit has nothing to credit. Replaced by:
+  miss the time and the owner is not charged the call-out portion of that job
+  (the market's diagnosis fee, NZ$225 in Queenstown, capped at the job's price).
+  The tradie is still paid in full; the platform wears it.
+- **Every tradie must have public liability insurance on file**, with the policy
+  number and expiry. No insurance, or expired insurance, and the app offers them
+  nothing, the same rule as licences.
+- **Founding deposits already paid** are refunded in full. There is no first
+  bill to take them off.
+- **Jobs, quotes, surcharges, payouts and disputes do not change.**
+
+**Why free beats cheap.** Any card step before the first job loses a third of
+signups. $0 gets the property into the app, the QR card into the house and the
+cleaner onto the link, and the first job makes the sale. A free app is also how
+cleaners and managers put whole portfolios in.
+
+**What this does to the money.** A property brings 2 to 4 jobs a year at about
+NZ$235, so NZ$70 to NZ$140 a year in platform fee. Queenstown alone tops out
+near NZ$200k a year. The business is national, and the levers are volume
+discounts from tradies (open spec 3 below, lifting the take from NZ$35 to
+about NZ$70 a job), Portfolio retainers when a manager wants guaranteed
+capacity, and a low cost per property from owner lists rather than ads.
+
+**Towns open on demand.** Owners anywhere in New Zealand can add a property.
+A town opens for jobs only once it has tradies in every trade; until then an
+owner there is told so when they try to log a job, and the admin is shown which
+towns have properties waiting.
+
+### Code to change
+
+- Essential becomes a NZ$0 tier: the property is a member as soon as a card is
+  on file, with no subscription and no monthly invoice. The code paths for a
+  priced membership stay, for Portfolio and for a paid tier later.
+- The missed-promise credit becomes the call-out credit above.
+- Tradies: insurance policy number and expiry on their profile, required before
+  approval and checked at offer time.
+- Owner page, price list, thank-you page and ads: "free to join, fixed prices,
+  pay when it's fixed". The founding deposit button goes. Refund paid deposits.
+- Legal pages: a real privacy statement and tradie agreement written from
+  `docs/LEGAL-TODO.md`, agreed to in the app with the time recorded. Owner
+  terms likewise. Reviewed by Community Law before the first job, and by a
+  lawyer at around 100 properties.
+
+---
+
 ## 2026-11-17 — A second tier for property managers (Portfolio)
 
 The first inbound owner-side enquiry was not an owner. It was a property
