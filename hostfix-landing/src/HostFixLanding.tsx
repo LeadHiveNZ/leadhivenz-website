@@ -29,6 +29,13 @@ export type Lead = {
   phone: string;
   email: string;
   properties: number;
+  /** owner, manager or cohost */
+  role: string;
+  town: string;
+  /** who sorts their maintenance today */
+  who_now: string | null;
+  /** when to ring them */
+  call_time: string | null;
   suburb: string | null;
   utm_source: string | null;
   utm_campaign: string | null;
@@ -151,7 +158,27 @@ function Logo({ small = false }: { small?: boolean }) {
   );
 }
 
-type Errors = Partial<Record<"name" | "phone" | "email" | "properties", string>>;
+type Errors = Partial<Record<"name" | "phone" | "email" | "properties" | "role" | "town", string>>;
+
+const ROLES: [string, string][] = [
+  ["owner", "I own it"],
+  ["manager", "I manage for owners"],
+  ["cohost", "I co-host or clean"],
+];
+const WHO_NOW: [string, string][] = [
+  ["", "Who sorts it?"],
+  ["me", "Me, ringing round"],
+  ["manager", "My property manager"],
+  ["handyman", "A handyman I know"],
+  ["nobody", "Nobody. It piles up"],
+];
+const CALL_TIMES: [string, string][] = [
+  ["", "Best time?"],
+  ["morning", "Morning"],
+  ["afternoon", "Afternoon"],
+  ["evening", "After 6pm"],
+  ["text", "Text me first"],
+];
 
 function LeadForm({ saveLead, onDone }: { saveLead: Props["saveLead"]; onDone: () => void }) {
   const [errors, setErrors] = useState<Errors>({});
@@ -166,8 +193,12 @@ function LeadForm({ saveLead, onDone }: { saveLead: Props["saveLead"]; onDone: (
     const phone = get("phone");
     const email = get("email");
     const properties = Number(get("properties"));
+    const role = get("role");
+    const town = get("town");
     const next: Errors = {};
     if (name.length < 2) next.name = "Please enter your name.";
+    if (!ROLES.some(([key]) => key === role)) next.role = "Pick one.";
+    if (town.length < 2) next.town = "Which town?";
     if (phone.replace(/\D/g, "").length < 8 || !/^[0-9+()\s-]+$/.test(phone)) next.phone = "Please check your mobile number.";
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) next.email = "Please check your email.";
     if (!Number.isInteger(properties) || properties < 1 || properties > 500) next.properties = "How many?";
@@ -183,7 +214,11 @@ function LeadForm({ saveLead, onDone }: { saveLead: Props["saveLead"]; onDone: (
       phone: phone.slice(0, 30),
       email: email.slice(0, 255),
       properties,
-      suburb: get("suburb").slice(0, 100) || null,
+      role,
+      town: town.slice(0, 100),
+      who_now: get("who_now").slice(0, 40) || null,
+      call_time: get("call_time").slice(0, 40) || null,
+      suburb: null,
       utm_source: param("utm_source"),
       utm_campaign: param("utm_campaign"),
       utm_content: param("utm_content"),
@@ -211,12 +246,40 @@ function LeadForm({ saveLead, onDone }: { saveLead: Props["saveLead"]; onDone: (
       <Field id="email" label="Email" error={errors.email}>
         <input id="email" name="email" type="email" inputMode="email" autoComplete="email" maxLength={255} className="hf-input" />
       </Field>
+      <fieldset className={`hf-field hf-choices ${errors.role ? "hf-field-error" : ""}`}>
+        <legend className="hf-label">The property</legend>
+        <div className="hf-chips">
+          {ROLES.map(([key, label]) => (
+            <label key={key} className="hf-chip">
+              <input type="radio" name="role" value={key} />
+              <span>{label}</span>
+            </label>
+          ))}
+        </div>
+        {errors.role && <span className="hf-error">{errors.role}</span>}
+      </fieldset>
       <div className="hf-row">
-        <Field id="properties" label="Properties" error={errors.properties}>
+        <Field id="properties" label="How many" error={errors.properties}>
           <input id="properties" name="properties" type="number" inputMode="numeric" min={1} max={500} defaultValue={1} className="hf-input" />
         </Field>
-        <Field id="suburb" label="Suburb (optional)">
-          <input id="suburb" name="suburb" maxLength={100} placeholder="e.g. Fernhill" className="hf-input" />
+        <Field id="town" label="Town" error={errors.town}>
+          <input id="town" name="town" maxLength={100} placeholder="e.g. Queenstown" autoComplete="address-level2" className="hf-input" />
+        </Field>
+      </div>
+      <div className="hf-row">
+        <Field id="who_now" label="Repairs today">
+          <select id="who_now" name="who_now" className="hf-input" defaultValue="">
+            {WHO_NOW.map(([key, label]) => (
+              <option key={key} value={key}>{label}</option>
+            ))}
+          </select>
+        </Field>
+        <Field id="call_time" label="Call you">
+          <select id="call_time" name="call_time" className="hf-input" defaultValue="">
+            {CALL_TIMES.map(([key, label]) => (
+              <option key={key} value={key}>{label}</option>
+            ))}
+          </select>
         </Field>
       </div>
       {failed && <p className="hf-error-box">That didn't send. Please check your connection and try again.</p>}

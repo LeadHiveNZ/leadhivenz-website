@@ -85,8 +85,15 @@ export const Route = createFileRoute("/api/public/leads")({
           !Number.isInteger(properties) || properties < 1 || properties > 500
         ) return Response.json({ error: "Please check the form" }, { status: 400 });
 
+        const role = text(body["role"], 20);
+        const town = text(body["town"], 100);
+        if (role === null || !["owner", "manager", "cohost"].includes(role) || town === null || town.length < 2) {
+          return Response.json({ error: "Please check the form" }, { status: 400 });
+        }
         const lead = {
-          name, phone, email, properties,
+          name, phone, email, properties, role, town,
+          who_now: text(body["who_now"], 40),
+          call_time: text(body["call_time"], 40),
           suburb: text(body["suburb"], 100),
           utm_source: text(body["utm_source"], 255),
           utm_campaign: text(body["utm_campaign"], 255),
@@ -122,8 +129,11 @@ export const Route = createFileRoute("/api/public/leads")({
             `Name: ${lead.name}`,
             `Mobile: ${lead.phone}`,
             `Email: ${lead.email}`,
+            `They are: ${{ owner: "the owner", manager: "a property manager", cohost: "a co-host or cleaner" }[lead.role] ?? lead.role}`,
             `Properties: ${lead.properties}`,
-            `Suburb: ${lead.suburb ?? "not given"}`,
+            `Town: ${lead.town}`,
+            `Repairs today: ${{ me: "them, ringing round", manager: "their property manager", handyman: "a handyman they know", nobody: "nobody, it piles up" }[lead.who_now ?? ""] ?? "not said"}`,
+            `Call them: ${{ morning: "morning", afternoon: "afternoon", evening: "after 6pm", text: "text first" }[lead.call_time ?? ""] ?? "any time"}`,
             ``,
             `Came from: ${source}`,
             `When: ${nzTime(new Date(saved.created_at))} (NZ time)`,
@@ -138,7 +148,7 @@ export const Route = createFileRoute("/api/public/leads")({
               from: LEAD_EMAIL_FROM,
               to: [LEAD_EMAIL_TO],
               reply_to: lead.email,
-              subject: `New HostFix lead: ${lead.name}, ${lead.properties} ${lead.properties === 1 ? "property" : "properties"}${lead.suburb ? ` (${lead.suburb})` : ""}`,
+              subject: `New HostFix lead: ${lead.name}, ${lead.properties} ${lead.properties === 1 ? "property" : "properties"} (${lead.town})${lead.role === "manager" ? " MANAGER" : ""}`,
               text: lines.join("\n"),
             }),
           });
