@@ -6,7 +6,8 @@ let counter = 0;
 /** A different, valid New Zealand mobile number every time. */
 export function uniquePhone(): string {
   counter += 1;
-  const tail = String((Date.now() + counter * 7919) % 10_000_000).padStart(7, "0");
+  // Never a leading zero: 021 0xx xxxx is grouped differently when displayed, which would break text matches.
+  const tail = String(((Date.now() + counter * 7919) % 9_000_000) + 1_000_000);
   return `021 ${tail.slice(0, 3)} ${tail.slice(3)}`;
 }
 

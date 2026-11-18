@@ -13,22 +13,21 @@ describe("the setup checklist", () => {
     expect(keys).toEqual(["database", "email", "sms", "payments", "timer", "photos", "pixel", "capi", "analytics", "copy", "legal"]);
   });
 
-  it("marks nothing as ready on a fresh install", async () => {
+  it("marks nothing that needs a key or an account as ready on a fresh install", async () => {
     const items = await setupStatus();
-    expect(items.filter((item) => item.state === "ok")).toEqual([]);
+    // Only the page copy can be done without any outside account: the words and the brand details are in the code.
+    expect(items.filter((item) => item.state === "ok").map((item) => item.key)).toEqual(["copy"]);
   });
 
   it("never claims the legal pages are done until a person has reviewed them", async () => {
     expect(await statusOf("legal")).toMatchObject({ state: "todo", detail: expect.stringContaining("Community Law") });
   });
 
-  it("counts the [EDIT] placeholders still in the copy and brand settings", async () => {
+  it("says the copy is done once no [EDIT] placeholders are left in the copy or the brand settings", async () => {
     const copy = await statusOf("copy");
-    expect(copy.state).toBe("todo");
-    expect(copy.detail).toMatch(/\d+ \[EDIT\] placeholders? still to replace/);
-    // The page copy is written. The contact email and company name are the owner's to fill in.
-    expect(copy.detail).toContain("2 in config/brand.ts");
-    expect(copy.detail).not.toContain("content/landing-owner.md");
+    // The page copy, the contact email and the company name are all filled in (config/brand.ts, content/*.md).
+    expect(copy.state).toBe("ok");
+    expect(copy.detail).toBe("No [EDIT] placeholders left.");
   });
 
   it("has no founding line while no deposit is held: the deposit is switched off", async () => {

@@ -63,13 +63,13 @@ export const brand = {
 
   /** Shown in the footer and in "something went wrong" messages. */
   contact: {
-    email: "[EDIT: your contact email]",
+    email: "hello@hostfix.co.nz",
     /** Optional. Leave empty to hide. */
     phone: "",
   },
 
   /** The legal entity behind the site, shown in the footer. */
-  legalName: "[EDIT: your company name]",
+  legalName: "Joe Ingram",
 } as const;
 
 export type Brand = typeof brand;
