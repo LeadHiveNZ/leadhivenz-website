@@ -196,3 +196,8 @@
 .hf-chip input:checked + span { background: #3b1e3f; color: #fff; border-color: #3b1e3f; }
 .hf-chip input:focus-visible + span { outline: 3px solid #d4f23a; outline-offset: 2px; }
 select.hf-input { appearance: none; -webkit-appearance: none; background-image: linear-gradient(45deg, transparent 50%, #3b1e3f 50%), linear-gradient(135deg, #3b1e3f 50%, transparent 50%); background-position: calc(100% - 18px) 55%, calc(100% - 13px) 55%; background-size: 5px 5px, 5px 5px; background-repeat: no-repeat; padding-right: 34px; }
+
+/* Tradie page: three pay cards */
+.hf-pay-grid { margin-top: 22px; display: grid; gap: 14px; }
+.hf-pay-title { padding: 16px 0 6px; }
+@media (min-width: 900px) { .hf-pay-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
