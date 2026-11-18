@@ -1,6 +1,6 @@
 # Reply to a tradie who commented on the Facebook post
 
-Send from Gmail within a few hours of their comment, with `hostfix-for-tradies-full.pdf` attached.
+Simplest reply to a comment: "Details and the 4-minute video: hostfix.co.nz/tradies. Put your hand up at the top if it's for you." Use the email below when they want it in writing; the PDF is optional now the page exists.
 Swap the bracketed bits. Keep it this short: the sheet does the explaining.
 
 Subject: HostFix: the details, as promised
@@ -28,9 +28,9 @@ I'll ring you for 10 minutes, then you get a text with your sign-in link. Queens
 [town] opens once I've got the trades covered there, and the first to put their hands up are first
 choice when it does.
 
-Four minutes of the app from your side: https://www.loom.com/share/73cf5f62d6ae4245887645b97ec9e4ce
+Everything on one page, with the 4-minute video: https://hostfix.co.nz/tradies
 
 Cheers,
 Joe
 HostFix
-hello@leadhivenz.com
+hello@hostfix.co.nz
