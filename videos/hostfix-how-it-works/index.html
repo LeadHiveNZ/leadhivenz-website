@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <title>HostFix how it works overlay</title>
+    <script src="assets/vendor/gsap.min.js"></script>
+    <style>
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { width:1080px; height:1920px; overflow:hidden; background:transparent; }
+#root { position:relative; width:100%; height:100%; overflow:hidden; background:transparent; font-family:'Montserrat', sans-serif; }
+.zone { position:absolute; left:0; right:0; display:flex; flex-direction:column; align-items:center; gap:16px; }
+i { display:inline-flex; width:40px; height:40px; flex:none; }
+i svg { width:100%; height:100%; }
+i.lm { color:#D7EC4C; }
+.mark { display:flex; align-items:center; gap:18px; padding:20px 40px; border-radius:30px; background:#F5F2EA; color:#2B1631; opacity:0;
+  font-weight:800; font-size:84px; letter-spacing:-0.02em; box-shadow:0 18px 44px rgba(0,0,0,0.3); }
+.mark i.dr { width:76px; height:76px; color:#2B1631; }
+.mark.small { font-size:60px; padding:14px 32px; }
+.mark.small i.dr { width:56px; height:56px; }
+.sub { padding:12px 30px; border-radius:999px; background:#2B1631; color:#fff; font-weight:800; font-size:38px; opacity:0; box-shadow:0 12px 30px rgba(0,0,0,0.3); }
+.link, .flow { display:flex; align-items:center; gap:0; }
+.node { display:flex; align-items:center; gap:12px; padding:18px 28px; border-radius:24px; background:rgba(43,22,49,0.94); color:#fff;
+  font-weight:800; font-size:40px; white-space:nowrap; opacity:0; box-shadow:0 14px 32px rgba(0,0,0,0.3); }
+.node i { color:#D7EC4C; }
+.node.lime { background:#D7EC4C; color:#2B1631; }
+.node.lime i { color:#2B1631; }
+.wire { width:110px; height:8px; margin:0 -4px; position:relative; z-index:0; }
+.wire b { display:block; width:100%; height:100%; border-radius:4px; background:#D7EC4C; transform-origin:0 50%; transform:scaleX(0); box-shadow:0 0 14px rgba(215,236,76,0.6); }
+.pill { display:inline-flex; align-items:center; gap:14px; padding:16px 30px; border-radius:999px; background:rgba(43,22,49,0.94); color:#fff;
+  font-weight:800; font-size:40px; white-space:nowrap; opacity:0; box-shadow:0 14px 32px rgba(0,0,0,0.3); }
+.pill.lime { background:#D7EC4C; color:#2B1631; }
+.pill.big { font-size:44px; padding:18px 36px; }
+.row { display:flex; gap:14px; }
+.col { display:flex; flex-direction:column; align-items:center; gap:14px; }
+.head { padding:10px 26px; border-radius:999px; background:#D7EC4C; color:#2B1631; font-weight:800; font-size:30px; letter-spacing:0.12em; opacity:0; }
+.grid { display:flex; flex-wrap:wrap; justify-content:center; gap:12px; width:960px; }
+.chip { display:inline-flex; align-items:center; gap:10px; padding:14px 24px; border-radius:20px; background:rgba(43,22,49,0.94); color:#fff;
+  font-weight:800; font-size:36px; white-space:nowrap; opacity:0; box-shadow:0 10px 24px rgba(0,0,0,0.3); }
+.chip i.ck { width:34px; height:34px; color:#D7EC4C; }
+.tile { display:flex; align-items:center; gap:16px; padding:16px 30px; border-radius:28px; background:rgba(43,22,49,0.94); color:#fff; opacity:0;
+  box-shadow:0 16px 36px rgba(0,0,0,0.3); }
+.tile b { font-weight:800; font-size:110px; line-height:1; letter-spacing:-0.03em; min-width:126px; text-align:right; color:#D7EC4C; }
+.tile span { font-weight:800; font-size:30px; line-height:1.15; letter-spacing:0.06em; }
+.tile.lime { background:#D7EC4C; color:#2B1631; }
+.tile.lime b { color:#2B1631; }
+.duo { display:flex; gap:16px; align-items:stretch; }
+.side { width:452px; padding:22px 26px; border-radius:28px; background:rgba(43,22,49,0.94); color:#fff; opacity:0; box-shadow:0 16px 36px rgba(0,0,0,0.3); }
+.side.lime { background:#D7EC4C; color:#2B1631; }
+.sh { font-weight:800; font-size:28px; letter-spacing:0.14em; opacity:0.85; margin-bottom:10px; }
+.sl { display:flex; align-items:center; gap:10px; font-weight:800; font-size:34px; line-height:1.25; margin-top:8px; opacity:0; }
+.sl i { width:34px; height:34px; }
+.cta { position:absolute; left:0; right:0; margin:0 auto; width:max-content; top:1400px; display:flex; align-items:center; gap:14px; padding:18px 40px;
+  border-radius:999px; background:#D7EC4C; color:#2B1631; font-weight:800; font-size:48px; letter-spacing:0.04em; opacity:0; box-shadow:0 16px 40px rgba(0,0,0,0.35); }
+.cta i { width:46px; height:46px; }
+</style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-width="1080" data-height="1920" data-duration="45.567">
+      <div class="zone" id="g1" style="top:270px;"><div class="mark" id="m1"><i class="dr"><svg viewBox="0 0 24 24"><path d="M5 3h10v18H5z" fill="currentColor"/><path d="M15 5l4 1.5v12L15 20z" fill="#D7EC4C"/><circle cx="12.5" cy="12" r="1.2" fill="#D7EC4C"/></svg></i><span>HostFix</span></div><div class="sub" id="m2">How it works</div></div>
+      <div class="zone" id="g2" style="top:270px;"><div class="link"><div class="node" id="n1"><i class=""><svg viewBox="0 0 24 24"><path d="M20.5 6.5a5 5 0 0 1-6.6 6.6L7 20l-3-3 6.9-6.9a5 5 0 0 1 6.6-6.6L14 7l3 3z" fill="currentColor"/></svg></i>Tradies</div><div class="wire"><b id="wire"></b></div><div class="node lime" id="n2"><i class=""><svg viewBox="0 0 24 24"><path d="M3 11 12 3l9 8v10h-6v-6H9v6H3z" fill="currentColor"/></svg></i>Airbnb owners</div></div><div class="pill lime" id="fp"><i class=""><svg viewBox="0 0 24 24"><path d="M3 12V4h8l10 10-8 8z" fill="currentColor"/><circle cx="7.5" cy="8" r="1.8" fill="#2B1631"/></svg></i>Fixed prices</div></div>
+      <div class="zone" id="g3" style="top:250px;"><div class="head" id="h3">SET UP ONCE</div><div class="grid"><div class="chip" id="c0"><i class="ck"><svg viewBox="0 0 24 24"><path d="M5 12.5 10 17 19 7" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></i>Create an account</div><div class="chip" id="c1"><i class="ck"><svg viewBox="0 0 24 24"><path d="M5 12.5 10 17 19 7" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></i>Lockbox code</div><div class="chip" id="c2"><i class="ck"><svg viewBox="0 0 24 24"><path d="M5 12.5 10 17 19 7" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></i>Water main</div><div class="chip" id="c3"><i class="ck"><svg viewBox="0 0 24 24"><path d="M5 12.5 10 17 19 7" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></i>Switchboard</div><div class="chip" id="c4"><i class="ck"><svg viewBox="0 0 24 24"><path d="M5 12.5 10 17 19 7" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></i>House details</div></div></div>
+      <div class="zone" id="g4" style="top:270px;"><div class="flow"><div class="node lime" id="f1"><i class=""><svg viewBox="0 0 24 24"><path d="M3 11 21 3l-8 18-2-8z" fill="currentColor"/></svg></i>Log a job</div><div class="wire"><b id="wire2"></b></div><div class="node" id="f2"><i class=""><svg viewBox="0 0 24 24"><path d="M20.5 6.5a5 5 0 0 1-6.6 6.6L7 20l-3-3 6.9-6.9a5 5 0 0 1 6.6-6.6L14 7l3 3z" fill="currentColor"/></svg></i>Tradie</div></div><div class="row"><div class="pill" id="f3"><i class="lm"><svg viewBox="0 0 24 24"><path d="M3 12V4h8l10 10-8 8z" fill="currentColor"/><circle cx="7.5" cy="8" r="1.8" fill="#2B1631"/></svg></i>Fixed price</div><div class="pill lime" id="f4"><i class=""><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2.6"/><path d="M12 7v5.5l3.5 2" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/></svg></i>Accepted in 15 min</div></div></div>
+      <div class="zone" id="g5" style="top:270px;"><div class="col"><div class="pill lime" id="b0"><i class=""><svg viewBox="0 0 24 24"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5z" fill="currentColor"/><path d="M8.5 12l2.5 2.5 4.5-5" fill="none" stroke="#2B1631" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></i>Fully vetted</div><div class="pill" id="b1"><i class="lm"><svg viewBox="0 0 24 24"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5z" fill="currentColor"/><path d="M8.5 12l2.5 2.5 4.5-5" fill="none" stroke="#2B1631" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></i>Public liability insured</div><div class="pill" id="b2"><i class="lm"><svg viewBox="0 0 24 24"><path d="M3 12V4h8l10 10-8 8z" fill="currentColor"/><circle cx="7.5" cy="8" r="1.8" fill="#2B1631"/></svg></i>Clear job &amp; price</div></div></div>
+      <div class="zone" id="g6" style="top:270px;"><div class="row"><div class="pill" id="d1"><i class="lm"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" fill="currentColor"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7z" fill="currentColor"/></svg></i>Your cleaner</div><div class="pill" id="d2"><i class="lm"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" fill="currentColor"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7z" fill="currentColor"/></svg></i>Your guests</div></div><div class="pill lime big" id="d3"><i class=""><svg viewBox="0 0 24 24"><path d="M5 12.5 10 17 19 7" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></i>With your approval</div></div>
+      <div class="zone" id="g7" style="top:270px;"><div class="row"><div class="tile" id="e1"><b id="n15">0</b><span>MINUTES<br>CONFIRMED</span></div><div class="tile lime" id="e2"><b id="n24">0</b><span>HOURS<br>COMPLETED</span></div></div></div>
+      <div class="zone" id="g8" style="top:250px;"><div class="duo"><div class="side" id="s1"><div class="sh">FOR YOU</div><div class="sl" id="s1a"><i class="lm"><svg viewBox="0 0 24 24"><path d="M5 12.5 10 17 19 7" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></i>Fixed, affordable pricing</div><div class="sl" id="s1b"><i class="lm"><svg viewBox="0 0 24 24"><path d="M5 12.5 10 17 19 7" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></i>Convenience</div></div><div class="side lime" id="s2"><div class="sh">FOR TRADIES</div><div class="sl" id="s2a"><i class=""><svg viewBox="0 0 24 24"><path d="M5 12.5 10 17 19 7" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/></svg></i>Guaranteed work</div></div></div></div>
+      <div class="zone" id="g9" style="top:270px;"><div class="mark small" id="k1"><i class="dr"><svg viewBox="0 0 24 24"><path d="M5 3h10v18H5z" fill="currentColor"/><path d="M15 5l4 1.5v12L15 20z" fill="#D7EC4C"/><circle cx="12.5" cy="12" r="1.2" fill="#D7EC4C"/></svg></i><span>HostFix</span></div><div class="pill lime big" id="k2"><i class=""><svg viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0-6 6v4l-2 3h16l-2-3V9a6 6 0 0 0-6-6zM10 19a2 2 0 0 0 4 0" fill="currentColor"/></svg></i>Sign up · first to know at launch</div></div>
+      <div class="cta" id="cta"><i class=""><svg viewBox="0 0 24 24"><path d="M12 4v14M5 12l7 7 7-7" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></i>LINK IN BIO</div>
+    </div>
+    <script>
+      function countUp(sel, target) { document.querySelector(sel).textContent = Math.round(target * this.progress()); }
+      const tl = gsap.timeline({ paused: true });
+      tl.to("#g1", { opacity: 0, y: -12, duration: 0.35, ease: "power1.in" }, 4.480);
+      tl.set("#g1", { visibility: "hidden" }, 4.830);
+      tl.fromTo("#m1", { opacity: 0, y: 30, x: 0 }, { opacity: 1, y: 0, x: 0, duration: 0.6, ease: "power2.out" }, 2.950);
+      tl.fromTo("#m2", { opacity: 0, y: 24, x: 0 }, { opacity: 1, y: 0, x: 0, duration: 0.45, ease: "power2.out" }, 3.400);
+      tl.to("#g2", { opacity: 0, y: -12, duration: 0.35, ease: "power1.in" }, 9.200);
+      tl.set("#g2", { visibility: "hidden" }, 9.550);
+      tl.fromTo("#n1", { opacity: 0, y: 0, x: -40 }, { opacity: 1, y: 0, x: 0, duration: 0.45, ease: "power2.out" }, 5.100);
+      tl.fromTo("#wire", { scaleX: 0 }, { scaleX: 1, duration: 0.6, ease: "power2.inOut" }, 5.630);
+      tl.fromTo("#n2", { opacity: 0, y: 0, x: 40 }, { opacity: 1, y: 0, x: 0, duration: 0.45, ease: "power2.out" }, 5.820);
+      tl.fromTo("#fp", { opacity: 0, y: 24, x: 0 }, { opacity: 1, y: 0, x: 0, duration: 0.45, ease: "power2.out" }, 8.540);
+      tl.to("#g3", { opacity: 0, y: -12, duration: 0.35, ease: "power1.in" }, 14.830);
+      tl.set("#g3", { visibility: "hidden" }, 15.180);
+      tl.fromTo("#h3", { opacity: 0, y: 24, x: 0 }, { opacity: 1, y: 0, x: 0, duration: 0.45, ease: "power2.out" }, 9.530);
+      tl.fromTo("#c0", { opacity: 0, y: 18, x: 0 }, { opacity: 1, y: 0, x: 0, duration: 0.4, ease: "power2.out" }, 9.580);
+      tl.fromTo("#c1", { opacity: 0, y: 18, x: 0 }, { opacity: 1, y: 0, x: 0, duration: 0.4, ease: "power2.out" }, 10.700);
+      tl.fromTo("#c2", { opacity: 0, y: 18, x: 0 }, { opacity: 1, y: 0, x: 0, duration: 0.4, ease: "power2.out" }, 11.980);
+      tl.fromTo("#c3", { opacity: 0, y: 18, x: 0 }, { opacity: 1, y: 0, x: 0, duration: 0.4, ease: "power2.out" }, 12.860);
+      tl.fromTo("#c4", { opacity: 0, y: 18, x: 0 }, { opacity: 1, y: 0, x: 0, duration: 0.4, ease: "power2.out" }, 13.740);
+      tl.to("#g4", { opacity: 0, y: -12, duration: 0.35, ease: "power1.in" }, 20.720);
+      tl.set("#g4", { visibility: "hidden" }, 21.070);
+      tl.fromTo("#f1", { opacity: 0, y: 0, x: -40 }, { opacity: 1, y: 0, x: 0, duration: 0.45, ease: "power2.out" }, 15.180);
+      tl.fromTo("#wire2", { scaleX: 0 }, { scaleX: 1, duration: 0.6, ease: "power2.inOut" }, 16.430);
+      tl.fromTo("#f2", { opacity: 0, y: 0, x: 40 }, { opacity: 1, y: 0, x: 0, duration: 0.45, ease: "power2.out" }, 17.320);
+      tl.fromTo("#f3", { opacity: 0, y: 24, x: 0 }, { opacity: 1, y: 0, x: 0, duration: 0.45, ease: "power2.out" }, 18.140);
+      tl.fromTo("#f4", { opacity: 0, y: 24, x: 0 }, { opacity: 1, y: 0, x: 0, duration: 0.45, ease: "power2.out" }, 19.740);
+      tl.to("#g5", { opacity: 0, y: -12, duration: 0.35, ease: "power1.in" }, 26.160);
+      tl.set("#g5", { visibility: "hidden" }, 26.510);
+      tl.fromTo("#b0", { opacity: 0, y: 24, x: 0 }, { opacity: 1, y: 0, x: 0, duration: 0.45, ease: "power2.out" }, 21.800);
+      tl.fromTo("#b1", { opacity: 0, y: 24, x: 0 }, { opacity: 1, y: 0, x: 0, duration: 0.45, ease: "power2.out" }, 22.840);
+      tl.fromTo("#b2", { opacity: 0, y: 24, x: 0 }, { opacity: 1, y: 0, x: 0, duration: 0.45, ease: "power2.out" }, 24.360);
+      tl.to("#g6", { opacity: 0, y: -12, duration: 0.35, ease: "power1.in" }, 29.600);
+      tl.set("#g6", { visibility: "hidden" }, 29.950);
+      tl.fromTo("#d1", { opacity: 0, y: 24, x: 0 }, { opacity: 1, y: 0, x: 0, duration: 0.45, ease: "power2.out" }, 26.620);
+      tl.fromTo("#d2", { opacity: 0, y: 24, x: 0 }, { opacity: 1, y: 0, x: 0, duration: 0.45, ease: "power2.out" }, 27.500);
+      tl.fromTo("#d3", { opacity: 0, y: 24, x: 0 }, { opacity: 1, y: 0, x: 0, duration: 0.45, ease: "power2.out" }, 29.270);
+      tl.to("#g7", { opacity: 0, y: -12, duration: 0.35, ease: "power1.in" }, 33.820);
+      tl.set("#g7", { visibility: "hidden" }, 34.170);
+      tl.fromTo("#e1", { opacity: 0, y: 24, x: 0 }, { opacity: 1, y: 0, x: 0, duration: 0.45, ease: "power2.out" }, 30.620);
+      tl.to("#n15", { duration: 0.6, ease: "power2.out", onUpdate: countUp, onUpdateParams: ["#n15", 15] }, 31.310);
+      tl.fromTo("#e2", { opacity: 0, y: 24, x: 0 }, { opacity: 1, y: 0, x: 0, duration: 0.45, ease: "power2.out" }, 32.620);
+      tl.to("#n24", { duration: 0.6, ease: "power2.out", onUpdate: countUp, onUpdateParams: ["#n24", 24] }, 33.310);
+      tl.to("#g8", { opacity: 0, y: -12, duration: 0.35, ease: "power1.in" }, 39.520);
+      tl.set("#g8", { visibility: "hidden" }, 39.870);
+      tl.fromTo("#s1", { opacity: 0, y: 24, x: 0 }, { opacity: 1, y: 0, x: 0, duration: 0.45, ease: "power2.out" }, 34.270);
+      tl.fromTo("#s1a", { opacity: 0, y: 12, x: 0 }, { opacity: 1, y: 0, x: 0, duration: 0.35, ease: "power2.out" }, 35.100);
+      tl.fromTo("#s1b", { opacity: 0, y: 12, x: 0 }, { opacity: 1, y: 0, x: 0, duration: 0.35, ease: "power2.out" }, 36.860);
+      tl.fromTo("#s2", { opacity: 0, y: 24, x: 0 }, { opacity: 1, y: 0, x: 0, duration: 0.45, ease: "power2.out" }, 37.820);
+      tl.fromTo("#s2a", { opacity: 0, y: 12, x: 0 }, { opacity: 1, y: 0, x: 0, duration: 0.35, ease: "power2.out" }, 38.460);
+      tl.to("#g9", { opacity: 0, y: -12, duration: 0.35, ease: "power1.in" }, 46.217);
+      tl.set("#g9", { visibility: "hidden" }, 46.567);
+      tl.fromTo("#k1", { opacity: 0, y: 24, x: 0 }, { opacity: 1, y: 0, x: 0, duration: 0.45, ease: "power2.out" }, 40.060);
+      tl.fromTo("#k2", { opacity: 0, y: 24, x: 0 }, { opacity: 1, y: 0, x: 0, duration: 0.45, ease: "power2.out" }, 42.220);
+      tl.fromTo("#cta", { opacity: 0, y: 24, x: 0 }, { opacity: 1, y: 0, x: 0, duration: 0.45, ease: "power2.out" }, 41.100);
+      tl.to("#cta i", { y: 8, duration: 0.45, repeat: 5, yoyo: true, ease: "sine.inOut" }, 41.600);
+      tl.set({}, {}, 45.567);
+      window.__timelines["main"] = tl;
+      tl.seek(0);
+    </script>
+  </body>
+</html>
