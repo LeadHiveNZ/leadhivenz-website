@@ -1,0 +1,171 @@
+<title>HostFix: Your Feedback</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Geist:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: a letter-style single column; "you said / we changed" pairs, then tradie-side numbers. */
+:root {
+  --bg: #f7f3ee; --surface: #ffffff; --ink: #241329; --muted: #6c5f72; --line: #e4dbe7;
+  --plum: #3b1e3f; --plum-soft: #efe6f1; --lime: #d4f23a; --lime-ink: #2b3a00; --good: #1f7a4d;
+  --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --body: "Geist", "Inter", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #160b18; --surface: #22132a; --ink: #f2eaf4; --muted: #b6a8bd; --line: #3a2741;
+    --plum: #e7d4ef; --plum-soft: #2e1a35; --good: #6fd39f; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #160b18; --surface: #22132a; --ink: #f2eaf4; --muted: #b6a8bd; --line: #3a2741;
+  --plum: #e7d4ef; --plum-soft: #2e1a35; --good: #6fd39f; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.6; margin: 0;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 64px;
+}
+.wrap { max-width: 820px; margin: 0 auto; display: grid; gap: 40px; }
+h1, h2 { font-family: var(--display); letter-spacing: -0.02em; text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(2rem, 5vw, 2.8rem); font-weight: 800; line-height: 1.08; }
+h2 { font-size: clamp(1.35rem, 3vw, 1.7rem); font-weight: 800; line-height: 1.2; }
+h3 { margin: 0; font-size: 1.05rem; }
+p { margin: 0; max-width: 66ch; }
+.muted { color: var(--muted); }
+.eyebrow { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
+section { display: grid; gap: 14px; }
+header { display: grid; gap: 14px; padding-bottom: 22px; border-bottom: 2px solid var(--ink); }
+.pairs { display: grid; gap: 12px; }
+.pair { display: grid; grid-template-columns: 1fr 1fr; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.pair > div { padding: 14px 18px; display: grid; gap: 4px; align-content: start; min-width: 0; }
+.pair .said { background: var(--plum-soft); }
+.pair .lab { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.pair .said p { font-style: italic; }
+@media (max-width: 620px) { .pair { grid-template-columns: 1fr; } }
+.scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+table { width: 100%; border-collapse: collapse; font-size: 0.95rem; min-width: 520px; }
+th, td { text-align: left; padding: 11px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 0.74rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); font-weight: 700; background: var(--plum-soft); }
+tr:last-child td { border-bottom: 0; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+td.get { font-weight: 700; color: var(--good); }
+.rule { background: #3b1e3f; color: #fff; border-radius: 18px; padding: 22px 24px; display: grid; gap: 10px; }
+.rule h2 { color: #fff; }
+.rule p { color: #ecdff1; }
+.rule ul { margin: 0; padding-left: 1.2rem; color: #ecdff1; display: grid; gap: 6px; }
+.rule b { color: #fff; }
+.ask { background: var(--surface); border-left: 4px solid var(--lime); border-radius: 0 14px 14px 0; padding: 18px 20px; display: grid; gap: 10px; }
+.ask ol { margin: 0; padding-left: 1.2rem; display: grid; gap: 6px; }
+.foot { font-size: 0.85rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 14px; }
+@media print {
+  body { padding: 0; font-size: 13px; }
+  .wrap { gap: 26px; }
+  .pair, .rule, .ask, tr { break-inside: avoid; }
+  h2 { break-after: avoid; }
+  .scroll { overflow: visible; }
+  table { min-width: 0; }
+}
+</style>
+
+<div class="wrap">
+
+  <header>
+    <span class="eyebrow">HostFix · Queenstown · November 2026</span>
+    <h1>What your feedback changed</h1>
+    <p>Qianyi, thank you. You told me five things I hadn't thought through properly, and every one of them changed how HostFix works. This is what's changing before launch, and what it means in dollars for a sparky like your partner.</p>
+    <p class="muted">All prices include GST. Owner prices are the Queenstown menu; the tradie's share is what lands in their bank account.</p>
+  </header>
+
+  <section>
+    <span class="eyebrow">You said, so we changed</span>
+    <h2>Five points, five changes</h2>
+    <div class="pairs">
+      <div class="pair">
+        <div class="said"><span class="lab">You said</span><p>Changing lights is a big part of the work, and it needs an electrician.</p></div>
+        <div><span class="lab">We changed</span><p>Light fittings are now electrician jobs. Owners report the problem ("light not working"), not the trade, and the app sends it to a sparky.</p></div>
+      </div>
+      <div class="pair">
+        <div class="said"><span class="lab">You said</span><p>Clients bundle jobs. One light on its own is expensive. That's why you went back to hourly.</p></div>
+        <div><span class="lab">We changed</span><p>One visit, several jobs. The first item is the menu price, each extra item on the same visit is half price. Jobs that can't be priced up front are hourly.</p></div>
+      </div>
+      <div class="pair">
+        <div class="said"><span class="lab">You said</span><p>Fittings vary and clients want to choose.</p></div>
+        <div><span class="lab">We changed</span><p>A quote can carry two or three product options with prices. The owner picks before any work starts.</p></div>
+      </div>
+      <div class="pair">
+        <div class="said"><span class="lab">You said</span><p>Most jobs can wait a few days, and managers use the sparky they trust.</p></div>
+        <div><span class="lab">We changed</span><p>A "within 5 days" option, so jobs can be batched. And an owner's own tradie always gets first offer on their properties. The network only sees it if he passes.</p></div>
+      </div>
+      <div class="pair">
+        <div class="said"><span class="lab">You said</span><p>15% won't work on big jobs, and the 12-month rule doesn't fit a small town where everyone already knows each other.</p></div>
+        <div><span class="lab">We changed</span><p>The fee drops on big jobs. A tradie's own clients are never HostFix's. And the 12-month rule is narrower, with a simple way out. Details below.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <span class="eyebrow">The fees</span>
+    <h2>Who found the client decides the fee</h2>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Situation</th><th>HostFix fee</th></tr></thead>
+        <tbody>
+          <tr><td><b>HostFix found the client</b>, menu job or job up to $1,000</td><td>15%</td></tr>
+          <tr><td><b>HostFix found the client</b>, quote over $1,000</td><td>15% of the first $1,000, then 2% of the rest. Paid from the owner's bank, not card.</td></tr>
+          <tr><td><b>The tradie's own client</b></td><td>1%, plus the card or bank fee. No subscription.</td></tr>
+          <tr><td><b>12 months after HostFix found the client</b></td><td>They become the tradie's own client: 1%</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="muted">No joining fee and no monthly fee, ever. Tradies can turn down any job, work for anyone, and set their own hours. On their own clients they set their own price.</p>
+  </section>
+
+  <section>
+    <span class="eyebrow">In dollars</span>
+    <h2>What a sparky would actually get</h2>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>Job</th><th class="num">Owner pays</th><th class="num">Sparky gets</th></tr></thead>
+        <tbody>
+          <tr><td>Single menu job, e.g. a light switch</td><td class="num">$225.00</td><td class="num get">$190.00</td></tr>
+          <tr><td>Same visit, three items (first full price, two extras at half)</td><td class="num">$450.00</td><td class="num get">$380.00</td></tr>
+          <tr><td>Hourly job, 2½ hours (first hour is the call-out, then $160/hr to the owner)</td><td class="num">$465.00</td><td class="num get">$394.00</td></tr>
+          <tr><td>Small quote, HostFix client</td><td class="num">$600.00</td><td class="num get">$510.00</td></tr>
+          <tr><td>Switchboard upgrade quote, HostFix client</td><td class="num">$6,000.00</td><td class="num get">$5,750.00</td></tr>
+          <tr><td>His own client, a $235 job paid by card</td><td class="num">$235.00</td><td class="num get">$225.30</td></tr>
+          <tr><td>His own client, a $2,000 job paid by bank</td><td class="num">$2,000.00</td><td class="num get">$1,970.81</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="muted">On the $6,000 switchboard, HostFix's fee is $250, about 4% of the job, not $900. Parts are at cost on top of every hourly job. No invoices, no chasing: the owner's payment is on file before the job starts and the tradie is paid in days.</p>
+  </section>
+
+  <section>
+    <div class="rule">
+      <h2>The 12-month rule, rewritten</h2>
+      <p>HostFix pays to find owners. The rule protects that, and nothing more.</p>
+      <ul>
+        <li><b>Only clients HostFix introduced.</b> Anyone a tradie already works with is listed at sign-up and is theirs, full stop.</li>
+        <li><b>12 months from the first job</b>, not the last, so it always ends.</li>
+        <li><b>A clean way out.</b> If a tradie and an owner want to deal directly sooner, it's $250 per property, once, and they're free.</li>
+        <li><b>After 12 months</b>, that owner is the tradie's own client, and the app is 1% if they keep using it.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section>
+    <div class="ask">
+      <h3>Two favours, if you're up for it</h3>
+      <ol>
+        <li>Would your partner read the electrical items on the menu, line by line? Ten minutes from a real sparky beats anything I can work out on my own.</li>
+        <li>With these changes, would he put his own property-manager clients through the app at 1%, and take HostFix jobs when he has a gap? A straight no is just as useful to me.</li>
+      </ol>
+      <p>Thanks again. This is the most useful feedback I've had.</p>
+      <p><b>Joe</b><br><span class="muted">HostFix · hostfix.co.nz</span></p>
+    </div>
+  </section>
+
+  <p class="foot">These changes are going into HostFix before it launches in Queenstown. Card and bank fees are Stripe New Zealand's published rates. Prices may still move a little after tradies like your partner have had their say.</p>
+</div>
