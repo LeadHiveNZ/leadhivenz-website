@@ -349,7 +349,7 @@ function Unlocked({ videoRef }: { videoRef: React.RefObject<HTMLElement | null> 
               </p>
             </div>
             <p className="hf-note">
-              52 jobs on the full menu. Need it within 4 hours? Add $90, plus $140 outside 7am to 4:30pm weekdays. Both go to the tradie.
+              52 jobs on the full menu. Need someone there within 4 hours? Add $50. Outside 7am to 4:30pm weekdays, add $140.
               Not on the menu? $225 for a tradie to come and look, then a quote. Nothing over $600 starts without your yes.
             </p>
           </div>
