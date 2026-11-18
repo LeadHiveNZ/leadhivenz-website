@@ -331,7 +331,7 @@ export async function createMarket(db: Db, input: NewMarket, actor: string): Pro
        values ($1, $2::timestamptz, $2::timestamptz, $3, $4, $5, $6, 'draft', $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20::text[], $21, $22, $23)`,
       [
         slug, at, input.name.trim(), input.country, defaults.currency, input.timezone, defaults.taxRate, defaults.taxName,
-        template?.platformFeeBps ?? 1500, template?.urgentSurchargeCents ?? 9000, template?.afterHoursSurchargeCents ?? 14000,
+        template?.platformFeeBps ?? 1500, template?.urgentSurchargeCents ?? 5000, template?.afterHoursSurchargeCents ?? 14000,
         template?.diagnosisFeeCents ?? 22500, template?.diagnosisPayoutCents ?? 19000, template?.approvalThresholdCents ?? 60000,
         template?.partsIncludedCents ?? 3000, template?.partsApprovalCents ?? 15000, template?.offerMinutes ?? 15,
         template?.hoursStart ?? 7, template?.hoursEnd ?? 16.5, template?.workDays ?? ["mon", "tue", "wed", "thu", "fri"],

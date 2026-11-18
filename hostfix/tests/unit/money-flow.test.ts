@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { addGoodwillCredit, applyPendingCredits, chargeDuePayments, chargeJob, creditMissedWindows, flagAtRisk, MAX_CHARGE_ATTEMPTS, raiseDispute, releaseDuePayouts, resolveDispute, retryPayout } from "@/lib/billing/settle";
 import { ownerStatement } from "@/lib/billing/statements";
@@ -20,7 +22,8 @@ import { addPlusTier, auditActions, gatewayFor, liveMarket, logJob, makeOwner, m
  *
  *   PL-01  Toilet seat or cistern parts     owner 22500   tradie 19000   we keep 3500
  *   PL-03, PL-04, PL-06, PL-07 (plumbing)   owner 23500   tradie 20000   we keep 3500
- *   Urgent surcharge 9000 and after-hours surcharge 14000: the tradie gets all of both
+ *   Urgent surcharge 5000 and after-hours surcharge 14000 (DECISIONS.md, 2026-11-18). Both carry
+ *   the 15% fee: urgent 5000 - 750 = 4250 to the tradie, after hours 14000 - 2100 = 11900
  *   Off-menu call-out                       owner 22500   tradie 19000   we keep 3500
  *   A quote takes the job over the limit when quotes add up to more than 60000
  *   Parts above 15000 need the owner's yes whatever the total
@@ -213,25 +216,39 @@ describe("a finished menu job", () => {
 });
 
 describe("surcharges", () => {
-  it("urgent: the owner pays NZ$90 more and all of it goes to the tradie", async () => {
+  it("urgent: the owner pays NZ$50 more and the tradie gets it less our 15%", async () => {
     const s = await setup();
     const job = await onSite(s, { urgent: true });
-    expect(job).toMatchObject({ urgency: "urgent", afterHours: false, ownerTotalCents: 22500 + 9000, tradieTotalCents: 19000 + 9000, responseHours: 4 });
+    // PL-01 urgent. Owner 22500 + 5000 = 27500. Tradie 19000 + 4250 = 23250.
+    expect(job).toMatchObject({ urgency: "urgent", afterHours: false, ownerTotalCents: 27500, tradieTotalCents: 23250, responseHours: 4 });
     const done = await finish(s, job.id);
-    // The surcharge adds nothing to what we keep: still the NZ$35 on the job itself.
-    expect(done.ownerTotalCents - done.tradieTotalCents).toBe(3500);
+    // We keep 3500 on the job and 750 on the surcharge: 4250.
+    expect(done.ownerTotalCents - done.tradieTotalCents).toBe(4250);
+    expect(await payout(job.id)).toMatchObject({ amount_cents: 23250 });
   });
 
-  it("urgent at 9pm: after-hours is added too, and both go to the tradie in full", async () => {
+  it("urgent at 9pm: after-hours is added too, and both carry our 15%", async () => {
     setTestNow(MONDAY_9PM);
     const s = await setup();
     const job = await onSite(s, { urgent: true });
-    expect(job).toMatchObject({ afterHours: true, ownerTotalCents: 22500 + 9000 + 14000, tradieTotalCents: 19000 + 9000 + 14000 });
+    // Owner 22500 + 5000 + 14000 = 41500. Tradie 19000 + 4250 + 11900 = 35150. We keep 3500 + 750 + 2100 = 6350.
+    expect(job).toMatchObject({ afterHours: true, ownerTotalCents: 41500, tradieTotalCents: 35150 });
     expect((await listLines(t.db, job.id)).map((line) => [line.kind, line.ownerCents, line.tradieCents])).toEqual([
       ["menu", 22500, 19000],
-      ["urgent", 9000, 9000],
-      ["after_hours", 14000, 14000],
+      ["urgent", 5000, 4250],
+      ["after_hours", 14000, 11900],
     ]);
+  });
+
+  it("a job already logged keeps the surcharge it was quoted when the market's price changes", async () => {
+    const s = await setup();
+    const job = await onSite(s, { urgent: true });
+    // Logged at urgent 5000: owner 27500, tradie 23250. Then the admin puts urgent up to 9000.
+    await t.db.query("update public.markets set urgent_surcharge_cents = 9000 where slug = $1", [s.property.market]);
+    const done = await finish(s, job.id);
+    expect(done).toMatchObject({ ownerTotalCents: 27500, tradieTotalCents: 23250 });
+    expect(await payment(job.id)).toMatchObject({ amount_cents: 27500 });
+    expect(await payout(job.id)).toMatchObject({ amount_cents: 23250 });
   });
 
   it("a normal job logged at 9pm has no surcharge: it is done in working hours", async () => {
@@ -244,13 +261,14 @@ describe("surcharges", () => {
   // The business sells one membership and urgent is always paid for (DECISIONS.md). The app can still
   // hold a membership that includes urgent call-outs, and the rule that matters must hold if one is ever
   // added: the owner is let off the surcharge, the tradie never is.
-  it("on a membership that includes urgent, the owner is not charged for it and the tradie still gets it", async () => {
+  it("on a membership that includes urgent, the owner is not charged for it and the tradie still gets their share", async () => {
     await addPlusTier(t.db);
     const s = await setup({ tier: "plus" });
     const job = await onSite(s, { urgent: true });
-    expect(job).toMatchObject({ ownerTotalCents: 22500, tradieTotalCents: 19000 + 9000 });
+    // The owner pays the 22500 job only. The tradie gets 19000 + their 4250 share of the 5000 urgent surcharge.
+    expect(job).toMatchObject({ ownerTotalCents: 22500, tradieTotalCents: 19000 + 4250 });
     const lines = await listLines(t.db, job.id);
-    expect(lines[1]).toMatchObject({ kind: "urgent", ownerCents: 0, tradieCents: 9000 });
+    expect(lines[1]).toMatchObject({ kind: "urgent", ownerCents: 0, tradieCents: 4250 });
     expect(lines[1]!.label).toContain("included");
   });
 
@@ -262,9 +280,43 @@ describe("surcharges", () => {
     await finish(s, first.id);
     // The month's one included call-out is used. The next is charged: PL-03 plus the surcharge.
     const second = await logJob(t.db, s.property, { code: "PL-03", urgent: true });
-    expect(second.ownerTotalCents).toBe(23500 + 9000);
+    expect(second.ownerTotalCents).toBe(23500 + 5000);
     // A cancelled job does not use up the allowance.
     await cancelJob(t.db, first.id, { actor: "staff:x", staff: true }, "test");
+  });
+});
+
+describe("the database change for urgent at NZ$50", () => {
+  const file = path.resolve(__dirname, "../../supabase/migrations/20261122000000_urgent_fifty.sql");
+  const urgent = async (slug: string) => (await getMarket(t.db, slug))!.urgentSurchargeCents;
+
+  it("moves Queenstown from 9000 to 5000, and a second run does nothing", async () => {
+    await liveMarket(t.db);
+    // A database set up before the change still says NZ$90.
+    await t.db.query("update public.markets set urgent_surcharge_cents = 9000 where slug = 'queenstown'");
+    await t.db.exec(fs.readFileSync(file, "utf8"));
+    expect(await urgent("queenstown")).toBe(5000);
+    await t.db.exec(fs.readFileSync(file, "utf8"));
+    expect(await urgent("queenstown")).toBe(5000);
+    expect((await getMarket(t.db, "queenstown"))!.afterHoursSurchargeCents).toBe(14000);
+  });
+
+  it("leaves a price the admin has already changed by hand", async () => {
+    await liveMarket(t.db);
+    await t.db.query("update public.markets set urgent_surcharge_cents = 7000 where slug = 'queenstown'");
+    await t.db.exec(fs.readFileSync(file, "utf8"));
+    expect(await urgent("queenstown")).toBe(7000);
+  });
+
+  it("does not touch jobs already logged at NZ$90", async () => {
+    const s = await setup();
+    await t.db.query("update public.markets set urgent_surcharge_cents = 9000 where slug = 'queenstown'");
+    // Logged while urgent was 9000, before the fee applied to surcharges, so stored as the old rule wrote it.
+    const job = await onSite(s, { urgent: true });
+    await t.db.query("update public.job_lines set tradie_cents = 9000 where job_id = $1::uuid and kind = 'urgent'", [job.id]);
+    await t.db.exec(fs.readFileSync(file, "utf8"));
+    const lines = await listLines(t.db, job.id);
+    expect(lines.map((line) => [line.kind, line.ownerCents, line.tradieCents])).toEqual([["menu", 22500, 19000], ["urgent", 9000, 9000]]);
   });
 });
 
@@ -280,9 +332,9 @@ describe("tax", () => {
     const s = await setup({ market: { tax_registered: true } });
     const job = await onSite(s, { urgent: true });
     await finish(s, job.id);
-    // NZ$315 (the NZ$225 job plus NZ$90 urgent) including 15% GST. The GST inside a price that includes
-    // it is 3/23 of the price: 315 x 3 / 23 = 41.0869..., so NZ$41.09 to the nearest cent.
-    expect(await payment(job.id)).toMatchObject({ amount_cents: 31500, tax_cents: 4109 });
+    // NZ$275 (the NZ$225 job plus NZ$50 urgent) including 15% GST. The GST inside a price that includes
+    // it is 3/23 of the price: 275 x 3 / 23 = 35.8695..., so NZ$35.87 to the nearest cent.
+    expect(await payment(job.id)).toMatchObject({ amount_cents: 27500, tax_cents: 3587 });
   });
 
   it("uses each market's own rate", async () => {
@@ -760,12 +812,13 @@ describe("when the tradie cannot get in", () => {
   it("charges the call-out fee instead of the job", async () => {
     const s = await setup();
     const job = await onSite(s, { code: "PL-06", urgent: true });
-    expect(job.ownerTotalCents).toBe(23500 + 9000);
+    expect(job.ownerTotalCents).toBe(23500 + 5000);
     const result = await reportNoAccess(t.db, job.id, s.tradie.tradieId, { note: "Lockbox code did not work, nobody answering.", uploadIds: [await photo(t.db, `tradie:${s.tradie.tradieId}`)] });
     if (!result.ok) throw new Error(result.message);
-    // The job's own price is replaced by the call-out (225 to the owner, 190 to the tradie). The urgent surcharge stays.
-    expect(result.job).toMatchObject({ status: "completed", outcome: "no_access", ownerTotalCents: 22500 + 9000, tradieTotalCents: 19000 + 9000 });
-    expect(await payment(job.id)).toMatchObject({ amount_cents: 31500 });
+    // The job's own price is replaced by the call-out (225 to the owner, 190 to the tradie). The urgent surcharge
+    // stays, with its fee: owner 22500 + 5000 = 27500, tradie 19000 + 4250 = 23250.
+    expect(result.job).toMatchObject({ status: "completed", outcome: "no_access", ownerTotalCents: 27500, tradieTotalCents: 23250 });
+    expect(await payment(job.id)).toMatchObject({ amount_cents: 27500 });
   });
 
   it("needs a reason and a photo", async () => {
@@ -820,7 +873,8 @@ describe("other money rules", () => {
     // What the owner paid is exactly what the tradie gets plus what the platform keeps.
     const platform = lines.filter((l) => l.status === "active").reduce((sum, l) => sum + l.ownerCents - l.tradieCents, 0);
     expect(paid!.amount_cents).toBe(owed!.amount_cents + platform);
-    // NZ$35 on the menu job. On the quote: the tradie's 85% of 3333 cents is 2833.05, paid as 2833, which leaves 500.
-    expect(platform).toBe(3500 + 500);
+    // NZ$35 on the menu job. On the urgent surcharge: 15% of 5000 is 750. On the quote: the tradie's 85% of
+    // 3333 cents is 2833.05, paid as 2833, which leaves 500. Parts carry nothing. 3500 + 750 + 500 = 4750.
+    expect(platform).toBe(3500 + 750 + 500);
   });
 });

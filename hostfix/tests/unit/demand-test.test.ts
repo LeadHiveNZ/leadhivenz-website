@@ -255,7 +255,7 @@ describe("the price list", () => {
   it("states every other charge with the market's own numbers", () => {
     expect(priceListNotes(launchMarket)).toEqual([
       "This is what your card is charged when the job is done, GST included. No call-out fee on top.",
-      "Need someone within 4 hours? Add NZ$90, plus NZ$140 outside working hours (7am to 4:30pm, Monday to Friday). Both go to the tradie in full.",
+      "Need someone within 4 hours? Add NZ$50 and the tradie drops what they are doing, plus NZ$140 outside working hours (7am to 4:30pm, Monday to Friday).",
       "Not on the list? NZ$225 for a tradie to come and look, then a quote. Nothing over NZ$600 starts without your yes.",
       "Small parts are in the price. Bigger parts are charged at cost: we add nothing on parts.",
     ]);

@@ -96,7 +96,7 @@ delete their own account.
 | Demo menu > **Scan the QR card as a guest**. Choose Plumbing, pick a job, give a name, **Report it**. | No prices anywhere. "Your host has been told." Nobody is sent. |
 | Open **Sam's phone** | A text asking whether to send someone |
 | Demo menu > **Report as the cleaner**. Pick a job, **Report it**. | A tradie is being found at once. Sam is texted the price. |
-| As Sam: **Report** at Arthurs Point Cabin, choose a job, choose **Urgent** | NZ$90 more, and on site within 4 hours. Before 7am, after 4:30pm or at the weekend it is NZ$140 more on top. |
+| As Sam: **Report** at Arthurs Point Cabin, choose a job, choose **Get someone there within 4 hours** | NZ$50 more, and the tradie drops what they are doing. Before 7am, after 4:30pm or at the weekend it is NZ$140 more on top. The tradie's offer shows their share: the surcharges less 15% (NZ$42.50 and NZ$119). |
 | As Sam: **Report**, choose **Something else** | NZ$225 for a tradie to come and look, with a quote to follow |
 | Log a plumbing job as Sam. Demo menu > **Skip 15 minutes**. As Maria, open it from **Jobs**. | "Who was offered it": the first choice ran out, the backup is being asked now |
 | **Skip 15 minutes** again | The backup ran out too. The sample has no third plumber, so it is in Maria's queue as "Nobody accepted", and Sam has been texted that the team is on it. |
@@ -196,7 +196,7 @@ In order. `SETUP.md` has the steps.
 - **A membership's price cannot be changed while members are on it.** Otherwise they are shown one price
   and charged another.
 - **Urgent is always paid for, and never discounted to the tradie** (`DECISIONS.md`). If a membership that
-  includes urgent call-outs ever comes back, the tradie still gets the full surcharge and you pay it.
+  includes urgent call-outs ever comes back, the tradie still gets their share of the surcharge (less 15%) and you pay it.
 - **Do not switch on slot fees yet** (`docs/PLAN.md`, section 9, item 5).
 - **The membership price is five to ten times what comparable software charges** (`docs/MARKET-RESEARCH.md`).
   Sell the guarantee, not the app.

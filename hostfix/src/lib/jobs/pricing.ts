@@ -9,9 +9,11 @@ import type { Market } from "@config/markets";
  *
  * The rules (from the brief):
  *  - Menu job: the owner pays the menu price, the tradie gets the menu payout.
- *  - Urgent and after-hours surcharges go to the tradie in full.
+ *  - Urgent and after-hours surcharges carry the platform fee, the same as
+ *    every other dollar: the tradie gets the surcharge less the fee, on top of
+ *    their menu share (DECISIONS.md, 2026-11-18). Never discounted further.
  *  - A tier that includes urgent response means the owner is not charged the
- *    urgent surcharge. The tradie still gets it, so the platform pays for it.
+ *    urgent surcharge. The tradie still gets their share, so the platform pays it.
  *  - Off-menu: a fixed diagnosis fee, then a quote. The platform keeps its fee
  *    percentage of the quoted work. Parts are passed on at cost.
  *  - A quote above the limit needs the owner's approval before work starts.
@@ -78,6 +80,15 @@ export function suggestedPayout(ownerPriceCents: number, feeBps: number): number
 }
 
 /**
+ * The tradie's share of an urgent or after-hours surcharge: the surcharge less
+ * the platform fee, the same 15% as on every other dollar. NZ$50 urgent pays
+ * the tradie NZ$42.50; NZ$140 after hours pays NZ$119.
+ */
+export function surchargeShare(surchargeCents: number, feeBps: number): number {
+  return whole(surchargeCents, "Surcharge") - platformFee(surchargeCents, feeBps);
+}
+
+/**
  * The tax inside a tax-inclusive amount. NZ$230 at 15% GST contains NZ$30 of
  * GST. Returns 0 when the rate is 0.
  */
@@ -120,19 +131,21 @@ export function initialLines(market: PricingMarket, job: InitialJob): Line[] {
     });
   }
   if (job.urgent) {
+    const surcharge = market.urgentSurchargeCents;
     lines.push({
       kind: "urgent",
       label: job.urgentIncluded ? "Urgent response (included in your membership)" : "Urgent response",
-      ownerCents: job.urgentIncluded ? 0 : market.urgentSurchargeCents,
-      tradieCents: market.urgentSurchargeCents,
+      ownerCents: job.urgentIncluded ? 0 : surcharge,
+      tradieCents: surchargeShare(surcharge, market.platformFeeBps),
     });
   }
   if (job.afterHours) {
+    const surcharge = market.afterHoursSurchargeCents;
     lines.push({
       kind: "after_hours",
       label: "After-hours call-out",
-      ownerCents: market.afterHoursSurchargeCents,
-      tradieCents: market.afterHoursSurchargeCents,
+      ownerCents: surcharge,
+      tradieCents: surchargeShare(surcharge, market.platformFeeBps),
     });
   }
   return lines;

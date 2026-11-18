@@ -19,7 +19,8 @@ afterEach(() => setTestNow(null));
  * An owner with one member property, the starting point for nearly every test here.
  *
  * The job most of these log is PL-01 on seed/menu-queenstown.json: "Toilet seat or cistern parts",
- * NZ$225 to the owner and NZ$190 to the tradie. Urgent adds NZ$90. If the menu changes, work the
+ * NZ$225 to the owner and NZ$190 to the tradie. Urgent adds NZ$50 to the owner and, less our 15%
+ * (750), NZ$42.50 to the tradie (DECISIONS.md, 2026-11-18). If the menu changes, work the
  * amounts below out again from the file.
  */
 async function member() {
@@ -659,9 +660,15 @@ describe("reports from guests and cleaners", () => {
     // The owner says yes, as urgent, an hour later. The promise runs from now.
     setTestNow(addMinutes(MONDAY_10AM, 60));
     const approved = await approveGuestReport(t.db, result.job.id, { urgent: true }, `owner:${owner.ownerId}`);
-    expect(approved).toMatchObject({ status: "offering", urgency: "urgent", ownerTotalCents: 22500 + 9000 });
+    // Owner 22500 + 5000 = 27500. Tradie 19000 + (5000 - 750) = 23250.
+    expect(approved).toMatchObject({ status: "offering", urgency: "urgent", ownerTotalCents: 27500, tradieTotalCents: 23250 });
     expect(approved!.respondBy?.getTime()).toBe(addMinutes(MONDAY_10AM, 60 + 4 * 60).getTime());
-    expect(await textsTo(t.db, tradie.phone, "offer")).toHaveLength(1);
+    const offer = await textsTo(t.db, tradie.phone, "offer");
+    expect(offer).toHaveLength(1);
+    // The offer shows the tradie's share, never the owner's price: accepting it accepts that amount.
+    expect(offer[0]!.body).toContain("URGENT");
+    expect(offer[0]!.body).toContain("Pays NZ$232.50");
+    expect(offer[0]!.body).not.toContain("NZ$275");
   });
 
   it("a guest's report goes straight out when the owner has switched that on, but never as urgent", async () => {

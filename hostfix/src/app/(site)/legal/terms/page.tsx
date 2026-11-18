@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   description: `How ${brand.name} works for property owners: free to join, fixed prices, charged when a job is done.`,
 };
 
-const UPDATED = "17 November 2026";
+const UPDATED = "18 November 2026";
 
 export default function Page() {
   const n = brand.name;
@@ -44,8 +44,9 @@ export default function Page() {
             log the job is the price you pay, even if we change the menu later.
           </li>
           <li>
-            <strong>Urgent</strong> (on site within 4 hours) adds a surcharge, and work before 7am, after 4:30pm or at the weekend adds an after-hours
-            surcharge. Both are shown before you choose them, and both go to the tradie in full.
+            <strong>Urgent</strong> (on site within 4 hours: the tradie drops what they are doing) adds a surcharge, and work before 7am, after
+            4:30pm or at the weekend adds an after-hours surcharge. The amount of each is on the price list and shown before you choose it, and
+            like the rest of the price it is fixed: nothing is added on the day.
           </li>
           <li>
             <strong>Jobs not on the menu</strong> cost a fixed call-out for a tradie to come and look, then a quote. Any quote over NZ$600, or over

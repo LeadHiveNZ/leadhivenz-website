@@ -46,7 +46,7 @@ export function priceListNotes(market: Market): string[] {
   const urgentHours = membership?.urgentResponseHours ?? 4;
   return [
     `This is what your card is charged when the job is done, ${market.taxName} included. No call-out fee on top.`,
-    `Need someone within ${urgentHours} hours? Add ${money(market.urgentSurchargeCents)}, plus ${money(market.afterHoursSurchargeCents)} outside working hours (${workingHours(market)}). Both go to the tradie in full.`,
+    `Need someone within ${urgentHours} hours? Add ${money(market.urgentSurchargeCents)} and the tradie drops what they are doing, plus ${money(market.afterHoursSurchargeCents)} outside working hours (${workingHours(market)}).`,
     `Not on the list? ${money(market.diagnosisFeeCents)} for a tradie to come and look, then a quote. Nothing over ${money(market.approvalThresholdCents)} starts without your yes.`,
     `Small parts are in the price. Bigger parts are charged at cost: we add nothing on parts.`,
   ];

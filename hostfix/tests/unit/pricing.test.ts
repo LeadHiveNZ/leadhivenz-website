@@ -1,18 +1,23 @@
 import { describe, expect, it } from "vitest";
 import { launchMarket } from "@config/markets";
-import { initialLines, noAccessLines, platformFee, quoteAmounts, refundSplit, suggestedPayout, taxPortion, totals } from "@/lib/jobs/pricing";
+import { initialLines, noAccessLines, platformFee, quoteAmounts, refundSplit, suggestedPayout, surchargeShare, taxPortion, totals } from "@/lib/jobs/pricing";
 
 const market = launchMarket;
 
 /**
  * THE NUMBERS THESE TESTS ARE BUILT ON, worked out by hand from
  * seed/menu-queenstown.json and config/markets.ts:
- *   PL-05 Shower head or mixer replace: owner 23500, tradie 20000, so we keep 3500
- *   urgent surcharge 9000, after-hours surcharge 14000 (the tradie gets all of both)
+ *   PL-03 Dripping tap or tap washer: owner 23500, tradie 20000, so we keep 3500
+ *   PL-05 Shower head or mixer replace: the same, owner 23500, tradie 20000
+ *   urgent surcharge 5000, after-hours surcharge 14000 (DECISIONS.md, 2026-11-18)
+ *   both surcharges carry the same 15% fee as everything else:
+ *     urgent:      15% of 5000  = 750,  so the tradie gets 5000 - 750   = 4250
+ *     after hours: 15% of 14000 = 2100, so the tradie gets 14000 - 2100 = 11900
  *   call-out for off-menu work, or when the tradie cannot get in: owner 22500, tradie 19000
  *   quotes above 60000 need the owner's yes, and so do parts above 15000
  * If any of those change, work the expected totals out again. Do not copy the code's answers.
  */
+const tap = { name: "Dripping tap or tap washer", ownerPriceCents: 23500, tradiePayoutCents: 20000 };
 const mixer = { name: "Shower head or mixer replace", ownerPriceCents: 23500, tradiePayoutCents: 20000 };
 
 describe("a menu job", () => {
@@ -22,25 +27,33 @@ describe("a menu job", () => {
     expect(totals(lines)).toEqual({ ownerCents: 23500, tradieCents: 20000, platformCents: 3500 });
   });
 
-  it("pays the urgent surcharge to the tradie in full", () => {
-    const lines = initialLines(market, { item: mixer, urgent: true, afterHours: false, urgentIncluded: false });
-    // 235 + 90 to the owner, 200 + 90 to the tradie. What we keep does not move.
-    expect(totals(lines)).toEqual({ ownerCents: 32500, tradieCents: 29000, platformCents: 3500 });
+  it("urgent: the owner pays NZ$50 more, the tradie gets it less our 15%", () => {
+    const lines = initialLines(market, { item: tap, urgent: true, afterHours: false, urgentIncluded: false });
+    expect(lines[1]).toMatchObject({ kind: "urgent", ownerCents: 5000, tradieCents: 4250 });
+    // Owner 23500 + 5000 = 28500. Tradie 20000 + 4250 = 24250. We keep 3500 + 750 = 4250.
+    expect(totals(lines)).toEqual({ ownerCents: 28500, tradieCents: 24250, platformCents: 4250 });
   });
 
-  it("pays the after-hours surcharge to the tradie in full, on top of urgent", () => {
-    const lines = initialLines(market, { item: mixer, urgent: true, afterHours: true, urgentIncluded: false });
+  it("after hours: the owner pays NZ$140 more, the tradie gets it less our 15%", () => {
+    const lines = initialLines(market, { item: tap, urgent: false, afterHours: true, urgentIncluded: false });
+    expect(lines[1]).toMatchObject({ kind: "after_hours", ownerCents: 14000, tradieCents: 11900 });
+    // Owner 23500 + 14000 = 37500. Tradie 20000 + 11900 = 31900. We keep 3500 + 2100 = 5600.
+    expect(totals(lines)).toEqual({ ownerCents: 37500, tradieCents: 31900, platformCents: 5600 });
+  });
+
+  it("urgent and after hours together: both carry the fee", () => {
+    const lines = initialLines(market, { item: tap, urgent: true, afterHours: true, urgentIncluded: false });
     expect(lines.map((l) => l.kind)).toEqual(["menu", "urgent", "after_hours"]);
-    // 235 + 90 + 140 to the owner, 200 + 90 + 140 to the tradie.
-    expect(totals(lines)).toEqual({ ownerCents: 46500, tradieCents: 43000, platformCents: 3500 });
+    // Owner 23500 + 5000 + 14000 = 42500. Tradie 20000 + 4250 + 11900 = 36150. We keep 3500 + 750 + 2100 = 6350.
+    expect(totals(lines)).toEqual({ ownerCents: 42500, tradieCents: 36150, platformCents: 6350 });
   });
 
-  it("does not charge the owner for urgent when the tier includes it, but still pays the tradie", () => {
+  it("does not charge the owner for urgent when the tier includes it, but still pays the tradie their share", () => {
     const lines = initialLines(market, { item: mixer, urgent: true, afterHours: false, urgentIncluded: true });
-    expect(lines[1]).toMatchObject({ kind: "urgent", ownerCents: 0, tradieCents: 9000 });
-    // The owner pays 235, the tradie is still due 290. We are NZ$55 out of pocket: the 90 we cover, less the 35 we kept.
-    // This is why no membership includes urgent call-outs today (DECISIONS.md).
-    expect(totals(lines)).toEqual({ ownerCents: 23500, tradieCents: 29000, platformCents: -5500 });
+    expect(lines[1]).toMatchObject({ kind: "urgent", ownerCents: 0, tradieCents: 4250 });
+    // The owner pays 23500, the tradie is still due 20000 + 4250 = 24250. We are 750 out of pocket:
+    // the 4250 we cover, less the 3500 we kept. This is why no membership includes urgent call-outs today (DECISIONS.md).
+    expect(totals(lines)).toEqual({ ownerCents: 23500, tradieCents: 24250, platformCents: -750 });
   });
 
   it("still charges after-hours when urgent is included", () => {
@@ -52,6 +65,30 @@ describe("a menu job", () => {
     expect(() =>
       initialLines(market, { item: { name: "x", ownerPriceCents: 100, tradiePayoutCents: 101 }, urgent: false, afterHours: false, urgentIncluded: false }),
     ).toThrow();
+  });
+});
+
+describe("the tradie's share of a surcharge", () => {
+  it("is the surcharge less 15%, both exact for the Queenstown amounts", () => {
+    // 15% of 5000 is 750; 15% of 14000 is 2100. No rounding.
+    expect(surchargeShare(5000, 1500)).toBe(4250);
+    expect(surchargeShare(14000, 1500)).toBe(11900);
+  });
+
+  it("rounds the fee to the nearest cent on a surcharge that does not divide evenly", () => {
+    // 15% of 3333 is 499.95, which rounds to a fee of 500, so the tradie gets 3333 - 500 = 2833.
+    expect(platformFee(3333, 1500)).toBe(500);
+    expect(surchargeShare(3333, 1500)).toBe(2833);
+    // 15% of 3330 is exactly 499.5: half a cent rounds up to a fee of 500, so the tradie gets 2830.
+    expect(surchargeShare(3330, 1500)).toBe(2830);
+    // Through a whole job: a market whose urgent surcharge is 3333. Owner 23500 + 3333 = 26833,
+    // tradie 20000 + 2833 = 22833, we keep 3500 + 500 = 4000.
+    const odd = { ...market, urgentSurchargeCents: 3333 };
+    expect(totals(initialLines(odd, { item: tap, urgent: true, afterHours: false, urgentIncluded: false }))).toEqual({ ownerCents: 26833, tradieCents: 22833, platformCents: 4000 });
+  });
+
+  it("refuses a surcharge that is not whole cents", () => {
+    expect(() => surchargeShare(50.5, 1500)).toThrow();
   });
 });
 
@@ -157,8 +194,9 @@ describe("when the tradie could not get in", () => {
     const lines = initialLines(market, { item: mixer, urgent: true, afterHours: true, urgentIncluded: false });
     const result = noAccessLines(market, lines);
     expect(result.map((l) => l.kind)).toEqual(["no_access", "urgent", "after_hours"]);
-    // The NZ$235 job becomes the NZ$225 call-out (NZ$190 to the tradie). Both surcharges stay.
-    expect(totals(result)).toEqual({ ownerCents: 22500 + 9000 + 14000, tradieCents: 19000 + 9000 + 14000, platformCents: 3500 });
+    // The NZ$235 job becomes the NZ$225 call-out (NZ$190 to the tradie). Both surcharges stay, with their fee:
+    // owner 22500 + 5000 + 14000 = 41500, tradie 19000 + 4250 + 11900 = 35150, we keep 3500 + 750 + 2100 = 6350.
+    expect(totals(result)).toEqual({ ownerCents: 41500, tradieCents: 35150, platformCents: 6350 });
   });
 
   it("never charges more than the job itself would have cost", () => {
@@ -180,6 +218,14 @@ describe("splitting a refund", () => {
     // Owner paid 180, tradie was due 210 (the platform was adding 30). A full
     // refund keeps all 210 back from the tradie and the platform saves its 30.
     expect(refundSplit({ ownerCents: 18000, tradieCents: 21000 }, 18000)).toEqual({ fromTradieCents: 21000, fromPlatformCents: -3000 });
+  });
+
+  it("splits a refund on an urgent job by the shares the job gave, surcharge fee included", () => {
+    // Dripping tap, urgent: owner 28500, tradie 24250, we keep 4250.
+    // Full refund: all 24250 back from the tradie, 4250 from us.
+    expect(refundSplit({ ownerCents: 28500, tradieCents: 24250 }, 28500)).toEqual({ fromTradieCents: 24250, fromPlatformCents: 4250 });
+    // Half refund, 14250: the tradie's half is 24250 / 2 = 12125, ours 14250 - 12125 = 2125.
+    expect(refundSplit({ ownerCents: 28500, tradieCents: 24250 }, 14250)).toEqual({ fromTradieCents: 12125, fromPlatformCents: 2125 });
   });
 
   it("refuses a refund bigger than the payment", () => {

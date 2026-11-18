@@ -115,7 +115,7 @@ Google Ads adds its own click id (`gclid`) by itself when auto-tagging is on, an
 > properties, half price for three months. The link's below."
 
 **What the ads must not say**, because the page does not and the product does not do it yet: an app or a
-login, "one number to ring", "on site in 4 hours" without saying urgent costs NZ$90 more, any statistic
+login, "one number to ring", "on site in 4 hours" without saying urgent costs NZ$50 more, any statistic
 you cannot source (the "three in four problems" figure is unsourced), what an owner's property earns,
 or that the tradies are already signed. Everything an ad promises has to be on the page they land on.
 

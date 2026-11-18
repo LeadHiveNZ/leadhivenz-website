@@ -139,8 +139,9 @@ What the software does, which the terms need to match:
   they did. The tradie's duty to tell HostFix of any change.
 - The offer: 15 minutes for the first choice, then the backup, then everyone. Accepting, passing, and what
   accepting commits them to.
-- **Pay.** The amount is fixed and shown in the offer. Surcharges and approved parts go to the tradie in
-  full. **Timing, as built:** the payment is sent 24 hours after the job (up to 48, set per market) once the
+- **Pay.** The amount is fixed and shown in the offer. It includes the tradie's share of any urgent or
+  after-hours surcharge: the surcharge less the 15% fee (DECISIONS.md, 18 Nov 2026). Approved parts are
+  paid back in full, at cost. **Timing, as built:** the payment is sent 24 hours after the job (up to 48, set per market) once the
   owner's card has been charged, and reaches the tradie's bank about 5 to 6 working days after the job in
   New Zealand. **If the owner's card fails, the tradie is not paid until it succeeds.** Is that acceptable,
   or must HostFix carry that risk?

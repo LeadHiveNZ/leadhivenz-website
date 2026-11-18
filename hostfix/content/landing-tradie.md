@@ -4,7 +4,7 @@ We send you fixed-price maintenance jobs at holiday homes, straight to your phon
 
 - Paid automatically, in your bank about {{payout_days}} after the job
 - You see what you'll be paid before you accept
-- Urgent and after-hours surcharges go to you in full
+- Urgent adds {{urgent_share}} to your pay and after hours adds {{after_hours_share}}: the surcharge less our {{platform_fee}}, like the rest of the price
 
 ## Why tradies join
 

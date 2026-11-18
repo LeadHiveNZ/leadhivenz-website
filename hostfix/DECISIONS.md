@@ -9,6 +9,73 @@ price, a fee or a promise, add a line here saying what and why.
 
 ---
 
+## 2026-11-18 — Urgent is NZ$50, and both surcharges carry the 15% fee
+
+The founder, in his words:
+
+> "The daytime urgent fee is too high: during business hours most firms do not
+> charge a same-day premium, so a local owner can beat NZ$90 by ringing round.
+> Urgent (within 4 hours) drops to NZ$50 and is described as what it buys: the
+> tradie drops what they are doing. After hours stays NZ$140. HostFix takes its
+> 15% on both surcharges, the same as on every other dollar; they no longer go
+> to the tradie in full. The tradie still gets the urgent and after-hours money
+> on top of their menu share, and urgent work is still never discounted."
+
+**Worked example: the dripping tap (PL-03), NZ$235 on the menu (owner 23500 cents, tradie 20000).**
+15% of 5000 is 750 and 15% of 14000 is 2100, both exact.
+
+| The job | Owner pays | Tradie gets | HostFix keeps |
+| --- | --- | --- | --- |
+| Booked, no surcharge | 23500 | 20000 | 3500 |
+| Urgent | 23500 + 5000 = 28500 | 20000 + 4250 = 24250 | 3500 + 750 = 4250 |
+| After hours | 23500 + 14000 = 37500 | 20000 + 11900 = 31900 | 3500 + 2100 = 5600 |
+| Urgent and after hours | 23500 + 5000 + 14000 = 42500 | 20000 + 4250 + 11900 = 36150 | 6350 |
+
+A surcharge that does not divide evenly rounds the fee to the nearest cent
+(3333 cents: fee 499.95, so 500; the tradie gets 2833).
+
+**What changed:**
+
+- **Queenstown urgent is NZ$50** (5000 cents): `config/markets.ts`,
+  `seed/menu-queenstown.json`, the default for a new market copied from nothing
+  (`src/lib/markets/admin.ts`), and migration `20261122000000_urgent_fifty.sql`,
+  which changes the Queenstown row only while it still says 9000, so a second
+  run, or a price the admin has since set by hand, is left alone.
+- **Jobs already logged keep what they were quoted.** Each job's prices are
+  copied onto its own lines when it is logged; the migration does not touch
+  them, and a test proves a later market change does not move a logged job.
+- **The fee applies to surcharges** (`surchargeShare` in `src/lib/jobs/pricing.ts`):
+  the urgent and after-hours lines give the tradie the surcharge less
+  `platformFee(cents, market.platformFeeBps)`, in whole cents. Refund splits,
+  the missed-promise credit, statements and payouts already work from each
+  job's lines, so they follow without change. Parts stay at cost, no fee.
+- **The tradie's offer text shows their share** (it always used the job's
+  tradie total): an urgent PL-01 now reads "Pays NZ$232.50" (19000 + 4250).
+- **Words:** the report screen's choice is now "Get someone there within 4
+  hours", "The tradie drops what they are doing to come. NZ$50 more.", with
+  the after-hours amount on its own line, all read from the market. Changed:
+  the price list (email and thank-you page), the owner page and its proof line,
+  the tradie page (now "Urgent adds NZ$42.50 to your pay and after hours adds
+  NZ$119"), the terms (section 3), the tradie agreement (section 6, "Pay"), the
+  tradie's job screen and profile, the admin Markets screen hints, AGENTS.md,
+  docs/PLAN.md, docs/TRY-IT.md, docs/DEMAND-TEST.md and docs/LEGAL-TODO.md.
+  Three new placeholders for the landing copy: `{{urgent_share}}`,
+  `{{after_hours_share}}`, and `{{platform_fee}}`.
+
+**Decided while building, to confirm:**
+
+- A membership that includes urgent (none is sold today) now costs the platform
+  the tradie's share, 4250, not the whole 5000.
+- The owner terms now say the tradie gets each surcharge "less our 15% fee".
+  Saying the split to owners is optional; take it out if you would rather not.
+- The legal pages' "last updated" date moved to 18 November 2026 for the
+  terms and the tradie agreement. Tradies who agreed before today have not
+  re-agreed to the new section 6.
+
+Built on 2026-11-18: all of the above.
+
+---
+
 ## 2026-11-17 — Free to join. The money is the 15% on every job.
 
 Owners who rang after the first ads all said the same thing: "$600 a year for

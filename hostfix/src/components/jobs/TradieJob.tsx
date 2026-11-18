@@ -249,7 +249,7 @@ export function TradieJob({ view, now, code, flash = {}, propertyPhotos }: Props
       {job.status !== "cancelled" && view.lines.length > 0 && (
         <Panel title="What you get">
           <CostLines lines={view.lines} currency={job.currency} side="tradie" totalLabel="You get" />
-          <p className="mt-3 text-sm text-muted">{payTiming(market).line} Surcharges and parts are yours in full.</p>
+          <p className="mt-3 text-sm text-muted">{payTiming(market).line} Parts are paid back in full. Urgent and after-hours amounts are your share, after the platform fee.</p>
         </Panel>
       )}
 

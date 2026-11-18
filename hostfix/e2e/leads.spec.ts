@@ -110,7 +110,7 @@ test.describe("owner landing page on a phone", () => {
     await expect(prices).toContainText("NZ$245");
     await expect(prices).toContainText("Free to join: you only pay the fixed price when a job is done.");
     // Every other charge, from the market's own settings.
-    await expect(prices).toContainText("Add NZ$90, plus NZ$140 outside working hours (7am to 4:30pm, Monday to Friday)");
+    await expect(prices).toContainText("Add NZ$50 and the tradie drops what they are doing, plus NZ$140 outside working hours (7am to 4:30pm, Monday to Friday)");
     await expect(prices).toContainText("NZ$225 for a tradie to come and look");
     await expect(prices).toContainText("Nothing over NZ$600 starts without your yes.");
     // Prices still waiting on a local quote are not shown (DECISIONS.md).

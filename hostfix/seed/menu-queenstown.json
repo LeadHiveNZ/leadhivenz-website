@@ -17,7 +17,7 @@
   "pricesIncludeGst": true,
   "placeholderPrices": false,
   "surcharges": {
-    "urgentDollars": 90,
+    "urgentDollars": 50,
     "afterHoursDollars": 140
   },
   "offMenu": {

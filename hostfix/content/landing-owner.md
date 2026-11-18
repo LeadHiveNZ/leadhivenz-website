@@ -23,7 +23,7 @@ One place for every trade your holiday home needs. A checked local tradie on sit
 
 ### Free to join. Pay per job.
 
-A tradie on site within 24 hours, at the fixed menu price. Need someone within 4 hours? Add {{urgent}} on the day, plus {{after_hours}} outside working hours. Both go to the tradie in full.
+A tradie on site within 24 hours, at the fixed menu price. Need someone within 4 hours? Add {{urgent}} on the day and the tradie drops what they are doing, plus {{after_hours}} outside working hours.
 
 ---
 

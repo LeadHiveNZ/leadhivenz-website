@@ -148,8 +148,9 @@ describe("mistakes in the copy are caught with a clear message", () => {
 describe("placeholders", () => {
   it("come from the market and brand settings, so nothing is tied to one town or currency", () => {
     // Queenstown's starting values (config/markets.ts and DECISIONS.md): Essential free to join ($0 a month, 2026-11-17),
-    // the old $99 founding deposit (no longer offered, kept for the record), urgent $90, after hours $140, $225 to come and
-    // look at something off the menu, quotes over $600 need a yes.
+    // the old $99 founding deposit (no longer offered, kept for the record), urgent $50 (2026-11-18), after hours $140,
+    // $225 to come and look at something off the menu, quotes over $600 need a yes. The tradie's share of each surcharge
+    // is the surcharge less 15%: 50 - 7.50 = 42.50, and 140 - 21 = 119.
     expect(contentTokens(launchMarket)).toEqual({
       brand: "HostFix",
       market: "Queenstown",
@@ -158,8 +159,11 @@ describe("placeholders", () => {
       essential: "NZ$0",
       // Portfolio's lowest band, 10-24 properties: NZ$600 a month (DECISIONS.md, 2026-11-17).
       portfolio_from: "NZ$600",
-      urgent: "NZ$90",
+      urgent: "NZ$50",
       after_hours: "NZ$140",
+      urgent_share: "NZ$42.50",
+      after_hours_share: "NZ$119",
+      platform_fee: "15%",
       callout: "NZ$225",
       approval_limit: "NZ$600",
       payout_days: "5 to 6 working days",
@@ -174,7 +178,8 @@ describe("placeholders", () => {
       approvalThresholdCents: 75000,
       foundingDeposit: { enabled: true, amountCents: 5900, spots: 25, terms: [] },
     };
-    expect(contentTokens(noosa)).toMatchObject({ market: "Noosa", deposit: "A$59", essential: "A$109", urgent: "A$95", approval_limit: "A$750" });
+    // Noosa's urgent A$95 less 15% (14.25) is A$80.75 to the tradie.
+    expect(contentTokens(noosa)).toMatchObject({ market: "Noosa", deposit: "A$59", essential: "A$109", urgent: "A$95", urgent_share: "A$80.75", approval_limit: "A$750" });
     // Australian card money clears faster than New Zealand's, so the page says so.
     expect(contentTokens({ ...noosa, country: "AU" as const }).payout_days).toBe("3 to 4 working days");
   });
@@ -223,8 +228,9 @@ describe("the real landing page files", () => {
     expect(pricing?.blocks.map((b) => b.type)).toEqual(["card", "paragraph"]);
     const card = pricing?.blocks[0];
     expect(card?.type === "card" && plainText(card.title)).toBe("Free to join. Pay per job.");
-    // Urgent NZ$90 and after hours NZ$140, both to the tradie in full.
-    expect(JSON.stringify(card)).toContain("Need someone within 4 hours? Add NZ$90 on the day, plus NZ$140 outside working hours. Both go to the tradie in full.");
+    // Urgent NZ$50 (DECISIONS.md, 2026-11-18) and after hours NZ$140. They no longer go to the tradie in full.
+    expect(JSON.stringify(card)).toContain("Need someone within 4 hours? Add NZ$50 on the day and the tradie drops what they are doing, plus NZ$140 outside working hours.");
+    expect(JSON.stringify(card)).not.toContain("in full");
     expect(JSON.stringify(pricing)).not.toContain("Managing 10 or more?");
   });
 
@@ -255,8 +261,9 @@ describe("the real landing page files", () => {
 
   it("the owner page states the real prices from the market settings, and no second membership", () => {
     const text = JSON.stringify(loadLanding("owner", launchMarket));
-    // Urgent NZ$90, after hours NZ$140, the call-out NZ$225 and the quote limit NZ$600. No monthly price: it is free to join.
-    for (const price of ["NZ$90", "NZ$140", "NZ$225", "NZ$600"]) expect(text).toContain(price);
+    // Urgent NZ$50, after hours NZ$140, the call-out NZ$225 and the quote limit NZ$600. No monthly price: it is free to join.
+    for (const price of ["NZ$50", "NZ$140", "NZ$225", "NZ$600"]) expect(text).toContain(price);
+    expect(text).not.toContain("NZ$90");
     expect(text).not.toContain("NZ$99");
     expect(text).not.toContain("NZ$0");
     // Priority was removed (DECISIONS.md): its old price and name must not come back.
@@ -277,5 +284,12 @@ describe("the real landing page files", () => {
     const text = JSON.stringify(loadLanding("tradie", launchMarket));
     expect(text).toContain("in your bank about 5 to 6 working days after the job");
     expect(text).not.toMatch(/48 hours/);
+  });
+
+  it("the tradie page shows the tradie's share of each surcharge, not the owner's price", () => {
+    // DECISIONS.md, 2026-11-18: urgent 5000 less 15% (750) is 4250; after hours 14000 less 15% (2100) is 11900.
+    const text = JSON.stringify(loadLanding("tradie", launchMarket));
+    expect(text).toContain("Urgent adds NZ$42.50 to your pay and after hours adds NZ$119: the surcharge less our 15%, like the rest of the price");
+    expect(text).not.toContain("in full");
   });
 });

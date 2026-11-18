@@ -140,8 +140,9 @@ describe("the Queenstown menu file", () => {
   });
 
   it("carries the surcharges and the off-menu rules that were decided", () => {
-    // DECISIONS.md, 16 November 2026: urgent 90, after hours 140, call-out 225 (190 to the tradie), approval above 600.
-    expect(menu.surcharges).toEqual({ urgentDollars: 90, afterHoursDollars: 140 });
+    // DECISIONS.md, 16 November 2026: after hours 140, call-out 225 (190 to the tradie), approval above 600.
+    // Urgent dropped from 90 to 50 on 18 November 2026.
+    expect(menu.surcharges).toEqual({ urgentDollars: 50, afterHoursDollars: 140 });
     expect(menu.offMenu).toEqual({ diagnosisFeeDollars: 225, diagnosisTradiePayoutDollars: 190, ownerApprovalAboveDollars: 600 });
     // The call-out follows the same 15% rule as every job on the menu.
     expect(menu.offMenu.diagnosisFeeDollars).toBe(5 * Math.round(menu.offMenu.diagnosisTradiePayoutDollars / 0.85 / 5));

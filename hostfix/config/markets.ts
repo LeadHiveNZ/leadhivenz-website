@@ -58,7 +58,7 @@ export type MembershipTier = {
   responseHours: number;
   /** The promise for an urgent job. */
   urgentResponseHours: number;
-  /** True when urgent jobs cost the owner no surcharge. The tradie still gets it. */
+  /** True when urgent jobs cost the owner no surcharge. The tradie still gets their share of it. */
   urgentIncluded: boolean;
   /** How many urgent jobs a month are included. null means no limit. */
   urgentIncludedPerMonth: number | null;
@@ -88,7 +88,7 @@ export type Market = {
 
   /** The platform's share of a job, in hundredths of a percent. 1500 means 15%. */
   platformFeeBps: number;
-  /** Paid to the tradie in full. */
+  /** Both carry the platform fee: the tradie gets the surcharge less the fee (DECISIONS.md, 2026-11-18). */
   urgentSurchargeCents: number;
   afterHoursSurchargeCents: number;
   /** Off-menu work: the fee to come and look, and what the tradie gets of it. */
@@ -172,7 +172,7 @@ export function defineMarket(input: MarketInput): Market {
     platformFeeBps: 1500,
     // The same figures as seed/menu-queenstown.json, so a market added later
     // starts from them too. Why each one: DECISIONS.md.
-    urgentSurchargeCents: 9000,
+    urgentSurchargeCents: 5000,
     afterHoursSurchargeCents: 14000,
     diagnosisFeeCents: 22500,
     diagnosisPayoutCents: 19000,

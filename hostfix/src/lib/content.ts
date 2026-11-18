@@ -5,6 +5,7 @@ import { Lexer, type Token } from "marked";
 import { brand } from "@config/brand";
 import { payoutArrival, type Market } from "@config/markets";
 import { lowestBand } from "@/lib/markets/bands";
+import { surchargeShare } from "@/lib/jobs/pricing";
 import { formatMoney } from "@/lib/money";
 
 /**
@@ -29,7 +30,10 @@ import { formatMoney } from "@/lib/money";
  *   {{portfolio_from}}                  the lowest Portfolio retainer, for
  *                                        managers with 10 or more properties
  *   {{deposit}}                         the founding deposit
- *   {{urgent}} {{after_hours}}          the two surcharges
+ *   {{urgent}} {{after_hours}}          the two surcharges, as the owner pays them
+ *   {{urgent_share}} {{after_hours_share}}  the tradie's share of each: the
+ *                                        surcharge less the platform fee
+ *   {{platform_fee}}                    the platform fee, for example "15%"
  *   {{callout}}                         the fee for a tradie to come and look at
  *                                        something that is not on the menu
  *   {{approval_limit}}                  quotes above this need the owner's yes
@@ -97,6 +101,9 @@ export function contentTokens(market: Market): Record<string, string> {
     portfolio_from: portfolioFrom ? money(portfolioFrom.cents) : "[EDIT: no Portfolio membership is on offer in this market]",
     urgent: money(market.urgentSurchargeCents),
     after_hours: money(market.afterHoursSurchargeCents),
+    urgent_share: money(surchargeShare(market.urgentSurchargeCents, market.platformFeeBps)),
+    platform_fee: `${market.platformFeeBps / 100}%`,
+    after_hours_share: money(surchargeShare(market.afterHoursSurchargeCents, market.platformFeeBps)),
     callout: money(market.diagnosisFeeCents),
     approval_limit: money(market.approvalThresholdCents),
     payout_days: payoutArrival(market.country),

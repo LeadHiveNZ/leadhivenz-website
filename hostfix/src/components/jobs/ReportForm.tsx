@@ -197,11 +197,16 @@ export function ReportForm(props: Props) {
             </Choice>
             <Choice on={urgent} onPick={() => setUrgent(true)}>
               <span className="flex-1">
-                <span className="block font-semibold text-ink">Urgent</span>
+                <span className="block font-semibold text-ink">Get someone there within {props.urgentHours} hours</span>
                 <span className="block text-sm text-muted">
-                  A tradie on site within {props.urgentHours} hours.
-                  {props.afterHoursNow ? " It is outside working hours now, so the after-hours call-out applies too." : ""}
+                  The tradie drops what they are doing to come.{" "}
+                  {props.urgentIncluded ? "Included in your membership." : `${formatMoney(props.urgentCents, currency)} more.`}
                 </span>
+                {props.afterHoursNow && (
+                  <span className="block text-sm text-muted">
+                    It is outside working hours now, so the after-hours call-out adds {formatMoney(props.afterHoursCents, currency)}.
+                  </span>
+                )}
               </span>
               <span className="tabular shrink-0 text-right text-sm font-bold text-ink">{urgentExtra === 0 ? "Included" : `+${formatMoney(urgentExtra, currency)}`}</span>
             </Choice>

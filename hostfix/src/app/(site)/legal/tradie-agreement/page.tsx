@@ -12,7 +12,7 @@ export const metadata: Metadata = {
   description: `How working with ${brand.name} works: the offers, the prices, the pay, and what we expect from each other.`,
 };
 
-const UPDATED = "17 November 2026";
+const UPDATED = "18 November 2026";
 
 export default function Page() {
   const n = brand.name;
@@ -101,7 +101,7 @@ export default function Page() {
 
       <Section n={6} title="Pay">
         <ul>
-          <li>Your share is the amount in the offer. Urgent and after-hours surcharges, and approved parts, go to you in full.</li>
+          <li>Your share is the amount in the offer. On an urgent or after-hours job, your share of the surcharge is in that amount, like the rest of the price: the surcharge less the 15% platform fee. Approved parts are paid back to you in full, at cost.</li>
           <li>
             Once the owner&rsquo;s card has been charged, your payment is sent 24 hours after the job finishes and reaches your bank about 5 to 6 working
             days after the job. We will never promise you faster than Stripe actually pays.

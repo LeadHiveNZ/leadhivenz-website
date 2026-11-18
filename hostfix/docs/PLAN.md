@@ -31,15 +31,18 @@
 > - **Owners have one membership: Essential, NZ$99 per property per month, 24-hour response** (`DECISIONS.md`,
 >   16 Nov 2026). Priority was removed because delivering it cost more than it charged, so everything below
 >   about Priority, its included urgent call-outs and its quarterly check is history. Urgent is always an
->   add-on the owner pays for, and the whole surcharge goes to the tradie.
+>   add-on the owner pays for. (Since 18 Nov 2026 the tradie gets the surcharge less the 15% fee: see below.)
 > - **Free to join** (`DECISIONS.md`, 17 Nov 2026): Essential is NZ$0, a property is covered as soon as a
 >   card is on file (no subscription, no monthly invoice), and the money is the 15% inside every menu price.
 >   A missed promise takes the call-out portion of that job off its charge. Tradies need public liability
 >   insurance on file, with its certificate uploaded, to be approved or offered work. The founding deposit is no longer offered; paid ones
 >   are refunded. The Essential-at-NZ$99 line above is history.
 > - **The real Queenstown prices are loaded** (59 researched jobs, `seed/menu-queenstown.json`): urgent
->   NZ$90, after hours NZ$140, NZ$225 to come and look at something off the menu, owner's yes needed above
+>   NZ$50 (NZ$90 until 18 Nov 2026), after hours NZ$140, NZ$225 to come and look at something off the menu, owner's yes needed above
 >   NZ$600. After-hours is before 7am, from 4:30pm and all weekend.
+> - **Urgent is NZ$50, and both surcharges carry the 15% fee** (`DECISIONS.md`, 18 Nov 2026). Urgent buys
+>   "the tradie drops what they are doing"; after hours stays NZ$140. The tradie gets each surcharge less 15%
+>   (NZ$42.50 and NZ$119) on top of their menu share. Section 4's "+NZ$80 to tradie in full" is history.
 > - **Portfolio, the second tier, is built** (`DECISIONS.md`, 17 Nov 2026): managers with 10+ properties pay
 >   one monthly retainer per account, banded by property count (NZ$600 / 900 / 1,200, 100+ by arrangement),
 >   re-banded from the next payment when properties are added or taken off. The 15% job fee is unchanged.

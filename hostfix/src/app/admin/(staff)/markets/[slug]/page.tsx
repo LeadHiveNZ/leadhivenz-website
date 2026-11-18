@@ -109,7 +109,7 @@ function TierForm({ slug, currency, tier }: { slug: string; currency: string; ti
           );
         })}
       </fieldset>
-      <Tick name="urgentIncluded" label="Urgent call-outs cost the owner nothing extra" hint="The tradie still gets the urgent surcharge. We pay it. Watch 'Urgent surcharges we covered' on the Numbers page." defaultChecked={tier?.urgentIncluded ?? false} />
+      <Tick name="urgentIncluded" label="Urgent call-outs cost the owner nothing extra" hint="The tradie still gets their share of the urgent surcharge. We pay it. Watch 'Urgent surcharges we covered' on the Numbers page." defaultChecked={tier?.urgentIncluded ?? false} />
       <Tick name="quarterlyCheck" label="Includes a property check every three months" hint="This is a promise on the page. The check itself is booked by a person: it is not automatic yet." defaultChecked={tier?.quarterlyCheck ?? false} />
       <Tick name="active" label="Offered to new members" defaultChecked={tier?.active ?? true} />
       <SubmitButton variant="secondary" pendingLabel="Saving...">
@@ -228,9 +228,9 @@ export default async function MarketPage({ params, searchParams }: { params: Pro
 
           <p className="border-t border-line pt-4 text-sm font-bold tracking-wide text-muted uppercase">Fees and surcharges ({market.currency})</p>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Our share of off-menu work (%)" name="platformFee" required inputMode="decimal" maxLength={5} defaultValue={String(market.platformFeeBps / 100)} hint="Menu jobs use the two prices on each job instead." />
-            <Field label="Urgent surcharge" name="urgentSurcharge" required inputMode="decimal" maxLength={8} defaultValue={centsToDollars(market.urgentSurchargeCents)} hint="Paid to the tradie in full." />
-            <Field label="After-hours surcharge" name="afterHoursSurcharge" required inputMode="decimal" maxLength={8} defaultValue={centsToDollars(market.afterHoursSurchargeCents)} hint="Paid to the tradie in full." />
+            <Field label="Our share of off-menu work (%)" name="platformFee" required inputMode="decimal" maxLength={5} defaultValue={String(market.platformFeeBps / 100)} hint="Also taken from the urgent and after-hours surcharges. Menu jobs use the two prices on each job instead." />
+            <Field label="Urgent surcharge" name="urgentSurcharge" required inputMode="decimal" maxLength={8} defaultValue={centsToDollars(market.urgentSurchargeCents)} hint="The tradie drops what they are doing. They get it less our share, like the rest of the price." />
+            <Field label="After-hours surcharge" name="afterHoursSurcharge" required inputMode="decimal" maxLength={8} defaultValue={centsToDollars(market.afterHoursSurchargeCents)} hint="The tradie gets it less our share, like the rest of the price." />
             <Field label="Call-out fee for off-menu work" name="diagnosisFee" required inputMode="decimal" maxLength={8} defaultValue={centsToDollars(market.diagnosisFeeCents)} hint="What the owner pays for a tradie to come and look." />
             <Field label="What the tradie gets of that call-out" name="diagnosisPayout" required inputMode="decimal" maxLength={8} defaultValue={centsToDollars(market.diagnosisPayoutCents)} />
             <Field label="Quotes above this need the owner's yes" name="approvalThreshold" required inputMode="decimal" maxLength={8} defaultValue={centsToDollars(market.approvalThresholdCents)} />

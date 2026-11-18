@@ -61,7 +61,10 @@ it when you change one.
 - **Two tiers, one fee.** Essential (free) for owners. Portfolio for managers with 10+ properties, a
   retainer banded by portfolio size, built and switched off for now. The platform fee is 15% of every job
   in both, and never varies. Urgent response is an add-on the owner pays for, never an inclusion; Priority
-  was removed because delivering it cost more than it charged. A surcharge always goes to the tradie in full.
+  was removed because delivering it cost more than it charged. The 15% applies to the urgent and after-hours
+  surcharges too: the tradie gets each surcharge less the fee (`surchargeShare` in `src/lib/jobs/pricing.ts`),
+  on top of their menu share, and the offer text shows that share (`DECISIONS.md`, 2026-11-18). Parts are
+  passed on at cost with no fee.
 - **Miss the promised time and the call-out portion of that job is on us** (the market's diagnosis fee,
   capped at the job's price), taken off that job's charge, once per property per month. The tradie is
   still paid in full.
