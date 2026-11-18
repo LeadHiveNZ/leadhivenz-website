@@ -85,7 +85,7 @@ const STEPS: [string, string][] = [
 const FAQS: [string, string][] = [
   ["What does it cost me?", "Nothing. No lead fees, no subscription, nothing if you never accept a job. HostFix takes 15% inside the fixed price, same as every dollar, and you see your share before you accept."],
   ["What if the job isn't what the text said?", "Tap \"This needs a quote\". You're paid the call-out ($190) for coming, you give a price, and the owner says yes or no before any more work starts. Don't start anything the owner hasn't approved."],
-  ["Urgent and after hours?", "Within 4 hours adds $42.50 to your pay. Before 7am, after 4:30pm or weekends adds $119. Both are in the text before you accept. Urgent work is never discounted."],
+  ["Urgent and after hours?", "Within 4 hours adds $42.50 to your pay when you're on site in time; late, and the owner isn't charged it. Arriving before 7am, after 4:30pm or at the weekend adds $119. Both are in the text before you accept. Urgent work is never discounted."],
   ["Parts?", "Small parts (washers, fittings, a cartridge) are in the price. Bigger parts go to the owner at cost when you add them to the job with the receipt. Over a set amount the app asks the owner first."],
   ["Couldn't get in?", "Tap \"Could not get in\" with a photo at the door. You're paid the call-out."],
   ["What if the owner complains?", "They have a day to raise it. Your payment holds while a person looks at the photos and both sides. Work stands, you're paid in full. A refund reduces your pay in proportion. You're always told why."],
@@ -176,7 +176,7 @@ export function HostFixTradies({ saveLead }: Props) {
             <h2 className="hf-h2">What the common jobs pay you.</h2>
             <p className="hf-note">
               Queenstown prices, GST included, your share after HostFix's 15%. Other towns get their own menu set from local rates. Urgent adds
-              $42.50, after hours adds $119, both yours. Off-menu jobs: $190 to come and look, then your quote.
+              $42.50 when you're on site within 4 hours, after hours adds $119, both yours. Off-menu jobs: $190 to come and look, then your quote.
             </p>
             <div className="hf-pay-grid">
               {PAY.map((group) => (

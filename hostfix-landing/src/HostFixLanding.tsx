@@ -338,7 +338,7 @@ const FAQS: [string, string][] = [
   ["So how do you make money?", "A small margin inside each fixed price. You pay the menu price and nothing more. The tradie gets steady work without quoting; you get a fixed price without chasing."],
   ["Are jobs dearer through you?", "No. Prices are set from what local tradies in your town charge for a call-out and the first hour, and the call-out is included."],
   ["Who are your tradies?", "Local tradies we've checked and approved, each with their own public liability insurance on file. Plumbing, gas and electrical work only goes to a tradie whose licence is on file and in date."],
-  ["What if the tradie is late?", "A tradie is on site within 24 hours, or 4 when it's urgent. Miss that and the call-out portion of that job is on us."],
+  ["What if the tradie is late?", "When a tradie takes your job, they give you an arrival time: within 24 hours, or 4 when it's urgent. Paid the $50 for urgent and they're late? You don't pay it. If nobody can take your job, we tell you straight away and you pay nothing."],
   ["When do you start?", "Queenstown first, then town by town as insured local tradies sign up. Leave your town and we'll tell you the day it opens. The first 25 properties in each town are set up personally."],
   ["What if I change my mind?", "Nothing to cancel and nothing to refund, because you haven't paid anything. Remove your property any time."],
   ["I'm not in Queenstown.", "Leave your details with your town. That's how we pick the next towns to open, and the first owners in each one are set up personally."],
@@ -367,7 +367,7 @@ function Unlocked({ videoRef }: { videoRef: React.RefObject<HTMLElement | null> 
                 <li><strong>$0 to join.</strong> No monthly fee, no minimum, no contract</li>
                 <li><strong>Fixed prices</strong> you see before you say yes, GST included</li>
                 <li>Your card is charged <strong>only when a job is done</strong></li>
-                <li><strong>On site within 24 hours</strong>, or 4 when it's urgent. Miss it and the call-out's on us</li>
+                <li><strong>On site within 24 hours</strong>, or 4 when it's urgent, at a time the tradie gives you. Late on an urgent job? You don't pay the $50</li>
                 <li>The first 25 properties in each town are <strong>set up personally</strong>: we call you, add your property, and you're covered</li>
               </ul>
             </div>
@@ -408,7 +408,7 @@ function Unlocked({ videoRef }: { videoRef: React.RefObject<HTMLElement | null> 
               </p>
               <p>
                 You pay the fixed price when a job is done, and nothing else. A tradie on site within 24 hours, or 4 hours when it's
-                urgent. Miss it and the call-out portion of that job is on us.
+                urgent, at a time they give you when they take the job. Late on an urgent job and you don't pay the $50.
               </p>
             </div>
             <p className="hf-note">
