@@ -33,6 +33,8 @@ type Props = {
   /** A picture of the product, shown beside the steps. */
   phone: ReactNode;
   menu?: MenuPreview | null;
+  /** A short walkthrough video, shown between the hero and the rest of the page. */
+  video?: { embedUrl: string; title: string; note: string } | null;
 };
 
 /**
@@ -48,7 +50,7 @@ type Props = {
  *   bullet points            a grid of cards
  *   anything else            plain paragraphs
  */
-export function LandingPage({ content, eyebrow, formTitle, formNote, form, ctaLabel, closingTitle, closingNote, proof, phone, menu }: Props) {
+export function LandingPage({ content, eyebrow, formTitle, formNote, form, ctaLabel, closingTitle, closingNote, proof, phone, menu, video }: Props) {
   const sections = plan(content.sections);
   return (
     <main className="pb-20 lg:pb-0">
@@ -94,6 +96,20 @@ export function LandingPage({ content, eyebrow, formTitle, formNote, form, ctaLa
           </dl>
         </div>
       </section>
+
+      {video && (
+        <section aria-labelledby="walkthrough-title" className="bg-sand/60">
+          <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6 sm:py-16">
+            <h2 id="walkthrough-title" className="display text-3xl text-ink sm:text-4xl">
+              {video.title}
+            </h2>
+            <p className="mt-2 text-lg text-muted">{video.note}</p>
+            <div className="mt-6 overflow-hidden rounded-3xl border border-line bg-black shadow-xl shadow-brand/10" style={{ aspectRatio: "16 / 9" }}>
+              <iframe src={video.embedUrl} title={video.title} allow="fullscreen" allowFullScreen loading="lazy" className="h-full w-full" />
+            </div>
+          </div>
+        </section>
+      )}
 
       {sections.map(({ section, kind }) => {
         if (kind === "steps") return <Steps key={section.id} section={section} phone={phone} />;

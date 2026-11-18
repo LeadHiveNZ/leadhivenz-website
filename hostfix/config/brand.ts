@@ -18,6 +18,15 @@ export const brand = {
     "Fixed-price repairs for holiday homes and short-stay rentals. Local tradies, fast response, photos when it's done.",
 
   /**
+   * Walkthrough videos shown on the public pages, as Loom embed links
+   * (https://www.loom.com/embed/<id>). null hides the section.
+   */
+  walkthroughs: {
+    /** The app from the tradie's side, about 4 minutes. Shown on the tradie page. */
+    tradie: "https://www.loom.com/embed/667a85c42c0a46678fba0e1dcdabf97e" as string | null,
+  },
+
+  /**
    * Logo. Leave as null to use the built-in mark: an open door, drawn in the
    * colours below. To use your own logo, put the file in the /public folder
    * and set this to its path, for example "/my-logo.svg".

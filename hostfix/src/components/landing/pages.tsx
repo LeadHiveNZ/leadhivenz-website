@@ -223,6 +223,11 @@ export function TradieLanding({ data }: { data: PublicMarket }) {
         { value: formatMoney(0, market.currency), label: "To join. No lead fees, no bidding, no subscription" },
       ]}
       phone={<TradiePhone example={example(data)} />}
+      video={
+        brand.walkthroughs.tradie
+          ? { embedUrl: brand.walkthroughs.tradie, title: "See a job from your side, in 4 minutes", note: "The text, the one tap to accept, the lockbox code, the photo, and the Pay page." }
+          : null
+      }
       menu={
         items.length > 0
           ? {
