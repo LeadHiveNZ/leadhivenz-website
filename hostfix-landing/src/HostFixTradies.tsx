@@ -54,6 +54,7 @@ const PAY: { trade: string; rows: [string, number][] }[] = [
       ["Tripping circuit, first-hour diagnosis", 190],
       ["Oven or cooktop fault, first-hour diagnosis", 190],
       ["Switchboard and RCD safety test", 190],
+      ["Light fitting replace, up to 2", 190],
       ["Extractor fan replace", 220],
       ["Heated towel rail replace", 230],
     ],
@@ -62,7 +63,7 @@ const PAY: { trade: string; rows: [string, number][] }[] = [
     trade: "Handyman",
     rows: [
       ["Shelf, hook or mirror hanging", 130],
-      ["Light bulbs or a light fitting, up to 5", 140],
+      ["Light bulbs, up to 5", 140],
       ["Smoke alarm replace or battery, up to 3", 140],
       ["Door handle, latch or lock adjust", 140],
       ["Sticking door or sliding door track", 150],

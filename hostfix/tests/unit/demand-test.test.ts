@@ -235,10 +235,10 @@ describe("the price list", () => {
 
   it("is every job that can be booked, at the owner's price, leaving out prices still waiting on a local quote", async () => {
     const list = await priceListFor(t.db, "queenstown");
-    // 59 researched jobs, less the five priced off national averages that wait on a local quote
+    // 60 researched jobs, less the five priced off national averages that wait on a local quote
     // (DECISIONS.md: GD-01, PV-01, PV-02, PV-04, OD-03) and the two add-ons that only go on another job
     // (HP-01 each extra heat pump, PV-03 filter clean between guests): 59 - 5 - 2 = 52.
-    expect(seed.items).toHaveLength(59);
+    expect(seed.items).toHaveLength(60);
     expect(list.count).toBe(52);
     const codes = list.groups.flatMap((group) => group.items.map((item) => item.code));
     for (const code of ["GD-01", "PV-01", "PV-02", "PV-04", "OD-03", "HP-01", "PV-03"]) expect(codes).not.toContain(code);

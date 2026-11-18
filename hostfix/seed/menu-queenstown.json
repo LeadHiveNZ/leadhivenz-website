@@ -28,7 +28,7 @@
   "items": [
     {"code": "HM-01", "trade": "handyman", "name": "Shelf, hook or mirror hanging", "ownerPriceDollars": 155, "tradiePayoutDollars": 130, "licenceRequired": false, "guestVisible": false},
     {"code": "HM-02", "trade": "handyman", "name": "Wi-Fi router reset and smart TV setup", "ownerPriceDollars": 155, "tradiePayoutDollars": 130, "licenceRequired": false, "tags": ["top-complaint"]},
-    {"code": "HM-03", "trade": "handyman", "name": "Light bulbs or a light fitting, up to 5", "ownerPriceDollars": 165, "tradiePayoutDollars": 140, "licenceRequired": false},
+    {"code": "HM-03", "trade": "handyman", "name": "Light bulbs, up to 5", "ownerPriceDollars": 165, "tradiePayoutDollars": 140, "licenceRequired": false, "notes": "Bulbs only. Replacing a light fitting is prescribed electrical work in NZ: that is EL-06, electricians only."},
     {"code": "HM-04", "trade": "handyman", "name": "Smoke alarm replace or battery, up to 3", "ownerPriceDollars": 165, "tradiePayoutDollars": 140, "licenceRequired": false, "notes": "NZ requires photoelectric alarms with 8-year battery, within 3m of each bedroom door, one per storey. Parts at cost."},
     {"code": "HM-05", "trade": "handyman", "name": "Door handle, latch or lock adjust", "ownerPriceDollars": 165, "tradiePayoutDollars": 140, "licenceRequired": false},
     {"code": "HM-06", "trade": "handyman", "name": "Blind or curtain rail repair", "ownerPriceDollars": 165, "tradiePayoutDollars": 140, "licenceRequired": false},
@@ -54,6 +54,7 @@
     {"code": "EL-03", "trade": "electrician", "name": "Oven or cooktop fault, first-hour diagnosis", "ownerPriceDollars": 225, "tradiePayoutDollars": 190, "licenceRequired": true, "isDiagnosis": true},
     {"code": "EL-04", "trade": "electrician", "name": "Extractor fan replace", "ownerPriceDollars": 260, "tradiePayoutDollars": 220, "licenceRequired": true},
     {"code": "EL-05", "trade": "electrician", "name": "Heated towel rail replace", "ownerPriceDollars": 270, "tradiePayoutDollars": 230, "licenceRequired": true},
+    {"code": "EL-06", "trade": "electrician", "name": "Light fitting replace, up to 2", "ownerPriceDollars": 225, "tradiePayoutDollars": 190, "licenceRequired": true, "notes": "Swapping a light fitting is prescribed electrical work (Electricity (Safety) Regulations 2010), so it is never offered to a handyman. The fitting itself is a part at cost."},
     {"code": "HP-01", "trade": "heat_pump_tech", "name": "Each extra unit, same visit", "ownerPriceDollars": 105, "tradiePayoutDollars": 90, "licenceRequired": true, "guestVisible": false, "isAddOn": true},
     {"code": "HP-02", "trade": "heat_pump_tech", "name": "Heat pump service and clean", "ownerPriceDollars": 210, "tradiePayoutDollars": 180, "licenceRequired": true, "guestVisible": false},
     {"code": "HP-03", "trade": "heat_pump_tech", "name": "Heat pump fault diagnosis", "ownerPriceDollars": 245, "tradiePayoutDollars": 210, "licenceRequired": true, "isDiagnosis": true},

@@ -328,7 +328,7 @@ const PRICES: [string, number][] = [
   ["Tripping circuit, first-hour diagnosis", 225],
   ["Reseal a shower or bath", 270],
   ["Lockout, business hours", 175],
-  ["Light bulbs or a fitting, up to 5", 165],
+  ["Light bulbs, up to 5", 165],
   ["Door handle, latch or lock adjust", 165],
 ];
 
@@ -412,7 +412,7 @@ function Unlocked({ videoRef }: { videoRef: React.RefObject<HTMLElement | null> 
               </p>
             </div>
             <p className="hf-note">
-              52 jobs on the full menu. The prices shown are Queenstown's; each town gets its own, set from what local tradies charge.
+              53 jobs on the full menu. The prices shown are Queenstown's; each town gets its own, set from what local tradies charge.
               Need someone there within 4 hours? Add $50. Outside 7am to 4:30pm weekdays, add $140. Not on the menu? $225 for a
               tradie to come and look, then a quote. Nothing over $600 starts without your yes.
             </p>

@@ -95,10 +95,10 @@ describe("the Queenstown menu file", () => {
     expect(typeof menu.placeholderPrices).toBe("boolean");
   });
 
-  it("holds real prices, not placeholders: 59 researched jobs with unique codes", () => {
+  it("holds real prices, not placeholders: 60 researched jobs with unique codes", () => {
     // Nothing may be shown to an owner as a price unless this is false (DECISIONS.md).
     expect(menu.placeholderPrices).toBe(false);
-    expect(items).toHaveLength(59);
+    expect(items).toHaveLength(60);
     const codes = items.map((item) => item.code);
     expect(new Set(codes).size).toBe(codes.length);
   });
@@ -115,7 +115,7 @@ describe("the Queenstown menu file", () => {
     expect(addOns.sort()).toEqual(["HP-01", "PV-03"]);
     const off = items.filter((item) => !startsOnTheMenu(item)).map((item) => item.code);
     expect(off.sort()).toEqual([...needQuote, ...addOns].sort());
-    expect(items.filter(startsOnTheMenu)).toHaveLength(59 - 7);
+    expect(items.filter(startsOnTheMenu)).toHaveLength(60 - 7);
   });
 
   it("keeps jobs an owner arranges off the form a guest sees", () => {

@@ -50,7 +50,7 @@ it when you change one.
 - **All times come from the app's clock** (`now()` in `src/lib/clock.ts`), never `new Date()` or the
   database's `now()`. The tests and the demo move that clock.
 - **Nothing tied to one town, currency or tax rate.** Those live on the market row in the database.
-- **The real prices are loaded.** `seed/menu-queenstown.json` is the 59 researched Queenstown jobs. It only
+- **The real prices are loaded.** `seed/menu-queenstown.json` is the 60 researched Queenstown jobs. It only
   fills an empty database: after that, prices change on the admin screen. The prices sit at local market
   rate, not above it, so nothing may tell an owner they pay a premium for price certainty. Money tests
   are worked out by hand from the menu file, never pasted from what the code returns.
