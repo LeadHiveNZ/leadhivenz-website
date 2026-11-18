@@ -7,10 +7,10 @@ import { HostFixLanding, type Lead } from "@/components/HostFixLanding";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "HostFix · Queenstown holiday home maintenance" },
-      { name: "description", content: "Queenstown Airbnb owners: tap what's broken, see the fixed price, and a checked local tradie is on site within 24 hours." },
-      { property: "og:title", content: "HostFix · Queenstown" },
-      { property: "og:description", content: "Never ring round for a tradie again. Fixed prices, on site within 24 hours." },
+      { title: "HostFix · Holiday home maintenance, New Zealand" },
+      { name: "description", content: "Airbnb and holiday home owners across New Zealand: tap what's broken, see the fixed price, and a checked local tradie is on site within 24 hours. Free to join." },
+      { property: "og:title", content: "HostFix · New Zealand" },
+      { property: "og:description", content: "Never ring round for a tradie again. Fixed prices, free to join, on site within 24 hours." },
       { property: "og:type", content: "website" },
     ],
   }),

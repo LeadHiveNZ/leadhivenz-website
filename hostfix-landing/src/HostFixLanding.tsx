@@ -74,7 +74,7 @@ export function HostFixLanding({ saveLead }: Props) {
           <nav className="hf-nav">
             <Logo />
             <span className="hf-pill">
-              <span className="hf-dot" /> Queenstown, NZ
+              <span className="hf-dot" /> New Zealand
             </span>
           </nav>
 
@@ -86,7 +86,7 @@ export function HostFixLanding({ saveLead }: Props) {
               </h1>
               <p className="hf-lead">
                 Tap what's broken, see the fixed price, and a checked local handyman, sparky or plumber is on site within
-                24 hours. Free to join. Leave your details to watch how it works.
+                24 hours. Free to join. Opening town by town across New Zealand. Leave your details to watch how it works.
               </p>
               <ul className="hf-ticks">
                 <li>Free to join. No monthly fee</li>
@@ -122,7 +122,7 @@ export function HostFixLanding({ saveLead }: Props) {
                 <span className="hf-play" />
               </div>
               <div className="hf-founding hf-founding-fake">
-                <p className="hf-h2-light">Free to join. The first 25 Queenstown properties.</p>
+                <p className="hf-h2-light">Free to join. Opening town by town across New Zealand.</p>
               </div>
             </div>
             <div className="hf-lock-note">
@@ -138,7 +138,7 @@ export function HostFixLanding({ saveLead }: Props) {
       <footer className="hf-footer">
         <div className="hf-wrap hf-footer-row">
           <Logo small />
-          <span>Queenstown · Questions? We'll call you.</span>
+          <span>New Zealand · Questions? We'll call you.</span>
         </div>
       </footer>
     </div>
@@ -336,12 +336,12 @@ const FAQS: [string, string][] = [
   ["I already have a guy.", "Keep him. We're who you call when he doesn't pick up on a Saturday in July."],
   ["What does it cost to join?", "Nothing. No joining fee, no monthly fee, no minimum. You add your property and a card, and the card is only charged the fixed price when a job is done."],
   ["So how do you make money?", "A small margin inside each fixed price. You pay the menu price and nothing more. The tradie gets steady work without quoting; you get a fixed price without chasing."],
-  ["Are jobs dearer through you?", "No. Prices are set from what Queenstown tradies charge for a call-out and the first hour, and the call-out is included."],
+  ["Are jobs dearer through you?", "No. Prices are set from what local tradies in your town charge for a call-out and the first hour, and the call-out is included."],
   ["Who are your tradies?", "Local tradies we've checked and approved, each with their own public liability insurance on file. Plumbing, gas and electrical work only goes to a tradie whose licence is on file and in date."],
   ["What if the tradie is late?", "A tradie is on site within 24 hours, or 4 when it's urgent. Miss that and the call-out portion of that job is on us."],
-  ["When do you start?", "We're opening Queenstown once our first tradies are signed. The first 25 properties are set up personally, and we'll call you before then."],
+  ["When do you start?", "Queenstown first, then town by town as insured local tradies sign up. Leave your town and we'll tell you the day it opens. The first 25 properties in each town are set up personally."],
   ["What if I change my mind?", "Nothing to cancel and nothing to refund, because you haven't paid anything. Remove your property any time."],
-  ["I'm in Wānaka or Arrowtown.", "Leave your details anyway. We'll tell you when we open there."],
+  ["I'm not in Queenstown.", "Leave your details with your town. That's how we pick the next towns to open, and the first owners in each one are set up personally."],
 ];
 
 function Unlocked({ videoRef }: { videoRef: React.RefObject<HTMLElement | null> }) {
@@ -362,20 +362,20 @@ function Unlocked({ videoRef }: { videoRef: React.RefObject<HTMLElement | null> 
           <div className="hf-founding">
             <div>
               <p className="hf-kicker hf-kicker-lime">Step 2 · We call you</p>
-              <h2 className="hf-h2-light">Free to join. The first 25 Queenstown properties.</h2>
+              <h2 className="hf-h2-light">Free to join. Opening town by town across New Zealand.</h2>
               <ul className="hf-founding-list">
                 <li><strong>$0 to join.</strong> No monthly fee, no minimum, no contract</li>
                 <li><strong>Fixed prices</strong> you see before you say yes, GST included</li>
                 <li>Your card is charged <strong>only when a job is done</strong></li>
                 <li><strong>On site within 24 hours</strong>, or 4 when it's urgent. Miss it and the call-out's on us</li>
-                <li>The first 25 properties are <strong>set up personally</strong>: we call you, add your property, and you're covered</li>
+                <li>The first 25 properties in each town are <strong>set up personally</strong>: we call you, add your property, and you're covered</li>
               </ul>
             </div>
             <div className="hf-founding-cta">
               <p className="hf-big-price">
                 $0<span>to join</span>
               </p>
-              <p className="hf-fine hf-fine-light">You've left your details. We'll call you to set you up. No card needed until then.</p>
+              <p className="hf-fine hf-fine-light">You've left your details and your town. We'll call you, and tell you the day your town opens. No card needed until then.</p>
             </div>
           </div>
         </div>
@@ -412,8 +412,9 @@ function Unlocked({ videoRef }: { videoRef: React.RefObject<HTMLElement | null> 
               </p>
             </div>
             <p className="hf-note">
-              52 jobs on the full menu. Need someone there within 4 hours? Add $50. Outside 7am to 4:30pm weekdays, add $140.
-              Not on the menu? $225 for a tradie to come and look, then a quote. Nothing over $600 starts without your yes.
+              52 jobs on the full menu. The prices shown are Queenstown's; each town gets its own, set from what local tradies charge.
+              Need someone there within 4 hours? Add $50. Outside 7am to 4:30pm weekdays, add $140. Not on the menu? $225 for a
+              tradie to come and look, then a quote. Nothing over $600 starts without your yes.
             </p>
           </div>
           <div className="hf-card hf-prices">
@@ -466,8 +467,8 @@ function Unlocked({ videoRef }: { videoRef: React.RefObject<HTMLElement | null> 
 
       <section className="hf-section hf-final">
         <div className="hf-wrap hf-final-inner">
-          <h2 className="hf-h2-light">The first 25 Queenstown properties.</h2>
-          <p>Free to join. Fixed prices. Pay only when it's fixed. You've left your details, so expect a call from us.</p>
+          <h2 className="hf-h2-light">Free to join, anywhere in New Zealand.</h2>
+          <p>Fixed prices. Pay only when it's fixed. Queenstown first, your town next. You've left your details, so expect a call from us.</p>
         </div>
       </section>
     </main>
