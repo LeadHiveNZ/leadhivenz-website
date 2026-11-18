@@ -22,8 +22,8 @@ export const brand = {
    * (https://www.loom.com/embed/<id>). null hides the section.
    */
   walkthroughs: {
-    /** The app from the tradie's side, about 3 minutes. Shown on the tradie page. */
-    tradie: "https://www.loom.com/embed/b696de9fed124b94a9d6def8f463f8ed" as string | null,
+    /** The app from the tradie's side, about 4 minutes. Shown on the tradie page. */
+    tradie: "https://www.loom.com/embed/73cf5f62d6ae4245887645b97ec9e4ce" as string | null,
   },
 
   /**

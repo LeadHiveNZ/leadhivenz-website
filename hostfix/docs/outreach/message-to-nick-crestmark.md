@@ -1,6 +1,6 @@
 # Draft: Nick at Crestmark Construction
 
-Send by text or WhatsApp first, with the one-pager attached (`hostfix-for-tradies.pdf`) and the 3-minute walkthrough: https://www.loom.com/share/b696de9fed124b94a9d6def8f463f8ed. Email version below if he prefers.
+Send by text or WhatsApp first, with the one-pager attached (`hostfix-for-tradies.pdf`) and the 4-minute walkthrough: https://www.loom.com/share/73cf5f62d6ae4245887645b97ec9e4ce. Email version below if he prefers.
 
 ## Text version
 
@@ -15,7 +15,7 @@ I'm starting in Queenstown and I'll open your region once I've got the right tra
 
 One rule I won't bend on: every tradie on it has their own public liability insurance, certificate uploaded, plus their trade licence. That's the whole promise to the owner.
 
-One-pager attached, and here's a 3-minute walkthrough of the app from the tradie's side: https://www.loom.com/share/b696de9fed124b94a9d6def8f463f8ed
+One-pager attached, and here's a 4-minute walkthrough of the app from the tradie's side: https://www.loom.com/share/73cf5f62d6ae4245887645b97ec9e4ce
 
 Five minutes on the phone this week?
 
@@ -41,7 +41,7 @@ I'm honest about who it suits. The prices are call-out-plus-first-hour prices, s
 1. Your read on it. Would your trades accept this kind of work at these rates? What would put them off?
 2. Introductions. The best plumber and sparky you know in your area, the ones you'd use at home. I only sign tradies with current public liability insurance (certificate uploaded) and a licence on the register, and I approve every one personally.
 
-Queenstown opens first; your region opens the day I have the trades covered. The attached one-pager is what I'd send your plumber, and this is the app from the tradie's side in three minutes: https://www.loom.com/share/b696de9fed124b94a9d6def8f463f8ed
+Queenstown opens first; your region opens the day I have the trades covered. The attached one-pager is what I'd send your plumber, and this is the app from the tradie's side in four minutes: https://www.loom.com/share/73cf5f62d6ae4245887645b97ec9e4ce
 
 Thanks Nick. Happy to talk it through on a call this week.
 
