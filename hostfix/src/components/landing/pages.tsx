@@ -225,7 +225,7 @@ export function TradieLanding({ data }: { data: PublicMarket }) {
       phone={<TradiePhone example={example(data)} />}
       video={
         brand.walkthroughs.tradie
-          ? { embedUrl: brand.walkthroughs.tradie, title: "See a job from your side, in 4 minutes", note: "The text, the one tap to accept, the lockbox code, the photo, and the Pay page." }
+          ? { embedUrl: brand.walkthroughs.tradie, title: "See a job from your side, in 3 minutes", note: "The text, the one tap to accept, the lockbox code, the photo, and the Pay page." }
           : null
       }
       menu={

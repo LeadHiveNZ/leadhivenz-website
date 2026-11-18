@@ -28,7 +28,7 @@ I'll ring you for 10 minutes, then you get a text with your sign-in link. Queens
 [town] opens once I've got the trades covered there, and the first to put their hands up are first
 choice when it does.
 
-Four minutes of the app from your side: https://www.loom.com/share/667a85c42c0a46678fba0e1dcdabf97e
+Three minutes of the app from your side: https://www.loom.com/share/b696de9fed124b94a9d6def8f463f8ed
 
 Cheers,
 Joe
