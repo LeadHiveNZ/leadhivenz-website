@@ -2755,7 +2755,7 @@ async function offerPdf(dl, o) {
   const JsPDF = await loadJsPdf();
   const doc = new JsPDF({ unit: 'mm', format: 'a4' });
   const INK = [47, 51, 22], OLIVE = [99, 107, 47], GREY = [138, 138, 138];
-  const L = 25.4, W = 210 - 2 * L, BOTTOM = 297 - 22, C1 = 36.8, C2 = W - C1, LH = 4.9;
+  const L = 25.4, W = 210 - 2 * L, BOTTOM = 297 - 22, C1 = 41, C2 = W - C1, LH = 4.9;
   const footer = () => { doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(...GREY); doc.text(String(state.settings.letterFooter || ''), 105, 289, { align: 'center' }); };
   let y = 14;
   const lw = 45, lh = lw * 160 / 370; doc.addImage(LOGO_DATA_URI, 'PNG', (210 - lw) / 2, y, lw, lh); y += lh + 9;
@@ -2765,13 +2765,14 @@ async function offerPdf(dl, o) {
   doc.setFontSize(10.5);
   offerRows(o).forEach(([k, vs]) => {
     doc.setFont('helvetica', 'bold'); const kl = doc.splitTextToSize(k, C1 - 3);
-    doc.setFont('helvetica', 'normal'); const vl = []; (vs.length ? vs : ['']).forEach(x => vl.push(...doc.splitTextToSize(String(x), C2)));
+    doc.setFont('helvetica', 'normal'); const vl = []; // [text, indent]; numbered conditions get a hanging indent
+    (vs.length ? vs : ['']).forEach(x => { const m = String(x).match(/^(\d+\.)\s+([\s\S]*)$/); if (m && k === 'Conditions:') { const HI = 6; doc.splitTextToSize(m[2], C2 - HI).forEach((ln, j) => vl.push([j ? ln : ln, HI, j ? '' : m[1]])); } else doc.splitTextToSize(String(x), C2).forEach(ln => vl.push([ln, 0, ''])); });
     const n = Math.max(kl.length, vl.length);
     for (let i = 0; i < n; i++) {
       if (y > BOTTOM) { footer(); doc.addPage(); y = 22; }
       doc.setTextColor(...INK);
       if (kl[i]) { doc.setFont('helvetica', 'bold'); doc.text(kl[i], L, y); }
-      if (vl[i]) { doc.setFont('helvetica', 'normal'); doc.text(vl[i], L + C1, y); }
+      if (vl[i]) { doc.setFont('helvetica', 'normal'); if (vl[i][2]) doc.text(vl[i][2], L + C1, y); doc.text(vl[i][0], L + C1 + vl[i][1], y); }
       y += LH;
     }
     y += 2.2;
