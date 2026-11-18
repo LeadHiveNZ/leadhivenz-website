@@ -18,6 +18,7 @@ import { createDemoGateway, DEMO_CARD_DECLINES, DEMO_CARD_OK } from "@/lib/payme
 import { addMonths } from "@/lib/payments/gateway";
 import { openPortfolio, startPortfolio } from "@/lib/properties/portfolio";
 import { activateFreeMembership, activateMembership, createProperty, type Property } from "@/lib/properties/service";
+import { addTeamMember } from "@/lib/team/service";
 import { createTradie, listLicences, markLicenceVerified, saveLicence, savePayoutAccount, setSlot, setTradieStatus, updateTradie } from "@/lib/tradies/service";
 import { recordInsuranceCertificate } from "@/lib/tradies/certificate";
 import { demoPhoto } from "./png";
@@ -234,6 +235,11 @@ export async function buildSampleData(db: Db, files: FileStore | null, real: Dat
     access: "Lockbox on the gate post, code 7730. Gas bottles are down the right-hand side of the house.", referralCode: cleaner.code,
   });
 
+  // Sam's cleaner is on his team (DECISIONS.md, 2026-11-18): one link for both of his houses, signed with her name.
+  setTestNow(new Date(real.getTime() - 19 * DAY));
+  const meleOnTeam = await addTeamMember(db, sam.ownerId, "+64211234521", { name: "Mele", dispatch: "straight", propertyIds: [lakeview.id, cabin.id], groupIds: [] });
+  const meleUserId = (await db.query<{ user_id: string }>("select user_id from public.team_links where id = $1::uuid", [meleOnTeam.member.linkId]))[0]!.user_id;
+
   // A property manager on Portfolio (DECISIONS.md, 2026-11-17): ten properties, the pilot size, on the
   // 10-24 band. She picked Portfolio with her first property, every later one joined it, and one
   // retainer covers them all. Started through the same steps as the Billing page's button.
@@ -265,6 +271,7 @@ export async function buildSampleData(db: Db, files: FileStore | null, real: Dat
   ago(ctx, 6 * DAY);
   const one = await log(ctx, lakeview, {
     code: "PL-08", reportedBy: "team", reporterName: "Mele", reporterPhone: "+64211234521", description: "Kitchen sink is draining very slowly and smells. Tried boiling water, no change.", photos: 1,
+    teamMemberId: meleOnTeam.member.id, actor: `team:${meleOnTeam.member.id}`,
   });
   ago(ctx, 6 * DAY - 4 * MINUTE);
   await accept(ctx, one.id, dave.tradieId);
@@ -386,7 +393,7 @@ export async function buildSampleData(db: Db, files: FileStore | null, real: Dat
     { key: "lena", label: "Lena (handyman)", role: "tradie", userId: lena.user.id, phone: lena.phone, note: "Backup handyman. No jobs yet." },
     { key: "maria", label: "Maria (dispatcher)", role: "dispatcher", userId: mariaId, phone: null, note: "The virtual assistant. Works the queue." },
     { key: "admin", label: "Admin (you)", role: "admin", userId: adminId, phone: null, note: "Sees everything: numbers, prices, markets, staff." },
-    { key: "mele", label: "Mele (cleaner)", role: "cleaner", userId: null, phone: "+64211234521", note: "Reports problems from the team link. Referred an owner." },
+    { key: "mele", label: "Mele (cleaner)", role: "cleaner", userId: meleUserId, phone: "+64211234521", note: "On Sam's team: one link for Lakeview Apartment and Arthurs Point Cabin. Referred an owner." },
     { key: "emma", label: "Emma (guest)", role: "guest", userId: null, phone: "+64211234531", note: "Scanned the QR card at Lakeview Apartment." },
   ];
 }

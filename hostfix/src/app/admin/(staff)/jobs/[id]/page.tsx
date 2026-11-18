@@ -135,7 +135,7 @@ export default async function StaffJobPage({ params, searchParams }: { params: P
       {job.status === "awaiting_owner" && (
         <Card className="border-brand/30 sm:p-6">
           <SectionTitle>Waiting for the owner&apos;s go-ahead</SectionTitle>
-          <p className="text-muted">A guest reported this. The owner has been texted. If they tell you yes by phone, send it out for them here.</p>
+          <p className="text-muted">{job.reportedBy === "team" ? `${job.reporterName ?? "The owner's team"} reported this, and the owner asked to say yes first.` : "A guest reported this."} The owner has been texted. If they tell you yes by phone, send it out for them here.</p>
           <ActionForm action={staffGoAhead} className="mt-4 flex flex-wrap gap-2">
             <input type="hidden" name="jobId" value={job.id} />
             <SubmitButton name="how" value="standard" pendingLabel="Sending...">

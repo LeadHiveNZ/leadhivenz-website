@@ -9,12 +9,13 @@ import { currentViewer, setSessionCookie } from "@/lib/auth/current";
 import { createSession } from "@/lib/auth/sessions";
 import { getDb } from "@/lib/db";
 import { demoPeople, skipAhead } from "@/lib/demo/state";
-import { demoModeAllowed } from "@/lib/env";
+import { appSecret, baseUrl, demoModeAllowed } from "@/lib/env";
 import { text, type FormState } from "@/lib/forms";
 import { handleInboundSms } from "@/lib/notify/inbound";
 import { saveBilling } from "@/lib/owners/service";
 import { completeDemoCardSetup, completeDemoCheckout, DEMO_CARD_DECLINES, DEMO_CARD_OK, getDemoCheckout } from "@/lib/payments/demo-gateway";
 import { activatePortfolio } from "@/lib/properties/portfolio";
+import { sealTeamDevice, TEAM_DEVICE_COOKIE, TEAM_DEVICE_DAYS } from "@/lib/team/device";
 import { activateFreeMembership, activateMembership } from "@/lib/properties/service";
 import { getTradie, savePayoutAccount } from "@/lib/tradies/service";
 
@@ -35,6 +36,17 @@ export async function becomePerson(formData: FormData): Promise<void> {
   const db = await getDb();
   const person = (await demoPeople(db)).find((candidate) => candidate.key === text(formData, "who"));
   if (!person?.userId) redirect("/demo");
+  if (person.role === "cleaner") {
+    // A cleaner has no sign-in: they have their own team link. In the demo this phone skips the
+    // six-digit code that a real phone types once (DECISIONS.md, 2026-11-18).
+    const link = (await db.query<{ id: string; link_token: string }>("select id, link_token from public.team_links where user_id = $1::uuid", [person.userId]))[0];
+    const secret = appSecret();
+    if (!link || !secret) redirect("/demo");
+    (await cookies()).set(TEAM_DEVICE_COOKIE, sealTeamDevice(secret, { id: link.id, token: link.link_token }), {
+      httpOnly: true, secure: baseUrl().startsWith("https://"), sameSite: "lax", path: "/", maxAge: TEAM_DEVICE_DAYS * 24 * 60 * 60,
+    });
+    redirect(`/r/${link.link_token}`);
+  }
   const session = await createSession(db, person.userId, (await headers()).get("user-agent"));
   await setSessionCookie(session.token);
   (await cookies()).delete(ADMIN_COOKIE);

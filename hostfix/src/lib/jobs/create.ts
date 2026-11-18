@@ -37,6 +37,10 @@ export type NewJob = {
   uploader: string;
   /** Who is logging the job, for the audit log. */
   actor: string;
+  /** A report from a cleaner's or co-host's own team link: which owner's team member they are. */
+  teamMemberId?: string | null;
+  /** That owner's setting for them: ask the owner before anyone is sent. */
+  askOwnerFirst?: boolean;
 };
 
 export type NewJobResult =
@@ -152,26 +156,30 @@ export async function createJob(db: Db, input: NewJob): Promise<NewJobResult> {
       return { ok: false, reason: "duplicate", message: "That has already been reported and is being dealt with.", existingJobId: duplicate[0].id };
     }
 
-    const needsOwner = input.reportedBy === "guest" && !property.guestAutoDispatch;
-    // A guest cannot commit the owner to a surcharge. Their job starts as
-    // standard and the owner chooses when they give the go-ahead.
-    const urgent = input.reportedBy === "guest" ? false : input.urgent;
+    // A team member whose owner asked to say yes first waits for the owner, like a guest (DECISIONS.md, 2026-11-18).
+    const teamAsks = input.reportedBy === "team" && Boolean(input.askOwnerFirst);
+    const needsOwner = (input.reportedBy === "guest" && !property.guestAutoDispatch) || teamAsks;
+    // A guest, or a team member waiting on the owner, cannot commit the owner to a surcharge.
+    // Their job starts as standard and the owner chooses when they give the go-ahead.
+    const urgent = input.reportedBy === "guest" || teamAsks ? false : input.urgent;
     const afterHours = urgent && isAfterHours(at, market);
     const urgentIncluded = urgent && (await urgentIsIncluded(tx, property, tier, market.timezone, at));
     const lines = initialLines(market, { item, urgent, afterHours, urgentIncluded });
     const responseHours = urgent ? (tier?.urgentResponseHours ?? 4) : (tier?.responseHours ?? 24);
-    const description = (input.reportedBy === "guest" && input.urgent ? `Guest says this is urgent. ${input.description}` : input.description).trim().slice(0, 2000);
+    const urgentNote = input.reportedBy === "guest" ? "Guest says this is urgent." : `${input.reporterName?.trim() || "Your team"} says this is urgent.`;
+    const description = ((input.reportedBy === "guest" || teamAsks) && input.urgent ? `${urgentNote} ${input.description}` : input.description).trim().slice(0, 2000);
 
     const rows = await tx.query<JobRow>(
       `insert into public.jobs
          (created_at, property_id, owner_id, market, menu_item_id, off_menu, trade, licence_required, title, description,
-          urgency, after_hours, reported_by, reporter_name, reporter_phone, status, tier_key, response_hours, currency)
-       values ($1::timestamptz, $2::uuid, $3::uuid, $4, $5::uuid, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+          urgency, after_hours, reported_by, reporter_name, reporter_phone, status, tier_key, response_hours, currency, team_member_id)
+       values ($1::timestamptz, $2::uuid, $3::uuid, $4, $5::uuid, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20::uuid)
        returning *`,
       [
         at.toISOString(), property.id, property.ownerId, market.slug, input.menuItemId, !input.menuItemId, trade, licenceRequired, title,
         description, urgent ? "urgent" : "standard", afterHours, input.reportedBy, input.reporterName?.trim().slice(0, 80) || null,
         input.reporterPhone, needsOwner ? "awaiting_owner" : "offering", tier?.key ?? null, responseHours, market.currency,
+        input.reportedBy === "team" ? (input.teamMemberId ?? null) : null,
       ],
     );
     const job = rowToJob(rows[0]!);
@@ -180,13 +188,21 @@ export async function createJob(db: Db, input: NewJob): Promise<NewJobResult> {
     await attachUploads(tx, input.uploadIds, { kind: "report", uploadedBy: input.uploader, jobId: job.id, propertyId: property.id });
     await audit(tx, {
       actor: input.actor, action: "job.created", entity: "job", entityId: job.id, amount: sum.ownerCents, currency: market.currency,
-      detail: { number: job.number, title, reported_by: input.reportedBy, urgent, after_hours: afterHours, needs_owner: needsOwner },
+      detail: {
+        number: job.number, title, reported_by: input.reportedBy, urgent, after_hours: afterHours, needs_owner: needsOwner,
+        ...(input.reportedBy === "team" && input.teamMemberId ? { team_member: input.teamMemberId, reporter: input.reporterName ?? null } : {}),
+      },
     });
 
     const context = await loadContext(tx, { ...job, ownerTotalCents: sum.ownerCents, tradieTotalCents: sum.tradieCents });
     const who = input.reporterName?.trim() || (input.reportedBy === "guest" ? "A guest" : "Your team");
     if (context.owner.phone) {
-      if (needsOwner) {
+      if (needsOwner && teamAsks) {
+        await enqueue(tx, {
+          channel: "sms", to: context.owner.phone, template: "team_report", audience: "owner", jobId: job.id, userId: context.owner.userId,
+          body: texts.teamReport({ reporter: who, property: property.name, title, link: ownerJobUrl(job) }), dedupeKey: `team_report:${job.id}`,
+        });
+      } else if (needsOwner) {
         await enqueue(tx, {
           channel: "sms", to: context.owner.phone, template: "guest_report", audience: "owner", jobId: job.id, userId: context.owner.userId,
           body: texts.guestReport({ property: property.name, title, link: ownerJobUrl(job) }), dedupeKey: `guest_report:${job.id}`,

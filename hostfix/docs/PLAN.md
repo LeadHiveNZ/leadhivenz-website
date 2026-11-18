@@ -1,6 +1,6 @@
 # HostFix — Plan and data model (v0, 15 Nov 2026)
 
-> **Status, 16 November 2026: Phases 0 to 4 are built and tested, and the demand test is ready to run.** Phase 5 is planned in section 9 and not built.
+> **Status, 18 November 2026: Phases 0 to 4 are built and tested, and the demand test is ready to run.** Phase 5 is planned in section 9 and not built.
 > To try it: `docs/TRY-IT.md`. To put it online: `SETUP.md`. For the dispatcher: `RUNBOOK.md`.
 > What similar products do and what was taken from them: `docs/MARKET-RESEARCH.md`.
 >
@@ -49,6 +49,15 @@
 >   100+ pricing, missed-promise credits on Portfolio properties and the 60-day pilot are handled by a person.
 > - **The demand test is built** (`docs/DEMAND-TEST.md`): the owner page sells founding spots for a
 >   refundable NZ$99 deposit or sends the full price list, and the leads page keeps the 14-day scorecard.
+>
+> - **A cleaner is a person, not a link** (`DECISIONS.md`, 18 Nov 2026). Owners add cleaners and co-hosts
+>   by name and mobile on **Your team** and tick their houses (or, with 3+ properties, named groups that
+>   cover houses added later). Each person has one link for life, listing every house they may report on
+>   across every owner who added that mobile; it opens nothing until the phone proves the number with a
+>   six-digit code, once. Reports are signed with their name and follow the owner's per-person "send
+>   straight away" or "ask me first". The per-property team link keeps working but is no longer offered
+>   once an owner has a team. The guest QR card is unchanged. Owners can print every QR card at once and
+>   paste up to 200 properties from a spreadsheet.
 >
 > The five questions in section 6 were never answered, so each default written there is what was built.
 > Question 1 (who is the seller for GST) still needs your accountant before the first real job.

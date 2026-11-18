@@ -11,6 +11,12 @@ import { cancelPortfolio, countPortfolioProperties, getPortfolio, joinPortfolio,
 import type { FileStore } from "@/lib/files/store";
 import { listInsuranceCertificates, saveInsuranceCertificate } from "@/lib/tradies/certificate";
 import { createTradie, getTradie } from "@/lib/tradies/service";
+import { getUser, viewerFor } from "@/lib/auth/users";
+import { TEAM_DEVICE_COOKIE, teamDeviceMatches } from "@/lib/team/device";
+import {
+  addTeamMember, createGroup, deleteGroup, findTeamLink, getGroup, getTeamMember, houseForLink, housesForLink, listGroups, listTeam, removeTeamMember,
+  updateGroup, updateTeamMember,
+} from "@/lib/team/service";
 import { testDb } from "./db";
 import { auditActions, certificate, liveMarket, logJob, makeOwner, makePortfolio, makeProperty, makeTradie, MONDAY_10AM, offersFor, photo } from "./factory";
 
@@ -96,6 +102,89 @@ describe("owners on Portfolio", () => {
     // Alice's portfolio is exactly as it was: ten properties covered, NZ$600, not ending.
     expect(await getPortfolio(t.db, alice.ownerId, portfolio.id)).toMatchObject({ status: "active", bandCents: 60000, cancelAtPeriodEnd: false });
     expect(await countPortfolioProperties(t.db, portfolio.id)).toBe(10);
+  });
+});
+
+describe("cleaners and co-hosts on a team (DECISIONS.md, 2026-11-18)", () => {
+  const MELE = "+64211239002";
+  const SECRET = "test-secret-that-is-at-least-32-characters";
+
+  it("see only the houses they were given, and nothing of billing, jobs or the owner's account", async () => {
+    const { alice, bob, aliceHome, bobHome } = await twoOfEverything();
+    const aliceSecond = await makeProperty(t.db, alice.ownerId, { name: "Alice's flat" });
+    const { member, linkToken } = await addTeamMember(t.db, alice.ownerId, MELE, { name: "Mele", dispatch: "straight", propertyIds: [aliceHome.id], groupIds: [] });
+    const link = (await findTeamLink(t.db, linkToken))!;
+    expect((await housesForLink(t.db, link.id)).map((house) => house.property.name)).toEqual(["Alice's bach"]);
+    expect(await houseForLink(t.db, link.id, aliceSecond.id)).toBeNull();
+    expect(await houseForLink(t.db, link.id, bobHome.id)).toBeNull();
+    // What the list hands over: the house, the name she is known by and the owner's first name. No card, no billing, no prices.
+    const house = (await houseForLink(t.db, link.id, aliceHome.id))!;
+    expect(Object.keys(house).sort()).toEqual(["dispatch", "memberId", "memberName", "ownerFirstName", "property"]);
+    expect(JSON.stringify(house)).not.toMatch(/card|billing|customer|payment/i);
+    // Her account is not an owner, a tradie or staff, so every signed-in page refuses her.
+    const viewer = await viewerFor(t.db, (await getUser(t.db, link.userId))!);
+    expect(viewer).toMatchObject({ ownerId: null, tradieId: null, staffRole: null });
+    expect(member.ownerId).toBe(alice.ownerId);
+    void bob;
+  });
+
+  it("removed by one owner, still see the other owner's houses", async () => {
+    const { alice, bob, aliceHome, bobHome } = await twoOfEverything();
+    const fromAlice = await addTeamMember(t.db, alice.ownerId, MELE, { name: "Mele", dispatch: "straight", propertyIds: [aliceHome.id], groupIds: [] });
+    await addTeamMember(t.db, bob.ownerId, MELE, { name: "Mele", dispatch: "ask", propertyIds: [bobHome.id], groupIds: [] });
+    const link = (await findTeamLink(t.db, fromAlice.linkToken))!;
+    expect((await housesForLink(t.db, link.id)).map((house) => house.property.name).sort()).toEqual(["Alice's bach", "Bob's apartment"]);
+    expect(await removeTeamMember(t.db, alice.ownerId, fromAlice.member.id)).toBe(true);
+    expect((await housesForLink(t.db, link.id)).map((house) => house.property.name)).toEqual(["Bob's apartment"]);
+  });
+
+  it("cannot be seen, changed or removed by another owner, who cannot give away houses that are not theirs", async () => {
+    const { alice, bob, aliceHome, bobHome } = await twoOfEverything();
+    const { member, linkToken } = await addTeamMember(t.db, alice.ownerId, MELE, { name: "Mele", dispatch: "straight", propertyIds: [aliceHome.id], groupIds: [] });
+    expect(await getTeamMember(t.db, bob.ownerId, member.id)).toBeNull();
+    expect(await listTeam(t.db, bob.ownerId)).toEqual([]);
+    expect(await updateTeamMember(t.db, bob.ownerId, member.id, { name: "Hacked", dispatch: "ask", propertyIds: [bobHome.id], groupIds: [] })).toBeNull();
+    expect(await removeTeamMember(t.db, bob.ownerId, member.id)).toBe(false);
+    expect(await getTeamMember(t.db, alice.ownerId, member.id)).toMatchObject({ name: "Mele", dispatch: "straight", propertyIds: [aliceHome.id] });
+
+    // Bob adds her too, ticking Alice's house and Alice's group: neither is given.
+    const aliceGroup = await createGroup(t.db, alice.ownerId, { name: "Alice's", propertyIds: [aliceHome.id] });
+    const fromBob = await addTeamMember(t.db, bob.ownerId, MELE, { name: "Mele", dispatch: "straight", propertyIds: [aliceHome.id, bobHome.id], groupIds: [aliceGroup.id] });
+    expect(fromBob.member).toMatchObject({ propertyIds: [bobHome.id], groupIds: [] });
+    const houses = await housesForLink(t.db, (await findTeamLink(t.db, linkToken))!.id);
+    // Alice's house is on the list once, as Alice's, never as Bob's.
+    expect(houses.map((house) => [house.property.name, house.memberId])).toEqual([["Alice's bach", member.id], ["Bob's apartment", fromBob.member.id]]);
+
+    // Groups are private too.
+    const bobGroup = await createGroup(t.db, bob.ownerId, { name: "Bob's", propertyIds: [aliceHome.id, bobHome.id] });
+    expect(bobGroup.propertyIds).toEqual([bobHome.id]);
+    expect(await getGroup(t.db, bob.ownerId, aliceGroup.id)).toBeNull();
+    expect(await listGroups(t.db, bob.ownerId)).toHaveLength(1);
+    expect(await updateGroup(t.db, bob.ownerId, aliceGroup.id, { name: "Mine", propertyIds: [bobHome.id] })).toBeNull();
+    expect(await deleteGroup(t.db, bob.ownerId, aliceGroup.id)).toBe(false);
+    expect(await getGroup(t.db, alice.ownerId, aliceGroup.id)).toMatchObject({ name: "Alice's", propertyIds: [aliceHome.id] });
+  });
+
+  it("need the phone's cookie: a forwarded link with no cookie opens nothing but the code screen", async () => {
+    const { alice, aliceHome } = await twoOfEverything();
+    const { linkToken } = await addTeamMember(t.db, alice.ownerId, MELE, { name: "Mele", dispatch: "straight", propertyIds: [aliceHome.id], groupIds: [] });
+    const link = (await findTeamLink(t.db, linkToken))!;
+    expect(TEAM_DEVICE_COOKIE).toBe("hf_team");
+    expect(teamDeviceMatches(SECRET, undefined, link)).toBe(false);
+    // A link that is not a team link, or a guest QR code, is never mistaken for one.
+    expect(await findTeamLink(t.db, aliceHome.guestToken)).toBeNull();
+    expect(await findTeamLink(t.db, "AAAAAAAAAAAAAAAAAAAAAAAA")).toBeNull();
+  });
+
+  it("leave the guest QR card anonymous and per property", async () => {
+    const { alice, aliceHome } = await twoOfEverything();
+    const { linkToken } = await addTeamMember(t.db, alice.ownerId, MELE, { name: "Mele", dispatch: "straight", propertyIds: [aliceHome.id], groupIds: [] });
+    const found = await findPropertyByReportToken(t.db, aliceHome.guestToken);
+    expect(found).toMatchObject({ via: "guest", property: { id: aliceHome.id } });
+    // The team link is not a property link, and the guest link carries no person.
+    expect(await findPropertyByReportToken(t.db, linkToken)).toBeNull();
+    const guestJob = await logJob(t.db, aliceHome, { reportedBy: "guest", reporterName: "Gus", reporterPhone: null, code: "PL-03" });
+    expect(guestJob.teamMemberId).toBeNull();
   });
 });
 

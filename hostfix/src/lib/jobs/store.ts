@@ -22,7 +22,7 @@ export type JobRow = {
   accepted_at: Date | null; en_route_at: Date | null; arrived_at: Date | null; completed_at: Date | null;
   cancelled_at: Date | null; cancelled_by: string | null; cancel_reason: string | null; window_missed_at: Date | null;
   outcome: JobOutcome | null; completion_note: string | null; currency: string; owner_total_cents: number;
-  tradie_total_cents: number; tax_cents: number;
+  tradie_total_cents: number; tax_cents: number; team_member_id?: string | null;
 };
 
 const d = (value: Date | null) => (value ? new Date(value) : null);
@@ -38,6 +38,7 @@ export function rowToJob(row: JobRow): Job {
     completedAt: d(row.completed_at), cancelledAt: d(row.cancelled_at), cancelledBy: row.cancelled_by, cancelReason: row.cancel_reason,
     windowMissedAt: d(row.window_missed_at), outcome: row.outcome, completionNote: row.completion_note, currency: row.currency,
     ownerTotalCents: row.owner_total_cents, tradieTotalCents: row.tradie_total_cents, taxCents: row.tax_cents,
+    teamMemberId: row.team_member_id ?? null,
   };
 }
 

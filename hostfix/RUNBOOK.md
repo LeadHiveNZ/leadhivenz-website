@@ -5,8 +5,9 @@ means and what to do about it. The last section is for the admin.
 
 ## How it works, in one minute
 
-1. An owner logs a job from their app. Their cleaner can log one from a link, and a guest can report
-   one from the QR card in the property (the owner is asked before anyone is sent for a guest's report).
+1. An owner logs a job from their app. Their cleaner can log one from their own team link, and a guest
+   can report one from the QR card in the property (the owner is asked before anyone is sent for a
+   guest's report, and for a cleaner's when the owner chose **Ask me first** for them).
 2. The job is **offered by text** to the first-choice tradie for that trade. They have 15 minutes. If
    they pass or do not answer, it goes to the backup for 15 minutes, then to every other approved tradie
    in that trade at once. First to accept gets it.
@@ -202,6 +203,36 @@ company holds card money for 4 working days first. Later than that? Open the job
 payment" under Money: it says whether it was sent, is on hold, or failed.
 
 **Find out what someone was sent.** The job page lists every text and email about that job.
+
+**How an owner adds a cleaner** (DECISIONS.md, 18 Nov 2026). Properties > **Your team** (or **Add a
+cleaner** on a property page). They type the cleaner's name and mobile, tick the houses (or whole groups,
+for owners with three or more properties), and choose **Send a tradie straight away** or **Ask me first**,
+then **Add and text them their link**. The cleaner gets one text with one link. The first time they open
+it on a phone they press **Text me the code** and type the six digits; after that the link opens straight
+to their list of houses. The same mobile added by another owner keeps the same link, and the second
+owner's houses join the list. Every report is signed with the name the owner typed.
+
+**A cleaner says their link does not work.**
+- *"It asks for a code."* That is normal on a new phone, or after about a year. They press **Text me
+  the code**. The code goes to the mobile the owner typed: if it is wrong, the owner fixes it by taking
+  them off the team and adding them again with the right number.
+- *"The house is not on my list."* The owner has not ticked it, has unticked it, or took them off the
+  team, or the property is not covered right now. Ask the owner to open **Your team** > the cleaner's
+  name and tick it. A house added to a group they have is on their list at once.
+- *"The code never arrives."* Check **A text or email did not send** in the queue. Five codes in 15
+  minutes is the limit; after that they wait.
+- *"Someone else has my link."* The link opens nothing without a code sent to the cleaner's own mobile,
+  so a forwarded link shows only the code screen. Nothing to do.
+
+**The older per-property team link.** Properties set up before 18 Nov 2026 have a link for the
+property itself. It still works for anyone who has it (a tradie is sent straight away, signed with
+whatever name is typed). The owner can replace it on the property page under **Make a new team link for
+this property**. Once the owner has anyone on their team, the property page stops offering it.
+
+**Print every QR card, or add many properties.** Properties > **Print every QR card** prints one card
+per page. Add a property > **Add many at once** takes lines pasted from a spreadsheet (name, street,
+suburb, postcode, access notes; up to 200), shows a problem against any line that is not right, and
+saves the rest together. With a card already on file they are covered straight away.
 
 ---
 

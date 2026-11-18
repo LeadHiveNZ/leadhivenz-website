@@ -27,6 +27,8 @@ export default async function DemoHub({ searchParams }: { searchParams: SearchPa
     "select name, team_token, guest_token from public.properties where status = 'active' order by created_at limit 1",
   );
   const place = links[0];
+  // The sample cleaner's own team link, opened as if it had been forwarded: the code screen, nothing else.
+  const cleanerLink = (await db.query<{ link_token: string }>("select link_token from public.team_links order by created_at limit 1"))[0]?.link_token ?? null;
   const offset = clockOffsetMs();
   const group = (role: DemoPerson["role"]) => people.filter((person) => person.role === role);
 
@@ -100,6 +102,12 @@ export default async function DemoHub({ searchParams }: { searchParams: SearchPa
                 <p className="mb-2 text-sm font-bold tracking-wide text-muted uppercase">Tradies</p>
                 <div className="space-y-2">{group("tradie").map((person) => <Person key={person.key} person={person} />)}</div>
               </div>
+              {group("cleaner").some((person) => person.userId) && (
+                <div>
+                  <p className="mb-2 text-sm font-bold tracking-wide text-muted uppercase">Cleaners</p>
+                  <div className="space-y-2">{group("cleaner").filter((person) => person.userId).map((person) => <Person key={person.key} person={person} />)}</div>
+                </div>
+              )}
               <div>
                 <p className="mb-2 text-sm font-bold tracking-wide text-muted uppercase">Your team</p>
                 <div className="space-y-2">{[...group("dispatcher"), ...group("admin")].map((person) => <Person key={person.key} person={person} />)}</div>
@@ -126,10 +134,18 @@ export default async function DemoHub({ searchParams }: { searchParams: SearchPa
                   </Link>
                   <Link href={`/r/${place.team_token}`} className="rounded-2xl border border-line bg-surface p-4 hover:border-brand/40">
                     <span className="flex items-center gap-2 font-bold text-ink">
-                      <Icon name="plus" className="text-brand" /> Report as the cleaner
+                      <Icon name="plus" className="text-brand" /> The older per-property link
                     </span>
-                    <span className="mt-1 block text-sm text-muted">The link Sam sent his cleaner. A tradie is sent straight away.</span>
+                    <span className="mt-1 block text-sm text-muted">Still works for anyone who has it. A tradie is sent straight away, signed with whatever name is typed.</span>
                   </Link>
+                  {cleanerLink && (
+                    <Link href={`/r/${cleanerLink}`} className="rounded-2xl border border-line bg-surface p-4 hover:border-brand/40">
+                      <span className="flex items-center gap-2 font-bold text-ink">
+                        <Icon name="phone" className="text-brand" /> Mele&apos;s link, forwarded
+                      </span>
+                      <span className="mt-1 block text-sm text-muted">On a phone that has not proved her number it opens only the code screen. Be Mele above to skip it.</span>
+                    </Link>
+                  )}
                 </>
               )}
               <Link href="/" className="rounded-2xl border border-line bg-surface p-4 hover:border-brand/40">

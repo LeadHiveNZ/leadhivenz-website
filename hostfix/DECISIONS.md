@@ -9,6 +9,96 @@ price, a fee or a promise, add a line here saying what and why.
 
 ---
 
+## 2026-11-18 — A cleaner is a person, not a link
+
+The founder, in his words:
+
+> "A cleaner is a person, not a link. The owner adds a cleaner by name and
+> mobile number and ticks the properties they look after, and the cleaner gets
+> one link for life that shows the list of houses they may report on, across
+> every owner who has added that number. A forwarded link opens nothing until
+> the phone proves the number with a six-digit text code, once. Unticking the
+> cleaner removes the house from their list. Every report is signed with the
+> cleaner's name. Owners can put properties into named groups and assign a
+> cleaner to a group, so a property added to the group later is covered
+> automatically. The guest QR card stays per property and anonymous. A manager
+> can print every QR card at once and can paste a spreadsheet of properties in."
+
+**What was built:**
+
+- **Tables** (migration `20261123000000_team.sql`, safe to run twice, Row Level
+  Security on with no policies): `team_links`, one per person (a user, known by
+  their mobile) holding their one link; `team_members`, one per owner per person,
+  with the name that owner knows them by and their setting; `property_groups` and
+  `property_group_members`; `team_access`, which properties and groups each team
+  member may report on; and `jobs.team_member_id`. Adding, changing and removing
+  a team member, and making, changing and deleting a group, each write their
+  audit entry in the same database step (`team.added`, `team.properties_changed`,
+  `team.removed`, `group.created`, `group.changed`, `group.deleted`).
+- **The owner's side** (`/app/team`, one tap from Properties, and the **Add a
+  cleaner** button on each property page): **Add a cleaner or co-host** with name,
+  mobile, the houses to tick, and **Send a tradie straight away** or **Ask me
+  first**. The app texts them their link. Each person's page shows their link to
+  copy, lets the owner change everything but the mobile, and **Take off my team**.
+  Groups (create, rename, add and remove houses, delete) appear only for owners
+  with 3 or more properties.
+- **The cleaner's link** (`/r/<link>`, `src/lib/team/`): on a phone without the
+  `hf_team` cookie it shows only "Text me the code" to a masked mobile. The code
+  is the same six-digit sign-in code (10 minutes, 5 tries). Right, and the phone
+  gets a cookie for about a year (the most a browser keeps one), signed against
+  the link. Then it lists their houses across every owner (name, suburb, and the
+  owner's first name when there is more than one owner), and the usual report
+  form for the chosen one, with no name box: "Sent as Mele". Only covered
+  properties appear.
+- **Signed with their name**: the job's reporter is the name the owner gave them
+  and their mobile, `team_member_id` is set, the audit actor is `team:<id>`, the
+  owner's text says "Mele logged ..." (or, for **Ask me first**, the new
+  `team_report` text "Mele reported ... You asked to say yes first. Send
+  someone?"), and the owner and admin job pages say "Mele reported this from
+  their team link". An "ask first" report waits like a guest's and never commits
+  the owner to urgent; "Mele says this is urgent" is put in the description.
+- **The older per-property team link keeps working** for anyone who has it. The
+  property page no longer offers it once the owner has anyone on their team; until
+  then it sits under "Or share this property's link", behind **Add a cleaner**.
+- **Print every QR card** (`/app/properties/cards`): every covered property's
+  guest card, one to a printed page, from the same markup as the single card.
+- **Add many at once** (`/app/properties/import`): one box, one property per line
+  (name, street, suburb, postcode, access notes; tabs or commas; a heading line
+  is skipped), a table that checks every line before saving, at most 200 lines.
+  Lines without a problem are saved in one database step, each through
+  `createProperty`, so Portfolio and the audit log work as usual; with a card on
+  file each is covered straight away, as "Cover this property" would.
+- **Demo**: Sam has Mele on his team with both his houses, job 1 is signed by her,
+  and the demo menu has **Mele (cleaner) > Be them** (straight to her houses) and
+  **Mele's link, forwarded** (the code screen).
+- **Words**: terms section 5 and the privacy statement say what is held about a
+  team member and who can send a tradie (both dated 18 November 2026); the owner
+  page's "How it works", README, RUNBOOK, TRY-IT and AGENTS.md.
+
+**Decided while building, to confirm:**
+
+- "Default to the property's team setting today": the per-property team link
+  always sent a tradie straight away, so **Send a tradie straight away** is the
+  default.
+- A report is signed with the name the owner typed, not a name the cleaner
+  chose, so each owner sees the name they know. Two owners can call the same
+  person different names.
+- A property can be in more than one group. Deleting a group keeps its houses.
+- Re-adding someone after **Take off my team** reuses the same record, so old jobs
+  still show who reported them, and texts them their link again.
+- The owner cannot change a team member's mobile; they take them off and add the
+  new number. Nobody, staff included, can replace a person's link from a screen
+  yet (it would need a button for staff).
+- A cleaner whose mobile is on the team is a user without an owner account. If
+  they later sign up as an owner with that mobile they are told it already has
+  an account; staff would need to make them an owner by hand.
+- Imported properties go into the market chosen on the import page (the first
+  open one by default), on the membership the Add a property form starts on.
+
+Built on 2026-11-18: all of the above.
+
+---
+
 ## 2026-11-18 — Urgent is NZ$50, and both surcharges carry the 15% fee
 
 The founder, in his words:

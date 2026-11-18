@@ -62,12 +62,19 @@ export const texts = {
   insuranceExpiring: (o: { date: string; link: string }) =>
     `${B}: your public liability insurance on file runs out on ${o.date}. Add your renewed policy and upload its certificate to keep getting offers: ${o.link}`,
 
+  // ---- to cleaners and co-hosts -----------------------------------------
+  teamInvite: (o: { name: string; owner: string; link: string }) =>
+    `${B}: hi ${clip(first(o.name), 16)}, ${clip(o.owner, 16)} has added you to their team. Save this link and report anything that needs fixing at their houses: ${o.link}`,
+
   // ---- to owners --------------------------------------------------------
   guestReport: (o: { property: string; title: string; link: string }) =>
     `${B}: a guest at ${clip(o.property, 28)} reported "${clip(o.title, 40)}". See it and tell us whether to send someone: ${o.link}`,
 
+  teamReport: (o: { reporter: string; property: string; title: string; link: string }) =>
+    `${B}: ${clip(o.reporter, 20)} reported "${clip(o.title, 40)}" at ${clip(o.property, 28)}. You asked to say yes first. Send someone? ${o.link}`,
+
   guestReportReminder: (o: { property: string; link: string }) =>
-    `${B}: the guest report at ${clip(o.property, 28)} is still waiting for your go-ahead. Nobody has been sent yet: ${o.link}`,
+    `${B}: the report at ${clip(o.property, 28)} is still waiting for your go-ahead. Nobody has been sent yet: ${o.link}`,
 
   jobLogged: (o: { reporter: string; property: string; title: string; totalCents: number; currency: string; link: string }) =>
     `${B}: ${clip(o.reporter, 20)} logged "${clip(o.title, 36)}" at ${clip(o.property, 24)} (${money(o.totalCents, o.currency)}). Finding a tradie now. ${o.link}`,

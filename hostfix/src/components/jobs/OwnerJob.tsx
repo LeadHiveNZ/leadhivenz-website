@@ -30,7 +30,7 @@ function explain(view: JobView): string {
   const { job, tradie } = view;
   switch (job.status) {
     case "awaiting_owner":
-      return "A guest reported this. Nobody has been sent yet.";
+      return job.reportedBy === "team" ? `${job.reporterName ?? "Your team"} reported this. Nobody has been sent yet.` : "A guest reported this. Nobody has been sent yet.";
     case "offering":
       return "We are offering this job to our tradies now. You will get a text when one takes it.";
     case "unfilled":
@@ -111,7 +111,7 @@ export function OwnerJob({ view, now, code, flash = {}, prices }: Props) {
         <Card className="border-brand/30 sm:p-6">
           <SectionTitle>Send a tradie?</SectionTitle>
           <p className="text-muted">
-            {job.reporterName ?? "A guest"} reported this from the QR card{job.reporterPhone ? ` (${displayPhone(job.reporterPhone)})` : ""}. Nobody is sent, and nothing is charged, until you say yes.
+            {job.reportedBy === "team" ? `${job.reporterName ?? "Your team"} reported this from their team link` : `${job.reporterName ?? "A guest"} reported this from the QR card`}{job.reporterPhone ? ` (${displayPhone(job.reporterPhone)})` : ""}. Nobody is sent, and nothing is charged, until you say yes.
           </p>
           <ActionForm action={goAhead} className="mt-4 space-y-2.5">
             {which}

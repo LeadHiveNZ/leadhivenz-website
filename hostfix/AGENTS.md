@@ -33,6 +33,8 @@ it when you change one.
 | The dispatcher's queue | `src/lib/ops/exceptions.ts` |
 | Who is signed in and what they may open | `src/lib/auth/current.ts` |
 | One-tap links in texts | `src/lib/links.ts`, `src/lib/access/links.ts` |
+| Cleaners and co-hosts: the team, groups, each person's one link and their list of houses | `src/lib/team/service.ts`, `src/lib/team/device.ts`, `src/app/r/[token]/page.tsx` |
+| Pasting a spreadsheet of properties | `src/lib/properties/import.ts` |
 | The words of every text | `src/lib/notify/messages.ts` |
 | Stripe | `src/lib/payments/stripe-gateway.ts`, `product-events.ts`, `deposit.ts` |
 
@@ -94,6 +96,11 @@ it when you change one.
   call `requireOwner()`, `requireTradie()`, `requireStaff()` or `requireAdminRole()` themselves. The proxy
   is a convenience, not the lock. Every table has Row Level Security on with no policies. Extend
   `tests/unit/access.test.ts` and the "people only see their own data" browser test with anything new.
+  A cleaner or co-host has no account pages: their own team link lists only covered properties that an
+  owner who has them on their team now has ticked for them (one by one or by group), and only on a phone
+  holding the `hf_team` cookie, which is set after a six-digit code to their mobile and signed against the
+  link (`src/lib/team/`). A forwarded link shows the code screen and nothing else. The guest QR card stays
+  per property and anonymous (DECISIONS.md, 2026-11-18).
 
 ### Next.js 16 with Cache Components: what bit us
 

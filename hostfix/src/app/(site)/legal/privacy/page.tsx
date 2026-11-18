@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   description: `What ${brand.name} holds about you, why, who sees it, and how to ask for it or have it removed.`,
 };
 
-const UPDATED = "17 November 2026";
+const UPDATED = "18 November 2026";
 
 export default function Page() {
   const n = brand.name;
@@ -40,7 +40,9 @@ export default function Page() {
         <p>
           <strong>If you report a problem as a cleaner, co-host or guest:</strong> your name and mobile number if you give them, what you wrote,
           and your photos. You do not need an account. We hold these so the owner and the tradie know what is wrong and can reach you if they
-          need to.
+          need to. If an owner adds you to their team, we hold the name they gave you, your mobile number, which of their properties you may
+          report on, and when a phone of yours typed the code we texted you. Each owner who adds you sees only their own properties and the name
+          they gave you, never another owner&rsquo;s.
         </p>
         <p>
           <strong>If you are a tradie:</strong> your name, business name, mobile number, email address, the work you do, your licence numbers and

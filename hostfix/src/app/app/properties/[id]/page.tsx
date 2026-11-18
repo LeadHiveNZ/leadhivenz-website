@@ -30,6 +30,7 @@ import { membershipLabel } from "@/lib/properties/display";
 import { getPortfolio, openPortfolio } from "@/lib/properties/portfolio";
 import { addressLine, getProperty } from "@/lib/properties/service";
 import { qrSvg } from "@/lib/qr";
+import { listGroups, listTeam } from "@/lib/team/service";
 import { formatDate } from "@/lib/time";
 
 export const metadata: Metadata = { title: "Property" };
@@ -63,6 +64,11 @@ export default async function PropertyPage({ params, searchParams }: { params: P
   const membership = membershipLabel(property, market.timezone);
   const member = property.status === "active" || property.status === "past_due";
   const teamUrl = `${baseUrl()}/r/${property.teamToken}`;
+  // A cleaner is a person, not a link (DECISIONS.md, 2026-11-18): who on the owner's team has this house on their list.
+  const [team, groups] = await Promise.all([listTeam(db, viewer.ownerId), listGroups(db, viewer.ownerId)]);
+  const teamSize = team.length;
+  const groupsHere = groups.filter((group) => group.propertyIds.includes(property.id)).map((group) => group.id);
+  const onTeam = team.filter((member) => member.propertyIds.includes(property.id) || member.groupIds.some((id) => groupsHere.includes(id)));
   const guestUrl = `${baseUrl()}/r/${property.guestToken}`;
   const qr = member ? await qrSvg(guestUrl, { dark: brand.colours.brandDark }) : "";
   const money = (cents: number) => formatMoney(cents, market.currency);
@@ -84,7 +90,7 @@ export default async function PropertyPage({ params, searchParams }: { params: P
       )}
       {query.member && member && (
         <Notice tone="good" title="You are covered">
-          Next: print the QR card for the property, and send the team link to your cleaner. Both are just below.
+          Next: print the QR card for the property, and add your cleaner to your team. Both are just below.
         </Notice>
       )}
       {query.cancelled && property.portfolioId && (
@@ -213,22 +219,45 @@ export default async function PropertyPage({ params, searchParams }: { params: P
 
           <Card>
             <SectionTitle>For your cleaner or co-host</SectionTitle>
-            <p className="text-muted">
-              Send them this link once. They save it and report problems from it. <span className="text-ink">A tradie is sent straight away, without asking you first.</span> You get a text each time.
-            </p>
-            <p className="mt-3 rounded-xl bg-tint px-3 py-2 font-mono text-sm break-all text-ink">{teamUrl}</p>
+            {onTeam.length > 0 ? (
+              <p className="text-muted">
+                {onTeam.map((member) => member.name).join(", ")} {onTeam.length === 1 ? "reports" : "report"} from {onTeam.length === 1 ? "their" : "their own"} link. Each report is signed with their name.
+              </p>
+            ) : (
+              <p className="text-muted">
+                Add them to your team by name and mobile. They get one link for every house you tick, and every report is signed with their name.
+              </p>
+            )}
             <div className="mt-4 flex flex-wrap gap-2">
-              <ShareButton className={buttonClass} label="Send to my cleaner" url={teamUrl} text={`Use this link to report anything that needs fixing at ${property.name}. A tradie is sent straight away:`} />
-              <CopyButton text={teamUrl} label="Copy the link" />
+              <Link href="/app/team" className={buttonClass}>
+                {teamSize > 0 ? "Your team" : "Add a cleaner"}
+              </Link>
             </div>
+            {/* The older link for this one property keeps working for anyone who has it. It is only offered until the owner has a team. */}
+            {teamSize === 0 && (
+              <div className="mt-3">
+                <Reveal label="Or share this property's link">
+                  <div className="space-y-3">
+                    <p className="text-muted">
+                      Anyone with this link can report a problem here. <span className="text-ink">A tradie is sent straight away, without asking you first.</span> Reports are signed with whatever name they type.
+                    </p>
+                    <p className="rounded-xl bg-tint px-3 py-2 font-mono text-sm break-all text-ink">{teamUrl}</p>
+                    <div className="flex flex-wrap gap-2">
+                      <ShareButton className={secondaryButtonClass} label="Share the link" url={teamUrl} text={`Use this link to report anything that needs fixing at ${property.name}. A tradie is sent straight away:`} />
+                      <CopyButton text={teamUrl} label="Copy the link" />
+                    </div>
+                  </div>
+                </Reveal>
+              </div>
+            )}
             <div className="mt-3">
-              <Reveal label="Make a new team link">
+              <Reveal label="Make a new team link for this property">
                 <ActionForm action={replaceLink} className="space-y-3">
                   <input type="hidden" name="propertyId" value={property.id} />
                   <input type="hidden" name="which" value="team" />
-                  <p className="text-muted">Use this when a cleaner leaves. The old link stops working, so send the new one to whoever still needs it.</p>
+                  <p className="text-muted">Use this if someone who should not still has this property&apos;s own link. The old link stops working. Your team&apos;s own links are not affected.</p>
                   <SubmitButton variant="danger" pendingLabel="Replacing...">
-                    Replace the team link
+                    Replace this property&apos;s link
                   </SubmitButton>
                 </ActionForm>
               </Reveal>

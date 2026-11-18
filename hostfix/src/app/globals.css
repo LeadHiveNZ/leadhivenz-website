@@ -99,4 +99,13 @@ details[open] > summary .chevron {
   body {
     background: #ffffff;
   }
+  /* Print every QR card: one card to a sheet, never split across two. */
+  .print-sheet {
+    break-after: page;
+    break-inside: avoid;
+    padding-top: 2cm;
+  }
+  .print-sheet:last-child {
+    break-after: auto;
+  }
 }

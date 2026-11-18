@@ -34,7 +34,7 @@ test: 14 days of ads to the owner page. Owners join free and pay the fixed price
 | --- | --- | --- |
 | Visitors | `/`, `/owners`, `/tradies`, `/in/<town>`, `/refer` | No |
 | Owner | `/app`: properties, memberships, jobs, billing | Email or mobile, then a six-digit code |
-| Cleaner or co-host | `/r/<link>`: the property's team link | No |
+| Cleaner or co-host | `/r/<link>`: their own team link, listing every house they may report on | No. A six-digit code to their mobile, once per phone |
 | Guest | `/r/<link>`: the QR card in the property | No |
 | Tradie taking a job | `/o/<link>`: the link in the offer text | No |
 | Tradie | `/tradie`: offers, jobs, pay, profile | Mobile or email, then a six-digit code |

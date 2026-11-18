@@ -23,6 +23,8 @@ const samples: Record<string, string> = {
   insuranceExpiring: texts.insuranceExpiring({ date: "30 Nov 2026", link }),
   guestReport: texts.guestReport({ property: longProperty, title: longTitle, link }),
   guestReportReminder: texts.guestReportReminder({ property: longProperty, link }),
+  teamReport: texts.teamReport({ reporter: "Mele Fifita-Longname", property: longProperty, title: longTitle, link }),
+  teamInvite: texts.teamInvite({ name: "Mele Fifita", owner: "Samantha", link: "https://hostfix.co.nz/r/Ab3xK9mQ2LpRAb3xK9mQ2LpR" }),
   jobLogged: texts.jobLogged({ reporter: "Sam the cleaner", property: longProperty, title: longTitle, totalCents: 38000, currency: "NZD", link }),
   jobBooked: texts.jobBooked({ tradie: "Mike at Wakatipu Plumbing", property: longProperty, deadline: "4:15pm today", link }),
   tradieArrived: texts.tradieArrived({ tradie: "Mike at Wakatipu Plumbing", property: longProperty }),

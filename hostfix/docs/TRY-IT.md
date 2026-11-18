@@ -80,7 +80,9 @@ something on the tour, delete the `.data` folder and start again to get it back.
 | Press **Report** before paying | "Start a membership first" |
 | **Continue to payment**, then pay on the pretend card page | "You are covered", and the plan and price |
 | On the property page: **Print the QR card** | A card to print and leave in the property, with the guest link under it |
-| On the property page, under **For your cleaner or co-host**: **Send to my cleaner** or **Copy the link** | The link to send your cleaner. A report from it sends a tradie straight away. |
+| On the property page, under **For your cleaner or co-host**: **Add a cleaner** | **Your team**: add them by name and mobile, tick the houses, and choose **Send a tradie straight away** or **Ask me first**. They are texted one link for all of them. |
+| **Properties > Print every QR card** (with two or more covered properties) | Every guest card, one to a printed page |
+| **Add a property > Add many at once**: paste lines of name, address, suburb, postcode, access notes | A table checking each line before anything is saved, then the Properties list |
 | Open **Address, access notes and guest reports** | Whether a guest's report needs your yes first, and your own spending limit for quotes |
 | Open **Photos for tradies** and add one | Photos only the tradie who takes a job there will see |
 | **Account > Billing** (as Sam, who has history) | The card on file with **Change card**, and a statement for each month with **Print or save**: jobs, memberships, credits and the GST inside the total |
@@ -95,7 +97,8 @@ delete their own account.
 | --- | --- |
 | Demo menu > **Scan the QR card as a guest**. Choose Plumbing, pick a job, give a name, **Report it**. | No prices anywhere. "Your host has been told." Nobody is sent. |
 | Open **Sam's phone** | A text asking whether to send someone |
-| Demo menu > **Report as the cleaner**. Pick a job, **Report it**. | A tradie is being found at once. Sam is texted the price. |
+| Demo menu > **Mele (cleaner)** > **Be them**. Choose a house, pick a job, **Send a tradie**. | Her list of Sam's two houses, then "Sent as Mele". A tradie is being found at once and Sam is texted "Mele logged...". |
+| Demo menu > **Mele's link, forwarded** (in a fresh private window) | Only the "Text me the code" screen: a forwarded link opens nothing until the phone proves the number |
 | As Sam: **Report** at Arthurs Point Cabin, choose a job, choose **Get someone there within 4 hours** | NZ$50 more, and the tradie drops what they are doing. Before 7am, after 4:30pm or at the weekend it is NZ$140 more on top. The tradie's offer shows their share: the surcharges less 15% (NZ$42.50 and NZ$119). |
 | As Sam: **Report**, choose **Something else** | NZ$225 for a tradie to come and look, with a quote to follow |
 | Log a plumbing job as Sam. Demo menu > **Skip 15 minutes**. As Maria, open it from **Jobs**. | "Who was offered it": the first choice ran out, the backup is being asked now |

@@ -18,6 +18,15 @@ describe("the demo's sample data", () => {
   it("builds through the real rules and leaves each job at the right point", async () => {
     const people = await buildSampleData(t.db, null, new Date("2026-11-18T01:30:00.000Z")); // a Wednesday afternoon in Queenstown
     expect(people.map((person) => person.key)).toEqual(expect.arrayContaining(["sam", "dave", "maria", "admin", "emma"]));
+    // Sam's cleaner is on his team with both of his houses, and the demo menu can be her (DECISIONS.md, 2026-11-18).
+    expect(people.find((person) => person.key === "mele")).toMatchObject({ role: "cleaner", userId: expect.any(String) });
+    const team = await t.db.query<{ name: string; houses: number }>(
+      "select m.name, (select count(*) from public.team_access a where a.member_id = m.id) as houses from public.team_members m",
+    );
+    expect(team.map((row) => [row.name, Number(row.houses)])).toEqual([["Mele", 2]]);
+    const signed = await t.db.query<{ reporter_name: string }>("select reporter_name from public.jobs where team_member_id is not null");
+    expect(signed).toEqual([{ reporter_name: "Mele" }]);
+
     // Three owners on Essential and one property manager on Portfolio.
     expect(people.filter((person) => person.role === "owner")).toHaveLength(4);
 

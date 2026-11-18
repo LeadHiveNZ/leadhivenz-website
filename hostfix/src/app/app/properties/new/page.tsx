@@ -47,6 +47,13 @@ export default async function NewPropertyPage({ searchParams }: { searchParams: 
   return (
     <div className="mx-auto max-w-xl">
       <PageTitle title="Add a property" back={{ href: "/app/properties", label: "Properties" }} intro="Two minutes. You can change any of this later." />
+      <p className="-mt-2 mb-4 text-sm text-muted">
+        Got a list?{" "}
+        <Link href={`/app/properties/import${live.length > 1 ? `?market=${market.slug}` : ""}`} className="font-semibold text-brand underline underline-offset-2">
+          Add many at once
+        </Link>{" "}
+        by pasting a spreadsheet.
+      </p>
 
       {live.length > 1 && (
         <div className="mb-4 flex flex-wrap items-center gap-2 text-sm">

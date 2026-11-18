@@ -75,8 +75,13 @@ export default function Page() {
         <ul>
           <li>You, from the app.</li>
           <li>
-            <strong>Anyone holding your property&rsquo;s team link</strong>, which is meant for your cleaner or co-host. A report from that link sends a
-            tradie straight away at your cost, so only give the link to people you trust, and ask us to change it if it leaks.
+            <strong>People on your team</strong>: the cleaners and co-hosts you add by name and mobile, for the properties you tick for them. Each has
+            their own link, which only opens on a phone that has typed a code we text to their mobile. For each person you choose whether a tradie is
+            sent straight away at your cost or you are asked first. Every report is signed with their name, and taking them off your team stops it at once.
+          </li>
+          <li>
+            <strong>Anyone holding a property&rsquo;s older team link</strong>, if you shared one before teams existed. A report from that link sends a
+            tradie straight away at your cost, so only give it to people you trust, and replace it on the property page if it leaks.
           </li>
           <li>
             <strong>Your guests</strong>, from the QR card in the house. A guest&rsquo;s report waits for your yes before anyone is sent, unless you switch

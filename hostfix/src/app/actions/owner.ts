@@ -19,8 +19,9 @@ import { getMarket } from "@/lib/markets/store";
 import { getBilling, updateOwnerContact } from "@/lib/owners/service";
 import { paymentsFor } from "@/lib/payments";
 import { normalisePhone } from "@/lib/phone";
+import { IMPORT_MAX_ROWS, parsePropertyRows } from "@/lib/properties/import";
 import { cancelPortfolio, choosePortfolio, getPortfolio, PortfolioError, startPortfolio } from "@/lib/properties/portfolio";
-import { changeTier, createProperty, getProperty, PropertyError, requestCancel, rotateReportLink, startMembership, updateProperty } from "@/lib/properties/service";
+import { activateFreeMembership, changeTier, createProperty, getProperty, PropertyError, requestCancel, rotateReportLink, startMembership, updateProperty } from "@/lib/properties/service";
 
 /**
  * EVERYTHING AN OWNER CAN DO. Each action starts by working out who is
@@ -366,4 +367,45 @@ export async function removePropertyPhoto(_previous: FormState, formData: FormDa
   ]);
   revalidatePath(`/app/properties/${propertyId}`);
   return { done: "Photo removed." };
+}
+
+/**
+ * "Add many at once": every line pasted from a spreadsheet that has no
+ * problems is saved, all in one step, each through the same path as adding
+ * one property, so memberships and the audit log work as usual.
+ */
+export async function importProperties(_previous: FormState, formData: FormData): Promise<FormState> {
+  const viewer = await requireOwner("/app/properties/import");
+  const pasted = text(formData, "rows");
+  const { rows, tooMany } = parsePropertyRows(pasted);
+  if (tooMany) return problem(formData, `That is more than ${IMPORT_MAX_ROWS} lines. Paste the first ${IMPORT_MAX_ROWS}, save them, then paste the rest.`);
+  const good = rows.filter((row) => row.problems.length === 0);
+  if (good.length === 0) return problem(formData, "There is nothing to save yet. Paste one property per line: name, street address, suburb, postcode, access notes.");
+
+  const db = await getDb();
+  const market = await getMarket(db, text(formData, "market"));
+  if (!market || market.stage !== "live") return problem(formData, "We are not taking new properties in that area yet.");
+  const tierId = text(formData, "tierId");
+  if (!tierId) return problem(formData, "Choose a membership.");
+  try {
+    await db.tx(async (tx) => {
+      const gateway = paymentsFor(tx, market.country);
+      // Free to join (DECISIONS.md, 2026-11-17): with a card already on file each one is covered straight away,
+      // exactly as pressing "Cover this property" would.
+      const card = await getBilling(tx, viewer.ownerId, market.country);
+      for (const row of good) {
+        const created = await createProperty(tx, viewer.ownerId, {
+          market: market.slug, name: row.name, addressLine1: row.addressLine1, suburb: row.suburb, postcode: row.postcode, accessNotes: row.accessNotes, tierId,
+        }, gateway);
+        if (created.status === "setup" && card?.paymentMethodId && gateway && card.provider === gateway.provider) {
+          await activateFreeMembership(tx, { propertyId: created.id, ownerId: viewer.ownerId, provider: card.provider, customerId: card.customerId, card: null });
+        }
+      }
+    });
+  } catch (error) {
+    if (error instanceof PropertyError) return problem(formData, `Nothing was saved. ${error.message}`);
+    throw error;
+  }
+  revalidatePath("/app/properties");
+  redirect(`/app/properties?imported=${good.length}`);
 }

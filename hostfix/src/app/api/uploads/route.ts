@@ -2,11 +2,14 @@ import { NextResponse, type NextRequest } from "next/server";
 import { offerFromLink } from "@/lib/access/links";
 import { currentStaff, currentViewer } from "@/lib/auth/current";
 import { getDb } from "@/lib/db";
+import { appSecret } from "@/lib/env";
 import { getFileStore } from "@/lib/files/store";
 import { checkFile, MAX_UPLOAD_BYTES, newStorageKey, recordUpload, type UploadKind } from "@/lib/files/uploads";
 import { findPropertyByReportToken } from "@/lib/properties/service";
 import { withinRateLimit } from "@/lib/rate-limit";
 import { ipKey } from "@/lib/request";
+import { TEAM_DEVICE_COOKIE, teamDeviceMatches } from "@/lib/team/device";
+import { findTeamLink } from "@/lib/team/service";
 
 /**
  * RECEIVES ONE PHOTO. The phone shrinks it first, so it arrives small. The
@@ -54,6 +57,11 @@ export async function POST(request: NextRequest) {
   if (typeof token === "string" && token !== "") {
     const found = await findPropertyByReportToken(db, token);
     if (found && wanted === "report") uploadedBy = `report:${found.property.id}`;
+    if (!found && wanted === "report") {
+      // A cleaner's own team link, on a phone that has proved the number (DECISIONS.md, 2026-11-18).
+      const link = await findTeamLink(db, token);
+      if (link && teamDeviceMatches(appSecret(), request.cookies.get(TEAM_DEVICE_COOKIE)?.value, link)) uploadedBy = `team:${link.id}`;
+    }
   } else if (typeof offerCode === "string" && offerCode !== "") {
     const offer = await offerFromLink(db, offerCode);
     if (offer && offer.status === "accepted" && TRADIE_KINDS.includes(wanted)) uploadedBy = `tradie:${offer.tradieId}`;

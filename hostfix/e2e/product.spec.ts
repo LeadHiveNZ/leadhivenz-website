@@ -248,6 +248,9 @@ test("people only see their own data", async ({ page, request }) => {
   await page.waitForURL(/\/app\/properties\/[0-9a-f-]{36}$/);
   await ready(page);
   const propertyPath = new URL(page.url()).pathname;
+  await open(page, `${propertyPath}/card`);
+  const printed = await page.locator("p.break-all").filter({ visible: true }).first().innerText();
+  const guestPath = `/${printed.split("/").slice(1).join("/")}`;
 
   // Sam's card is fine, so his home screen has no payment warning.
   await open(page, "/app");
@@ -327,6 +330,36 @@ test("people only see their own data", async ({ page, request }) => {
   }
   expect((await request.get(`${BASE}${photoPath}`)).status()).toBe(404);
   expect((await request.get(`${BASE}${certificatePath}`)).status()).toBe(404);
+
+  // A cleaner on Sam's team (DECISIONS.md, 2026-11-18) sees his two houses on her own link, and nothing else.
+  await be(page, "Mele (cleaner)");
+  await expect(page).toHaveURL(/\/r\/[A-Za-z0-9]{24}$/);
+  const cleanerPath = new URL(page.url()).pathname;
+  await expect(page.getByRole("heading", { name: "Your houses" })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Lakeview Apartment/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Arthurs Point Cabin/ })).toBeVisible();
+  await expect(shown(page, "Fernhill Studio")).toHaveCount(0);
+  await expect(shown(page, "Kelvin Heights House")).toHaveCount(0);
+  await expect(shown(page, "Jacks Point Villa")).toHaveCount(0);
+  // She has no account: billing, jobs and properties are not hers to open.
+  for (const path of ["/app/billing", "/app/properties", jobPath]) {
+    await page.goto(`${BASE}${path}`);
+    await expect(page).toHaveURL(new RegExp(`^${BASE}/sign-in\\?next=`));
+  }
+  // Forwarded to a phone that has not proved her number, the link opens only the code screen, even asked for a house.
+  await signOut(page);
+  for (const path of [cleanerPath, `${cleanerPath}?p=${propertyPath.split("/").pop()}`]) {
+    await open(page, path);
+    await expect(page.getByRole("button", { name: "Text me the code" })).toBeVisible();
+    await expect(shown(page, "Lakeview Apartment")).toHaveCount(0);
+    await expect(shown(page, "Arthurs Point Cabin")).toHaveCount(0);
+  }
+  // The guest QR card stays anonymous and for one property: no code, no list, the guest types any name.
+  await open(page, guestPath);
+  await expect(page.getByRole("heading", { name: "Something not working?" })).toBeVisible();
+  await expect(page.getByLabel("Your name")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Text me the code" })).toHaveCount(0);
+  await expect(shown(page, "Arthurs Point Cabin")).toHaveCount(0);
 
   // A one-tap link only opens with its own code. A guessed or altered one opens nothing.
   const texts = await phone(page, "sam");
@@ -492,4 +525,103 @@ test("a tradie signs in with their mobile, adds bank details and their insurance
   expect((await page.request.get(`${BASE}${await onFile.getAttribute("href")}`)).status()).toBe(200);
   await expect(shown(page, /certificate is not uploaded/)).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Approve" })).toBeVisible();
+});
+
+test("an owner adds a cleaner by name and mobile; she proves her phone once and her report is signed with her name", async ({ page }) => {
+  // Tane has one house: the team page asks for nothing about groups.
+  await be(page, "Tane Rangi");
+  await open(page, "/app/properties");
+  await page.getByRole("link", { name: /Your team/ }).click();
+  await page.waitForURL(/\/app\/team$/);
+  await ready(page);
+  await expect(shown(page, "Groups")).toHaveCount(0);
+  await page.getByLabel("Their name").fill("Kiri");
+  await page.getByLabel("Their mobile").fill("021 555 0202");
+  await expect(page.getByRole("checkbox", { name: /Kelvin Heights House/ })).toBeChecked();
+  await page.getByRole("radio", { name: /Ask me first/ }).check();
+  await page.getByRole("button", { name: "Add and text them their link" }).click();
+  await page.waitForURL(/\/app\/team\/[0-9a-f-]{36}\?added=1$/);
+  await ready(page);
+  await expect(shown(page, "We have texted Kiri their link.", ).first()).toBeVisible();
+  const link = (await page.locator("[data-team-link]").filter({ visible: true }).innerText()).trim();
+  const linkPath = new URL(link).pathname;
+
+  // The property page now sends the owner to the team, not to the old per-property link.
+  await open(page, "/app/properties");
+  await page.getByRole("link", { name: /Kelvin Heights House/ }).click();
+  await ready(page);
+  await expect(shown(page, "Kiri reports from their link.").first()).toBeVisible();
+  await expect(page.getByRole("link", { name: "Your team" }).filter({ visible: true })).toBeVisible();
+  await expect(shown(page, "Or share this property's link")).toHaveCount(0);
+
+  // Kiri opens the link on her phone: one code, once.
+  await signOut(page);
+  await open(page, linkPath);
+  await page.getByRole("button", { name: "Text me the code" }).click();
+  await page.waitForURL(/\?code=1$/);
+  await ready(page);
+  const code = (await page.locator("[data-demo-code]").innerText()).trim();
+  await page.getByLabel("Six-digit code").fill(code === "000000" ? "111111" : "000000");
+  await page.getByRole("button", { name: "Open my houses" }).click();
+  await expect(page.locator('form [role="alert"]').first()).toContainText("That code is not right.");
+  await page.getByLabel("Six-digit code").fill(code);
+  await page.getByRole("button", { name: "Open my houses" }).click();
+  await page.waitForURL((url) => url.pathname === linkPath && !url.search);
+  await ready(page);
+  // One house, so the report form opens straight away, signed with her name and asking the owner first.
+  await expect(page.getByRole("heading", { name: "Report a problem" })).toBeVisible();
+  await expect(shown(page, "Kelvin Heights House").first()).toBeVisible();
+  await expect(shown(page, /Sent as/).first()).toContainText("Kiri");
+  await expect(page.getByLabel("Your name")).toHaveCount(0);
+  await page.getByRole("button", { name: /Plumbing/ }).click();
+  await page.getByRole("radio", { name: "Toilet seat or cistern parts" }).click();
+  await page.getByRole("button", { name: "Send to the owner" }).click();
+  await page.waitForURL(/\/sent\?w=owner/);
+  await ready(page);
+  await expect(shown(page, "The owner has been told and will say whether to send a tradie.").first()).toBeVisible();
+
+  // The next time, the same phone goes straight in.
+  await open(page, linkPath);
+  await expect(page.getByRole("heading", { name: "Report a problem" })).toBeVisible();
+
+  // Tane is asked first, and the job says who reported it.
+  await be(page, "Tane Rangi");
+  const waiting = page.getByRole("link", { name: /Toilet seat or cistern parts/ });
+  await expect(waiting).toContainText("Waiting for your go-ahead");
+  await waiting.click();
+  await ready(page);
+  await expect(shown(page, "Kiri reported this from their team link").first()).toBeVisible();
+  const texts = await phone(page, "tane");
+  await expect(texts.filter({ hasText: "Kiri reported" })).toHaveCount(1);
+});
+
+test("a manager prints every QR card at once and pastes a spreadsheet of properties", async ({ page }) => {
+  await be(page, "Hana Moore (manager)");
+  await open(page, "/app/properties");
+  await page.getByRole("link", { name: /Print every QR card/ }).click();
+  await page.waitForURL(/\/app\/properties\/cards$/);
+  await ready(page);
+  await expect(page.locator(".qr-card").filter({ visible: true })).toHaveCount(10);
+  await expect(page.getByRole("button", { name: "Print all the cards" })).toBeVisible();
+
+  // With ten properties, groups are offered on the team page.
+  await open(page, "/app/team");
+  await expect(shown(page, "Groups").first()).toBeVisible();
+
+  await open(page, "/app/properties/new");
+  await page.getByRole("link", { name: "Add many at once" }).click();
+  await page.waitForURL(/\/app\/properties\/import/);
+  await ready(page);
+  await page.getByLabel("Paste your properties").fill(
+    ["Name\tAddress\tSuburb\tPostcode\tAccess", "Kawarau Flat\t3 Kawarau Road\tFrankton\t9300\tKey safe 1122", "Shotover Loft, 8 Shotover Street, Queenstown, 9300, Ring the office", "No street,,Frankton"].join("\n"),
+  );
+  const preview = page.getByRole("table", { name: "What will be saved" });
+  await expect(preview.getByText("Ready")).toHaveCount(2);
+  await expect(preview.getByText("No street address.")).toBeVisible();
+  await page.getByRole("button", { name: "Save 2 properties" }).click();
+  await page.waitForURL(/\/app\/properties\?imported=2$/);
+  await ready(page);
+  await expect(shown(page, "2 properties added").first()).toBeVisible();
+  await expect(page.getByRole("link", { name: /Kawarau Flat/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Shotover Loft/ })).toBeVisible();
 });

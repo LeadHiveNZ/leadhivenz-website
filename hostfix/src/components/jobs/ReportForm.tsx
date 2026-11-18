@@ -31,6 +31,10 @@ type Props = {
   afterHoursCents: number;
   /** The report link, for people who are not signed in, so their photos are accepted. */
   uploadToken?: string;
+  /** A team member on their own link: the report is signed with this name, so they are not asked for it. */
+  signedAs?: string;
+  /** Their owner asked to say yes first: nobody is sent until the owner does. */
+  asksOwner?: boolean;
 };
 
 const OFF_MENU = "off-menu";
@@ -218,7 +222,13 @@ export function ReportForm(props: Props) {
 
       <PhotoUploader kind="report" label="Photos (they help the tradie bring the right parts)" token={props.uploadToken} max={6} />
 
-      {audience !== "owner" && (
+      {props.signedAs && (
+        <p className="rounded-xl bg-tint px-4 py-3 text-ink">
+          Sent as <strong>{props.signedAs}</strong>. {props.asksOwner ? "The owner gets a text to say yes before anyone is sent." : "The owner gets a text to say it is on its way."}
+        </p>
+      )}
+
+      {audience !== "owner" && !props.signedAs && (
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Your name" name="reporterName" required maxLength={60} autoComplete="name" />
           <Field label="Your mobile (optional)" name="reporterPhone" type="tel" inputMode="tel" autoComplete="tel" maxLength={30} hint="So we can text you when a tradie is booked." />
@@ -237,7 +247,7 @@ export function ReportForm(props: Props) {
 
       {choice === "" && <p className="text-center text-sm text-muted">Choose what needs fixing above, then send.</p>}
       <SubmitButton pendingLabel="Sending..." className="w-full">
-        {audience === "guest" ? "Report it" : "Send a tradie"}
+        {audience === "guest" ? "Report it" : props.asksOwner ? "Send to the owner" : "Send a tradie"}
       </SubmitButton>
     </ActionForm>
   );

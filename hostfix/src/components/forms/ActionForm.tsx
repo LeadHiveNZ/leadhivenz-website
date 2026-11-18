@@ -177,7 +177,8 @@ export function RadioCards({ name, legend, options, defaultValue, hint }: { name
 export function CheckList({ name, legend, options, defaultValues = [], hint }: { name: string; legend: string; options: readonly { key: string; label: string; detail?: string }[]; defaultValues?: string[]; hint?: string }) {
   const state = useContext(FormContext);
   const value = state.values?.[name];
-  const chosen = Array.isArray(value) ? value : typeof value === "string" ? [value] : defaultValues;
+  // Once the form has come back, what was sent is what is ticked: nothing sent means nothing ticked.
+  const chosen = Array.isArray(value) ? value : typeof value === "string" ? [value] : state.values ? [] : defaultValues;
   const error = state.fieldErrors?.[name];
   return (
     <fieldset aria-invalid={error ? true : undefined} key={chosen.join(",")}>

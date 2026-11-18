@@ -55,6 +55,8 @@ export type Job = {
   ownerTotalCents: number;
   tradieTotalCents: number;
   taxCents: number;
+  /** The owner's team member who reported it from their own team link, if one did. */
+  teamMemberId?: string | null;
 };
 
 export type JobLine = {
