@@ -147,8 +147,8 @@ select wellco_test.ok('seed: Dan''s templates are land 9 / commercial 9 / reside
 select wellco_test.ok('seed: 6 contact categories in order',
   (select string_agg(name, ', ' order by sort_order) from public.contact_categories where owner_id = :'dan')
   = 'Consultants, Civil contractors, Building contractors, Agents & advisers, Council & government, Banks & vendors');
-select wellco_test.ok('seed: 12 document types',
-  (select count(*) from public.document_types where owner_id = :'dan') = 12);
+select wellco_test.ok('seed: 13 document types (incl. Letter of offer)',
+  (select count(*) from public.document_types where owner_id = :'dan') = 13);
 select wellco_test.ok('seed: seeding wrote nothing to the activity log',
   (select count(*) from public.activity_log) = 0);
 
@@ -588,7 +588,7 @@ delete from public.zonings where code = 'RU6';
 select wellco_test.ok('8a. zoning: an unused one can be deleted',
   not exists (select 1 from public.zonings where code = 'RU6'));
 
-insert into public.document_types (code, name, sort_order) values ('valuation', 'Valuation', 13);
+insert into public.document_types (code, name, sort_order) values ('valuation', 'Valuation', 14);
 update public.document_types set name = 'Bank valuation' where code = 'valuation';
 select wellco_test.ok('8a. document type: added and renamed; the file-name code follows the name',
   (select file_code from public.document_types where code = 'valuation') = 'BankValuation');
@@ -715,6 +715,20 @@ select wellco_test.expect_error('8d. only one accepted offer per deal',
   format($$update public.deal_offers set status = 'accepted', accepted_on = '2026-11-21' where id = %L$$, :'offer1'));
 select wellco_test.expect_error('8d. an exchange date needs an accepted offer',
   format($$update public.deal_offers set exchange_on = '2026-12-01' where id = %L$$, :'offer1'));
+-- 18 Nov: letters go out as PDF.  The app generates the PDF and files it here.
+select wellco_test.ok('8d. offers default to a PDF letter',
+  (select bool_and(letter_format = 'pdf') from public.deal_offers where deal_id = :'tt_deal'));
+select storage_path as offer1_path from public.file_offer_letter(:'offer1') \gset
+select wellco_test.ok('8d. filed letter of offer: .pdf on the deal, standard name, linked to the offer',
+  :'offer1_path' = 'deals/' || :'tt_deal' || '/offer/Deal-21TynanRdTabletop_LetterOfOffer_Offer1_2026-11-17.pdf'
+  and (select d.file_ext = 'pdf' and d.mime_type = 'application/pdf' and d.doc_type = 'offer'
+         from public.deal_offers o join public.documents d on d.id = o.document_id where o.id = :'offer1'),
+  :'offer1_path');
+update public.deal_offers set letter_format = 'docx' where id = :'offer2';
+select public.file_offer_letter(:'offer2') \g /dev/null
+select wellco_test.ok('8d. Word is still possible: offer 2 filed as .docx',
+  (select d.file_ext = 'docx' and d.standard_name = 'Deal-21TynanRdTabletop_LetterOfOffer_Offer2_2026-11-20'
+     from public.deal_offers o join public.documents d on d.id = o.document_id where o.id = :'offer2'));
 select wellco_test.ok('8d. deals list shows offers, accepted price and latest feaso',
   (select offers = 2 and accepted_price = 1950000 and feaso_version = 2 from public.v_deals where id = :'tt_deal'));
 
@@ -835,6 +849,29 @@ select wellco_test.ok('8g. contacts list alphabetically (by company, else name; 
   = 'Amy Abbott | Coastal Civil Group Pty Ltd | Doyle Plastering | Shoalhaven City Council | Zenith Planning',
   (select string_agg(coalesce(company, name), ' | ' order by sort_name, name) from public.v_contacts));
 
+-- 8h. 18 Nov: loan months on the Quick Feaso ---------------------------------
+-- interest = debt x rate x months / 12.  12 / 12 is his sheet (version 1 above,
+-- still exactly his numbers).  Versions 3 and 4 change one input each.
+select wellco_test.ok('8h. loan months default to 12 / 12, and v1 still gives his exact finance figures',
+  (select land_loan_months = 12 and construction_loan_months = 12 and land_interest = 3600
+          and construction_interest = 194180 and finance_costs = 271272.50 and net_profit = 1968772.95
+     from public.v_deal_feasos where deal_id = :'tt_deal' and version = 1));
+insert into public.deal_feasos (deal_id, equity, lots, construction_loan_months, label)
+values (:'tt_deal', 800000, 30, 6, 'Construction loan 6 months');
+insert into public.deal_feasos (deal_id, equity, lots, land_loan_months, label)
+values (:'tt_deal', 800000, 30, 18, 'Land loan 18 months');
+select wellco_test.ok('8h. construction loan 6 months halves construction interest exactly (194,180.00 -> 97,090.00), land unchanged',
+  (select v3.construction_interest = v1.construction_interest / 2 and v3.construction_interest = 97090.00
+          and v3.land_interest = v1.land_interest
+     from public.v_deal_feasos v1, public.v_deal_feasos v3
+    where v1.deal_id = :'tt_deal' and v1.version = 1 and v3.deal_id = :'tt_deal' and v3.version = 3));
+select wellco_test.ok('8h. land loan 18 months gives 1.5x land interest (3,600.00 -> 5,400.00), construction unchanged',
+  (select v4.land_interest = v1.land_interest * 1.5 and v4.land_interest = 5400.00
+          and v4.construction_interest = v1.construction_interest
+     from public.v_deal_feasos v1, public.v_deal_feasos v4
+    where v1.deal_id = :'tt_deal' and v1.version = 1 and v4.deal_id = :'tt_deal' and v4.version = 4));
+select wellco_test.expect_error('8h. loan months must be more than 0',
+  format($$insert into public.deal_feasos (deal_id, lots, land_loan_months) values (%L, 30, 0)$$, :'tt_deal'));
 
 -- =============================================================================
 -- 9. A second login sees none of Dan's data.

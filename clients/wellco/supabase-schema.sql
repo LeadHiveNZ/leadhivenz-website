@@ -94,6 +94,10 @@
 --       project milestone (exchange, DD expiry, unconditional, DA approval,
 --       settlement) by N days; changes ripple to the tasks that follow.
 --   14. Document types and zonings are per-user lists: add, rename, delete if unused.
+--   18 Nov addendum: Quick Feaso finance has land / construction loan months
+--       (interest = debt x rate x months / 12; 12 = his sheet); offers are
+--       generated as PDF (letter_format, default pdf) and filed with
+--       file_offer_letter() under the new "Letter of offer" document type.
 --  Each version replaces the last outright: nothing has been loaded into Dan's
 --  Supabase yet, so there is no data migration, just run this on a fresh project.
 -- =============================================================================
@@ -172,6 +176,7 @@ create type public.yield_unit        as enum ('lots', 'factory_units', 'units');
 create type public.purchase_tax_type as enum ('gst', 'margin_scheme', 'gst_exempt');   -- how the LAND purchase is taxed (from the contract)
 create type public.sales_gst_method  as enum ('margin_scheme', 'full_gst', 'none');    -- Quick Feaso: GST on the lot sales
 create type public.offer_status      as enum ('draft', 'sent', 'countered', 'accepted', 'declined', 'withdrawn');
+create type public.letter_format     as enum ('pdf', 'docx');   -- generated letter of offer (PDF unless Dan asks for Word)
 create type public.offer_term_field  as enum ('deposit', 'due_diligence', 'settlement', 'condition', 'solicitor');
 create type public.task_milestone    as enum ('exchange', 'dd_expiry', 'unconditional', 'da_approval', 'settlement');
 create type public.task_anchor       as enum ('due', 'done');   -- follow the other task's due date, or the date it was ticked off
@@ -638,6 +643,8 @@ create table public.deal_feasos (
   land_interest_rate          numeric(7,5)  not null default 0.08,
   construction_interest_rate  numeric(7,5)  not null default 0.08,
   establishment_fee_pct       numeric(7,5)  not null default 0.015,
+  land_loan_months            numeric(6,2)  not null default 12 check (land_loan_months > 0),          -- how long the land debt runs
+  construction_loan_months    numeric(6,2)  not null default 12 check (construction_loan_months > 0),  -- how long the construction debt runs
   notes                       text,
   created_at                  timestamptz not null default now(),
   updated_at                  timestamptz not null default now(),
@@ -668,7 +675,8 @@ create table public.deal_offers (
   sent_on        date,
   accepted_on    date,
   exchange_on    date,                                      -- contracts exchanged (becomes the project's exchange date)
-  document_id    uuid,                                      -- the generated letter (FK added after documents)
+  letter_format  public.letter_format not null default 'pdf',  -- the app generates the letter as PDF (or Word)
+  document_id    uuid,                                      -- the latest generated letter (FK added after documents; see file_offer_letter)
   notes          text,
   created_at     timestamptz not null default now(),
   updated_at     timestamptz not null default now(),
@@ -2150,6 +2158,48 @@ $$;
 create trigger deals_keep_converted before delete on public.deals
   for each row execute function public.deals_keep_converted();
 
+-- File a generated letter of offer.  The app builds the PDF in the browser
+-- from v_offer_letters, calls this to get the document row (type "Letter of
+-- offer", standard name, .pdf or .docx from letter_format), uploads the file
+-- to the returned storage_path, and the offer now points at it.  Each call
+-- files a new copy (earlier letters stay as documents).  On a deal that has
+-- already become a project, the letter is filed on the project (stage 1).
+--   select * from public.file_offer_letter('<offer uuid>');
+--   -> document_id, storage_path 'deals/<deal>/offer/Deal-21TynanRdTabletop_LetterOfOffer_Offer1_2026-11-17.pdf'
+create or replace function public.file_offer_letter(p_offer_id uuid)
+returns table (document_id uuid, storage_path text)
+language plpgsql
+as $$
+#variable_conflict use_column
+declare
+  o      public.deal_offers%rowtype;
+  d      public.deals%rowtype;
+  v_doc  public.documents%rowtype;
+  v_ext  text;
+begin
+  select * into o from public.deal_offers where id = p_offer_id;
+  if not found then raise exception 'Offer % not found', p_offer_id; end if;
+  select * into d from public.deals where id = o.deal_id;
+  v_ext := o.letter_format::text;
+
+  insert into public.documents (owner_id, deal_id, project_id, stage_id, doc_type, party, doc_date,
+                                original_name, file_ext, mime_type)
+  values (o.owner_id,
+          case when d.project_id is null then d.id end,
+          d.project_id,
+          case when d.project_id is not null then
+            (select ps.id from public.project_stages ps where ps.project_id = d.project_id order by ps.position limit 1) end,
+          'offer', 'Offer' || o.offer_no, coalesce(o.sent_on, public.today_syd()),
+          'Letter of offer ' || o.offer_no || '.' || v_ext, v_ext,
+          case o.letter_format when 'pdf' then 'application/pdf'
+               else 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' end)
+  returning * into v_doc;
+
+  update public.deal_offers set document_id = v_doc.id where id = p_offer_id;
+  return query select v_doc.id, v_doc.storage_path;
+end;
+$$;
+
 -- (i4) CONTACT ROLES: rename = a plain UPDATE of name (contacts link by id,
 -- so they follow).  Delete: refused while contacts use it, unless you name a
 -- role to move them to.
@@ -2556,7 +2606,8 @@ begin
     (p_owner, 'sales_invoice',   'Sales invoice',      9),
     (p_owner, 'survey',          'Survey',            10),
     (p_owner, 'company',         'Company',           11),
-    (p_owner, 'correspondence',  'Correspondence',    12)
+    (p_owner, 'correspondence',  'Correspondence',    12),
+    (p_owner, 'offer',           'Letter of offer',   13)
   on conflict do nothing;
 
   perform public.set_quiet_log(false);
@@ -2611,9 +2662,11 @@ select public.seed_owner_defaults(u.id) from auth.users u;
 --   Consult.: electrical design + other + engineer + surveyor per lot x lots + planning
 --   Fees:     marketing + PM (monthly x months) + bond (% of civils) + accounting
 --             + holding + council CC fee + s94 per lot x (lots - existing-lot credit)
---   Finance:  land debt = acquisition - equity, at the land rate;
---             construction debt = (total cost - equity) - land debt, at the
---             construction rate on half (average draw); establishment fee on both.
+--   Finance:  land debt = acquisition - equity, at the land rate for the land
+--             loan months; construction debt = (total cost - equity) - land debt,
+--             at the construction rate on half (average draw) for the construction
+--             loan months; interest = debt x rate x months / 12 (12 months = his
+--             sheet).  Establishment fee on both debts.
 --   Net profit = net revenue - total cost inc finance; MoC = net profit / that.
 -- Where his sheet would go below zero (equity bigger than the land cost, land
 -- dearer than revenue) the debts / margin GST stop at $0.
@@ -2652,6 +2705,8 @@ select
   round(r.net_revenue - c.total_cost, 2)                           as gross_profit_before_finance,
   -- finance
   f.equity,
+  f.land_loan_months,
+  f.construction_loan_months,
   round(fi.funds_to_complete, 2)                                   as funds_to_complete,
   round(fi.land_debt, 2)                                           as land_debt,
   round(fi.land_interest, 2)                                       as land_interest,
@@ -2705,8 +2760,8 @@ cross join lateral (
   select w.*,
          w.land_interest + w.construction_interest + w.establishment_fee as finance_costs
   from (select v.*,
-               f.land_interest_rate * v.land_debt                        as land_interest,
-               v.construction_debt * f.construction_interest_rate / 2    as construction_interest,
+               f.land_interest_rate * v.land_debt * f.land_loan_months / 12                     as land_interest,
+               v.construction_debt * f.construction_interest_rate / 2 * f.construction_loan_months / 12 as construction_interest,
                f.establishment_fee_pct * (v.construction_debt + v.land_debt) as establishment_fee
         from (select c.total_cost - f.equity                                         as funds_to_complete,
                      greatest(c.acquisition - f.equity, 0)                           as land_debt,
@@ -2739,6 +2794,7 @@ select
   'Dan Wellman'::text                                               as signatory_name,
   'Director'::text                                                  as signatory_title,
   'Wellco Developments PL'::text                                    as signatory_company,
+  o.letter_format,
   o.document_id
 from public.deal_offers o;
 

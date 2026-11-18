@@ -152,7 +152,7 @@ This repo's client sites already go through Lovable. Use it to turn the demo int
    v_bas_by_project, v_budget_vs_actual, v_funds_needed, v_project_issuer, v_rfq_status,
    v_engagement_progress, v_contacts, v_contacts_by_category, v_documents, v_deals, v_deal_feasos,
    v_offer_letters; create_project_from_template, add_project_stage, add_template_stage,
-   convert_deal_to_project, close_company, delete_contact_role). Bills are a header in
+   convert_deal_to_project, close_company, delete_contact_role, file_offer_letter). Bills are a header in
    invoices_in plus rows in invoice_in_lines. Do not create or change tables unless I ask."
    Use plan mode for each section (Projects, Quotes, Money...) before letting it write code.
 5. Publish > connect a domain like `app.wellco.au` (needs a paid Lovable plan; Dan adds one DNS record).
@@ -199,7 +199,7 @@ Rough effort for one builder using Lovable + the schema in this folder.
 | 2.1 | Foundation | Dan's Supabase (A1-A6), schema, login, home-screen install, Wellco settings | 0.5 day |
 | 2.2 | Projects & stages | Home "Needs you today", project cards, stage stepper from `project_stages`, checklists, lead-time warnings, new project wizard by type (land / commercial / residential) with street / suburb / state / postcode. Settings: edit stage templates and template tasks; on a project, rename / insert stages and tasks. Task due dates editable on the task, or set to follow another task or a project date (exchange, DD expiry, unconditional, DA approval, settlement) | 3 days |
 | 2.3 | Contacts, deals & companies | Contacts A to Z by category with editable categories and roles (rename, delete with "move contacts to"), phone and mobile, expiry warnings. Log a site with split address, zoning (Settings list), land and minimum lot size, yield, purchase tax type; documents dropped straight on the deal; "Create project" carries it all across. Companies register (owner per project, assign when registered, close after bonds) | 2.5 days |
-| 2.3b | Quick Feaso & Make Offer | Quick Feaso on a deal (his spreadsheet, prefilled from the deal, saved as versions). Make Offer: offers per deal from his term bank, status, one accepted; letter generated as PDF / Word in his layout and filed on the deal | 2.5 days |
+| 2.3b | Quick Feaso & Make Offer | Quick Feaso on a deal (his spreadsheet, prefilled from the deal, saved as versions). Make Offer: offers per deal from his term bank, status, one accepted; letter generated as PDF in the browser in his layout and filed on the deal | 2.5 days |
 | 2.4 | Quotes & engagements | RFQ templates, side-by-side compare, min-3 check, appoint with reason, POs/engagement letters as PDF in the project company's name | 2.5 days |
 | 2.5 | Approvals & email | Approval drawer, real sending from Dan's Gmail (Make.com Gmail module, or Gmail API with an internal Workspace OAuth app), action log | 1.5 days |
 | 2.6 | Money & GST | Bills and sales invoices with lines (GST treatment AND cost category per line), budget vs actual by line, BAS per company per quarter with the "nothing to lodge" list, funds needed before sign-off, FY roll-over, intercompany/distribution flags | 3.5 days |
@@ -216,9 +216,6 @@ Xero link for Wellco's management fee invoices.
 
 ## 5. Open items to confirm with Dan
 
-- Quick Feaso: his sheet charges finance as one year's interest (land debt at 8%, half the construction
-  debt at 8%) whatever the project length. Kept as is; ask if he wants a months input.
-- Letter of offer: generate as PDF, Word, or both? (Word lets him tweak before sending.)
 - Per company: GST registration date and BAS cycle (quarterly or not lodging yet), so the quarter-end
   list shows the right "lodge / nil BAS / nothing to lodge".
 - Management fee basis (fixed / % of costs / one invoice at the end). Field exists in Settings.
@@ -279,3 +276,15 @@ App notes for the build:
   Generate the letter from `v_offer_letters`, file it as a document on the deal, set `deal_offers.document_id`.
 - Task dates: set the project's milestone dates (exchange etc.) and the following tasks fill themselves.
   Show a small "follows ..." note and a "reset to rule" action (clears `manual_override`).
+
+**18 Nov addendum (Dan's answers).** Schema v3 updated; tests now 146 checks, all passing on two fresh
+databases.
+- Quick Feaso finance has a months input: `land_loan_months` and `construction_loan_months` (default 12,
+  must be above 0). Interest = debt x rate x months / 12, construction still on half the balance. 12 / 12
+  still gives his example to the cent; 6 construction months halves construction interest; 18 land months
+  gives 1.5x land interest.
+- Offers go out as PDF. `deal_offers.letter_format` is `pdf` by default (`docx` still possible). The app
+  generates the PDF client-side (in the browser, from `v_offer_letters`), calls
+  `file_offer_letter(offer_id)` to get the document row and storage path (new "Letter of offer" document
+  type, standard name ending `.pdf`, e.g. `Deal-21TynanRdTabletop_LetterOfOffer_Offer1_2026-11-17.pdf`),
+  uploads the file there, and the offer links to it. Each regenerate files a new copy.
