@@ -362,7 +362,7 @@ export async function setUpPayouts(_previous: FormState, _formData: FormData): P
   try {
     let accountId = tradie.payoutProvider === gateway.provider ? tradie.payoutAccountId : null;
     if (!accountId) {
-      const created = await gateway.createPayoutAccount({ tradieId: tradie.id, businessName: tradie.businessName, email: tradie.email });
+      const created = await gateway.createPayoutAccount({ tradieId: tradie.id, businessName: tradie.businessName, email: tradie.email, trades: tradie.trades });
       accountId = created.accountId;
       await savePayoutAccount(db, tradie.id, { provider: gateway.provider, accountId, payoutsEnabled: false });
     }

@@ -222,7 +222,21 @@ Things to know:
   have income sitting in Stripe.
 - **Refund from the job page in the team area, not in Stripe.** The job page refunds the owner and brings
   the tradie's payment down to match in one step. A refund made by hand in Stripe is noticed and put in
-  the queue, but the tradie's payment is left alone for you to sort out.
+  the queue; if the tradie has not been paid yet their payment is brought down by their share of it, as on
+  the job page, and if they have, it is left for you to sort out.
+- **Keep a float of NZ$500 to NZ$1,000 in Stripe.** A tradie is paid whatever the owner's card does. When the
+  card has paid, the tradie's payment comes out of that charge, even while the card money is still on its
+  way. When it has not, it comes out of HostFix's own **available** Stripe balance, and in New Zealand card
+  money takes about 4 working days to become available, so a new account often has nothing there. Then the
+  payment waits, the site tries again every minute, and "Top up the Stripe balance" appears in the queue.
+  To keep a float: **Settings > Payouts > Minimum balance**, switch it on and set NZ$500 to NZ$1,000 (Stripe
+  keeps that much back from its payouts to your bank). Stripe's "add funds" (top-ups from your bank) is not
+  open to every New Zealand account yet; use it if your dashboard offers it.
+- **A tradie's bank details page.** The site tells Stripe what the tradie does (for example "Plumbing
+  maintenance and repairs for holiday homes, booked through HostFix"), their trade's category, and that they
+  are a sole trader, so Stripe's page does not ask for a business website. The tradie confirms these on
+  Stripe's page. Whether a tradie who trades through a company can change "sole trader" on that page is not
+  confirmed yet: it is a step in `docs/STRIPE-TEST-CHECKLIST.md`.
 - One Stripe account per country. Australia needs its own account and its own pair of keys
   (`STRIPE_AU_SECRET_KEY`, `STRIPE_AU_WEBHOOK_SECRET`), because Stripe cannot pay Australian tradies
   from a New Zealand account.

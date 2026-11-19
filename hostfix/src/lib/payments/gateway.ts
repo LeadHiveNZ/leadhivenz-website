@@ -46,6 +46,20 @@ export type ChargeResult =
       paymentIntentId: string | null;
     };
 
+/**
+ * Thrown by transfer() when the payment company says the platform's own
+ * available balance is too low to send it. Nothing was sent, so it is safe to
+ * try again (with a new key) once there is money there. Only a transfer that
+ * is not tied to a successful charge (a tradie paid ahead of the owner's
+ * card) needs that balance: one tied to a charge is sent from the charge.
+ */
+export class PlatformBalanceTooLow extends Error {
+  constructor(message = "The HostFix Stripe balance is too low to send this payment.") {
+    super(message);
+    this.name = "PlatformBalanceTooLow";
+  }
+}
+
 export type TierForBilling = { id: string; key: string; name: string; priceCents: number; providerProductId: string | null };
 
 export interface PaymentsGateway {
@@ -126,12 +140,16 @@ export interface PaymentsGateway {
   billingPortalUrl(input: { customerId: string; ownerId: string; returnUrl: string }): Promise<string>;
 
   /** Tradie payouts. */
-  createPayoutAccount(input: { tradieId: string; businessName: string; email: string | null }): Promise<{ accountId: string }>;
+  /** Trades are the tradie's trade keys (config/trades.ts), used to fill in what the business does. */
+  createPayoutAccount(input: { tradieId: string; businessName: string; email: string | null; trades: string[] }): Promise<{ accountId: string }>;
   payoutOnboardingUrl(input: { accountId: string; tradieId: string; returnUrl: string; refreshUrl: string }): Promise<string>;
   payoutAccountStatus(accountId: string): Promise<{ payoutsEnabled: boolean; detailsSubmitted: boolean }>;
   payoutDashboardUrl(accountId: string): Promise<string | null>;
 
-  /** Moves the tradie's share to their account. The same key never pays twice. */
+  /**
+   * Moves the tradie's share to their account. The same key never pays twice.
+   * Throws PlatformBalanceTooLow when the platform's available balance cannot cover it.
+   */
   transfer(input: { accountId: string; amountCents: number; currency: string; chargeId: string | null; jobNumber: number; idempotencyKey: string }): Promise<{ transferId: string }>;
   reverseTransfer(input: { transferId: string; amountCents: number; idempotencyKey: string }): Promise<void>;
 }

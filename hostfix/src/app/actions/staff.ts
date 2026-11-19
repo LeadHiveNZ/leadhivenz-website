@@ -204,6 +204,7 @@ export async function staffRetryPayout(_previous: FormState, formData: FormData)
   if (outcome === "sent") redirect(`${jobPath(jobId)}?did=tradie_paid`);
   revalidatePath(jobPath(jobId));
   if (outcome === "skipped") return { message: "There is no failed payment to try again on this job." };
+  if (outcome === "waiting") return { message: "The HostFix Stripe balance is too low to send it yet. Tell the admin to top it up: it then goes by itself." };
   return { message: "It still could not be sent. Check the tradie's bank details are set up, then try again." };
 }
 

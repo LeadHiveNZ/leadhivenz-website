@@ -9,6 +9,70 @@ price, a fee or a promise, add a line here saying what and why.
 
 ---
 
+## 2026-11-21 — What the first Stripe sandbox run found: the website question, a refund before the payout, paying ahead with no balance
+
+(Migration `supabase/migrations/20261129000000_platform_balance.sql`. Tests: `tests/unit/stripe-sandbox.test.ts`, worked by hand.)
+The first run of `src/lib/payments/stripe-gateway.ts` against a real Stripe sandbox (NZ platform, test mode) found three things.
+
+**1. A tradie's bank details page asked for a business website** (`createPayoutAccount`, `payoutAccountProfile`). A new
+Express account (`controller` properties, `transfers` requested) had `business_profile.url`, `business_type`,
+`external_account` and `tos_acceptance` due. Most sole-trader tradies have no website. What Stripe's documentation allows
+(read 21 Nov 2026): the platform "can prefill any information" on the account when creating it (docs.stripe.com/api/accounts/create,
+docs.stripe.com/connect/express-accounts); "If the account doesn't have a URL, prefill its business_profile.product_description"
+(Stripe may still ask for both, depending on the account); `business_type`, `company`, `individual` and `external_account`
+can only be set by the platform **before the first onboarding link** on an account where Stripe collects the details;
+`tos_acceptance` can only be set where the **platform** collects them, so it is never sent; a platform may set
+`business_profile.mcc` on accounts it controls, and Stripe checks it against the business like other identity details
+(docs.stripe.com/connect/setting-mcc). Stripe's page shows prefilled details for the account holder to confirm. So the
+account is now created with:
+- `business_profile.product_description`, from the tradie's trades: "Plumbing, electrical and handyman maintenance and repairs
+  for holiday homes, booked through HostFix." (only Stripe sees it);
+- `business_profile.mcc` where one plainly fits the first trade that has one: 1711 Heating, Plumbing, A/C (plumber, gasfitter,
+  heat pump), 1731 Electrical Services (electrician), 1799 Special Trade Services (handyman). Others are left for Stripe;
+- `business_type: "individual"`. The app does not ask whether a tradie trades as a company, and most are sole traders.
+  **Not confirmed yet: whether a tradie with a company can change it on Stripe's page.** It is a step in
+  `docs/STRIPE-TEST-CHECKLIST.md` (B1). If they cannot, the app must ask before creating the account.
+Accounts made before this keep what they had (the account is created once per tradie).
+
+**2. A refund before the payout broke the payout** (`releasePayout` in `src/lib/billing/settle.ts`, `charge.refunded` in
+`src/lib/payments/product-events.ts`). Charged NZ$235, NZ$50 refunded, then a NZ$200 transfer tied to the charge
+(`source_transaction`) was refused: "must not exceed the source amount of $185.00" (Stripe: the transfers tied to a charge may
+not add up to more than the charge). A refund on the job page already cut the unsent payout by the tradie's share
+(`refundSplit`): PL-03, refund 5000: 5000 x 20000 / 23500 = 4255, payout 20000 - 4255 = 15745, under 23500 - 5000 = 18500 (now
+proven by a test). The sandbox refund was made **in Stripe**, which left the payout alone for a person to sort out. Now:
+- a refund made in Stripe also cuts a payout that has not gone by the tradie's share, the same sum as on the job page, in
+  the same database step as recording the refund, once per refund. A payout already sent is still left for a person;
+- a payout is only tied to its charge when it is no more than what is left of the charge after refunds. Anything bigger
+  (an old missed-promise credit came off the charge, not the payout) is sent from HostFix's own balance instead.
+
+**3. Paying a tradie ahead of a failed card needs available balance** (`releasePayout`, `PlatformBalanceTooLow` in
+`src/lib/payments/gateway.ts`). NZ card money sits "pending" for days; the sandbox's available balance was negative while
+pending was positive. A transfer tied to a successful charge works off the charge even while it is pending. A tradie paid
+ahead (no successful charge, so nothing to tie it to) needs **available** balance, and Stripe refuses it with
+`balance_insufficient` otherwise. Now that refusal:
+- marks the payout `waiting` (never `failed`), does not count as one of the three tries, and it is tried again on every
+  timer run (each minute);
+- uses a new idempotency key for the next try (`-w1`, `-w2`, ...): nothing was sent, and Stripe replays a saved error for the
+  same key for 24 hours, so the same key would fail for a day;
+- puts **Top up the Stripe balance** in the queue (`platform_balance`), once per job: "Top up the HostFix Stripe balance to pay
+  <tradie>: NZ$200 for job N is waiting ...". It closes by itself when the tradie is paid. A card that goes through while the
+  payout waits lets it go from the charge instead.
+- **Keep a float of NZ$500 to NZ$1,000** in the Stripe balance (Stripe: Settings > Payouts > Minimum balance). In `RUNBOOK.md`
+  and `SETUP.md`. Stripe's top-ups (adding money from a bank) are in private preview in New Zealand, so the minimum balance is
+  the dependable way to build the float.
+
+**Not changed:** other payout failures still reuse one idempotency key across their three tries. A definite Stripe error under
+that key is replayed for 24 hours, so those retries (ten minutes apart) cannot succeed until the dispatcher's "Try paying the
+tradie again" after a day. Worth a look when the payouts are next touched.
+
+**Open item, not done now: Stripe's Accounts v2.** The Stripe library printed "We recommend building your integration using
+Accounts v2", and Stripe's Express page now tells new platforms to use Accounts v2. HostFix uses the v1 Accounts API with
+`controller` properties, which Stripe still supports. Moving is a change to how every tradie account is made and read
+(`createPayoutAccount`, `payoutAccountStatus`, the `account.updated` handling) and needs its own sandbox run. Decide before
+launch whether to move first or after; see Open specs, item 6.
+
+---
+
 ## 2026-11-20 — Quotes that can't be a free exit, fixed hourly rates, the call-out credit, STOP, shorter texts, app notifications
 
 (The third entry for 20 November. Migration `supabase/migrations/20261128000000_quotes_texts_push.sql`. The tradie
@@ -1222,6 +1286,15 @@ This answers "who carries the risk when the owner's card fails after the tradie
 has done the work". Nobody should. Pre-authorise the owner's card at the moment
 the tradie accepts the offer, and capture when the job closes. A card that
 cannot be pre-authorised means the job never gets offered.
+
+### 6. Stripe Accounts v2 for tradie payout accounts (from 2026-11-21)
+
+The Stripe library recommends Accounts v2, and Stripe's docs now point new Connect platforms there. HostFix
+creates tradie accounts with the v1 Accounts API and `controller` properties (Express dashboard, platform pays
+fees and carries losses), which still works. Moving needs: `createPayoutAccount` (and its prefill: v2 names
+the category `configuration.merchant.mcc`), `payoutOnboardingUrl`, `payoutAccountStatus`, `payoutDashboardUrl`,
+the webhook events for account changes, and a fresh sandbox run of `docs/STRIPE-TEST-CHECKLIST.md` section B.
+What happens to tradie accounts already made with v1 is to be read in Stripe's docs at the time.
 
 ---
 

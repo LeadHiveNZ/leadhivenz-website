@@ -42,7 +42,7 @@ const OFFER_LOOK: Record<string, { label: string; tone: StatusTone }> = {
 const STAGES = ["", "First choice", "Backup", "Everyone else", "Given by the team"];
 
 const PAYOUT_WORDS: Record<string, string> = {
-  waiting: "Will be sent at the usual time",
+  waiting: "Waiting for money in the HostFix Stripe balance (tried again every minute)",
   scheduled: "Will be sent on",
   paused: "On hold (owner raised a problem)",
   held: "Held until the flagged job is confirmed",

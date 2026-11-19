@@ -4,6 +4,7 @@ import { audit } from "@/lib/audit";
 import type { Db } from "@/lib/db/types";
 import { baseUrl } from "@/lib/env";
 import { formatMoney } from "@/lib/money";
+import { refundSplit } from "@/lib/jobs/pricing";
 import { closeChargeback, recordChargeback } from "@/lib/billing/chargebacks";
 import { raiseException } from "@/lib/ops/exceptions";
 import { findOwnerByCustomer, saveBilling } from "@/lib/owners/service";
@@ -242,6 +243,9 @@ export async function handleProductMessage(db: Db, message: StripeMessage, accou
 
     // A refund. Refunds made on the job page are already in our books. One
     // made by hand in Stripe's dashboard is not, so it is recorded and flagged.
+    // A tradie's payment that has not gone yet is cut by their share of it, as
+    // a refund on the job page does (refundSplit), so the payout can never be
+    // more than what is left of the charge (DECISIONS.md, 2026-11-21).
     case "charge.refunded": {
       const charge = event.object as Stripe.Charge;
       const paymentIntentId = idOf(charge.payment_intent);
@@ -253,25 +257,58 @@ export async function handleProductMessage(db: Db, message: StripeMessage, accou
       const payment = found[0];
       if (!payment) return null;
       let outside = 0;
+      let fromTradie = 0;
+      let alreadyPaid = false;
       for (const refund of await get.refundsFor(paymentIntentId)) {
         if (refund.metadata?.hostfix_refund === "app" || refund.status === "failed" || refund.status === "canceled") continue;
-        const first = await audit(db, {
-          actor: "stripe", action: "refund.made_outside_app", entity: "job", entityId: payment.job_id, amount: refund.amount, currency: payment.currency,
-          detail: { refund: refund.id }, dedupeKey: `refund.outside:${refund.id}`,
+        const result = await db.tx(async (tx) => {
+          const first = await audit(tx, {
+            actor: "stripe", action: "refund.made_outside_app", entity: "job", entityId: payment.job_id, amount: refund.amount, currency: payment.currency,
+            detail: { refund: refund.id }, dedupeKey: `refund.outside:${refund.id}`,
+          });
+          if (!first) return null;
+          const row = (await tx.query<{ amount_cents: number; refunded_cents: number; owner_total_cents: number }>(
+            "select p.amount_cents, p.refunded_cents, j.owner_total_cents from public.payments p join public.jobs j on j.id = p.job_id where p.id = $1::uuid for update",
+            [payment.id],
+          ))[0]!;
+          const counted = Math.max(0, Math.min(refund.amount, Number(row.amount_cents) - Number(row.refunded_cents)));
+          await tx.query(
+            `update public.payments set refunded_cents = least(amount_cents, refunded_cents + $2),
+                    status = case when least(amount_cents, refunded_cents + $2) >= amount_cents then 'refunded' else 'part_refunded' end
+              where id = $1::uuid`,
+            [payment.id, refund.amount],
+          );
+          const payout = (await tx.query<{ id: string; amount_cents: number; status: string }>(
+            "select id, amount_cents, status from public.payouts where job_id = $1::uuid for update",
+            [payment.job_id],
+          ))[0];
+          if (!payout || counted === 0) return { amount: refund.amount, fromTradie: 0, sent: false };
+          if (!["waiting", "scheduled", "held", "paused"].includes(payout.status)) return { amount: refund.amount, fromTradie: 0, sent: payout.status === "sent" };
+          // In proportion to the job's full price, exactly as a refund on the job page (resolveDispute in settle.ts).
+          const split = refundSplit({ ownerCents: Math.max(Number(row.amount_cents), Number(row.owner_total_cents)), tradieCents: Number(payout.amount_cents) }, counted);
+          const remaining = Number(payout.amount_cents) - split.fromTradieCents;
+          if (remaining <= 0) await tx.query("update public.payouts set status = 'cancelled' where id = $1::uuid", [payout.id]);
+          else await tx.query("update public.payouts set amount_cents = $2, deducted_cents = least(deducted_cents, $2) where id = $1::uuid", [payout.id, remaining]);
+          await audit(tx, {
+            actor: "stripe", action: "payout.reduced", entity: "job", entityId: payment.job_id, amount: split.fromTradieCents, currency: payment.currency,
+            detail: { now_pays: Math.max(0, remaining), refund: refund.id, from_platform: split.fromPlatformCents }, dedupeKey: `payout.reduced:${refund.id}`,
+          });
+          return { amount: refund.amount, fromTradie: split.fromTradieCents, sent: false };
         });
-        if (!first) continue;
-        outside += refund.amount;
-        await db.query(
-          `update public.payments set refunded_cents = least(amount_cents, refunded_cents + $2),
-                  status = case when least(amount_cents, refunded_cents + $2) >= amount_cents then 'refunded' else 'part_refunded' end
-            where id = $1::uuid`,
-          [payment.id, refund.amount],
-        );
+        if (!result) continue;
+        outside += result.amount;
+        fromTradie += result.fromTradie;
+        alreadyPaid ||= result.sent;
       }
       if (outside === 0) return { handled: true, outcome: "nothing_to_change" };
+      const tradieWords = alreadyPaid
+        ? "The tradie had already been paid, so their payment was not changed. Decide whether some should come back."
+        : fromTradie > 0
+          ? `The tradie's payment, not sent yet, was cut by their share of it (${formatMoney(fromTradie, payment.currency)}), as a refund on the job page does.`
+          : "The tradie's payment was not changed.";
       await raiseException(db, {
         kind: "needs_review", market: payment.market, jobId: payment.job_id,
-        summary: `Job ${Number(payment.number)}: ${formatMoney(outside, payment.currency)} was refunded in Stripe, not on the job page. The owner has their money, but the tradie's payment was not changed. Decide whether it should be. Next time, refund from the job page so both are done together.`,
+        summary: `Job ${Number(payment.number)}: ${formatMoney(outside, payment.currency)} was refunded in Stripe, not on the job page. The owner has their money. ${tradieWords} Next time, refund from the job page so both are done together.`,
         dedupeKey: `refund_outside:${paymentIntentId}:${outside}`,
       });
       return { handled: true, outcome: "refund_outside_app" };

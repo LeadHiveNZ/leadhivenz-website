@@ -13,7 +13,7 @@ import { enqueue } from "@/lib/notify/outbox";
 import { raiseException, resolveExceptionsFor } from "@/lib/ops/exceptions";
 import { getBilling } from "@/lib/owners/service";
 import { holdReasons } from "./holds";
-import type { PaymentsGateway, Provider } from "@/lib/payments/gateway";
+import { PlatformBalanceTooLow, type PaymentsGateway, type Provider } from "@/lib/payments/gateway";
 import { formatDeadline, monthKey, monthLabel } from "@/lib/time";
 import { formatMoney } from "@/lib/money";
 import { NO_SHOW_DAYS, needsReview, recentNoShows } from "@/lib/tradies/reliability";
@@ -51,7 +51,7 @@ type PaymentRow = {
 
 type PayoutRow = {
   id: string; job_id: string; tradie_id: string; amount_cents: number; currency: string; status: string; release_at: Date;
-  transfer_id: string | null; attempts: number; provider: Provider | null; deducted_cents?: number;
+  transfer_id: string | null; attempts: number; provider: Provider | null; deducted_cents?: number; balance_waits?: number;
 };
 
 /**
@@ -260,15 +260,33 @@ export async function chargeDuePayments(db: Db, gatewayFor: GatewayFor): Promise
   return done;
 }
 
-export type PayoutOutcome = "sent" | "failed" | "retry" | "skipped";
+/**
+ * "waiting": the tradie is paid ahead of the owner's card, and HostFix's own Stripe balance is too low
+ * to cover it just now. It is tried again on the next timer run (DECISIONS.md, 2026-11-21).
+ */
+export type PayoutOutcome = "sent" | "failed" | "retry" | "waiting" | "skipped";
 
-/** Sends one tradie's share, if it is due. A payout is never sent twice. */
+/** The idempotency key for a payout. A new one only after Stripe said a definite "not enough balance". */
+export function payoutKey(jobId: string, balanceWaits: number): string {
+  return balanceWaits > 0 ? `hostfix-job-${jobId}-payout-w${balanceWaits}` : `hostfix-job-${jobId}-payout`;
+}
+
+/**
+ * Sends one tradie's share, if it is due. A payout is never sent twice.
+ *
+ * A payout tied to the owner's charge (source_transaction) is never more than what is left of that charge
+ * after refunds: Stripe refuses it otherwise. Every refund made before the payout goes has already taken the
+ * tradie's share off it (refundSplit), so this only matters for a payout that is bigger than its charge for
+ * another reason (an old missed-promise credit came off the charge, not the payout): that one is sent from
+ * HostFix's own balance instead, like a tradie paid ahead of the card.
+ */
 export async function releasePayout(db: Db, gatewayFor: GatewayFor, payoutId: string): Promise<PayoutOutcome> {
   const claim = await db.tx(async (tx) => {
     const at = now();
     const rows = await tx.query<PayoutRow>("select * from public.payouts where id = $1::uuid for update", [payoutId]);
     const payout = rows[0];
-    if (!payout || payout.status !== "scheduled" || new Date(payout.release_at).getTime() > at.getTime()) return null;
+    // "waiting": an earlier try found HostFix's Stripe balance too low. It is tried again like a scheduled one.
+    if (!payout || !["scheduled", "waiting"].includes(payout.status) || new Date(payout.release_at).getTime() > at.getTime()) return null;
     const dispute = await tx.query("select 1 from public.disputes where job_id = $1::uuid and status = 'open'", [payout.job_id]);
     if (dispute.length > 0) {
       await tx.query("update public.payouts set status = 'paused' where id = $1::uuid", [payoutId]);
@@ -276,15 +294,20 @@ export async function releasePayout(db: Db, gatewayFor: GatewayFor, payoutId: st
     }
     // The tradie is paid at the usual time whatever the owner's card has done (DECISIONS.md, 2026-11-20, second entry).
     // Without a charge to pay from, the transfer comes out of HostFix's own balance.
-    const paid = await tx.query<{ charge_id: string | null; status: string }>("select charge_id, status from public.payments where job_id = $1::uuid", [payout.job_id]);
+    const paid = await tx.query<{ charge_id: string | null; status: string; amount_cents: number; refunded_cents: number }>(
+      "select charge_id, status, amount_cents, refunded_cents from public.payments where job_id = $1::uuid",
+      [payout.job_id],
+    );
     const charged = !paid[0] || ["succeeded", "part_refunded"].includes(paid[0].status);
+    // What is left of the owner's charge after refunds: the most a transfer tied to it may be.
+    const chargeLeft = paid[0] ? Number(paid[0].amount_cents) - Number(paid[0].refunded_cents) : 0;
     // A balance the tradie owes (a lost chargeback that was their fault) comes off, never more than half of this payout.
     // Worked out once and kept, so a retried transfer always asks for the same amount.
     let deducted = Number(payout.deducted_cents ?? 0);
     if (deducted === 0 && payout.attempts === 0) {
       const owing = await tx.query<{ owed: number }>(
         `select coalesce(sum(amount_cents - recovered_cents), 0)
-                - coalesce((select sum(o.deducted_cents) from public.payouts o where o.tradie_id = $1::uuid and o.status in ('scheduled', 'failed') and o.id <> $2::uuid), 0) as owed
+                - coalesce((select sum(o.deducted_cents) from public.payouts o where o.tradie_id = $1::uuid and o.status in ('scheduled', 'waiting', 'failed') and o.id <> $2::uuid), 0) as owed
            from public.tradie_balances where tradie_id = $1::uuid and status = 'open'`,
         [payout.tradie_id, payoutId],
       );
@@ -301,35 +324,60 @@ export async function releasePayout(db: Db, gatewayFor: GatewayFor, payoutId: st
     if (!job || !market || !tradie[0]) return null;
     // Push the release time out so another server does not pick it up while we talk to the payment company.
     await tx.query("update public.payouts set attempts = attempts + 1, release_at = $2::timestamptz where id = $1::uuid", [payoutId, addMinutes(at, 10).toISOString()]);
-    return { payout: { ...payout, attempts: payout.attempts + 1 }, job, market, tradie: tradie[0], chargeId: charged ? (paid[0]?.charge_id ?? null) : null, charged, deducted };
+    const sendCents = payout.amount_cents - deducted;
+    // Tied to the charge only while the charge can cover it (see above).
+    const chargeId = charged && paid[0]?.charge_id && sendCents <= chargeLeft ? paid[0].charge_id : null;
+    return { payout: { ...payout, attempts: payout.attempts + 1 }, job, market, tradie: tradie[0], chargeId, charged, deducted, sendCents };
   });
   if (!claim) return "skipped";
-  const { payout, job, market, tradie, chargeId, charged, deducted } = claim;
+  const { payout, job, market, tradie, chargeId, charged, deducted, sendCents } = claim;
 
   const gateway = gatewayFor(market.country);
   let transferId: string | null = null;
   let failure: string | null = null;
+  let balanceTooLow = false;
   if (!gateway) failure = "Payments are not set up for this country.";
   else if (!tradie.payout_account_id) failure = `${tradie.business_name} has not added bank details yet.`;
   else {
     try {
       const sent = await gateway.transfer({
-        accountId: tradie.payout_account_id, amountCents: payout.amount_cents - deducted, currency: payout.currency, chargeId, jobNumber: job.number,
-        idempotencyKey: `hostfix-job-${job.id}-payout`,
+        accountId: tradie.payout_account_id, amountCents: sendCents, currency: payout.currency, chargeId, jobNumber: job.number,
+        idempotencyKey: payoutKey(job.id, Number(payout.balance_waits ?? 0)),
       });
       transferId = sent.transferId;
     } catch (error) {
       failure = error instanceof Error ? error.message : String(error);
+      balanceTooLow = error instanceof PlatformBalanceTooLow;
     }
   }
 
   return db.tx(async (tx) => {
     const at = now();
+    if (balanceTooLow) {
+      // Nothing was sent (a definite "no" from Stripe), so this try does not count towards giving up, the next
+      // try uses a new key (Stripe replays a saved error for the same key for 24 hours), and the next timer run
+      // tries again. The money is owed: it is never marked failed for this (DECISIONS.md, 2026-11-21).
+      await tx.query(
+        `update public.payouts set status = 'waiting', attempts = greatest(attempts - 1, 0), balance_waits = balance_waits + 1,
+                release_at = $2::timestamptz, last_error = $3 where id = $1::uuid`,
+        [payoutId, at.toISOString(), `Waiting for the HostFix Stripe balance: ${failure}`.slice(0, 500)],
+      );
+      await audit(tx, {
+        actor: gateway!.provider, action: "payout.waiting_for_balance", entity: "job", entityId: job.id, amount: sendCents, currency: payout.currency,
+        detail: { tradie: tradie.business_name, reason: failure, owner_charged: charged }, dedupeKey: `payout.waiting_for_balance:${job.id}`,
+      });
+      await raiseException(tx, {
+        kind: "platform_balance", market: job.market, jobId: job.id, tradieId: payout.tradie_id,
+        summary: `Top up the HostFix Stripe balance to pay ${tradie.business_name}: ${formatMoney(sendCents, payout.currency)} for job ${job.number} is waiting. The owner's card has not paid, so it comes from our own Stripe balance, and there is not enough available there yet. It goes by itself once there is.`,
+        dedupeKey: `platform_balance:${job.id}`,
+      });
+      return "waiting";
+    }
     if (transferId) {
       await tx.query("update public.payouts set status = 'sent', transfer_id = $2, sent_at = $3::timestamptz, provider = $4, last_error = null where id = $1::uuid", [
         payoutId, transferId, at.toISOString(), gateway!.provider,
       ]);
-      await resolveExceptionsFor(tx, job.id, ["payout_failed"], "Tradie paid");
+      await resolveExceptionsFor(tx, job.id, ["payout_failed", "platform_balance"], "Tradie paid");
       // What came off goes against the oldest balances first.
       let left = deducted;
       const balances = await tx.query<{ id: string; amount_cents: number; recovered_cents: number }>(
@@ -346,10 +394,10 @@ export async function releasePayout(db: Db, gatewayFor: GatewayFor, payoutId: st
       }
       if (!charged) await tx.query("update public.payments set tradie_paid_ahead_at = $2::timestamptz where job_id = $1::uuid and tradie_paid_ahead_at is null", [job.id, at.toISOString()]);
       await audit(tx, {
-        actor: gateway!.provider, action: "payout.sent", entity: "job", entityId: job.id, amount: payout.amount_cents - deducted, currency: payout.currency,
+        actor: gateway!.provider, action: "payout.sent", entity: "job", entityId: job.id, amount: sendCents, currency: payout.currency,
         detail: {
           transfer: transferId, tradie: tradie.business_name, hours_after_completion: job.completedAt ? Math.round((at.getTime() - job.completedAt.getTime()) / 3_600_000) : null,
-          deducted, owner_charged: charged,
+          deducted, owner_charged: charged, from_charge: Boolean(chargeId),
         },
         dedupeKey: `payout.sent:${job.id}`,
       });
@@ -377,7 +425,7 @@ export async function releasePayout(db: Db, gatewayFor: GatewayFor, payoutId: st
 
 export async function releaseDuePayouts(db: Db, gatewayFor: GatewayFor): Promise<number> {
   const due = await db.query<{ id: string }>(
-    "select id from public.payouts where status = 'scheduled' and release_at <= $1::timestamptz order by release_at limit 50",
+    "select id from public.payouts where status in ('scheduled', 'waiting') and release_at <= $1::timestamptz order by release_at limit 50",
     [now().toISOString()],
   );
   let sent = 0;

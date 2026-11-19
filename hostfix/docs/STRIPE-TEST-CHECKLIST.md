@@ -83,6 +83,9 @@ three-digit code work with them.
 - [ ] Open the link in the text. Profile > **Add bank details**. You land on Stripe's page.
 - [ ] Enter Stripe's test details. Its page "Testing Stripe Connect" (docs.stripe.com/connect/testing)
       lists the pretend date of birth, address and bank account to use.
+- [ ] *Should happen:* Stripe's page does **not** ask for a business website, and shows "Individual" (sole
+      trader) and a description of the work for you to confirm (DECISIONS.md, 2026-11-21). Try changing
+      "Individual" to a company on that page and note whether Stripe lets you: tell Claude either way.
 - [ ] *Should happen:* back on the site it says **Bank details set up. You can be paid.** In Stripe,
       **Connect > Accounts** shows the tradie. On the site, the tradie's page says **Getting offers**.
 - [ ] On the Tradies page, make yourself first choice for Handyman.
@@ -104,8 +107,12 @@ three-digit code work with them.
 
 **B4. A card that declines on a job.**
 - [ ] Change the owner's card to `4000 0000 0000 0341` (as in A4). Do a job as in B2.
-- [ ] *Should happen:* the queue shows **Card payment failed**. The tradie's payment says it is waiting
-      for the owner's card. Nothing is sent to the tradie.
+- [ ] *Should happen:* the queue shows **Card payment failed**. The tradie is still paid at the usual time,
+      out of HostFix's own Stripe balance. A new sandbox has no **available** balance (card money takes days
+      to become available), so expect **Top up the Stripe balance** in the queue and the tradie's payment
+      waiting, not failed. Stripe's testing page (docs.stripe.com/testing, "Send funds to your available
+      balance") lists `4000 0000 0000 0077`, whose money skips the wait: pay another job with it, and the
+      waiting payment goes by itself within a minute.
 - [ ] Change the card back to `4242 4242 4242 4242`. On the staff job page press **Try the card again now**.
 - [ ] *Should happen:* charged, the queue item closes by itself, and the tradie's payment is on its way.
 
@@ -130,7 +137,9 @@ three-digit code work with them.
 
 **B8. A refund made in Stripe by mistake.**
 - [ ] In Stripe > Payments, refund NZ$10 of a job payment by hand.
-- [ ] *Should happen:* the queue shows **Needs a look**, saying the refund was made outside the app.
+- [ ] *Should happen:* the queue shows **Needs a look**, saying the refund was made outside the app. If the
+      tradie had not been paid yet, their payment is now smaller by their share of the NZ$10, and it is
+      sent without Stripe refusing it.
 
 **B9. A bank dispute.**
 - [ ] Stripe's testing page (docs.stripe.com/testing) lists a card under "Disputes" that is charged and

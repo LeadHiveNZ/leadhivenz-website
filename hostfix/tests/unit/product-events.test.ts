@@ -282,7 +282,7 @@ describe("a refund", () => {
     expect(await queue()).toHaveLength(0);
   });
 
-  it("made by hand in Stripe is recorded once and flagged, because the tradie's payment was not changed", async () => {
+  it("made by hand in Stripe is recorded once and flagged, and the unsent payout loses the tradie's share of it", async () => {
     const { job, paymentIntentId } = await chargedJob();
     const message = event("charge.refunded", { id: "ch_1", payment_intent: paymentIntentId });
     const deps: ProductDeps = { fetch: { refundsFor: async () => [refund("re_hand", 6000, false), refund("re_failed", 9000, false, "failed")] } };
@@ -294,6 +294,11 @@ describe("a refund", () => {
     const open = await queue();
     expect(open.map((row) => row.kind)).toEqual(["needs_review"]);
     expect(open[0]!.summary).toContain("NZ$60 was refunded in Stripe, not on the job page");
+    // PL-01: owner 22500, tradie 19000. The tradie's share of NZ$60: 6000 x 19000 / 22500 = 5066.67, so 5067,
+    // and the payout not yet sent becomes 19000 - 5067 = 13933 (DECISIONS.md, 2026-11-21).
+    expect(open[0]!.summary).toContain("cut by their share of it (NZ$50.67)");
+    const payout = await t.db.query<{ amount_cents: number; status: string }>("select amount_cents, status from public.payouts where job_id = $1::uuid", [job.id]);
+    expect(payout[0]).toEqual({ amount_cents: 13933, status: "scheduled" });
   });
 
   it("for something that is not a job is left to the deposit code", async () => {

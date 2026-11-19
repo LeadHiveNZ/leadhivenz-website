@@ -201,6 +201,22 @@ not be taken back automatically.
 the job and press **Try paying the tradie again**. For the second: tell the admin, who settles it with
 the tradie directly.
 
+### Top up the Stripe balance
+**Means.** A tradie is due their money, but the owner's card has not paid (yet), so HostFix pays them from
+its own Stripe balance, and there is not enough there right now. Card money takes about 4 working days to
+become usable in New Zealand, so a new business often has money "on its way" but none "available". The
+payment is **not** failed: it waits, and the site tries again every minute.
+
+**Do.** Tell the admin the same day: they add money to the HostFix Stripe balance (see below). Once there is
+enough, the tradie is paid by itself and the item closes. Nothing to press on the job page.
+
+**Keep a float so this rarely happens.** Keep NZ$500 to NZ$1,000 of HostFix's own money sitting in the Stripe
+balance: enough to pay two to four tradies ahead of owners whose cards fail. The admin sets it once in
+Stripe: **Settings > Payouts > Minimum balance**, turned on, NZ$500 to NZ$1,000 (Stripe then keeps that much
+back instead of paying everything out to the bank). Adding money straight from a bank to the Stripe balance
+("top-ups") is not open to every New Zealand account yet: if Stripe does not offer it, the minimum balance is
+how the float builds up, from the 15% kept on each job. Raise it as the number of jobs grows.
+
 ### Quote waiting on the owner
 **Means.** A tradie on site has quoted for work that needs the owner's yes, and four hours have passed
 with no answer. The owner was reminded after one hour.

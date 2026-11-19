@@ -49,7 +49,8 @@ function payoutLine(view: JobView): { text: string; tone: "good" | "info" | "war
     case "scheduled":
       return { text: `${amount} will be sent on ${formatDateTime(payout.releaseAt, zone)}. It reaches your bank ${payTiming(view.market).arrives}.`, tone: "good" };
     case "waiting":
-      return { text: `${amount} will be sent at the usual time. If the owner's card fails you are still paid. Chasing is our job.`, tone: "info" };
+      // Paid ahead of the owner's card and waiting for HostFix's own Stripe balance (DECISIONS.md, 2026-11-21).
+      return { text: `${amount} is owed to you and is being sent. It is a little late at our end, not yours: you do not need to do anything.`, tone: "info" };
     case "held":
       if (!view.job.confirmStatus || !["waiting", "staff_queue", "staff_held"].includes(view.job.confirmStatus)) {
         return view.parts.some((part) => part.status === "active" && (part.receiptStatus === "to_follow" || part.receiptStatus === "needed"))

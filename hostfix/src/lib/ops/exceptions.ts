@@ -61,7 +61,12 @@ export type ExceptionKind =
   /** A tradie turns far more menu jobs into quotes than others: talk to them. Never removed automatically. */
   | "quote_rate"
   /** A tradie replied STOP to our texts: offers go by app notification or email only. */
-  | "sms_opted_out";
+  | "sms_opted_out"
+  /**
+   * A tradie paid ahead (the owner's card has not paid) is waiting because the Stripe balance HostFix pays
+   * from is too low. Tried again on every timer run (DECISIONS.md, 2026-11-21).
+   */
+  | "platform_balance";
 
 /** The ones worth a text to the founder as well as an email. */
 const URGENT: ExceptionKind[] = ["nobody_accepted", "missed_window", "dispute", "chargeback", "not_taken_yet", "owner_says_absent", "no_show"];
@@ -248,6 +253,7 @@ export const EXCEPTION_LABELS: Record<ExceptionKind, string> = {
   not_described: "Owner says it was the job described",
   quote_rate: "Tradie quotes a lot of menu jobs",
   sms_opted_out: "Tradie stopped our texts",
+  platform_balance: "Top up the Stripe balance",
 };
 
 /** One line on what to do about each kind. The runbook (RUNBOOK.md) has the longer version. */
@@ -281,4 +287,5 @@ export const EXCEPTION_ACTIONS: Record<ExceptionKind, string> = {
   not_described: "The tradie said this was not the job described; the owner says it was. Look at the tradie's photos and reason on the job page, then press Pay call-out or No call-out.",
   quote_rate: "This tradie turns far more of their menu jobs into quotes, or \"not the job described\", than others in the market. Look at those jobs on their page, then talk to them. Only a person can pause or remove a tradie.",
   sms_opted_out: "This tradie replied STOP, so we cannot text them. Offers reach them only by app notification or email. Ring them and ask them to turn on app notifications, or to reply START.",
+  platform_balance: "The owner's card has not paid, so HostFix pays the tradie from its own Stripe balance, and there is not enough there yet (card money takes a few days to arrive). Tell the admin to add money to the HostFix Stripe balance. The payment is tried again every minute and goes by itself once there is enough. Nothing to do on the job page.",
 };

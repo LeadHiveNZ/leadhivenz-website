@@ -2,7 +2,7 @@ import Stripe from "stripe";
 import { brand } from "@config/brand";
 import type { Market } from "@config/markets";
 import { formatMoney } from "@/lib/money";
-import type { CardSummary, ChargeResult, InvoiceSummary, MembershipStart, PaymentsGateway, TierForBilling } from "./gateway";
+import { PlatformBalanceTooLow, type CardSummary, type ChargeResult, type InvoiceSummary, type MembershipStart, type PaymentsGateway, type TierForBilling } from "./gateway";
 import { stripeClient, type StripeAccount } from "./stripe";
 
 /**
@@ -94,6 +94,45 @@ function plainReason(error: unknown): { reason: string; code: string | null; pay
     return { reason, code, paymentIntentId: intent?.id ?? null };
   }
   return { reason: error instanceof Error ? error.message : String(error), code: "error", paymentIntentId: null };
+}
+
+/** What each trade's work is called in a sentence ("Plumbing, electrical and handyman maintenance ..."). */
+const TRADE_WORK: Record<string, string> = {
+  plumber: "plumbing",
+  electrician: "electrical",
+  gasfitter: "gasfitting",
+  handyman: "handyman",
+  heat_pump_tech: "heat pump and air conditioning",
+  appliance_tech: "appliance repair",
+  locksmith: "locksmith",
+};
+
+/**
+ * The merchant category code for a trade, where one plainly fits (Stripe's MCC list,
+ * docs.stripe.com/connect/setting-mcc, read 21 Nov 2026: 1711 Heating, Plumbing, A/C;
+ * 1731 Electrical Services; 1799 Special Trade Services). Anything else is left for
+ * Stripe to work out from the description, which it does by itself.
+ */
+const TRADE_MCC: Record<string, string> = {
+  plumber: "1711",
+  gasfitter: "1711",
+  heat_pump_tech: "1711",
+  electrician: "1731",
+  handyman: "1799",
+};
+
+/**
+ * What the platform fills in on a tradie's new Stripe account so Stripe's page
+ * does not ask for a website (most sole-trader tradies have none). Stripe: "If
+ * the account doesn't have a URL, prefill its business_profile.product_description"
+ * (docs.stripe.com/connect/express-accounts, read 21 Nov 2026). Only Stripe sees it.
+ */
+export function payoutAccountProfile(trades: string[]): { product_description: string; mcc?: string } {
+  const work = [...new Set(trades.map((trade) => TRADE_WORK[trade]).filter((w): w is string => Boolean(w)))];
+  const listed = work.length === 0 ? "" : work.length === 1 ? work[0]! : `${work.slice(0, -1).join(", ")} and ${work[work.length - 1]}`;
+  const what = listed ? `${listed.charAt(0).toUpperCase()}${listed.slice(1)} maintenance and repairs` : "Maintenance and repairs";
+  const mcc = trades.map((trade) => TRADE_MCC[trade]).find(Boolean);
+  return { product_description: `${what} for holiday homes, booked through ${brand.name}.`.slice(0, 500), ...(mcc ? { mcc } : {}) };
 }
 
 export type StripeMembership = {
@@ -420,11 +459,17 @@ export function createStripeGateway(account: StripeAccount): PaymentsGateway {
     },
 
     async createPayoutAccount(input) {
+      // Filled in before the first onboarding link, the only time Stripe lets the platform set them on an
+      // account where Stripe collects the details (docs.stripe.com/api/accounts/create, read 21 Nov 2026).
+      // Stripe's page shows them for the tradie to confirm. business_type "individual": most tradies are sole
+      // traders, and the app does not ask. The terms (tos_acceptance) are never set here: Stripe collects
+      // those itself, as the API only lets the platform set them where the platform collects the details.
       const created = await stripe.accounts.create(
         {
           country: account.country,
           ...(input.email ? { email: input.email } : {}),
-          business_profile: { name: input.businessName.slice(0, 100) },
+          business_type: "individual",
+          business_profile: { name: input.businessName.slice(0, 100), ...payoutAccountProfile(input.trades) },
           controller: {
             stripe_dashboard: { type: "express" },
             fees: { payer: "application" },
@@ -465,18 +510,29 @@ export function createStripeGateway(account: StripeAccount): PaymentsGateway {
     },
 
     async transfer(input) {
-      const sent = await stripe.transfers.create(
-        {
-          amount: input.amountCents,
-          currency: input.currency.toLowerCase(),
-          destination: input.accountId,
-          transfer_group: `hostfix-job-${input.jobNumber}`,
-          ...(input.chargeId ? { source_transaction: input.chargeId } : {}),
-          metadata: { hostfix_job: String(input.jobNumber) },
-        },
-        { idempotencyKey: input.idempotencyKey },
-      );
-      return { transferId: sent.id };
+      try {
+        const sent = await stripe.transfers.create(
+          {
+            amount: input.amountCents,
+            currency: input.currency.toLowerCase(),
+            destination: input.accountId,
+            transfer_group: `hostfix-job-${input.jobNumber}`,
+            // Tied to the owner's charge, the transfer is accepted even while the card money is still on its
+            // way (it moves when the charge settles), and may not exceed the charge (docs.stripe.com,
+            // "Separate charges and transfers", read 21 Nov 2026). Without one it needs available balance.
+            ...(input.chargeId ? { source_transaction: input.chargeId } : {}),
+            metadata: { hostfix_job: String(input.jobNumber) },
+          },
+          { idempotencyKey: input.idempotencyKey },
+        );
+        return { transferId: sent.id };
+      } catch (error) {
+        // "balance_insufficient": the platform's available balance is too low (docs.stripe.com/error-codes).
+        if (error instanceof Stripe.errors.StripeError && error.code === "balance_insufficient") {
+          throw new PlatformBalanceTooLow(error.message);
+        }
+        throw error;
+      }
     },
 
     async reverseTransfer(input) {
