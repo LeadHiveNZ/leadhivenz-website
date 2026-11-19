@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { TradieJob } from "@/components/jobs/TradieJob";
+import { hourlyRate } from "@/lib/jobs/rates";
 import { listPriceList } from "@/lib/jobs/parts";
 import { PageTitle } from "@/components/ui/Bits";
 import { requireTradie } from "@/lib/auth/current";
@@ -30,7 +31,7 @@ export default async function TradieJobPage({ params, searchParams }: { params: 
   return (
     <div className="mx-auto max-w-2xl">
       <PageTitle title={`Job ${job.number}`} back={{ href: "/tradie/jobs", label: "My jobs" }} />
-      <TradieJob view={view} now={now()} propertyPhotos={propertyPhotos} priceList={await listPriceList(db, view.market.slug)} flash={{ yours: Boolean(query.yours), here: Boolean(query.here), quoted, done: Boolean(query.done), parts: query.parts === "wait" || query.parts === "go" ? query.parts : null }} />
+      <TradieJob view={view} now={now()} propertyPhotos={propertyPhotos} priceList={await listPriceList(db, view.market.slug)} hourlyRateCents={await hourlyRate(db, view.market.slug, view.job.trade)} flash={{ yours: Boolean(query.yours), here: Boolean(query.here), quoted, done: Boolean(query.done), parts: query.parts === "wait" || query.parts === "go" ? query.parts : null }} />
     </div>
   );
 }

@@ -96,6 +96,12 @@ export type Job = {
   guestPhone: string | null;
   /** The owner said: if nobody answers, the tradie may let themselves in. */
   mayLetIn: boolean;
+  /** "Not the job described" on a menu job (DECISIONS.md, 2026-11-20, third entry). */
+  notDescribedAt: Date | null;
+  notDescribedReason: string | null;
+  notDescribedStatus: "waiting" | "approved" | "no_objection" | "owner_objects" | "staff_paid" | "staff_no_callout" | null;
+  /** Until when the owner can say "This was the job I described". */
+  notDescribedBy: Date | null;
   outcome: JobOutcome | null;
   completionNote: string | null;
   currency: string;
@@ -150,6 +156,13 @@ export type Quote = {
   status: QuoteStatus;
   decidedAt: Date | null;
   decidedBy: string | null;
+  /** Work up to the hourly limit is quoted in hours at the market's fixed rate (DECISIONS.md, 2026-11-20, third entry). */
+  hours: number | null;
+  rateCents: number | null;
+  /** An off-menu job's call-out taken off this quote, owner side. */
+  creditCents: number;
+  /** Sent with "Not the job described". */
+  notDescribed: boolean;
 };
 
 /** A job is "open" while something still has to happen on it. */

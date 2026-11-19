@@ -28,15 +28,21 @@ import { setTradiePaused } from "@/lib/tradies/service";
  * relying on it (SETUP.md).
  */
 
-export type InboundOutcome = "accepted" | "passed" | "taken" | "not_eligible" | "paused" | "no_offer" | "unknown_sender" | "not_understood";
+export type InboundOutcome =
+  | "accepted" | "passed" | "taken" | "not_eligible" | "paused" | "no_offer" | "unknown_sender" | "not_understood" | "opted_out" | "opted_in";
 
 const YES = /^(y|yes|yep|yeah|ok|okay|accept|accepted|take|1)\b/i;
 const NO = /^(n|no|nah|nope|pass|decline|2)\b/i;
-const STOP = /^(stop|unsubscribe|pause)\b/i;
+/** STOP and its usual words stop every text to that number, whoever sent it (DECISIONS.md, 2026-11-20, third entry). START undoes it. */
+const STOP = /^(stop|stopall|unsubscribe|cancel|end|quit)\b/i;
+const START = /^(start|unstop|resume)\b/i;
+const PAUSE = /^pause\b/i;
 
-export function readReply(body: string): "yes" | "no" | "stop" | null {
+export function readReply(body: string): "yes" | "no" | "stop" | "start" | "pause" | null {
   const text = body.trim().replace(/^["'.\s]+/, "");
   if (STOP.test(text)) return "stop";
+  if (START.test(text)) return "start";
+  if (PAUSE.test(text)) return "pause";
   if (YES.test(text)) return "yes";
   if (NO.test(text)) return "no";
   return null;
@@ -60,8 +66,20 @@ export async function handleInboundSms(db: Db, message: InboundMessage): Promise
     : [];
   const tradie = tradies[0];
 
-  if (!tradie) outcome = "unknown_sender";
-  else if (reply === "stop") {
+  if (reply === "stop" && phone) {
+    await db.query(
+      `insert into public.sms_opt_outs (phone, opted_out_at, keyword, resumed_at) values ($1, $2::timestamptz, $3, null)
+       on conflict (phone) do update set opted_out_at = excluded.opted_out_at, keyword = excluded.keyword, resumed_at = null`,
+      [phone, at.toISOString(), message.body.trim().split(/\s+/)[0]!.toUpperCase().slice(0, 20)],
+    );
+    await audit(db, { actor: `phone:${phone}`, action: "sms.opted_out", entity: "phone", entityId: phone, detail: { provider: message.provider } });
+    outcome = "opted_out";
+  } else if (reply === "start" && phone) {
+    await db.query("update public.sms_opt_outs set resumed_at = $2::timestamptz where phone = $1 and resumed_at is null", [phone, at.toISOString()]);
+    await audit(db, { actor: `phone:${phone}`, action: "sms.opted_in", entity: "phone", entityId: phone, detail: { provider: message.provider } });
+    outcome = "opted_in";
+  } else if (!tradie) outcome = "unknown_sender";
+  else if (reply === "pause") {
     await setTradiePaused(db, tradie.id, true);
     outcome = "paused";
   } else if (reply === null) outcome = "not_understood";
@@ -105,10 +123,14 @@ export function replyText(outcome: InboundOutcome, brandName: string): string | 
       return `${brandName}: we could not give you that job. Check your licence details in the app.`;
     case "paused":
       return `${brandName}: job offers are paused. Sign in and switch them back on when you are ready.`;
+    case "opted_out":
+      return `${brandName}: you will get no more texts from us. Reply START to get them again.`;
+    case "opted_in":
+      return `${brandName}: texts are back on. Reply STOP to opt out.`;
     case "no_offer":
       return `${brandName}: there is no job waiting for your answer right now.`;
     case "not_understood":
-      return `${brandName}: reply YES to take the job or NO to pass.`;
+      return `${brandName}: reply YES to take the job, NO to pass, or STOP to stop texts.`;
     case "unknown_sender":
       return null;
   }

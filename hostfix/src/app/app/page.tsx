@@ -4,6 +4,7 @@ import { JobRow } from "@/components/jobs/JobRow";
 import { buttonClass } from "@/components/forms/styles";
 import { Chip, EmptyState, Notice, RowLink, SectionTitle } from "@/components/ui/Bits";
 import { Icon } from "@/components/ui/Icon";
+import { Notifications } from "@/components/ui/Notifications";
 import { requireOwner } from "@/lib/auth/current";
 import { DAY, now } from "@/lib/clock";
 import { getDb } from "@/lib/db";
@@ -72,6 +73,8 @@ export default async function OwnerHome() {
           {underWay.length + needsYou.length === 0 ? "Nothing needs fixing right now." : `${underWay.length + needsYou.length} ${underWay.length + needsYou.length === 1 ? "job" : "jobs"} under way.`}
         </p>
       </div>
+
+      <Notifications audience="owner" />
 
       {unpaid.map((job) => (
         <Notice key={job.jobId} tone="error" title={`We could not charge your card for job ${job.number}`}>

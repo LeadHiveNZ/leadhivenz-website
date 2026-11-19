@@ -19,6 +19,7 @@ import { formatMoney } from "@/lib/money";
 import { smsSettings } from "@/lib/notify/sms";
 import { paymentsProblem } from "@/lib/payments";
 import { coverage } from "@/lib/tradies/service";
+import { HOURLY_LIMIT_CENTS, hourlyRates } from "@/lib/jobs/rates";
 import { dateKey, formatDate } from "@/lib/time";
 import { WEEKDAY_OPTIONS } from "@/lib/weekdays";
 
@@ -173,6 +174,7 @@ export default async function MarketPage({ params, searchParams }: { params: Pro
   const query = await searchParams;
   const db = await getDb();
   const market = await getMarket(db, slug);
+  const rates = await hourlyRates(db, slug);
   if (!market) notFound();
   const tiers = await listTiers(db, market.slug);
   const menu = await listMenu(db, market.slug, { includeInactive: true });
@@ -269,10 +271,22 @@ export default async function MarketPage({ params, searchParams }: { params: Pro
             <Field label="Hours an owner has to answer their tradie's later time" name="counterOfferHours" required inputMode="numeric" maxLength={2} defaultValue={String(market.counterOfferHours)} hint="When the first choice or backup can't make it in time and suggests a later one. No answer and it goes to the next tradies. 1 to 12." />
             <Field label="Shortest time on site before a job is flagged (minutes)" name="minMinutesOnSite" required inputMode="numeric" maxLength={3} defaultValue={String(market.minMinutesOnSite)} hint="Job done sooner than this after Arrived and the tradie's payment waits for the owner to check the photos. Diagnosis and look-and-price jobs, and could-not-get-in, are never flagged for this. 0 switches it off." />
             <Field label="Hours an owner has to confirm a flagged job" name="ownerConfirmHours" required inputMode="numeric" maxLength={3} defaultValue={String(market.ownerConfirmHours)} hint="No answer by then: a trusted tradie is paid, anyone else comes to your queue to approve or hold. 1 to 168." />
+            <Field label="Hours an owner has to say &quot;This was the job I described&quot;" name="notDescribedHours" required inputMode="numeric" maxLength={3} defaultValue={String(market.notDescribedHours)} hint="After a tradie says a menu job is not the job described. No objection by then and the call-out is paid. 1 to 168." />
+            <Field label="Minutes before an unopened offer is also texted" name="offerPushSmsMinutes" required inputMode="numeric" maxLength={2} defaultValue={String(market.offerPushSmsMinutes)} hint="For tradies with app notifications on: the offer goes by notification first, and by text after this long if they have not opened it. 0 to 15." />
             <Field label="Working day starts (for example 7 or 7:30)" name="hoursStart" required maxLength={7} defaultValue={clockText(market.hoursStart)} />
             <Field label="Working day ends (for example 17 or 16:30)" name="hoursEnd" required maxLength={7} defaultValue={clockText(market.hoursEnd)} hint="24-hour clock. An urgent job logged outside these hours, or on a day that is not ticked, carries the after-hours surcharge, charged only if the tradie also arrives outside them." />
           </div>
           <Checks label="Working days" name="workDays" options={WEEKDAY_OPTIONS} defaultValues={market.workDays} />
+
+          <p className="border-t border-line pt-4 text-sm font-bold tracking-wide text-muted uppercase">Hourly rates for extra work (to confirm before launch)</p>
+          <p className="text-sm text-muted">
+            What the owner pays an hour, GST included. Extra work up to {formatMoney(HOURLY_LIMIT_CENTS, market.currency)} is quoted in quarter hours at this rate, and the tradie cannot type another. Above that, and for a trade with no rate, the tradie prices it their own way. The 15% fee comes off the labour, as on every quote.
+          </p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            {trades.filter((trade) => trade.key !== "other").map((trade) => (
+              <Field key={trade.key} label={`${trade.label} (${market.currency} an hour)`} name={`rate-${trade.key}`} inputMode="decimal" maxLength={8} defaultValue={rates[trade.key] ? centsToDollars(rates[trade.key]!) : ""} />
+            ))}
+          </div>
           <Tick name="replyByText" label="Tradies can accept by replying YES to the text" hint="Only switch this on once this market's text number can receive replies and you have tested it. The link in the text always works." defaultChecked={market.replyByText} />
 
           <p className="border-t border-line pt-4 text-sm font-bold tracking-wide text-muted uppercase">Tax</p>

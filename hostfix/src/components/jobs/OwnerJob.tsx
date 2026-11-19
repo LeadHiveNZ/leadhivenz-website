@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { answerLater, answerQuote, cancelOwnerJob, confirmJob, goAhead, reportProblem, tradieNotHere } from "@/app/actions/owner";
+import { answerLater, answerQuote, cancelOwnerJob, confirmJob, goAhead, objectNotDescribed, reportProblem, tradieNotHere } from "@/app/actions/owner";
 import { ActionForm, Area } from "@/components/forms/ActionForm";
 import { SubmitButton } from "@/components/forms/SubmitButton";
 import { secondaryButtonClass } from "@/components/forms/styles";
@@ -233,6 +233,37 @@ export function OwnerJob({ view, now, code, flash = {}, prices }: Props) {
         </Card>
       )}
 
+      {job.notDescribedAt && (
+        <Card className={`${job.notDescribedStatus === "waiting" ? "border-alert/40" : ""} sm:p-6`}>
+          <SectionTitle>The tradie says this is not the job described</SectionTitle>
+          <p className="text-ink">&ldquo;{job.notDescribedReason}&rdquo;</p>
+          {quotePhotos.length > 0 && (
+            <div className="mt-3">
+              <PhotoGrid photos={quotePhotos} query={photoQuery} />
+            </div>
+          )}
+          <p className="mt-3 text-sm text-muted">
+            So the fixed price for the job you described comes off, and the {fmt(market.diagnosisFeeCents)} call-out is charged instead, for coming and looking.{" "}
+            {job.notDescribedStatus === "waiting"
+              ? `It is charged once you approve the quote, or if you have not told us otherwise by ${job.notDescribedBy ? formatDateTime(job.notDescribedBy, market.timezone) : "then"}.`
+              : job.notDescribedStatus === "owner_objects"
+                ? "You told us it was the job you described. Our team is looking at the photos and will decide whether the call-out is charged."
+                : job.notDescribedStatus === "staff_no_callout"
+                  ? "Our team looked at the photos and agreed with you: no call-out is charged."
+                  : "The call-out is charged."}
+          </p>
+          {job.notDescribedStatus === "waiting" && job.notDescribedBy && job.notDescribedBy.getTime() > now.getTime() && (
+            <ActionForm action={objectNotDescribed} className="mt-4">
+              {which}
+              <SubmitButton variant="secondary" pendingLabel="Sending...">
+                This was the job I described
+              </SubmitButton>
+              <p className="mt-2 text-sm text-muted">Our team then looks at the tradie&rsquo;s photos and decides. Nothing is charged for the call-out until they do.</p>
+            </ActionForm>
+          )}
+        </Card>
+      )}
+
       {pendingQuote && job.status === "awaiting_approval" && (
         <Card className="border-brand/30 sm:p-6">
           <SectionTitle>A quote needs your answer</SectionTitle>
@@ -242,7 +273,7 @@ export function OwnerJob({ view, now, code, flash = {}, prices }: Props) {
               rows={[
                 ...view.lines
                   .filter((line) => line.quoteId === pendingQuote.id && line.status === "pending")
-                  .map((line) => ({ label: line.kind === "parts" ? `Part: ${line.label}` : "Work", value: fmt(line.ownerCents) })),
+                  .map((line) => ({ label: line.kind === "parts" ? `Part: ${line.label}` : line.kind === "adjustment" ? `${line.label} (the call-out you already pay)` : "Work", value: fmt(line.ownerCents) })),
                 { label: pendingQuote.labourCents > 0 ? "This quote" : "These parts", value: <span className="text-xl">{fmt(pendingQuote.ownerTotalCents)}</span> },
               ]}
             />

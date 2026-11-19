@@ -164,6 +164,26 @@ themselves they were stopped and told; if their team or a guest did, the job is 
 
 **Do.** Ring the owner if it is urgent. The job goes out by itself within a minute of the card being sorted.
 
+### Owner says it was the job described
+**Means.** The tradie said a menu job was not the job described (with photos and a reason) and quoted. The owner
+pressed "This was the job I described". The call-out is not charged and the tradie is not paid it until you decide.
+
+**Do.** Open the job. Read the tradie's reason and look at their photos. If the photos show something other than what
+the owner described, press **Pay call-out**. If it was the job described, press **No call-out**: nothing is charged
+for the visit. Both sides are told. Not sure? Ring both, or ask the admin.
+
+### Tradie quotes a lot of menu jobs
+**Means.** This tradie turns many more of their menu jobs into quotes, or "not the job described", than the other
+tradies here (over a quarter of their last 20, and over twice the average).
+
+**Do.** Open their page and look at those jobs and photos. Talk to them. Nothing has changed on their account; only
+a person can pause or remove a tradie.
+
+### Tradie stopped our texts
+**Means.** The tradie replied STOP, so we cannot text them. Offers reach them only by app notification or email.
+
+**Do.** Ring them. Ask them to turn on notifications in the app, or to reply START to our number to get texts again.
+
 ### Chargeback lost: whose fault?
 **Means.** The owner's bank kept the money. Someone has to decide whether the tradie was at fault.
 

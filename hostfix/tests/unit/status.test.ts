@@ -10,7 +10,22 @@ async function statusOf(key: string): Promise<StatusItem> {
 describe("the setup checklist", () => {
   it("lists every part of the system once", async () => {
     const keys = (await setupStatus()).map((item) => item.key);
-    expect(keys).toEqual(["database", "email", "sms", "payments", "timer", "photos", "address-lookup", "map-pictures", "pixel", "capi", "analytics", "copy", "legal"]);
+    expect(keys).toEqual(["database", "email", "sms", "payments", "timer", "photos", "address-lookup", "map-pictures", "push", "hourly-rates", "pixel", "capi", "analytics", "copy", "legal"]);
+  });
+
+  it("lists app notifications as still to do until the three VAPID settings are set, and the hourly rates as to confirm (DECISIONS.md, 2026-11-20, third entry)", async () => {
+    expect(await statusOf("push")).toMatchObject({ state: "todo", detail: expect.stringContaining("VAPID_PUBLIC_KEY") });
+    expect(await statusOf("hourly-rates")).toMatchObject({ state: "todo", detail: expect.stringContaining("To confirm before launch") });
+    process.env.VAPID_PUBLIC_KEY = "public";
+    process.env.VAPID_PRIVATE_KEY = "private";
+    process.env.VAPID_SUBJECT = "mailto:hello@example.com";
+    try {
+      expect(await statusOf("push")).toMatchObject({ state: "ok" });
+    } finally {
+      delete process.env.VAPID_PUBLIC_KEY;
+      delete process.env.VAPID_PRIVATE_KEY;
+      delete process.env.VAPID_SUBJECT;
+    }
   });
 
   it("lists the two free map keys as still to do until they are set (DECISIONS.md, 2026-11-19)", async () => {

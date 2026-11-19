@@ -13,7 +13,9 @@ describe("reading a reply", () => {
   it("understands the ways people say yes and no", () => {
     for (const yes of ["YES", "yes", " Yes please", "Y", "ok", "Okay", "yep", "1", "Accept", '"YES"']) expect(readReply(yes)).toBe("yes");
     for (const no of ["NO", "no thanks", "N", "nah", "pass", "2", "Decline"]) expect(readReply(no)).toBe("no");
-    for (const stop of ["STOP", "stop", "Unsubscribe"]) expect(readReply(stop)).toBe("stop");
+    for (const stop of ["STOP", "stop", "Unsubscribe", "STOPALL", "cancel", "End", "QUIT"]) expect(readReply(stop)).toBe("stop");
+    for (const start of ["START", "start", "Unstop"]) expect(readReply(start)).toBe("start");
+    expect(readReply("Pause")).toBe("pause");
     for (const unclear of ["", "maybe", "what job?", "yesterday", "not sure", "12 Lake St"]) expect(readReply(unclear)).toBeNull();
   });
 });
@@ -61,9 +63,9 @@ describe("a tradie replying by text", () => {
     expect(log).toEqual([{ outcome: "not_understood", body: "Which address is it?" }]);
   });
 
-  it("STOP pauses their offers, as the anti-spam rules require", async () => {
+  it("PAUSE pauses their offers; STOP stops every text to the number instead (DECISIONS.md, 2026-11-20, third entry)", async () => {
     const { first } = await offered();
-    expect(await reply(first.phone, "STOP")).toBe("paused");
+    expect(await reply(first.phone, "PAUSE")).toBe("paused");
     expect((await t.db.query<{ status: string }>("select status from public.tradies where id = $1::uuid", [first.tradieId]))[0]!.status).toBe("paused");
   });
 
@@ -74,7 +76,7 @@ describe("a tradie replying by text", () => {
   });
 
   it("has a short reply for each outcome, never with a link", () => {
-    for (const outcome of ["accepted", "passed", "taken", "not_eligible", "paused", "no_offer", "not_understood"] as const) {
+    for (const outcome of ["accepted", "passed", "taken", "not_eligible", "paused", "no_offer", "not_understood", "opted_out", "opted_in"] as const) {
       const text = replyText(outcome, "HostFix")!;
       expect(text.startsWith("HostFix:")).toBe(true);
       expect(text.length).toBeLessThanOrEqual(160);

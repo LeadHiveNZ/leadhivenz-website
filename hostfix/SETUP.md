@@ -282,6 +282,19 @@ Nothing here costs money, and nothing needs a card.
 - [ ] Existing properties: each owner is asked to check their pin on the Properties page. The timer looks up
   addresses that have never been looked up, ten a minute.
 
+## Step 7b. App notifications (5 minutes, free, optional)
+
+With these set, tradies and owners see "Turn on notifications" in the app. A tradie with notifications on gets each job
+offer as a notification first; the text follows 3 minutes later only if they have not opened it (the minutes are a
+market setting). An owner with notifications on gets their job updates as notifications instead of texts. On an iPhone,
+notifications only work once HostFix is added to the home screen; the app explains that. Nothing here costs money.
+
+- [ ] On your computer, in the project folder, run `npx web-push generate-vapid-keys`. It prints a public key and a
+  private key. Add them as `VAPID_PUBLIC_KEY` and `VAPID_PRIVATE_KEY`, and add `VAPID_SUBJECT` as `mailto:` followed by
+  your email address (for example `mailto:hello@hostfix.co.nz`). Never change the pair once people have turned
+  notifications on: they would have to turn them on again.
+- [ ] Redeploy, then check the setup checklist says **App notifications** is ready.
+
 ## Step 8. Your own domain (10 minutes)
 
 1. Buy the domain anywhere.
@@ -358,6 +371,8 @@ keys (step 6) and, for texts, whatever registration that country requires.
 | `LINZ_DATA_KEY` | Optional. Finding each property's map pin from its address | data.linz.govt.nz > your account > API keys (free) |
 | `LINZ_BASEMAPS_KEY` | Optional. Aerial photos under the pin map | A developer key from LINZ Basemaps (free) |
 | `MAP_TILES` | Optional. `off` shows no map pictures (used by the browser tests) | You choose it |
+| `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` | Optional. App notifications (offers first by notification, fewer texts) | Run `npx web-push generate-vapid-keys` once (free) |
+| `VAPID_SUBJECT` | With the two above: who the push services can contact | `mailto:` and your email address |
 
 ## Try the demo
 

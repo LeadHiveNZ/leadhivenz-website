@@ -25,6 +25,7 @@ import { SCORE_DAYS, scorecards } from "@/lib/tradies/scorecard";
 import { getTradie, listLicences, listSlots, insuranceProblem, TRADIE_AGREEMENT_VERSION } from "@/lib/tradies/service";
 import { formatMoney } from "@/lib/money";
 import { balanceOwed } from "@/lib/billing/chargebacks";
+import { hoursByJobType, marketQuoteRate, QUOTE_RATE_FLOOR, QUOTE_RATE_MIN_JOBS, QUOTE_RATE_MULTIPLE, quoteRate, quoteRateFlagged } from "@/lib/tradies/quote-rate";
 import { dateKey, formatDate } from "@/lib/time";
 import { WEEKDAY_OPTIONS } from "@/lib/weekdays";
 
@@ -65,6 +66,10 @@ export default async function StaffTradiePage({ params, searchParams }: { params
   const owed = await balanceOwed(db, tradie.id);
   const trust = await tradieTrust(db, tradie.id, null, at);
   const record = (await onTimeRecords(db, [tradie.id])).get(tradie.id);
+  // Quote rate and hours quoted (DECISIONS.md, 2026-11-20, third entry). Admin only.
+  const quotes = await quoteRate(db, tradie.id);
+  const quoteAverage = await marketQuoteRate(db, tradie.market);
+  const hours = await hoursByJobType(db, tradie.id, tradie.market);
   const today = dateKey(at, market.timezone);
   const licensed = tradie.trades.filter((key) => findTrade(key)?.licenceRequired);
   const licenceOk = (key: string) => licences.some((licence) => licence.trade === key && licence.expiresOn >= today);
@@ -222,10 +227,34 @@ export default async function StaffTradiePage({ params, searchParams }: { params
             />
           </div>
           <div className="col-span-2">
+            <Stat
+              label="Menu jobs turned into a quote"
+              value={quotes.rate === null ? `${quotes.quoted} of ${quotes.jobs} so far` : `${Math.round(quotes.rate * 100)}% (${quotes.quoted} of last ${quotes.jobs})`}
+              note={`Quotes and "not the job described" on menu jobs they took. Market average ${quoteAverage === null ? "not known yet" : `${Math.round(quoteAverage * 100)}%`}. Flagged over ${Math.round(QUOTE_RATE_FLOOR * 100)}% and over ${QUOTE_RATE_MULTIPLE} times the average, from ${QUOTE_RATE_MIN_JOBS} jobs. Declines never count.`}
+              tone={quoteRateFlagged(quotes.rate, quoteAverage) ? "alert" : undefined}
+            />
+          </div>
+          <div className="col-span-2">
             <Stat label="Usual time to accept" value={card?.avgMinutesToAccept !== null && card?.avgMinutesToAccept !== undefined ? `${card.avgMinutesToAccept} min` : "No history"} />
           </div>
         </div>
       </div>
+
+      {hours.length > 0 && (
+        <Card className="sm:p-6">
+          <SectionTitle>Hours quoted, against other tradies</SectionTitle>
+          <ul className="divide-y divide-line text-sm">
+            {hours.map((row) => (
+              <li key={row.jobType} className="flex flex-wrap justify-between gap-2 py-2">
+                <span className="font-semibold text-ink">{row.jobType}</span>
+                <span className="tabular text-muted">
+                  {row.mineAverage.toFixed(2)} h average ({row.mineCount}) · others {row.othersAverage === null ? "none yet" : `${row.othersAverage.toFixed(2)} h (${row.othersCount})`}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
 
       <Card className="sm:p-6">
         <SectionTitle action={<Chip tone={insuranceProblem(tradie, today) ? "alert" : "done"}>{insuranceProblem(tradie, today) ? "Not complete" : "In date"}</Chip>}>

@@ -11,7 +11,7 @@ import { addMonths } from "@/lib/payments/gateway";
 import { activateFreeMembership, activateMembership, changeTier, createProperty, endMembership, getProperty, PropertyError, recordMembershipPaymentFailed, recordRenewal, requestCancel, startMembership } from "@/lib/properties/service";
 import { SqlLeadStore } from "@/lib/store/sql";
 import { testDb } from "./db";
-import { addPaidTier, addPlusTier, auditActions, gatewayFor, liveMarket, makeOwner, makeProperty, MONDAY_10AM, openExceptions, textsTo } from "./factory";
+import { addPaidTier, addPlusTier, auditActions, gatewayFor, liveMarket, makeOwner, makeProperty, MONDAY_10AM, openExceptions, messagesTo } from "./factory";
 import { ownerLead } from "./store-contract";
 
 const t = testDb();
@@ -268,7 +268,7 @@ describe("each month", () => {
     const failed = { invoiceId: "in_failed", amountCents: 9900, currency: "NZD", periodStart: addMonths(MONDAY_10AM, 1), periodEnd: addMonths(MONDAY_10AM, 2), paidAt: addMonths(MONDAY_10AM, 1) };
     expect(await recordMembershipPaymentFailed(t.db, { provider: "demo", subscriptionId: property.subscriptionId!, invoice: failed, updateCardUrl: "http://localhost:3000/app/billing" })).toBe(true);
     expect((await getProperty(t.db, owner.ownerId, property.id))!.status).toBe("past_due");
-    expect((await textsTo(t.db, owner.user.phone!, "membership_failed"))[0]!.body).toContain("did not go through");
+    expect((await messagesTo(t.db, owner.user.phone!, "membership_failed"))[0]!.body).toContain("failed. Update your card");
 
     expect(await recordRenewal(t.db, { provider: "demo", subscriptionId: property.subscriptionId!, invoice: { ...failed, invoiceId: "in_retry_ok" } })).toBe(true);
     expect((await getProperty(t.db, owner.ownerId, property.id))!.status).toBe("active");

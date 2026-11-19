@@ -47,7 +47,15 @@ export default async function DemoPhone({ searchParams }: { searchParams: Search
   const db = await getDb();
   const people = (await demoPeople(db)).filter((person) => person.phone);
   const person = people.find((candidate) => candidate.key === query.who) ?? null;
-  const texts = person?.phone ? (await listMessages(db, { recipient: person.phone, limit: 40 })).filter((message) => message.channel === "sms").reverse() : [];
+  // Everything the person was sent, however it went (DECISIONS.md, 2026-11-20, third entry): texts, and the emails and
+  // app notifications that now carry some messages instead.
+  const account = person?.phone ? (await db.query<{ id: string; email: string | null }>("select id, email from public.users where phone = $1", [person.phone]))[0] : undefined;
+  const recipients = [person?.phone, account?.email, account?.id].filter((value): value is string => Boolean(value));
+  const texts = (await Promise.all(recipients.map((recipient) => listMessages(db, { recipient, limit: 40 }))))
+    .flat()
+    .filter((message) => message.status !== "skipped")
+    .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime() || a.id.localeCompare(b.id))
+    .slice(-60);
   const site = baseUrl();
   const replied = typeof query.replied === "string" ? REPLIED[query.replied] : null;
 
@@ -58,7 +66,7 @@ export default async function DemoPhone({ searchParams }: { searchParams: Search
           <Icon name="back" size={16} /> Demo menu
         </Link>
         <h1 className="display text-4xl text-ink">Whose phone?</h1>
-        <p className="mt-2 text-muted">These are the texts the system has sent each person. In the demo they are kept here instead of being sent.</p>
+        <p className="mt-2 text-muted">Everything the system has sent each person: texts, emails and app notifications. In the demo they are kept here instead of being sent.</p>
       </div>
 
       <div className="flex flex-wrap gap-2">
@@ -87,7 +95,10 @@ export default async function DemoPhone({ searchParams }: { searchParams: Search
             ) : (
               texts.map((message) => (
                 <div key={message.id}>
-                  <p className="tabular mb-1 text-center text-[0.7rem] text-muted">{formatDateTime(message.createdAt, "Pacific/Auckland")}</p>
+                  <p className="tabular mb-1 text-center text-[0.7rem] text-muted">
+                    {formatDateTime(message.createdAt, "Pacific/Auckland")}
+                    {message.channel === "email" ? ` · email: ${message.subject ?? ""}` : message.channel === "push" ? " · app notification" : ""}
+                  </p>
                   <p className="max-w-[88%] rounded-2xl rounded-bl-md bg-tint px-3.5 py-2.5 text-[0.95rem] leading-snug text-ink">{withLinks(message.body ?? "", site)}</p>
                 </div>
               ))

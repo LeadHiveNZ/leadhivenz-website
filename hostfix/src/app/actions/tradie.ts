@@ -148,18 +148,48 @@ export async function arrived(_previous: FormState, formData: FormData): Promise
   redirect(`${who.back}?here=1`);
 }
 
+/** Reads the price of the work: hours at the fixed rate, or the tradie's own price (DECISIONS.md, 2026-11-20, third entry). */
+function quotePrice(formData: FormData): { hours: number | null; labourCents: number | null; error: Record<string, string> | null } {
+  const hoursText = text(formData, "hours");
+  const labourText = text(formData, "labour");
+  if (hoursText) {
+    const hours = Number(hoursText);
+    if (!Number.isFinite(hours) || hours <= 0) return { hours: null, labourCents: null, error: { hours: "Hours in quarter hours, for example 1.5." } };
+    return { hours, labourCents: null, error: null };
+  }
+  const labourCents = labourText ? dollarsToCents(labourText) : null;
+  if (labourCents === null || labourCents <= 0) return { hours: null, labourCents: null, error: { hours: "Enter the hours, or your price for work over NZ$1,000." } };
+  return { hours: null, labourCents, error: null };
+}
+
 export async function sendQuote(_previous: FormState, formData: FormData): Promise<FormState> {
   const db = await getDb();
   const who = await whoAndJob(db, formData);
   if (!who) return problem(formData, NO_JOB);
-  const labourCents = dollarsToCents(text(formData, "labour"));
-  if (labourCents === null || labourCents <= 0) return problem(formData, "Please check the amount.", { labour: "Enter your price for the work, for example 180." });
+  const price = quotePrice(formData);
+  if (price.error) return problem(formData, "Please check the price.", price.error);
   const result = await submitQuote(db, who.job.id, who.tradieId, {
-    description: text(formData, "quoteDescription"), labourCents, uploadIds: list(formData, "quoteUploadIds"),
+    description: text(formData, "quoteDescription"), hours: price.hours, labourCents: price.labourCents, uploadIds: list(formData, "quoteUploadIds"),
   });
   await sendQueued(db);
   if (!result.ok) return problem(formData, result.message);
   redirect(`${who.back}?quoted=${result.quote.needsApproval ? "wait" : "go"}`);
+}
+
+/** "Not the job described" on a menu job: a reason, photos and a quote (DECISIONS.md, 2026-11-20, third entry). */
+export async function sendNotDescribed(_previous: FormState, formData: FormData): Promise<FormState> {
+  const db = await getDb();
+  const who = await whoAndJob(db, formData);
+  if (!who) return problem(formData, NO_JOB);
+  const price = quotePrice(formData);
+  if (price.error) return problem(formData, "Please check the price.", price.error);
+  const result = await submitQuote(db, who.job.id, who.tradieId, {
+    description: text(formData, "quoteDescription"), hours: price.hours, labourCents: price.labourCents, uploadIds: list(formData, "quoteUploadIds"),
+    notDescribed: { reason: text(formData, "notDescribedReason") },
+  });
+  await sendQueued(db);
+  if (!result.ok) return problem(formData, result.message);
+  redirect(`${who.back}?quoted=wait`);
 }
 
 /**

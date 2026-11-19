@@ -16,7 +16,7 @@ import type { PaymentsGateway } from "@/lib/payments/gateway";
 import { activatePortfolio, countPortfolioProperties, getPortfolio, rebandPortfolio, setAgreedRetainer, startPortfolio } from "@/lib/properties/portfolio";
 import { endMembership, getProperty, recordMembershipPaymentFailed, recordRenewal, requestCancel } from "@/lib/properties/service";
 import { testDb } from "./db";
-import { arrive, gatewayFor, HOUSE, liveMarket, logJob, makeOwner, makePortfolio, makeProperty, makeTradie, MONDAY_10AM, offersFor, photo, textsTo } from "./factory";
+import { arrive, gatewayFor, HOUSE, liveMarket, logJob, makeOwner, makePortfolio, makeProperty, makeTradie, MONDAY_10AM, offersFor, photo, textsTo, messagesTo } from "./factory";
 
 /**
  * PORTFOLIO (DECISIONS.md, 2026-11-17).
@@ -348,7 +348,7 @@ describe("what the payment company tells us about a retainer", () => {
     expect(await recordMembershipPaymentFailed(t.db, { provider: "demo", subscriptionId: portfolio.subscriptionId!, invoice, updateCardUrl: "https://example.com/app/billing" })).toBe(true);
     const held = await t.db.query<{ status: string }>("select distinct status from public.properties where portfolio_id = $1::uuid", [portfolio.id]);
     expect(held.map((row) => row.status)).toEqual(["past_due"]);
-    expect((await textsTo(t.db, manager.user.phone!, "membership_failed"))[0]!.body).toContain("your membership payment for your Portfolio did not go through");
+    expect((await messagesTo(t.db, manager.user.phone!, "membership_failed"))[0]!.body).toContain("the membership payment for your Portfolio failed");
 
     expect(await endMembership(t.db, { provider: "demo", subscriptionId: portfolio.subscriptionId! })).toBe(true);
     expect(await endMembership(t.db, { provider: "demo", subscriptionId: portfolio.subscriptionId! })).toBe(false);

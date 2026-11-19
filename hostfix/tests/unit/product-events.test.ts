@@ -12,7 +12,7 @@ import { handleProductMessage, type ProductDeps } from "@/lib/payments/product-e
 import type { StripeAccount } from "@/lib/payments/stripe";
 import { activateMembership, getProperty } from "@/lib/properties/service";
 import { testDb } from "./db";
-import { addPaidTier, arrive, gatewayFor, HOUSE, liveMarket, logJob, makeOwner, makeProperty, makeTradie, menuItem, MONDAY_10AM, offersFor, photo, textsTo } from "./factory";
+import { addPaidTier, arrive, gatewayFor, HOUSE, liveMarket, logJob, makeOwner, makeProperty, makeTradie, menuItem, MONDAY_10AM, offersFor, photo, messagesTo } from "./factory";
 
 /**
  * WHAT STRIPE TELLS US, and what the app does about it. These use made-up
@@ -162,7 +162,7 @@ describe("monthly payments", () => {
 
     const held = (await getProperty(t.db, owner.ownerId, property.id))!;
     expect(held.status).toBe("past_due");
-    expect(await textsTo(t.db, owner.user.phone!, "membership_failed")).toHaveLength(1);
+    expect(await messagesTo(t.db, owner.user.phone!, "membership_failed")).toHaveLength(1);
     const refused = await createJob(t.db, {
       property: held, reportedBy: "owner", reporterName: null, reporterPhone: null, menuItemId: (await menuItem(t.db, "PL-01")).id, description: "",
       urgent: false, uploadIds: [], uploader: `owner:${owner.ownerId}`, actor: `owner:${owner.ownerId}`,

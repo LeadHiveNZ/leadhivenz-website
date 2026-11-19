@@ -1,4 +1,5 @@
-import { arrived, finishJob, noAccess, onMyWay, reportHazardAction, sendQuote } from "@/app/actions/tradie";
+import { arrived, finishJob, noAccess, onMyWay, reportHazardAction, sendNotDescribed, sendQuote } from "@/app/actions/tradie";
+import { HOURLY_LIMIT_CENTS } from "@/lib/jobs/rates";
 import { GuestNote, HazardNote } from "./SafetyNotes";
 import { ActionForm, Area, Field, Tick } from "@/components/forms/ActionForm";
 import { RECEIPT_TO_FOLLOW_DAYS, type PriceListItem } from "@/lib/jobs/parts";
@@ -33,6 +34,8 @@ type Props = {
   propertyPhotos: Upload[];
   /** The market's parts price list (DECISIONS.md, 2026-11-20). */
   priceList: PriceListItem[];
+  /** The market's fixed hourly rate for this trade, or null when it has none (DECISIONS.md, 2026-11-20, third entry). */
+  hourlyRateCents: number | null;
 };
 
 function payoutLine(view: JobView): { text: string; tone: "good" | "info" | "warn" | "error" } {
@@ -75,7 +78,7 @@ function heldBecause(view: JobView): string {
 }
 
 /** One job, as the tradie doing it sees it: where, what, the steps, and what they get. */
-export function TradieJob({ view, now, code, flash = {}, propertyPhotos, priceList }: Props) {
+export function TradieJob({ view, now, code, flash = {}, propertyPhotos, priceList, hourlyRateCents }: Props) {
   const { job, market, property } = view;
   const which = code ? <input type="hidden" name="code" value={code} /> : <input type="hidden" name="jobId" value={job.id} />;
   const photoQuery = code ? `?o=${encodeURIComponent(code)}` : "";
@@ -175,6 +178,22 @@ export function TradieJob({ view, now, code, flash = {}, propertyPhotos, priceLi
         </Notice>
       )}
 
+      {job.status === "awaiting_approval" && job.notDescribedAt && (
+        <Card className="border-brand/30 sm:p-6">
+          <SectionTitle>Not the job described: you can leave with the call-out</SectionTitle>
+          <p className="text-muted">
+            The owner has your reason, photos and quote. If you cannot wait for their answer, finish here: the quote is withdrawn and you are paid the call-out once the owner
+            has not objected within {market.notDescribedHours} hours (or our team decides it from your photos).
+          </p>
+          <ActionForm action={finishJob} className="mt-4 space-y-4">
+            {which}
+            <PhotoUploader kind="completion" label="A photo as you leave (at least one)" offer={code} max={4} camera stamp />
+            <Area label="Anything to add?" name="note" rows={2} maxLength={1500} />
+            <LocatedButton label="Leave with the call-out" busyLabel="Finishing..." icon="check" />
+          </ActionForm>
+        </Card>
+      )}
+
       {job.status === "on_site" && (
         <>
           {job.offMenu && !hasApprovedWork && (
@@ -185,17 +204,43 @@ export function TradieJob({ view, now, code, flash = {}, propertyPhotos, priceLi
           <Reveal label={job.offMenu && !hasApprovedWork ? "Price the work (send a quote)" : "Found more to do? Send a quote"} open={job.offMenu && !hasApprovedWork}>
             <ActionForm action={sendQuote} className="space-y-4">
               {which}
-              <Field label="What is the work?" name="quoteDescription" required maxLength={160} placeholder="Replace the hot water cylinder valve" />
-              <Field label={`Your price for the work (${job.currency})`} name="labour" inputMode="decimal" maxLength={10} placeholder="180" hint={`You keep ${share}% of this. Parts go in "Add parts", below.`} />
+              {!job.offMenu && (
+                <p className="text-sm text-muted">
+                  A quote here is for work <strong>beyond</strong> the job described. You still do the job described at its price. If what you found is not the job described at all, use &ldquo;Not the job described&rdquo; below.
+                </p>
+              )}
+              <QuoteFields currency={job.currency} hourlyRateCents={hourlyRateCents} share={share} fmt={fmt} />
               <PhotoUploader kind="quote" name="quoteUploadIds" label="Photos of what you found (optional)" offer={code} max={4} />
               <p className="text-sm text-muted">
                 Up to {fmt(limit)} of extra work (parts included) goes ahead straight away and the owner is told. Above that, the owner is asked first and you wait for their yes.
+                {job.offMenu && !hasApprovedWork ? ` If the owner approves, the ${fmt(market.diagnosisFeeCents)} call-out comes off your quote for them, and you keep the call-out pay.` : ""}
               </p>
               <SubmitButton variant="secondary" pendingLabel="Sending...">
                 Send quote
               </SubmitButton>
             </ActionForm>
           </Reveal>
+
+          {!job.offMenu && !job.notDescribedAt && (
+            <Reveal label="Not the job described?">
+              <ActionForm action={sendNotDescribed} className="space-y-4">
+                {which}
+                <input type="hidden" name="notDescribed" value="yes" />
+                <p className="text-sm text-muted">
+                  Only when what you found is not the job the owner described (the dripping tap is a burst pipe in the wall). The menu price comes off and you are paid
+                  the {fmt(market.diagnosisPayoutCents)} call-out once the owner approves your quote, or has not objected within {market.notDescribedHours} hours. If they say it was the job
+                  they described, our team decides from your photos.
+                </p>
+                <Field label="Why, in one line" name="notDescribedReason" required maxLength={160} placeholder="The tap is fine. The pipe behind the wall has burst." />
+                <PhotoUploader kind="quote" name="quoteUploadIds" label="Photos of what you found (at least one)" offer={code} max={4} camera />
+                <Field label="What is the work?" name="quoteDescription" required maxLength={160} placeholder="Cut out and replace the burst section of pipe" />
+                <QuoteFields currency={job.currency} hourlyRateCents={hourlyRateCents} share={share} fmt={fmt} />
+                <SubmitButton variant="secondary" pendingLabel="Sending...">
+                  Not the job described: send it
+                </SubmitButton>
+              </ActionForm>
+            </Reveal>
+          )}
 
           <AddPartsForm which={which} code={code} currency={job.currency} priceList={priceList} market={market} limitCents={limit} />
 
@@ -335,5 +380,35 @@ export function TradieJob({ view, now, code, flash = {}, propertyPhotos, priceLi
 
       <History view={view} />
     </div>
+  );
+}
+
+/**
+ * The price of the work: hours at the market's fixed rate up to NZ$1,000, or
+ * the tradie's own price above that (DECISIONS.md, 2026-11-20, third entry).
+ */
+function QuoteFields({ currency, hourlyRateCents, share, fmt }: { currency: string; hourlyRateCents: number | null; share: number; fmt: (cents: number) => string }) {
+  const visit = "If you need to come back, include the extra visit in your quote. There is no second call-out on the same job.";
+  if (hourlyRateCents === null) {
+    return <Field label={`Your price for the work (${currency})`} name="labour" inputMode="decimal" maxLength={10} placeholder="180" hint={`You keep ${share}% of this. Parts go in "Add parts", below. ${visit}`} />;
+  }
+  return (
+    <>
+      <Field
+        label="Hours of work"
+        name="hours"
+        inputMode="decimal"
+        maxLength={5}
+        placeholder="1.5"
+        hint={`In quarter hours (0.25, 0.5, 0.75...). At the fixed ${fmt(hourlyRateCents)} an hour, the owner's price; you keep ${share}%. Parts go in "Add parts". ${visit}`}
+      />
+      <Field
+        label={`Over ${fmt(HOURLY_LIMIT_CENTS)}? Your price for the whole job instead (${currency})`}
+        name="labour"
+        inputMode="decimal"
+        maxLength={10}
+        hint={`Only for work over ${fmt(HOURLY_LIMIT_CENTS)}. Leave hours empty.`}
+      />
+    </>
   );
 }

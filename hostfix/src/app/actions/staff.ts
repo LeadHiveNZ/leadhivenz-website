@@ -8,6 +8,7 @@ import { requireStaff } from "@/lib/auth/current";
 import { AccountExistsError } from "@/lib/auth/users";
 import { addGoodwillCredit, chargeJob, resolveDispute, retryPayout } from "@/lib/billing/settle";
 import { decideChargebackFault } from "@/lib/billing/chargebacks";
+import { staffDecideNotDescribed } from "@/lib/jobs/not-described";
 import { getDb } from "@/lib/db";
 import { assignTradie, reoffer } from "@/lib/dispatch/cascade";
 import { baseUrl } from "@/lib/env";
@@ -240,6 +241,17 @@ export async function staffOwnerAccess(_previous: FormState, formData: FormData)
   if (!result.ok) return problem(formData, result.message);
   revalidatePath(`/admin/owners/${ownerId}`);
   return { done: allowed ? "Access given back." : "Access removed." };
+}
+
+/** One tap on "not the job described" the owner objected to: Pay call-out or No call-out (DECISIONS.md, 2026-11-20, third entry). */
+export async function staffNotDescribed(_previous: FormState, formData: FormData): Promise<FormState> {
+  const staff = await requireStaff();
+  const jobId = text(formData, "jobId");
+  const db = await getDb();
+  const result = await staffDecideNotDescribed(db, jobId, text(formData, "decision") === "pay", staff.actor);
+  await sendQueued(db);
+  if (!result.ok) return { message: result.message };
+  redirect(`${jobPath(jobId)}?did=${text(formData, "decision") === "pay" ? "callout_paid" : "no_callout"}`);
 }
 
 export async function staffGoodwill(_previous: FormState, formData: FormData): Promise<FormState> {

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  staffAssign, staffCancel, staffChargebackFault, staffChargeBoughtParts, staffCheckJob, staffCheckReceipt, staffGoAhead, staffGoodwill, staffQuote, staffReoffer, staffResolveDispute, staffRetryCharge, staffRetryPayout,
+  staffAssign, staffCancel, staffChargebackFault, staffNotDescribed, staffChargeBoughtParts, staffCheckJob, staffCheckReceipt, staffGoAhead, staffGoodwill, staffQuote, staffReoffer, staffResolveDispute, staffRetryCharge, staffRetryPayout,
 } from "@/app/actions/staff";
 import { ActionForm, Area, Field, RadioCards, Select } from "@/components/forms/ActionForm";
 import { SubmitButton } from "@/components/forms/SubmitButton";
@@ -114,6 +114,8 @@ const DID: Record<string, string> = {
   charged: "The card was charged. The tradie's payment is now on its way.",
   parts_charged: "Charged at the receipt's cost. The owner has been texted.",
   chargeback_tradie: "Recorded as the tradie's fault. What they were paid is now a balance taken from their later payments (never more than half of any one), and they have been texted.",
+  callout_paid: "Call-out paid. The tradie has been texted.",
+  no_callout: "No call-out. Nothing is charged for the visit, and the tradie has been texted.",
   chargeback_us: "Recorded as not the tradie's fault. HostFix carries the loss and the tradie is paid as normal.",
 };
 
@@ -369,6 +371,38 @@ export default async function StaffJobPage({ params, searchParams }: { params: P
             <input type="hidden" name="jobId" value={job.id} />
             <SubmitButton pendingLabel="Charging...">Try the card again now</SubmitButton>
           </ActionForm>
+        </Card>
+      )}
+
+      {job.notDescribedAt && (
+        <Card className={`${job.notDescribedStatus === "owner_objects" ? "border-alert/40" : ""} sm:p-6`}>
+          <SectionTitle>Not the job described</SectionTitle>
+          <p className="text-ink">The tradie: &ldquo;{job.notDescribedReason}&rdquo;</p>
+          <p className="mt-1 text-sm text-muted">
+            {formatDateTime(job.notDescribedAt, market.timezone)}. The menu price came off and the call-out went on.{" "}
+            {job.notDescribedStatus === "waiting"
+              ? `Paid once the owner approves the quote, or if they have not objected by ${job.notDescribedBy ? formatDateTime(job.notDescribedBy, market.timezone) : "then"}.`
+              : job.notDescribedStatus === "owner_objects"
+                ? "The owner says it was the job they described. Look at the photos (with the quote, below) and decide."
+                : job.notDescribedStatus === "approved"
+                  ? "The owner approved the quote: the call-out is paid."
+                  : job.notDescribedStatus === "no_objection"
+                    ? "The owner did not object in time: the call-out is paid."
+                    : job.notDescribedStatus === "staff_paid"
+                      ? "The team decided: call-out paid."
+                      : "The team decided: no call-out."}
+          </p>
+          {(job.notDescribedStatus === "owner_objects" || job.notDescribedStatus === "waiting") && (
+            <ActionForm action={staffNotDescribed} className="mt-4 flex flex-wrap gap-2">
+              <input type="hidden" name="jobId" value={job.id} />
+              <SubmitButton name="decision" value="pay" pendingLabel="Saving...">
+                Pay call-out
+              </SubmitButton>
+              <SubmitButton name="decision" value="none" variant="secondary" pendingLabel="Saving...">
+                No call-out
+              </SubmitButton>
+            </ActionForm>
+          )}
         </Card>
       )}
 

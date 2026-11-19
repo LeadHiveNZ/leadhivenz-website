@@ -16,6 +16,7 @@ import { foundingBillingLine, foundingSpotsTaken } from "@/lib/leads/founding";
 import { listMarkets } from "@/lib/markets/store";
 import { storageSettings } from "@/lib/files/store";
 import { mapTiles } from "@/lib/maps/tiles";
+import { pushSettings } from "@/lib/notify/push";
 import { getStore, storeKind } from "@/lib/store";
 
 /**
@@ -204,6 +205,23 @@ export async function setupStatus(): Promise<StatusItem[]> {
             : "MAP_TILES is set to off, so the pin map has no pictures. Remove it, or add LINZ_BASEMAPS_KEY (SETUP.md).",
         },
   );
+
+  // App notifications (DECISIONS.md, 2026-11-20, third entry).
+  const push = pushSettings();
+  items.push(
+    "problem" in push
+      ? {
+          key: "push", label: "App notifications", state: "todo",
+          detail: `${push.problem} Until they are, every offer and update goes by text. Making them is free (SETUP.md, Step 7b).`,
+        }
+      : { key: "push", label: "App notifications", state: "ok", detail: "Tradies and owners can turn on notifications in the app. Offers go by notification first, then by text if unopened." },
+  );
+
+  // The fixed hourly rates for extra work: proposed, not finally confirmed (DECISIONS.md, 2026-11-20, third entry).
+  items.push({
+    key: "hourly-rates", label: "Hourly rates for extra work", state: "todo",
+    detail: "To confirm before launch: plumber NZ$160, electrician NZ$160, gasfitter NZ$170, handyman NZ$110 an hour (what the owner pays, GST included). Change them on the Markets screen, then mark them confirmed in DECISIONS.md.",
+  });
 
   // Meta
   const pixel = metaPixelId();

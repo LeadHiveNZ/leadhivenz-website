@@ -12,6 +12,7 @@ import { SubmitButton } from "@/components/forms/SubmitButton";
 import { CostLines } from "@/components/jobs/JobParts";
 import { Countdown } from "@/components/jobs/TradieClient";
 import { TradieJob } from "@/components/jobs/TradieJob";
+import { hourlyRate } from "@/lib/jobs/rates";
 import { listPriceList } from "@/lib/jobs/parts";
 import { Card, Chip, Notice } from "@/components/ui/Bits";
 import { Icon } from "@/components/ui/Icon";
@@ -83,7 +84,7 @@ async function Opened({ params, searchParams }: { params: Params; searchParams: 
     const propertyPhotos = await listUploads(db, { propertyId: job.propertyId, kinds: ["property"] });
     const quoted = query.quoted === "wait" || query.quoted === "go" ? query.quoted : null;
     return (
-      <TradieJob view={view} now={at} code={code} propertyPhotos={propertyPhotos} priceList={await listPriceList(db, view.market.slug)} flash={{ yours: Boolean(query.yours), here: Boolean(query.here), quoted, done: Boolean(query.done), parts: query.parts === "wait" || query.parts === "go" ? query.parts : null }} />
+      <TradieJob view={view} now={at} code={code} propertyPhotos={propertyPhotos} priceList={await listPriceList(db, view.market.slug)} hourlyRateCents={await hourlyRate(db, view.market.slug, view.job.trade)} flash={{ yours: Boolean(query.yours), here: Boolean(query.here), quoted, done: Boolean(query.done), parts: query.parts === "wait" || query.parts === "go" ? query.parts : null }} />
     );
   }
 
@@ -101,8 +102,11 @@ async function Opened({ params, searchParams }: { params: Params; searchParams: 
     return <Closed title="The owner needed someone sooner">It has gone to another tradie. Thanks for offering a time. This never counts against you.</Closed>;
   }
   const canTake = (offer.status === "pending" || offer.status === "expired") && (job.status === "offering" || job.status === "unfilled");
-  if (!canTake) return <Closed title="This job has gone">Another tradie took it. There will be more.</Closed>;
+  if (!canTake) return <Closed title="This job has gone to another tradie">There will be more. Nothing for you to do.</Closed>;
 
+  // The tradie has seen the offer: a text held back behind its app notification is not sent (DECISIONS.md, 2026-11-20, third entry).
+  // Seeing it changes nothing about the job; accepting still needs the button.
+  if (offer.status === "pending") await db.query("update public.offers set opened_at = $2::timestamptz where id = $1::uuid and opened_at is null", [offer.id, at.toISOString()]);
   const property = await getPropertyForStaff(db, job.propertyId);
   const lines = await listLines(db, job.id);
   const photos = await countUploads(db, job.id, "report");

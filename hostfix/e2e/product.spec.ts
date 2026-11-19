@@ -63,7 +63,9 @@ async function phone(page: Page, who: string) {
 test("a tradie takes a job from the link in a text, without signing in, and finishes it", async ({ page }) => {
   const texts = await phone(page, "dave");
   const offer = texts.filter({ hasText: "Dripping tap" }).last();
-  await expect(offer).toContainText("Pays NZ$200");
+  await expect(offer).toContainText(": NZ$200, by");
+  await expect(offer).toContainText("Reply STOP to opt out");
+  await expect(offer).not.toContainText("Lake Esplanade");
   await offer.locator('a[href^="/o/"]').click();
   await ready(page);
 
@@ -125,11 +127,11 @@ test("a tradie takes a job from the link in a text, without signing in, and fini
 
   // The owner was texted at each step, charged the fixed price, and asked to check the job, neutrally.
   const owner = await phone(page, "sam");
-  await expect(owner.filter({ hasText: "Dave's Plumbing & Gas is booked for Lakeview Apartment, on site between" }).last()).toBeVisible();
-  await expect(owner.filter({ hasText: "has arrived at Lakeview Apartment. Not there? Tell us on the job page" }).last()).toBeVisible();
-  await expect(owner.filter({ hasText: "Dave's Plumbing & Gas needs Mixer tap cartridge (40 mm), NZ$31.41, within your NZ$150 no-ask limit." })).toHaveCount(1);
-  // NZ$235 for the job and NZ$31.41 for the part: NZ$266.41.
-  const check = owner.filter({ hasText: '"Dripping tap or tap washer" at Lakeview Apartment is done, NZ$266.41 charged. We couldn\'t confirm how long the job took for this job. Can you check the photos and confirm it\'s fixed?' });
+  await expect(owner.filter({ hasText: /booked for Lakeview Ap\.\.\., between/ }).last()).toBeVisible();
+  await expect(owner.filter({ hasText: "has arrived at Lakeview Apartment. Not there? Tell us:" }).last()).toBeVisible();
+  await expect(owner.filter({ hasText: "needs Mixer tap cartridge..., NZ$31.41, within your NZ$150 limit." })).toHaveCount(1);
+  // Job done (with a question) now goes by email to an owner with an email address; the demo phone shows it too.
+  const check = owner.filter({ hasText: "is done. We couldn't confirm how long the job took. Check?" });
   await expect(check).toHaveCount(1);
 
   // Opening the link changes nothing. The owner sees the before and after photos side by side, and presses the button.
@@ -147,19 +149,19 @@ test("a tradie takes a job from the link in a text, without signing in, and fini
 
 test("an owner answers a quote from the link in their text, without signing in", async ({ page }) => {
   const texts = await phone(page, "sam");
-  const quote = texts.filter({ hasText: "has quoted NZ$685" }).last();
+  const quote = texts.filter({ hasText: "quoted NZ$695 for more work" }).last();
   await quote.locator('a[href^="/j/"]').click();
   await ready(page);
 
   await expect(shown(page, "A quote needs your answer").first()).toBeVisible();
   await expect(shown(page, "Replace the leaking shower mixer and the section of pipe behind it").first().first()).toBeVisible();
-  await page.getByRole("button", { name: "Yes, go ahead · NZ$685" }).click();
+  await page.getByRole("button", { name: "Yes, go ahead · NZ$695" }).click();
   await page.waitForURL(/answered=1/);
   await ready(page);
   await expect(shown(page, "Thanks, the tradie has been told").first()).toBeVisible();
 
   const tradie = await phone(page, "mere");
-  await expect(tradie.filter({ hasText: "the owner approved your quote of NZ$685. Go ahead." })).toHaveCount(1);
+  await expect(tradie.filter({ hasText: "the owner approved your NZ$695 quote. Go ahead." })).toHaveCount(1);
 });
 
 test("a guest's report waits for the owner's yes, and the guest never sees a price", async ({ page }) => {
@@ -229,7 +231,7 @@ test("the dispatcher gives a job nobody accepted to a tradie they have rung", as
   await expect(page.locator("li", { hasText: "nobody accepted" })).toHaveCount(0);
 
   const tradie = await phone(page, "andy");
-  await expect(tradie.filter({ hasText: /job \d+ is yours\. 14B Lake Esplanade/ }).last()).toBeVisible();
+  await expect(tradie.filter({ hasText: /job \d+ is yours\. The address and access notes are here:/ }).last()).toBeVisible();
 });
 
 test("an offer nobody answers moves on to the backup after 15 minutes", async ({ page }) => {

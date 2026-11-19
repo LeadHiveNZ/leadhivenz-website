@@ -6,7 +6,8 @@ import TermsPage from "@/app/(site)/legal/terms/page";
 import TradieAgreementPage from "@/app/(site)/legal/tradie-agreement/page";
 import PrivacyPage from "@/app/(site)/legal/privacy/page";
 import { FEE_NOTICE_DAYS } from "@/lib/markets/admin";
-import { TRADIE_AGREEMENT_VERSION } from "@/lib/tradies/service";
+import { DIRECT_DEALING_MONTHS, DIRECT_RELEASE_CENTS, TRADIE_AGREEMENT_VERSION } from "@/lib/tradies/service";
+import { HOURLY_LIMIT_CENTS } from "@/lib/jobs/rates";
 import { FAR_METRES } from "@/lib/jobs/arrival";
 import { FLAG_DAYS, FLAG_REVIEW, TRUSTED_FINISHED_JOBS } from "@/lib/tradies/reliability";
 import { OLD_RECEIPT_DAYS, RECEIPT_TO_FOLLOW_DAYS } from "@/lib/jobs/parts";
@@ -137,6 +138,38 @@ describe("the tradie agreement", () => {
     expect(agreement).toContain("you are asked to agree to the new version in the app (on your home page) before your next offer");
     // The date on the page is the version a tradie agrees to.
     expect(agreement).toContain(TRADIE_AGREEMENT_VERSION);
+  });
+});
+
+describe("quotes, the 12-month rule and texts (DECISIONS.md, 2026-11-20, third entry)", () => {
+  it("the tradie agreement says the quote rules, the call-out credit worked by hand, and the 12-month rule from the constants", () => {
+    expect(HOURLY_LIMIT_CENTS).toBe(100000);
+    expect(DIRECT_DEALING_MONTHS).toBe(12);
+    expect(DIRECT_RELEASE_CENTS).toBe(25000);
+    expect(launchMarket.notDescribedHours).toBe(24);
+    const agreement = text(TradieAgreementPage);
+    expect(agreement).toContain("That quote is only for work beyond the job described: you still do the job described, at its price.");
+    expect(agreement).toContain("You are paid the call-out (NZ$190) once the owner approves your quote, or if they have not objected within 24 hours.");
+    expect(agreement).toContain("Work up to NZ$1,000 is quoted in hours, in quarter hours");
+    expect(agreement).toContain("If you need to come back, include the extra visit in your quote. There is no second call-out on the same job.");
+    // 50000 quote, 22500 credit: owner 22500 + 50000 - 22500 = 50000; tradie 19000 + (27500 - 4125) = 42375.
+    expect(agreement).toContain("A NZ$500 quote: the owner pays NZ$500 in all, and you get NZ$190 plus 85% of NZ$275 (NZ$233.75), NZ$423.75.");
+    expect(agreement).toContain("For 12 months from your first job for that owner");
+    expect(agreement).toContain("you agree not to do their maintenance work directly, outside HostFix");
+    expect(agreement).toContain("paying HostFix NZ$250 for that property");
+    expect(agreement).toContain("Any job for them that still comes through HostFix is at the normal fee");
+    expect(agreement).not.toContain("12 months after your last job");
+    expect(agreement).not.toContain("This needs a quote");
+  });
+
+  it("the owner terms and privacy page say what the code does about quotes, STOP and app notifications", () => {
+    const terms = text(TermsPage);
+    expect(terms).toContain("When a quote goes ahead (your yes, or inside your limit), the call-out comes off it, so you pay for the visit once.");
+    expect(terms).toContain("A return visit is part of the quote, never a second call-out.");
+    expect(terms).toContain("if you have not pressed \u201cThis was the job I described\u201d within 24 hours");
+    const privacy = text(PrivacyPage);
+    expect(privacy).toContain("You can stop texts from us at any time by replying STOP (START turns them back on).");
+    expect(privacy).toContain("Notifications never contain an address or door code.");
   });
 });
 

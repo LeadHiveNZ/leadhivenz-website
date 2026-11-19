@@ -362,7 +362,7 @@ export async function buildSampleData(db: Db, files: FileStore | null, real: Dat
   ago(ctx, 24.25 * HOUR);
   await finish(ctx, four.id, tom.tradieId, "Replaced the power point. The old one had a burnt terminal. Tested and safe.", door(PINS.studio), 1);
 
-  // ---- 5. Off-menu: the tradie has quoted NZ$685, over the NZ$600 limit, and is waiting for the owner -----
+  // ---- 5. Off-menu: the tradie has quoted 5.75 hours (NZ$920, less the NZ$225 call-out: NZ$695 more), over the NZ$600 limit, and is waiting for the owner -----
   ago(ctx, 3 * HOUR);
   const five = await log(ctx, cabin, {
     menuItemId: null, offMenuTrade: "plumber", offMenuTitle: "Water stain spreading on the lounge ceiling", description: "Brown stain about the size of a dinner plate, under the bathroom. It was not there last week.", photos: 2,
@@ -376,7 +376,7 @@ export async function buildSampleData(db: Db, files: FileStore | null, real: Dat
   await arrive(ctx, five.id, mere.tradieId, door(PINS.cabin));
   ago(ctx, 40 * MINUTE);
   const found = await picture(ctx, `tradie:${mere.tradieId}`, "quote", "found");
-  await submitQuote(db, five.id, mere.tradieId, { description: "Replace the leaking shower mixer and the section of pipe behind it", labourCents: 68500, uploadIds: [found] });
+  await submitQuote(db, five.id, mere.tradieId, { description: "Replace the leaking shower mixer and the section of pipe behind it", hours: 5.75, uploadIds: [found] });
 
   // ---- 6. Urgent: accepted, the tradie is on the way -----------------------
   ago(ctx, 50 * MINUTE);

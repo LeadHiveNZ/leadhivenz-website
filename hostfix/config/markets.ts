@@ -134,6 +134,10 @@ export type Market = {
    * app decides: paid if the tradie is trusted, otherwise to the dispatcher.
    */
   ownerConfirmHours: number;
+  /** Hours an owner has to say "This was the job I described" before the call-out is paid (DECISIONS.md, 2026-11-20, third entry). */
+  notDescribedHours: number;
+  /** Minutes after an offer's app notification before its text goes too, unless the offer has been opened. */
+  offerPushSmsMinutes: number;
   /** Where the map opens for a property that has no pin yet. Null: the whole country. */
   mapCentre: { lat: number; lng: number } | null;
 
@@ -216,6 +220,8 @@ export function defineMarket(input: MarketInput): Market {
     counterOfferHours: 2,
     minMinutesOnSite: 10,
     ownerConfirmHours: 48,
+    notDescribedHours: 24,
+    offerPushSmsMinutes: 3,
     mapCentre: null,
     referralRewardCents: 10000,
     referralPaidMonths: 3,

@@ -124,6 +124,8 @@ export async function chargeJob(db: Db, gatewayFor: GatewayFor, jobId: string, o
     if (payment.claimed_until && new Date(payment.claimed_until).getTime() > at.getTime()) return null;
     const job = await getJobForStaff(tx, jobId);
     if (!job) return null;
+    // A "not the job described" call-out is not charged until the owner has had their say (DECISIONS.md, 2026-11-20, third entry).
+    if (job.notDescribedStatus === "waiting" || job.notDescribedStatus === "owner_objects") return null;
     const context = await loadContext(tx, job);
     const billing = await getBilling(tx, job.ownerId, context.market.country);
     await tx.query("update public.payments set claimed_until = $2::timestamptz, next_retry_at = null, last_attempt_at = $3::timestamptz where id = $1::uuid", [payment.id, addMinutes(at, 2).toISOString(), at.toISOString()]);

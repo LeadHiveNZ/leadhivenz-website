@@ -15,6 +15,7 @@ import { approveGuestReport, cancelJob, createJob } from "@/lib/jobs/create";
 import { getJobForOwner, getQuote } from "@/lib/jobs/store";
 import type { Job } from "@/lib/jobs/types";
 import { answerLaterTime } from "@/lib/dispatch/cascade";
+import { ownerObjects } from "@/lib/jobs/not-described";
 import { decideQuote, reportTradieAbsent } from "@/lib/jobs/work";
 import { confirmFixed } from "@/lib/jobs/confirm";
 import { guestFromForm } from "@/lib/jobs/guest-form";
@@ -326,6 +327,17 @@ export async function answerQuote(_previous: FormState, formData: FormData): Pro
   await sendQueued(db);
   if (!result.ok) return { message: result.message };
   redirect(`${found.back}?answered=1`);
+}
+
+/** "This was the job I described" (DECISIONS.md, 2026-11-20, third entry): the team decides the call-out from the photos. */
+export async function objectNotDescribed(_previous: FormState, formData: FormData): Promise<FormState> {
+  const db = await getDb();
+  const found = await ownersJob(db, formData);
+  if (!found) return { message: NOT_FOUND };
+  const result = await ownerObjects(db, found.job.id, found.actor);
+  await sendQueued(db);
+  if (!result.ok) return { message: result.message };
+  redirect(`${found.back}?told=1`);
 }
 
 export async function reportProblem(_previous: FormState, formData: FormData): Promise<FormState> {

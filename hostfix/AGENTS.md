@@ -31,6 +31,10 @@ it when you change one.
 | Chargebacks: the evidence pack, whose fault, balances taken from later payouts | `src/lib/billing/chargebacks.ts`, `releasePayout` in `settle.ts`, `/admin/jobs/[id]/evidence` |
 | The tradie agreement agreed in the app, and a fee change's 30 days | `TRADIE_AGREEMENT_VERSION` in `src/lib/tradies/service.ts`, `applyScheduledFees` in `src/lib/markets/admin.ts` |
 | Arriving, quotes, finishing, "could not get in" | `src/lib/jobs/work.ts` |
+| "Not the job described", the owner's objection, Pay call-out / No call-out | `src/lib/jobs/not-described.ts` |
+| Fixed hourly rates for extra work, the NZ$1,000 line, the call-out credit | `src/lib/jobs/rates.ts`, `hourlyLabour` and `quoteAmounts` in `pricing.ts` |
+| Quote rate and hours quoted per tradie | `src/lib/tradies/quote-rate.ts` |
+| Text, email or app notification; STOP; the first-text STOP line | `enqueue` in `src/lib/notify/outbox.ts`, `src/lib/notify/push.ts`, `src/lib/notify/inbound.ts` |
 | The offer cascade: first choice, backup, everyone, dispatcher | `src/lib/dispatch/cascade.ts` |
 | Everything the clock drives | `src/lib/dispatch/tick.ts`, called by `/api/cron/tick` |
 | Charging, paying tradies, credits, disputes, refunds | `src/lib/billing/settle.ts` |
@@ -138,6 +142,19 @@ it when you change one.
   `agreement_version = TRADIE_AGREEMENT_VERSION`, which is also the date on the agreement page. Change the
   agreement, bump the version, and every tradie agrees again in the app. A platform fee change waits 30
   days once a market has tradies, and they are texted.
+- **A quote on a menu job is for work beyond the job described; "Not the job described" is the only way off the
+  menu price** (DECISIONS.md, 2026-11-20, third entry): menu jobs only, a photo and a one-line reason, the call-out
+  instead of the menu price, paid only when the owner approves the quote or has not objected in
+  `not_described_hours`; until then the payout is held and the owner not charged; an objection goes to the team.
+  Extra work up to NZ$1,000 is quarter hours at the market's fixed rate (the tradie cannot type another); over it,
+  their own price. An off-menu job's call-out comes off its first quote that goes ahead, for both sides in
+  proportion. No second call-out on a job. A tradie's quote rate over 25% and over twice the market average flags
+  them for a conversation; declines never count.
+- **Every text fits one 160-character GSM-7 message with "Reply STOP to opt out" added** (tested with long,
+  realistic values in `tests/unit/messages.test.ts`), never carries a street address or access details (offers
+  and "job yours" included: those are only on the job page), and STOP is obeyed per number (sign-in codes
+  excepted). Job done, receipts and payment/payout notices go by email to anyone with an email address. Offers go
+  by app notification first when it is on; owners' updates go by notification instead of text.
 - **No insurance, no jobs.** A tradie needs public liability insurance (insurer, policy number, expiry) on
   file and the certificate of currency uploaded (an `insurance_certificate` file, `src/lib/tradies/certificate.ts`)
   before approval, and the offer query skips anyone whose insurance has run out or has no certificate, the

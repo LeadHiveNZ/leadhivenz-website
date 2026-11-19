@@ -61,6 +61,8 @@ export type MarketPatch = Partial<{
   counterOfferHours: number;
   minMinutesOnSite: number;
   ownerConfirmHours: number;
+  notDescribedHours: number;
+  offerPushSmsMinutes: number;
   referralRewardCents: number;
   referralPaidMonths: number;
   depositEnabled: boolean;
@@ -79,6 +81,7 @@ const COLUMNS: Record<keyof MarketPatch, string> = {
   hoursStart: "hours_start", hoursEnd: "hours_end", workDays: "work_days", payoutHoldHours: "payout_hold_hours",
   unacceptedAlertHours: "unaccepted_alert_hours", counterOfferHours: "counter_offer_hours",
   minMinutesOnSite: "min_minutes_on_site", ownerConfirmHours: "owner_confirm_hours",
+  notDescribedHours: "not_described_hours", offerPushSmsMinutes: "offer_push_sms_minutes",
   referralRewardCents: "referral_reward_cents", referralPaidMonths: "referral_paid_months", depositEnabled: "deposit_enabled",
   depositCents: "deposit_cents", depositTerms: "deposit_terms", depositSpots: "deposit_spots", replyByText: "reply_by_text",
 };
@@ -129,6 +132,12 @@ function checkMarket(patch: MarketPatch, current: { hoursStart: number; hoursEnd
   }
   if (patch.ownerConfirmHours !== undefined && (!Number.isInteger(patch.ownerConfirmHours) || patch.ownerConfirmHours < 1 || patch.ownerConfirmHours > 168)) {
     throw new AdminInputError("The hours an owner has to confirm a job must be between 1 and 168.");
+  }
+  if (patch.notDescribedHours !== undefined && (!Number.isInteger(patch.notDescribedHours) || patch.notDescribedHours < 1 || patch.notDescribedHours > 168)) {
+    throw new AdminInputError("The hours an owner has to say \"This was the job I described\" must be between 1 and 168.");
+  }
+  if (patch.offerPushSmsMinutes !== undefined && (!Number.isInteger(patch.offerPushSmsMinutes) || patch.offerPushSmsMinutes < 0 || patch.offerPushSmsMinutes > 15)) {
+    throw new AdminInputError("The minutes before an unopened offer is also texted must be between 0 and 15.");
   }
   if (patch.referralPaidMonths !== undefined && (!Number.isInteger(patch.referralPaidMonths) || patch.referralPaidMonths < 1 || patch.referralPaidMonths > 24)) {
     throw new AdminInputError("Referral months must be between 1 and 24.");

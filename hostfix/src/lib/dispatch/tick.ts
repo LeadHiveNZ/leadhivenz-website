@@ -18,6 +18,7 @@ import { randomToken } from "@/lib/ids";
 import { dateKey, formatDate } from "@/lib/time";
 import { alertNotTakenYet, expireDueOffers, expireLaterTimes } from "./cascade";
 import { settleUnansweredChecks } from "@/lib/jobs/confirm";
+import { settleNotDescribed } from "@/lib/jobs/not-described";
 import { refundMissingReceipts } from "@/lib/jobs/parts";
 import type { Geocoder } from "@/lib/maps/geocode";
 import { fillMissingPins } from "@/lib/properties/pin";
@@ -39,6 +40,8 @@ import { fillMissingPins } from "@/lib/properties/pin";
  *   promises missed                   marked, and the dispatcher told; an
  *                                     accepted job with nobody there is a no-show
  *   cards to try again, payouts due   charged and paid
+ *   "not the job described", no       the call-out paid (the owner did not object in time)
+ *     objection in 24 hours
  *   a flagged job the owner has not   paid if the tradie is trusted, otherwise
  *     confirmed in 48 hours           to the dispatcher to approve or hold
  *   a parts receipt promised at Job   the part refunded to the owner out of the
@@ -318,6 +321,7 @@ export async function runTick(db: Db, deps: TickDeps): Promise<TickReport> {
   await step("at_risk", () => flagAtRisk(db));
   await step("windows", () => markMissedWindows(db));
   await step("checks", () => settleUnansweredChecks(db));
+  await step("callouts_settled", () => settleNotDescribed(db));
   await step("receipts_refunded", () => refundMissingReceipts(db, deps.gatewayFor));
   await step("credits_applied", () => applyPendingCredits(db, deps.gatewayFor));
   await step("cards_charged", () => chargeDuePayments(db, deps.gatewayFor));

@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   description: `How ${brand.name} works for property owners: free to join, fixed prices, charged when a job is done.`,
 };
 
-const UPDATED = "20 November 2026";
+const UPDATED = "21 November 2026";
 
 /**
  * The hours in section 4 come from the launch market's settings (config/markets.ts), so the page cannot say
@@ -70,7 +70,15 @@ export default function Page() {
           </li>
           <li>
             <strong>Jobs not on the menu</strong> cost a fixed call-out for a tradie to come and look, then a quote. Any quote over NZ$600, or over
-            the limit you set for that property, stops until you say yes. If you say no, the call-out is still charged.
+            the limit you set for that property, stops until you say yes. When a quote goes ahead (your yes, or inside your limit), the call-out comes off
+            it, so you pay for the visit once. If you say no, the call-out is still charged. Extra work up to NZ$1,000 is quoted in hours at a fixed hourly rate for the trade,
+            which the tradie cannot change; bigger work the tradie prices. A return visit is part of the quote, never a second call-out.
+          </li>
+          <li>
+            <strong>Not the job described.</strong> On a menu job, a quote is only for work beyond the job you described, which is still done at its
+            price. If the tradie finds it is not the job described at all, they tell us with photos and a reason, and quote. The menu price comes off
+            and the call-out is charged instead, once you approve the quote or if you have not pressed &ldquo;This was the job I described&rdquo;
+            within 24 hours. If you press it, we decide from the photos whether the call-out is charged.
           </li>
           <li>
             <strong>Parts.</strong> {partsWords(launchMarket)} The tradie can add parts on any job. Up to {money(launchMarket.partsApprovalCents)} of parts on a job

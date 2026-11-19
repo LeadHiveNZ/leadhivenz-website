@@ -13,7 +13,7 @@ import { loadJobView } from "@/lib/jobs/view";
 import { completeJob, decideQuote, reportNoAccess, submitQuote } from "@/lib/jobs/work";
 import { getMarket } from "@/lib/markets/store";
 import { testDb } from "./db";
-import { arrive, auditActions, gatewayFor, HOUSE, liveMarket, logJob, makeOwner, makeProperty, makeTradie, MONDAY_10AM, offersFor, openExceptions, photo, textsTo } from "./factory";
+import { arrive, auditActions, gatewayFor, HOUSE, liveMarket, logJob, makeOwner, makeProperty, makeTradie, MONDAY_10AM, offersFor, openExceptions, photo, textsTo, messagesTo } from "./factory";
 
 /**
  * PARTS (DECISIONS.md, 2026-11-20). Every amount is worked out by hand, never
@@ -114,7 +114,7 @@ describe("parts on a menu job", () => {
     // Owner 22500 + 3141 + 2624 = 28265. Tradie 19000 + 3047 + 2545 = 24592.
     expect(added.ok && added.job).toMatchObject({ status: "on_site", ownerTotalCents: 28265, tradieTotalCents: 24592 });
     const [text] = await textsTo(t.db, s.owner.user.phone!, "parts_added");
-    expect(text!.body).toContain("Wakatipu Plumbing needs Mixer tap cartridge (40 mm), Toilet cistern inlet valve, NZ$57.65, within your NZ$150 no-ask limit.");
+    expect(text!.body).toContain("Wakatipu Plumbing needs Mixer tap cartridge..., NZ$57.65, within your NZ$150 limit.");
     const done = await finish(s, job.id);
     expect(done).toMatchObject({ ok: true, job: { ownerTotalCents: 28265, tradieTotalCents: 24592, checkFlags: [] } });
     expect(await chargeJob(t.db, gatewayFor(t.db), job.id)).toBe("succeeded");
@@ -131,7 +131,7 @@ describe("parts on a menu job", () => {
     const added = await addParts(t.db, job.id, s.tradie.tradieId, { list: [], offList: { description: "Hot water cylinder element", receiptTotalCents: 30000, amountCents: 30000, uploadId: receiptId } });
     expect(added).toMatchObject({ ok: true, needsApproval: true, quote: { status: "pending", ownerTotalCents: 36000 } });
     expect(added.ok && added.job).toMatchObject({ status: "awaiting_approval", ownerTotalCents: 22500 });
-    expect((await textsTo(t.db, s.owner.user.phone!, "parts_need_approval"))[0]!.body).toContain("needs Hot water cylinder element, NZ$360. They will not buy it until you say yes:");
+    expect((await textsTo(t.db, s.owner.user.phone!, "parts_need_approval"))[0]!.body).toContain("needs Hot water cylinder..., NZ$360. Yes or no:");
     expect(await finish(s, job.id)).toMatchObject({ ok: false });
     const approved = await decideQuote(t.db, added.ok ? added.quote.id : "", true, `owner:${s.owner.ownerId}`);
     // Owner 22500 + 36000 = 58500. Tradie 19000 + 35100 = 54100.
@@ -226,8 +226,8 @@ describe("a receipt to follow", () => {
     expect(await payment(job.id)).toMatchObject({ status: "part_refunded", amount_cents: 34500, refunded_cents: 12000 });
     expect(await payout(job.id)).toMatchObject({ amount_cents: 19000 });
     expect((await getJobForStaff(t.db, job.id))!).toMatchObject({ ownerTotalCents: 22500, tradieTotalCents: 19000 });
-    expect((await textsTo(t.db, s.tradie.phone, "receipt_missing_refunded"))[0]!.body).toContain("NZ$117 comes off your payment");
-    expect((await textsTo(t.db, s.owner.user.phone!, "receipt_missing_refunded"))[0]!.body).toContain("(NZ$120) has been refunded to your card, because we did not get its receipt.");
+    expect((await messagesTo(t.db, s.tradie.phone, "receipt_missing_refunded"))[0]!.body).toContain("NZ$117 came off your pay");
+    expect((await messagesTo(t.db, s.owner.user.phone!, "receipt_missing_refunded"))[0]!.body).toContain("(NZ$120) was refunded to your card: no receipt came.");
     // Released in the same run: it went out with the others.
     expect((await payout(job.id)).status).toBe("sent");
     // Running again changes nothing.
@@ -275,7 +275,7 @@ describe("receipt checks go straight to the team", () => {
     expect(part.receiptFlags).toEqual(["over_receipt"]);
     expect(await staffDecideReceipts(t.db, job.id, false, "staff:maria", "Ringing the tradie")).toMatchObject({ ok: true, released: 0 });
     expect(await payout(job.id)).toMatchObject({ status: "held" });
-    expect((await textsTo(t.db, s.tradie.phone, "receipt_check_held"))[0]!.body).toContain("we are checking a receipt on this job");
+    expect((await messagesTo(t.db, s.tradie.phone, "receipt_check_held"))[0]!.body).toContain("we are checking a receipt, so your payment is on hold");
   });
 
   it("the same receipt on two jobs claiming more than its total is flagged: by the same file, or by the same tradie, total and date", async () => {
@@ -319,14 +319,14 @@ describe("a job cancelled after the owner approved work", () => {
   it("is charged only for parts already bought that cannot go back, at their cost: owner 8650, tradie 8650, HostFix 0", async () => {
     const s = await setup();
     const job = await onSite(s);
-    const quoted = await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Replace the cistern", labourCents: 90000, uploadIds: [] });
+    const quoted = await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Replace the cistern", hours: 5.75, uploadIds: [] });
     await decideQuote(t.db, quoted.ok ? quoted.quote.id : "", true, `owner:${s.owner.ownerId}`);
     expect(await cancelJob(t.db, job.id, { actor: "staff:maria", staff: true }, "Owner is replacing the whole bathroom")).toMatchObject({ ok: true });
     expect(await chargeBoughtParts(t.db, job.id, { description: "Cistern kit, special order", amountCents: 8650 }, "staff:maria")).toMatchObject({ ok: true, job: { ownerTotalCents: 8650, tradieTotalCents: 8650 } });
     expect(await chargeJob(t.db, gatewayFor(t.db), job.id)).toBe("succeeded");
     expect(await payment(job.id)).toMatchObject({ status: "succeeded", amount_cents: 8650 });
     expect(await payout(job.id)).toMatchObject({ amount_cents: 8650 });
-    expect((await textsTo(t.db, s.owner.user.phone!, "bought_parts_charged"))[0]!.body).toContain("NZ$86.50, their cost with nothing added");
+    expect((await messagesTo(t.db, s.owner.user.phone!, "bought_parts_charged"))[0]!.body).toContain("NZ$86.50, their cost, is charged");
     // Once only.
     expect(await chargeBoughtParts(t.db, job.id, { description: "Again", amountCents: 100 }, "staff:maria")).toMatchObject({ ok: false });
   });

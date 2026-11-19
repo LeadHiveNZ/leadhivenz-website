@@ -12,6 +12,9 @@ import type { Db } from "@/lib/db/types";
  *   receipt_missing  an off-list part's receipt is still to come
  *                    (DECISIONS.md, 2026-11-20, src/lib/jobs/parts.ts)
  *   receipt_check    a receipt the checks flagged, waiting for the team
+ *   not_described    the tradie said "not the job described" and the owner
+ *                    may still object, or the team has not decided yet
+ *                    (DECISIONS.md, 2026-11-20, third entry, src/lib/jobs/not-described.ts)
  *
  * When the last one closes, the payout is due at its usual time (the
  * market's hold after the job) or now if that has passed, and only once the
@@ -19,12 +22,13 @@ import type { Db } from "@/lib/db/types";
  * (`paused`), in billing/settle.ts.
  */
 
-export type HoldReason = "job_check" | "receipt_missing" | "receipt_check";
+export type HoldReason = "job_check" | "receipt_missing" | "receipt_check" | "not_described";
 
 export async function holdReasons(db: Db, jobId: string): Promise<HoldReason[]> {
   const reasons: HoldReason[] = [];
-  const job = await db.query<{ confirm_status: string | null }>("select confirm_status from public.jobs where id = $1::uuid", [jobId]);
+  const job = await db.query<{ confirm_status: string | null; not_described_status: string | null }>("select confirm_status, not_described_status from public.jobs where id = $1::uuid", [jobId]);
   if (["waiting", "staff_queue", "staff_held"].includes(job[0]?.confirm_status ?? "")) reasons.push("job_check");
+  if (["waiting", "owner_objects"].includes(job[0]?.not_described_status ?? "")) reasons.push("not_described");
   const parts = await db.query<{ missing: boolean; checking: boolean }>(
     `select bool_or(receipt_status in ('needed', 'to_follow', 'refunding')) as missing,
             bool_or(check_status in ('flagged', 'held')) as checking

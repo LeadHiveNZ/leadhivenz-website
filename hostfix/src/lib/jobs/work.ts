@@ -8,11 +8,15 @@ import { raiseException, resolveExceptionsFor } from "@/lib/ops/exceptions";
 import { FLAG_DAYS, flagsNeedReview, recentFlags } from "@/lib/tradies/reliability";
 import { formatClock, formatDate } from "@/lib/time";
 import { openSettlement } from "@/lib/billing/settle";
+import { releaseIfClear } from "@/lib/billing/holds";
 import { loadContext, offerUrl, ownerJobUrl } from "./context";
 import { arrivedOnTime, linesToDrop, surchargeVerdict } from "./arrival";
 import { receiptsAtJobDone } from "./parts";
 import { checkTap, chooseReference, jobFlags, minutesOnSite, photoIsStale, pointFrom, tooQuick } from "./checks";
-import { noAccessLines, quoteAmounts } from "./pricing";
+import { hourlyLabour, noAccessLines, quoteAmounts } from "./pricing";
+import { HOURLY_LIMIT_CENTS, hourlyRate } from "./rates";
+import { noteQuoteRate } from "@/lib/tradies/quote-rate";
+import { formatMoney } from "@/lib/money";
 import { getQuote, insertLines, listLines, lockJob, recalcTotals, rowToQuote } from "./store";
 import type { Job, Quote } from "./types";
 
@@ -233,13 +237,30 @@ export async function reportTradieAbsent(db: Db, jobId: string, actor: string): 
 }
 
 /** Extra work, priced by the tradie. Parts are added on their own (src/lib/jobs/parts.ts). */
-export type QuoteInput = { description: string; labourCents: number; uploadIds: string[] };
+export type QuoteInput = {
+  description: string;
+  /** Work up to HOURLY_LIMIT_CENTS: hours (quarter hours) at the market's fixed rate for the trade. */
+  hours?: number | null;
+  /** Bigger work, or a trade with no fixed rate: the tradie's own price for the work. */
+  labourCents?: number | null;
+  uploadIds: string[];
+  /**
+   * "Not the job described" (menu jobs only, DECISIONS.md, 2026-11-20, third entry): the one-line reason. At
+   * least one photo is needed. The menu price comes off; the call-out goes on, paid once the owner approves the
+   * quote or does not object in time.
+   */
+  notDescribed?: { reason: string } | null;
+};
 export type QuoteResult = { ok: true; job: Job; quote: Quote } | { ok: false; message: string };
 
 /**
- * The tradie prices extra or off-menu work. Under the limit it goes ahead and
- * the owner is told. Over it, nothing starts until the owner says yes. Parts
- * are added separately, on any job (addParts, src/lib/jobs/parts.ts).
+ * The tradie prices extra or off-menu work. On a menu job a quote is for work
+ * beyond the job described: the described job is still done at the menu
+ * price. Under the limit it goes ahead and the owner is told. Over it, nothing
+ * starts until the owner says yes. Work up to NZ$1,000 is quoted in hours at
+ * the market's fixed rate. Parts are added separately, on any job (addParts,
+ * src/lib/jobs/parts.ts). A return visit goes in the quote: there is never a
+ * second call-out on the same job.
  */
 export async function submitQuote(db: Db, jobId: string, tradieId: string, input: QuoteInput): Promise<QuoteResult> {
   return db.tx(async (tx) => {
@@ -248,55 +269,113 @@ export async function submitQuote(db: Db, jobId: string, tradieId: string, input
     if (job.status === "awaiting_approval") return { ok: false, message: "There is already a quote waiting for the owner's answer." };
     if (job.status !== "on_site") return { ok: false, message: "Tap Arrived first, then add the quote." };
     const description = input.description.replace(/\s+/g, " ").trim();
-    if (description.length < 3) return { ok: false, message: "Say in a few words what the extra work is." };
-    if (!Number.isInteger(input.labourCents) || input.labourCents <= 0) {
-      return { ok: false, message: "Enter your price for the work. Parts are added with \"Add parts\"." };
-    }
-    if (input.labourCents > 2_000_000) return { ok: false, message: "That is more than can be quoted here. Contact us about this job." };
+    if (description.length < 3) return { ok: false, message: "Say in a few words what the work is." };
 
     const context = await loadContext(tx, job);
     const { market, property, owner, tradie } = context;
+    const rate = await hourlyRate(tx, market.slug, job.trade);
+    let labourCents: number;
+    let hours: number | null = null;
+    if (input.hours !== undefined && input.hours !== null) {
+      if (rate === null) return { ok: false, message: "There is no fixed hourly rate for this trade yet. Enter your price for the work instead." };
+      try {
+        labourCents = hourlyLabour(input.hours, rate);
+      } catch (error) {
+        return { ok: false, message: error instanceof Error ? error.message : String(error) };
+      }
+      if (labourCents > HOURLY_LIMIT_CENTS) {
+        return { ok: false, message: `That comes to more than ${formatMoney(HOURLY_LIMIT_CENTS, job.currency)} of work. Over that, enter your own price for the whole job instead of hours.` };
+      }
+      hours = input.hours;
+    } else {
+      if (!Number.isInteger(input.labourCents) || (input.labourCents ?? 0) <= 0) {
+        return { ok: false, message: rate === null ? "Enter your price for the work. Parts are added with \"Add parts\"." : "Enter the hours the work will take. Parts are added with \"Add parts\"." };
+      }
+      labourCents = input.labourCents!;
+      if (rate !== null && labourCents <= HOURLY_LIMIT_CENTS) {
+        return { ok: false, message: `Work up to ${formatMoney(HOURLY_LIMIT_CENTS, job.currency)} is quoted in hours at the fixed rate of ${formatMoney(rate, job.currency)} an hour.` };
+      }
+    }
+    if (labourCents > 2_000_000) return { ok: false, message: "That is more than can be quoted here. Contact us about this job." };
+
+    // "Not the job described": menu jobs only, once, with a reason and at least one photo.
+    const notDescribed = input.notDescribed ?? null;
+    let reason: string | null = null;
+    if (notDescribed) {
+      if (job.offMenu) return { ok: false, message: "This is already a look-and-price job. Send a quote for the work." };
+      if (job.notDescribedAt) return { ok: false, message: "You have already said this is not the job described." };
+      reason = notDescribed.reason.replace(/\s+/g, " ").trim();
+      if (reason.length < 5) return { ok: false, message: "Say in one line why it is not the job described, for example: the tap is fine, the pipe behind the wall has burst." };
+      if (reason.length > 160) return { ok: false, message: "Keep the reason to one line (160 characters)." };
+      if (input.uploadIds.length === 0) return { ok: false, message: "Add at least one photo of what you found." };
+    }
+
+    const lines = await listLines(tx, jobId);
     const approved = await tx.query<{ total: number }>(
       "select coalesce(sum(owner_total_cents), 0) as total from public.quotes where job_id = $1::uuid and status in ('approved', 'auto_approved')",
       [jobId],
     );
+    // The call-out credit: an off-menu job's call-out comes off its first quote the owner approves (or that is within their limit).
+    const diagnosis = lines.find((line) => line.kind === "diagnosis" && line.status === "active");
+    const credited = await tx.query("select 1 from public.quotes where job_id = $1::uuid and credit_cents > 0 and status in ('pending', 'approved', 'auto_approved')", [jobId]);
+    const creditCents = job.offMenu && !job.notDescribedAt && diagnosis && credited.length === 0 ? diagnosis.ownerCents : 0;
     const amounts = quoteAmounts(market, {
-      description, labourCents: input.labourCents,
+      description, labourCents, creditCents,
       limitCents: property.spendLimitCents, alreadyApprovedCents: Number(approved[0]?.total ?? 0),
     });
+    // A quote sent with "Not the job described" always waits for the owner.
+    const needsApproval = amounts.needsApproval || notDescribed !== null;
     const at = now();
     const rows = await tx.query<Parameters<typeof rowToQuote>[0]>(
       `insert into public.quotes
-         (created_at, job_id, tradie_id, description, labour_cents, parts_cents, owner_total_cents, tradie_total_cents, needs_approval, status, decided_at, decided_by)
-       values ($1::timestamptz, $2::uuid, $3::uuid, $4, $5, $6, $7, $8, $9, $10, $11::timestamptz, $12)
+         (created_at, job_id, tradie_id, description, labour_cents, parts_cents, owner_total_cents, tradie_total_cents, needs_approval, status, decided_at, decided_by,
+          hours, rate_cents, credit_cents, not_described)
+       values ($1::timestamptz, $2::uuid, $3::uuid, $4, $5, $6, $7, $8, $9, $10, $11::timestamptz, $12, $13, $14, $15, $16)
        returning *`,
       [
-        at.toISOString(), jobId, tradieId, description, input.labourCents, 0, amounts.ownerTotalCents, amounts.tradieTotalCents,
-        amounts.needsApproval, amounts.needsApproval ? "pending" : "auto_approved", amounts.needsApproval ? null : at.toISOString(),
-        amounts.needsApproval ? null : "system",
+        at.toISOString(), jobId, tradieId, description, labourCents, 0, amounts.ownerTotalCents, amounts.tradieTotalCents,
+        needsApproval, needsApproval ? "pending" : "auto_approved", needsApproval ? null : at.toISOString(), needsApproval ? null : "system",
+        hours, hours === null ? null : rate, creditCents > 0 ? Math.min(creditCents, labourCents) : 0, notDescribed !== null,
       ],
     );
     const quote = rowToQuote(rows[0]!);
-    await insertLines(tx, jobId, amounts.lines, { at, status: amounts.needsApproval ? "pending" : "active", quoteId: quote.id });
-    await attachUploads(tx, input.uploadIds, { kind: "quote", uploadedBy: `tradie:${tradieId}`, jobId });
-    await audit(tx, {
-      actor: `tradie:${tradieId}`, action: "quote.submitted", entity: "job", entityId: jobId, amount: amounts.ownerTotalCents, currency: job.currency,
-      detail: { quote: quote.id, description, needs_approval: amounts.needsApproval, reason: amounts.approvalReason },
-    });
 
-    if (amounts.needsApproval) {
-      await tx.query("update public.jobs set status = 'awaiting_approval' where id = $1::uuid", [jobId]);
-    } else {
-      await recalcTotals(tx, jobId, market.taxRate, market.taxRegistered);
-    }
-    if (owner.phone && tradie) {
-      const words = amounts.needsApproval ? texts.quoteNeedsApproval : texts.quoteGoingAhead;
-      await enqueue(tx, {
-        channel: "sms", to: owner.phone, template: amounts.needsApproval ? "quote_needs_approval" : "quote_going_ahead", audience: "owner", jobId, userId: owner.userId,
-        body: words({ tradie: tradie.businessName, amountCents: amounts.ownerTotalCents, currency: job.currency, property: property.name, link: ownerJobUrl(job) }),
-        dedupeKey: `quote:${quote.id}`,
+    if (notDescribed) {
+      // The menu price comes off; the call-out goes on. Paid once the owner approves the quote, or does not object in time.
+      await tx.query("update public.job_lines set status = 'void' where job_id = $1::uuid and kind = 'menu' and status = 'active'", [jobId]);
+      await insertLines(tx, jobId, [{ kind: "diagnosis", label: "Call-out (not the job described)", ownerCents: market.diagnosisFeeCents, tradieCents: market.diagnosisPayoutCents }], { at });
+      await tx.query(
+        "update public.jobs set not_described_at = $2::timestamptz, not_described_reason = $3, not_described_status = 'waiting', not_described_by = $4::timestamptz where id = $1::uuid",
+        [jobId, at.toISOString(), reason, addHours(at, market.notDescribedHours).toISOString()],
+      );
+      await audit(tx, {
+        actor: `tradie:${tradieId}`, action: "job.not_described", entity: "job", entityId: jobId, amount: market.diagnosisFeeCents, currency: job.currency,
+        detail: { reason, callout_payout: market.diagnosisPayoutCents, owner_can_object_until: addHours(at, market.notDescribedHours).toISOString() },
       });
     }
+    await insertLines(tx, jobId, amounts.lines, { at: new Date(at.getTime() + 10), status: needsApproval ? "pending" : "active", quoteId: quote.id });
+    await attachUploads(tx, input.uploadIds, { kind: "quote", uploadedBy: `tradie:${tradieId}`, jobId });
+    if (notDescribed && (await countUploads(tx, jobId, "quote")) === 0) throw new Error("A photo is needed with \"Not the job described\".");
+    await audit(tx, {
+      actor: `tradie:${tradieId}`, action: "quote.submitted", entity: "job", entityId: jobId, amount: amounts.ownerTotalCents, currency: job.currency,
+      detail: { quote: quote.id, description, needs_approval: needsApproval, reason: amounts.approvalReason, hours, rate: hours === null ? null : rate, credit: quote.creditCents, not_described: notDescribed !== null },
+    });
+
+    if (needsApproval) {
+      await tx.query("update public.jobs set status = 'awaiting_approval' where id = $1::uuid", [jobId]);
+    }
+    await recalcTotals(tx, jobId, market.taxRate, market.taxRegistered);
+    if (owner.phone && tradie) {
+      const link = ownerJobUrl(job);
+      const body = notDescribed
+        ? texts.notDescribed({ tradie: tradie.businessName, property: property.name, amountCents: amounts.ownerTotalCents, currency: job.currency, link })
+        : (needsApproval ? texts.quoteNeedsApproval : texts.quoteGoingAhead)({ tradie: tradie.businessName, amountCents: amounts.ownerTotalCents, currency: job.currency, property: property.name, link });
+      await enqueue(tx, {
+        channel: "sms", to: owner.phone, template: notDescribed ? "not_described" : needsApproval ? "quote_needs_approval" : "quote_going_ahead", audience: "owner", jobId, userId: owner.userId,
+        body, dedupeKey: `quote:${quote.id}`,
+      });
+    }
+    await noteQuoteRate(tx, job, tradieId);
     return { ok: true, job: (await lockJob(tx, jobId))!, quote };
   });
 }
@@ -322,6 +401,11 @@ export async function decideQuote(db: Db, quoteId: string, approve: boolean, act
     if (job.status === "awaiting_approval") await tx.query("update public.jobs set status = 'on_site' where id = $1::uuid", [job.id]);
     await recalcTotals(tx, job.id, context.market.taxRate, context.market.taxRegistered);
     await resolveExceptionsFor(tx, job.id, ["quote_waiting"], approve ? "Owner approved the quote" : "Owner declined the quote");
+    // "Not the job described": approving the quote settles the call-out for the tradie (DECISIONS.md, 2026-11-20, third entry).
+    if (approve && quote.notDescribed && job.notDescribedStatus === "waiting") {
+      await tx.query("update public.jobs set not_described_status = 'approved' where id = $1::uuid", [job.id]);
+      await releaseIfClear(tx, job.id);
+    }
     await audit(tx, {
       actor, action: approve ? "quote.approved" : "quote.declined", entity: "job", entityId: job.id,
       amount: quote.ownerTotalCents, currency: job.currency, detail: { quote: quoteId },
@@ -440,14 +524,23 @@ export async function completeJob(db: Db, jobId: string, tradieId: string, input
     const job = await theirs(tx, jobId, tradieId);
     if (!job) return { ok: false, message: NOT_YOURS };
     if (job.status === "completed") return { ok: true, job };
-    if (job.status === "awaiting_approval") return { ok: false, message: "The owner has not answered your quote yet. Wait for their answer before finishing." };
+    if (job.status === "awaiting_approval" && !job.notDescribedAt) return { ok: false, message: "The owner has not answered your quote yet. Wait for their answer before finishing." };
+    if (job.status === "awaiting_approval") {
+      // "Not the job described" and the owner has not answered: the tradie can leave with the call-out. The quote is withdrawn.
+      const pending = await tx.query<{ id: string }>("update public.quotes set status = 'withdrawn', decided_at = $2::timestamptz, decided_by = $3 where job_id = $1::uuid and status = 'pending' returning id", [jobId, now().toISOString(), `tradie:${tradieId}`]);
+      for (const row of pending) await tx.query("update public.job_lines set status = 'void' where quote_id = $1::uuid and status = 'pending'", [row.id]);
+      await tx.query("update public.job_parts set status = 'void' where job_id = $1::uuid and status = 'pending'", [jobId]);
+      await tx.query("update public.jobs set status = 'on_site' where id = $1::uuid", [jobId]);
+      job.status = "on_site";
+    }
     if (job.status !== "on_site") return { ok: false, message: "Tap Arrived first, then finish the job." };
     // An off-list part needs its receipt, or the tradie's word that it will follow (DECISIONS.md, 2026-11-20).
     const receipts = await receiptsAtJobDone(tx, jobId, input.receiptsToFollow ?? false);
     if (!receipts.ok) return { ok: false, message: receipts.message };
     // Off-menu work with no approved quote is a call-out and diagnosis only.
     const lines = await listLines(tx, jobId);
-    const didWork = !job.offMenu || lines.some((line) => line.kind === "quote" && line.status === "active");
+    // So is a menu job the tradie said was not the job described (DECISIONS.md, 2026-11-20, third entry).
+    const didWork = (!job.offMenu && !job.notDescribedAt) || lines.some((line) => line.kind === "quote" && line.status === "active");
     return finish(tx, job, tradieId, didWork ? "done" : "diagnosis_only", input);
   });
 }

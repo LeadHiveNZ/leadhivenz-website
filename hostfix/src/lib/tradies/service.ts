@@ -555,7 +555,15 @@ export async function coverage(db: Db, market: string, today: string): Promise<C
  * Change this when the agreement changes, and the page's date with it
  * (tests/unit/legal.test.ts).
  */
-export const TRADIE_AGREEMENT_VERSION = "20 November 2026";
+export const TRADIE_AGREEMENT_VERSION = "21 November 2026";
+
+/**
+ * The no-direct-dealing rule (DECISIONS.md, 2026-11-20, first and third entries): an owner HostFix introduced
+ * may not be dealt with directly for 12 months from the tradie's first job for them; before then, a release
+ * for one property costs the tradie NZ$250. Not enforced by the app: the tradie agreement says it.
+ */
+export const DIRECT_DEALING_MONTHS = 12;
+export const DIRECT_RELEASE_CENTS = 25_000;
 
 /** The tradie presses "I agree". Recorded with the time, and in the audit log. Safe to press twice. */
 export async function agreeToAgreement(db: Db, tradieId: string): Promise<void> {

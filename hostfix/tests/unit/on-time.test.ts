@@ -144,7 +144,7 @@ describe("an urgent job", () => {
     await logJob(t.db, s.property, { code: "PL-01", urgent: true });
     const [text] = await textsTo(t.db, s.first.phone, "offer");
     // 19000 + 4250 = 23250.
-    expect(text!.body).toContain("Pays NZ$232.50. NZ$42.50 of it only if on site by 2pm today.");
+    expect(text!.body).toContain(": NZ$232.50 (NZ$42.50 if there by 2pm today)");
   });
 });
 
@@ -265,7 +265,7 @@ describe("checking where the Arrived tap came from", () => {
     expect(await reportTradieAbsent(t.db, job.id, `owner:${s.owner.ownerId}`)).toMatchObject({ ok: false });
     await arrive(t.db, job.id, s.first.tradieId, HOUSE);
     const [arrivedText] = await textsTo(t.db, s.owner.user.phone!, "tradie_arrived");
-    expect(arrivedText!.body).toContain("Not there? Tell us on the job page:");
+    expect(arrivedText!.body).toContain("Not there? Tell us:");
     expect(arrivedText!.body).toMatch(/\/j\/\d+\.[A-Za-z0-9]{12}/);
 
     expect(await reportTradieAbsent(t.db, job.id, `owner:${s.owner.ownerId}`)).toMatchObject({ ok: true });
@@ -303,8 +303,8 @@ describe("the arrival window", () => {
     const booked = await accepted(s, job, threePm.toISOString());
     expect(booked.arrivalWindowStart!.toISOString()).toBe(onePm.toISOString());
     expect(booked.arrivalWindowEnd!.toISOString()).toBe(threePm.toISOString());
-    expect((await textsTo(t.db, s.owner.user.phone!, "job_booked"))[0]!.body).toContain("on site between 1pm and 3pm today");
-    expect((await textsTo(t.db, "+64211234599", "reporter_booked"))[0]!.body).toContain("will be there between 1pm and 3pm today");
+    expect((await textsTo(t.db, s.owner.user.phone!, "job_booked"))[0]!.body).toContain(", between 1pm and 3pm today");
+    expect((await textsTo(t.db, "+64211234599", "reporter_booked"))[0]!.body).toContain("between 1pm and 3pm today");
 
     // 3:01pm: inside the 24-hour promise, but after the window they chose, so not on time. No money changes on a normal job.
     setTestNow(addMinutes(threePm, 1));
@@ -329,7 +329,7 @@ describe("the arrival window", () => {
     const booked = await accepted(s, job);
     expect(booked.arrivalWindowStart!.toISOString()).toBe(MONDAY_10AM.toISOString());
     expect(booked.arrivalWindowEnd!.toISOString()).toBe(MONDAY_2PM.toISOString());
-    expect((await textsTo(t.db, s.owner.user.phone!, "job_booked"))[0]!.body).toContain("on site by 2pm today");
+    expect((await textsTo(t.db, s.owner.user.phone!, "job_booked"))[0]!.body).toContain("by 2pm today");
   });
 });
 
@@ -347,8 +347,8 @@ describe("a normal job nobody has taken in 3 hours", () => {
     setTestNow(addHours(MONDAY_10AM, 3));
     expect(await alertNotTakenYet(t.db)).toBe(1);
     const [told] = await textsTo(t.db, s.owner.user.phone!, "not_taken_yet");
-    expect(told!.body).toContain("no tradie has taken the job at");
-    expect(told!.body).toContain("Our team is ringing round now. You pay nothing unless a tradie does the job.");
+    expect(told!.body).toContain("no tradie for");
+    expect(told!.body).toContain("We're ringing round. No charge unless it's done.");
     expect(await openExceptions(t.db, job.id)).toContain("not_taken_yet");
     expect((await textsTo(t.db, "+64211112222", "exception")).some((text) => (text.body ?? "").includes("nobody has taken"))).toBe(true);
     // Once only.
@@ -513,8 +513,7 @@ describe("the owner's chosen tradie suggests a later time", () => {
   it("asks the owner by text, holds the job, and does not offer it to the backup meanwhile", async () => {
     const { s, backup, job } = await suggested();
     const [asked] = await textsTo(t.db, s.owner.user.phone!, "later_time_offered");
-    expect(asked!.body).toContain("Wakatipu Plumbing can't make it within 24 hours. They can come between 9am and 11am Wed 18 Nov.");
-    expect(asked!.body).toContain("Wait for them, or send it to another HostFix tradie now?");
+    expect(asked!.body).toContain("Wakatipu Pl... can come between 9am and 11am Wed 18 Nov, not in 24h. Wait?");
     setTestNow(addMinutes(MONDAY_10AM, 30));
     await expireDueOffers(t.db);
     expect(await textsTo(t.db, backup.phone, "offer")).toHaveLength(0);
@@ -529,7 +528,7 @@ describe("the owner's chosen tradie suggests a later time", () => {
     expect(booked).toMatchObject({ status: "accepted", tradieId: s.first.tradieId });
     expect(booked.respondBy!.toISOString()).toBe(later.end.toISOString());
     expect(booked.arrivalWindowEnd!.toISOString()).toBe(later.end.toISOString());
-    expect((await textsTo(t.db, s.first.phone, "later_time_accepted"))[0]!.body).toContain("the owner will wait for you");
+    expect((await textsTo(t.db, s.first.phone, "later_time_accepted"))[0]!.body).toContain("is yours, the owner will wait:");
     // The original 24 hours pass: not a miss, because the promise moved.
     setTestNow(addHours(MONDAY_10AM, 25));
     expect(await markMissedWindows(t.db)).toEqual({ missed: 0, noShows: 0 });

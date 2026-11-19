@@ -21,7 +21,8 @@ import { getStore } from "@/lib/store";
 import { startDemandTest } from "@/lib/leads/demand-test";
 import { launchMarket } from "@config/markets";
 import { AccountExistsError } from "@/lib/auth/users";
-import { findTrade } from "@config/trades";
+import { findTrade, trades } from "@config/trades";
+import { hourlyRates, saveHourlyRate } from "@/lib/jobs/rates";
 import { createTradie, TradieError } from "@/lib/tradies/service";
 
 /**
@@ -129,6 +130,8 @@ export async function saveMarketSettings(_previous: FormState, formData: FormDat
     counterOfferHours: whole(formData, "counterOfferHours", errors),
     minMinutesOnSite: whole(formData, "minMinutesOnSite", errors),
     ownerConfirmHours: whole(formData, "ownerConfirmHours", errors),
+    notDescribedHours: whole(formData, "notDescribedHours", errors),
+    offerPushSmsMinutes: whole(formData, "offerPushSmsMinutes", errors),
     referralPaidMonths: whole(formData, "referralPaidMonths", errors),
     workDays: list(formData, "workDays"),
     replyByText: ticked(formData, "replyByText"),
@@ -137,9 +140,22 @@ export async function saveMarketSettings(_previous: FormState, formData: FormDat
     depositSpots: spots(formData, "depositSpots", errors),
     depositTerms: text(formData, "depositTerms").split(/\r?\n/).map((line) => line.trim()).filter(Boolean),
   };
+  // The fixed hourly rates for extra work, per trade (DECISIONS.md, 2026-11-20, third entry).
+  const rates: { trade: string; cents: number }[] = [];
+  for (const trade of trades) {
+    const name = `rate-${trade.key}`;
+    const raw = text(formData, name);
+    if (!raw) continue;
+    const cents = dollarsToCents(raw);
+    if (cents === null || cents < 1000 || cents > 100_000) errors[name] = "An hourly rate from 10 to 1000, or leave it empty.";
+    else rates.push({ trade: trade.key, cents });
+  }
   if (Object.keys(errors).length > 0) return problem(formData, "Please check the highlighted fields. Nothing was saved.", errors);
   try {
-    await updateMarket(await getDb(), slug, patch, staff.actor);
+    const db = await getDb();
+    const current = await hourlyRates(db, slug);
+    for (const rate of rates) if (current[rate.trade] !== rate.cents) await saveHourlyRate(db, slug, rate.trade, rate.cents, staff.actor);
+    await updateMarket(db, slug, patch, staff.actor);
   } catch (error) {
     if (error instanceof AdminInputError) return problem(formData, `${error.message} Nothing was saved.`);
     throw error;

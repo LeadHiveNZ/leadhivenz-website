@@ -50,10 +50,12 @@ describe("the offer cascade", () => {
 
     const sent = await textsTo(t.db, first.phone, "offer");
     expect(sent).toHaveLength(1);
-    expect(sent[0]!.body).toContain("Toilet seat or cistern parts");
+    expect(sent[0]!.body).toContain("Toilet seat or cister...");
     expect(sent[0]!.body).toContain("Frankton");
-    expect(sent[0]!.body).toContain("Pays NZ$190");
-    expect(sent[0]!.body).toContain("Yours for 15 min");
+    expect(sent[0]!.body).toContain(": NZ$190, by");
+    expect(sent[0]!.body).toContain("15 min:");
+    // Every offer ends with how to stop the texts (DECISIONS.md, 2026-11-20, third entry).
+    expect(sent[0]!.body).toMatch(/ Reply STOP to opt out$/);
     expect(sent[0]!.body).toMatch(/\/o\/\d+\.[A-Za-z0-9]{12}/);
     // The street address stays private until someone accepts.
     expect(sent[0]!.body).not.toContain("Lake Esplanade");
@@ -127,7 +129,7 @@ describe("the offer cascade", () => {
 
     const offers = await offersFor(t.db, job.id);
     expect(offers.filter((o) => o.stage === 3).map((o) => o.tradie_id).sort()).toEqual([a.tradieId, b.tradieId].sort());
-    expect((await textsTo(t.db, a.phone, "offer"))[0]!.body).toContain("First to accept gets it");
+    expect((await textsTo(t.db, a.phone, "offer"))[0]!.body).toContain(" Open: ");
     expect(await textsTo(t.db, electrician.phone)).toHaveLength(0);
 
     const offerA = offers.find((o) => o.tradie_id === a.tradieId)!;
@@ -228,9 +230,11 @@ describe("accepting", () => {
 
     const yours = await textsTo(t.db, tradie.phone, "job_yours");
     expect(yours).toHaveLength(1);
-    expect(yours[0]!.body).toContain("Lake Esplanade");
+    // Never the address in a text: it is only on the job page (Joe, 2026-11-20).
+    expect(yours[0]!.body).not.toContain("Lake Esplanade");
+    expect(yours[0]!.body).toContain("is yours. The address and access notes are here:");
     const told = await textsTo(t.db, owner.user.phone!, "job_booked");
-    expect(told[0]!.body).toContain("Wakatipu Plumbing is booked");
+    expect(told[0]!.body).toContain("Wakatipu Plum... booked for");
     expect(told[0]!.body).toContain("10am tomorrow");
     expect(await auditActions(t.db, job.id)).toEqual(["job.created", "job.dispatched", "job.offered", "job.accepted"]);
   });
@@ -434,7 +438,7 @@ describe("public liability insurance (DECISIONS.md, 2026-11-17)", () => {
     expect(queue.filter((item) => item.kind === "insurance_expiring").map((item) => item.summary)).toEqual([
       expect.stringContaining("public liability insurance runs out on 16 Dec 2026"),
     ]);
-    expect((await textsTo(t.db, tradie.phone, "insurance_expiring"))[0]!.body).toContain("your public liability insurance on file runs out on 16 Dec 2026");
+    expect((await textsTo(t.db, tradie.phone, "insurance_expiring"))[0]!.body).toContain("your liability insurance runs out 16 Dec 2026");
   });
 
   it("is not flagged 31 days ahead", async () => {
@@ -637,7 +641,7 @@ describe("reports from guests and cleaners", () => {
     expect(result.ok && result.job.status).toBe("offering");
     const told = await textsTo(t.db, owner.user.phone!, "job_logged");
     expect(told).toHaveLength(1);
-    expect(told[0]!.body).toContain("Sam the cleaner logged");
+    expect(told[0]!.body).toContain("Sam the cle... logged");
     expect(told[0]!.body).toContain("NZ$225");
   });
 
@@ -668,7 +672,7 @@ describe("reports from guests and cleaners", () => {
     expect(offer).toHaveLength(1);
     // The offer shows the tradie's share, never the owner's price: accepting it accepts that amount.
     expect(offer[0]!.body).toContain("URGENT");
-    expect(offer[0]!.body).toContain("Pays NZ$232.50");
+    expect(offer[0]!.body).toContain(": NZ$232.50 (NZ$42.50 if there by");
     expect(offer[0]!.body).not.toContain("NZ$275");
   });
 

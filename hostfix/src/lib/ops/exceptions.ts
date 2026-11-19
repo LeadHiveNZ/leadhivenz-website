@@ -55,7 +55,13 @@ export type ExceptionKind =
   /** All the card tries failed: HostFix paid the tradie, and the owner owes it. Chase the owner. */
   | "owner_owes"
   /** A chargeback was lost: decide whether it was the tradie's fault. */
-  | "chargeback_lost";
+  | "chargeback_lost"
+  /** The owner says "This was the job I described" after the tradie said it was not: Pay call-out or No call-out. */
+  | "not_described"
+  /** A tradie turns far more menu jobs into quotes than others: talk to them. Never removed automatically. */
+  | "quote_rate"
+  /** A tradie replied STOP to our texts: offers go by app notification or email only. */
+  | "sms_opted_out";
 
 /** The ones worth a text to the founder as well as an email. */
 const URGENT: ExceptionKind[] = ["nobody_accepted", "missed_window", "dispute", "chargeback", "not_taken_yet", "owner_says_absent", "no_show"];
@@ -239,6 +245,9 @@ export const EXCEPTION_LABELS: Record<ExceptionKind, string> = {
   card_needed: "Owner's card needs updating",
   owner_owes: "Owner owes us for a job",
   chargeback_lost: "Chargeback lost: whose fault?",
+  not_described: "Owner says it was the job described",
+  quote_rate: "Tradie quotes a lot of menu jobs",
+  sms_opted_out: "Tradie stopped our texts",
 };
 
 /** One line on what to do about each kind. The runbook (RUNBOOK.md) has the longer version. */
@@ -269,4 +278,7 @@ export const EXCEPTION_ACTIONS: Record<ExceptionKind, string> = {
   card_needed: "Nothing goes to tradies until the owner's card can be charged. They have been texted. Ring them if it is urgent: the job goes out by itself a minute after the card is updated.",
   owner_owes: "The card was tried four times. The tradie has been paid by us anyway. Ring the owner, ask them to update their card on the Billing page (it is tried again straight away), and no new jobs go out for them until it is paid.",
   chargeback_lost: "The owner's bank sided with the owner. Open the job and decide: the tradie's fault (bad work, or not there) takes it back from their next payments, never more than half of one; not their fault, and HostFix carries it.",
+  not_described: "The tradie said this was not the job described; the owner says it was. Look at the tradie's photos and reason on the job page, then press Pay call-out or No call-out.",
+  quote_rate: "This tradie turns far more of their menu jobs into quotes, or \"not the job described\", than others in the market. Look at those jobs on their page, then talk to them. Only a person can pause or remove a tradie.",
+  sms_opted_out: "This tradie replied STOP, so we cannot text them. Offers reach them only by app notification or email. Ring them and ask them to turn on app notifications, or to reply START.",
 };

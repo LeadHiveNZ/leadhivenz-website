@@ -207,8 +207,22 @@ export function gatewayFor(db: Db): GatewayFor {
   return () => createDemoGateway(db, "NZ");
 }
 
+/** Texts to a phone, by template. `messagesTo` also counts what went to the same person by email or app notification. */
 export async function textsTo(db: Db, phone: string, template?: string): Promise<LoggedMessage[]> {
   return (await listMessages(db, { recipient: phone, limit: 200 })).filter((message) => !template || message.template === template);
+}
+
+/**
+ * Everything sent to the person with this phone, however it went: a text, an
+ * email (DECISIONS.md, 2026-11-20, third entry: job done, receipts, payment and
+ * payout notices go by email to anyone with an email address) or an app notification.
+ */
+export async function messagesTo(db: Db, phone: string, template?: string): Promise<LoggedMessage[]> {
+  const users = await db.query<{ id: string; email: string | null }>("select id, email from public.users where phone = $1", [phone]);
+  const recipients = [phone, ...users.flatMap((user) => [user.id, user.email ?? ""])].filter(Boolean);
+  const all: LoggedMessage[] = [];
+  for (const recipient of recipients) all.push(...(await listMessages(db, { recipient, limit: 200 })));
+  return all.filter((message) => !template || message.template === template).sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 }
 
 export async function auditActions(db: Db, entityId: string): Promise<string[]> {

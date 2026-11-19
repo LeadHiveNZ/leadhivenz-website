@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   description: `What ${brand.name} holds about you, why, who sees it, and how to ask for it or have it removed.`,
 };
 
-const UPDATED = "20 November 2026";
+const UPDATED = "21 November 2026";
 
 export default function Page() {
   const n = brand.name;
@@ -168,7 +168,15 @@ export default function Page() {
           (what was charged and paid) inside the 7 years the law requires us to keep them, and we cannot edit the permanent record of jobs and
           payments, but your name and contact details can be removed from it.
         </p>
-        <p>You can stop texts from us at any time: tradies with the Pause switch in their profile, owners by closing their account.</p>
+        <p>
+          You can stop texts from us at any time by replying STOP (START turns them back on). We keep the number and when you replied, so we never
+          text it again by mistake. Sign-in codes you ask for are still sent. Tradies can also pause offers with the Pause switch in their profile.
+        </p>
+        <p>
+          <strong>App notifications.</strong> If you turn on notifications in the app, we keep what your phone or browser gives us to reach it (an
+          address at your phone&rsquo;s notification service and two keys), linked to your account, and delete it when you turn notifications off or
+          the service says it no longer works. Notifications never contain an address or door code.
+        </p>
       </Section>
 
       <Section n={9} title="Access codes and keeping things safe">

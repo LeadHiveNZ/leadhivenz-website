@@ -180,16 +180,26 @@ export type QuoteAmounts = {
  */
 export function quoteAmounts(
   market: PricingMarket,
-  input: { description: string; labourCents: number; limitCents?: number | null; alreadyApprovedCents?: number },
+  input: { description: string; labourCents: number; limitCents?: number | null; alreadyApprovedCents?: number; creditCents?: number },
 ): QuoteAmounts {
   const labour = whole(input.labourCents, "Labour");
   if (labour <= 0) throw new Error("A quote needs a price for the work.");
 
   const fee = platformFee(labour, market.platformFeeBps);
   const lines: Line[] = [{ kind: "quote", label: input.description, ownerCents: labour, tradieCents: labour - fee }];
+  // The call-out credit (DECISIONS.md, 2026-11-20, third entry): an off-menu job's call-out comes off its first
+  // approved quote. It comes out of the quoted work for both sides, so the tradie is paid their share of
+  // (quote - credit), on top of the call-out payout they keep. NZ$500 quote, NZ$225 credit: the owner pays
+  // 50000 - 22500 = 27500 more; the tradie gets 27500 - 15% (4125) = 23375 more.
+  const credit = Math.min(whole(input.creditCents ?? 0, "Credit"), labour);
+  if (credit > 0) {
+    const net = labour - credit;
+    const tradieNet = net - platformFee(net, market.platformFeeBps);
+    lines.push({ kind: "adjustment", label: "Call-out credit", ownerCents: -credit, tradieCents: tradieNet - (labour - fee) });
+  }
 
   const limit = input.limitCents ?? market.approvalThresholdCents;
-  const running = (input.alreadyApprovedCents ?? 0) + labour;
+  const running = (input.alreadyApprovedCents ?? 0) + labour - credit;
   const approvalReason = running > limit ? "The quote is over the pre-approved limit." : null;
 
   const sum = totals(lines);
@@ -201,6 +211,20 @@ export function quoteAmounts(
     approvalReason,
     lines,
   };
+}
+
+/**
+ * Labour quoted by the hour at the market's fixed rate for the trade
+ * (DECISIONS.md, 2026-11-20, third entry). Hours go in quarter hours. 1.5 hours
+ * at NZ$160 is 24000; 0.25 hours at NZ$110 is 2750.
+ */
+export function hourlyLabour(hours: number, rateCents: number): number {
+  whole(rateCents, "Rate");
+  const quarters = Math.round(hours * 4);
+  if (!(hours > 0) || Math.abs(quarters - hours * 4) > 1e-9 || quarters > 4 * 40) {
+    throw new Error("Hours go in quarter hours: 0.25, 0.5, 0.75, 1 and so on, up to 40.");
+  }
+  return Math.round((quarters * rateCents) / 4);
 }
 
 // ---------------------------------------------------------------------------

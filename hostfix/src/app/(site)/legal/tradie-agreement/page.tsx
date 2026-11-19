@@ -6,7 +6,8 @@ import { OLD_RECEIPT_DAYS, RECEIPT_TO_FOLLOW_DAYS } from "@/lib/jobs/parts";
 import { LIST_PART_FEE_BPS } from "@/lib/jobs/pricing";
 import { formatMoney } from "@/lib/money";
 import { FEE_NOTICE_DAYS } from "@/lib/markets/admin";
-import { TRADIE_AGREEMENT_VERSION } from "@/lib/tradies/service";
+import { DIRECT_DEALING_MONTHS, DIRECT_RELEASE_CENTS, TRADIE_AGREEMENT_VERSION } from "@/lib/tradies/service";
+import { HOURLY_LIMIT_CENTS } from "@/lib/jobs/rates";
 import { FAR_METRES, PROPOSAL_DAYS, WINDOW_HOURS } from "@/lib/jobs/arrival";
 import {
   FLAG_DAYS, FLAG_REVIEW, MIN_ARRIVALS, NO_SHOW_DAYS, NO_SHOW_REVIEW, ON_TIME_TARGET, RECENT_ARRIVALS, TRUSTED_FINISHED_JOBS,
@@ -125,9 +126,28 @@ export default function Page() {
           amount for that job.</strong> You cannot ask the owner for more, charge them directly, or renegotiate on site.
         </p>
         <p>
-          If you arrive and the job is not what was described (the dripping tap is a cracked pipe), tap <strong>This needs a quote</strong>. You are
-          paid the call-out for coming, and the job becomes a quote the owner says yes or no to before any more work starts. Anything the owner has
-          not approved is at your own cost.
+          <strong>Extra work on a menu job</strong> is quoted with <strong>Found more to do? Send a quote</strong>. That quote is only for work beyond the
+          job described: you still do the job described, at its price. Up to the owner&rsquo;s limit it goes ahead and they are told; above it, nothing
+          starts until they say yes. Anything the owner has not approved is at your own cost.
+        </p>
+        <p>
+          <strong>Not the job described.</strong> If what you find is not the job described at all (the dripping tap is a burst pipe in the wall), tap{" "}
+          <strong>Not the job described</strong> on a menu job, with at least one photo, a one-line reason and a quote. The menu price comes off and the
+          call-out goes on. You are paid the call-out ({money(launchMarket.diagnosisPayoutCents)}) once the owner approves your quote, or if they have not
+          objected within {launchMarket.notDescribedHours} hours. If the owner says it was the job they described, our team decides from your photos: call-out
+          paid, or no call-out. On a job that was already a look-and-price job, you simply quote.
+        </p>
+        <p>
+          <strong>How quotes are priced.</strong> Work up to {money(HOURLY_LIMIT_CENTS)} is quoted in hours, in quarter hours, at {n}&rsquo;s fixed hourly
+          rate for your trade (shown on the quote screen; it is what the owner pays, GST included). You cannot use a different rate. Above{" "}
+          {money(HOURLY_LIMIT_CENTS)} you price the work your own way. The 15% platform fee comes off the work, as on every job. Parts are added on their own,
+          below. <strong>If you need to come back, include the extra visit in your quote.</strong> There is no second call-out on the same job.
+        </p>
+        <p>
+          <strong>The call-out credit.</strong> On a look-and-price job, if the owner approves your quote, the {money(launchMarket.diagnosisFeeCents)} call-out
+          comes off the quote for them. It comes off your share in the same proportion: you keep the {money(launchMarket.diagnosisPayoutCents)} call-out pay, plus
+          85% of the quote less the call-out. A NZ$500 quote: the owner pays NZ$500 in all, and you get NZ$190 plus 85% of NZ$275 (NZ$233.75),
+          NZ$423.75. If the owner says no, the call-out stands and you are paid it.
         </p>
         <p>
           <strong>Parts</strong> can be added on any job, with <strong>Add parts</strong>. Small parts up to {money(launchMarket.partsIncludedCents)} are in the job&rsquo;s price.
@@ -243,8 +263,11 @@ export default function Page() {
 
       <Section n={10} title="Owners' work">
         <p>
-          You agree not to take {n} owners&rsquo; maintenance work directly for 12 months after your last job for them. The owner came to you through
-          us; that is what pays for the offers you receive.
+          An owner {n} introduced to you came to you through us; that is what pays for the offers you receive. For{" "}
+          <strong>{DIRECT_DEALING_MONTHS} months from your first job for that owner</strong>, you agree not to do their maintenance work directly, outside
+          {" "}{n}. Before then you can be released for one of their properties by paying {n} {money(DIRECT_RELEASE_CENTS)} for that property. After the{" "}
+          {DIRECT_DEALING_MONTHS} months you may work for them directly. Any job for them that still comes through {n} is at the normal fee, however long you
+          have known them.
         </p>
       </Section>
 

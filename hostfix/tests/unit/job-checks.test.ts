@@ -13,7 +13,7 @@ import { confirmPin } from "@/lib/properties/pin";
 import type { Property } from "@/lib/properties/service";
 import { flagCounts, recentFlags, tradieTrust } from "@/lib/tradies/reliability";
 import { testDb } from "./db";
-import { arrive, auditActions, gatewayFor, HOUSE, liveMarket, logJob, makeOwner, makeProperty, makeTradie, MONDAY_10AM, offersFor, openExceptions, photo, textsTo } from "./factory";
+import { arrive, auditActions, gatewayFor, HOUSE, liveMarket, logJob, makeOwner, makeProperty, makeTradie, MONDAY_10AM, offersFor, openExceptions, photo, messagesTo } from "./factory";
 
 /**
  * IS THE JOB REALLY DONE? (DECISIONS.md, 2026-11-19)
@@ -202,8 +202,8 @@ describe("a clean job", () => {
     expect(await payout(done.id)).toMatchObject({ status: "scheduled", amount_cents: 19000 });
     expect(new Date((await payout(done.id)).release_at).toISOString()).toBe(TUESDAY_1030.toISOString());
     // The ordinary "job done" text, and nothing for the owner to confirm.
-    expect((await textsTo(t.db, s.owner.user.phone!, "job_done"))[0]!.body).toContain("NZ$225 charged to your card");
-    expect(await textsTo(t.db, s.owner.user.phone!, "job_check")).toEqual([]);
+    expect((await messagesTo(t.db, s.owner.user.phone!, "job_done"))[0]!.body).toContain("is done, NZ$225 charged.");
+    expect(await messagesTo(t.db, s.owner.user.phone!, "job_check")).toEqual([]);
     setTestNow(addMinutes(TUESDAY_1030, -1));
     expect(await releaseDuePayouts(t.db, gatewayFor(t.db))).toBe(0);
     setTestNow(TUESDAY_1030);
@@ -222,10 +222,10 @@ describe("a far Arrived tap", () => {
     expect(await charged(done.id)).toBe(22500);
     expect(await payout(done.id)).toMatchObject({ status: "held", amount_cents: 19000 });
     // The owner's "job done" text asks them to check, neutrally, and links to the page (a link never acts by being opened).
-    const [text] = await textsTo(t.db, s.owner.user.phone!, "job_check");
-    expect(text!.body).toContain("NZ$225 charged. We couldn't confirm the tradie's location for this job. Can you check the photos and confirm it's fixed?");
+    const [text] = await messagesTo(t.db, s.owner.user.phone!, "job_check");
+    expect(text!.body).toContain("is done. We couldn't confirm the tradie's location. Check?");
     expect(text!.body).toMatch(/\/j\/\d+\.[A-Za-z0-9]{12}/);
-    expect(await textsTo(t.db, s.owner.user.phone!, "job_done")).toEqual([]);
+    expect(await messagesTo(t.db, s.owner.user.phone!, "job_done")).toEqual([]);
     // Nothing for the dispatcher yet: the owner is asked first.
     expect(await openExceptions(t.db, done.id)).toEqual([]);
     // Not sent at the usual time while it is held.
@@ -270,7 +270,7 @@ describe("time on site", () => {
     const quick = await doJob(s, await accepted(s), { minutes: 9 });
     expect(quick).toMatchObject({ minutesOnSite: 9, checkFlags: ["quick_finish"], confirmStatus: "waiting" });
     expect(await payout(quick.id)).toMatchObject({ status: "held", amount_cents: 19000 });
-    expect((await textsTo(t.db, s.owner.user.phone!, "job_check"))[0]!.body).toContain("We couldn't confirm how long the job took for this job.");
+    expect((await messagesTo(t.db, s.owner.user.phone!, "job_check"))[0]!.body).toContain("We couldn't confirm how long the job took.");
 
     const steady = await doJob(s, await accepted(s, s.property, { code: "PL-03" }), { at: addHours(MONDAY_10AM, 2), minutes: 10 });
     expect(steady).toMatchObject({ minutesOnSite: 10, checkFlags: [], confirmStatus: null });
@@ -405,7 +405,7 @@ describe("the owner says nothing for 48 hours", () => {
     await settleUnansweredChecks(t.db);
     expect(await staffDecideCheck(t.db, done.id, false, "staff:maria", "Ringing the owner.")).toMatchObject({ ok: true, job: { confirmStatus: "staff_held" } });
     expect(await payout(done.id)).toMatchObject({ status: "held" });
-    expect((await textsTo(t.db, s.tradie.phone, "payout_check_held"))[0]!.body).toContain("we are checking this job before paying it");
+    expect((await messagesTo(t.db, s.tradie.phone, "payout_check_held"))[0]!.body).toContain("we are checking this job, so your payment is on hold");
     setTestNow(addHours(WEDNESDAY_1030, 2));
     await staffDecideCheck(t.db, done.id, true, "staff:maria");
     expect(await payout(done.id)).toMatchObject({ status: "scheduled", amount_cents: 19000 });

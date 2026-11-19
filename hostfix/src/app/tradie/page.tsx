@@ -22,6 +22,7 @@ import { windowsForAccepting } from "@/lib/dispatch/cascade";
 import { windowLabel } from "@/lib/jobs/arrival";
 import { getTradie, listLicences } from "@/lib/tradies/service";
 import { AgreementCard } from "@/components/jobs/AgreementCard";
+import { Notifications } from "@/components/ui/Notifications";
 import { dateKey, formatDeadline } from "@/lib/time";
 
 export const metadata: Metadata = { title: "Offers" };
@@ -56,6 +57,7 @@ export default async function TradieHome({ searchParams }: { searchParams: Searc
       </div>
 
       <AgreementCard tradie={tradie} />
+      <Notifications audience="tradie" />
       {query.passed && <Notice tone="info" title="Passed. It has gone to the next tradie. Passing never counts against you." />}
       {query.asked && <Notice tone="info" title="We have asked the owner about your time. We will text you their answer." />}
 

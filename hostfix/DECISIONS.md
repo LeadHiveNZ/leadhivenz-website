@@ -9,6 +9,105 @@ price, a fee or a promise, add a line here saying what and why.
 
 ---
 
+## 2026-11-20 — Quotes that can't be a free exit, fixed hourly rates, the call-out credit, STOP, shorter texts, app notifications
+
+(The third entry for 20 November. Migration `supabase/migrations/20261128000000_quotes_texts_push.sql`. The tradie
+agreement is now version "21 November 2026", so every tradie agrees again before their next offer: fine before launch.)
+
+**1. "Needs a quote" is not a free exit on menu jobs** (`submitQuote` in `src/lib/jobs/work.ts`, `src/lib/jobs/not-described.ts`).
+
+- On a menu job a quote covers work **beyond** the job described. The menu line stays: the tradie still does the
+  described job at the menu price. (In the code it always did; the tradie agreement's old "This needs a quote... you
+  are paid the call-out" described something that did not exist, and is gone.)
+- **Not the job described** (menu jobs only, once per job): at least one photo, a one-line reason (5 to 160
+  characters) and a quote. The menu line is voided and a call-out line (the market's diagnosis fee and payout) goes
+  on. The quote always waits for the owner. The owner sees the reason and photos with the quote, and a button
+  **This was the job I described** until `not_described_hours` (24, a market setting) after the tap.
+- The call-out is paid when the owner approves the quote, or when they have not objected by then (the timer:
+  `settleNotDescribed`). Until then the tradie's payout is `held` (`not_described` in `billing/holds.ts`) **and the
+  owner is not charged** (`chargeJob` skips it). The owner's objection puts "Owner says it was the job described"
+  in the queue: one tap **Pay call-out** or **No call-out** (no call-out: the line is voided, the pending charge
+  shrinks or goes, the held payout shrinks or is cancelled; the tradie is texted either way).
+- The tradie can leave while the owner has not answered: the pending quote is withdrawn and the job finishes as
+  call-out only. Off-menu (look-and-price) jobs are unchanged.
+- Worked by hand (`tests/unit/quotes-texts-push.test.ts`): PL-03 (owner 23500, tradie 20000), not described, 2 hours
+  at NZ$160. Approved: owner 22500 + 32000 = 54500, tradie 19000 + 27200 = 46200. Declined, no objection: 22500 and
+  19000 after 24 hours. Objection, No call-out: 0 and 0.
+
+**2. Quote rate** (`src/lib/tradies/quote-rate.ts`). Per tradie: of the menu jobs they accepted and arrived at, the
+share with a quote for work (not parts alone, not withdrawn) or "not the job described", over their last 20, counted
+from 10. Declines never count (only jobs they took). Flagged for a conversation ("Tradie quotes a lot of menu jobs" in
+the queue, after their next quote) when over 25% (`QUOTE_RATE_FLOOR`) and over 2x (`QUOTE_RATE_MULTIPLE`) the market
+average (the average rate of the market's tradies with 10 or more such jobs). Shown on the admin tradie page with the
+average. Nothing changes on their account.
+
+**3. Fixed hourly rates for extra work up to NZ$1,000** (`src/lib/jobs/rates.ts`, `hourlyLabour` in `pricing.ts`).
+Per market and trade, what the owner pays an hour, GST included, edited on the admin Markets screen (`trade_rates`;
+a trade with no row uses the default). **Defaults, NOT finally confirmed by the founder, to confirm before launch**
+(also on the setup checklist): plumber NZ$160, electrician NZ$160, gasfitter NZ$170, handyman NZ$110. Other trades have
+no rate yet: the tradie prices those their own way. Work up to NZ$1,000 (`HOURLY_LIMIT_CENTS`) is quoted in quarter
+hours (0.25 to 40); labour = hours x rate, the 15% fee off it as on every quote; the tradie's own price is refused
+at or under NZ$1,000 and hours that come to more than NZ$1,000 are refused. Over NZ$1,000 the tradie prices it their
+own way. Quotes keep `hours` and `rate_cents`; the admin tradie page shows average hours per job type (the menu job,
+or the trade for off-menu) against everyone else in the market. Admin only.
+
+**4. The NZ$225 call-out credit** (`quoteAmounts` in `pricing.ts`). On an off-menu job, the first quote that goes
+ahead (the owner's yes, or inside their limit) carries a "Call-out credit" line: the call-out comes off the quoted
+work for both sides in proportion, so the tradie keeps the diagnosis payout plus 85% of (quote - credit). Worked:
+a NZ$500 quote: owner 22500 + 50000 - 22500 = 50000 (NZ$500 in all); tradie 19000 + (27500 - 4125) = 42375; HostFix
+7625. A 3.75-hour quote (60000): owner 60000, tradie 19000 + 31875 = 50875. The owner's limit is checked on what
+they pay more (quote - credit). If the owner declines, the credit goes with the quote and the NZ$225 stands.
+
+**5. Return visits.** The quote screen and the tradie agreement: "If you need to come back, include the extra visit
+in your quote." There is never a second call-out on a job (only one call-out line can exist).
+
+**6. Tradie agreement section 10** now says the rule decided on 19 November (entry below): an owner HostFix
+introduced may not be dealt with directly for 12 months from the first job (`DIRECT_DEALING_MONTHS`); before then a
+NZ$250-per-property release paid by the tradie (`DIRECT_RELEASE_CENTS`); after that they may go direct; jobs that
+still come through HostFix stay at the normal fee. **Not enforced by the app**: no release payment is built.
+`TRADIE_AGREEMENT_VERSION` bumped to "21 November 2026".
+
+**7. STOP** (`enqueue` in `src/lib/notify/outbox.ts`, `src/lib/notify/inbound.ts`). Every job offer, and the first
+text a number ever gets from us, ends "Reply STOP to opt out". A reply of STOP, STOPALL, UNSUBSCRIBE, CANCEL, END
+or QUIT from any number (not only tradies) records it in `sms_opt_outs`; nothing is texted to it again except
+sign-in codes, until it replies START (or UNSTOP). An offer to an opted-out tradie goes by app notification, else
+email, and the team is told once ("Tradie stopped our texts"). PAUSE still pauses a tradie's offers (STOP used to).
+
+**8. Shorter texts, more email.** Every text fits one 160-character GSM-7 message with long but realistic values
+**and** the STOP line added; `tests/unit/messages.test.ts` renders each with the longest menu names, a 40-character
+business name, a four-figure amount, the real link length and the longest window wording. The links were already
+the shortest form the app has (`/o/<number>.<12 characters>`, `/j/...`). These go by email instead when the person
+has an email address (`EMAIL_INSTEAD`): job done (with photos), job done and to check, payment failed, membership
+failed, a problem received, parts charged for a cancelled job, receipts refunded, payout sent, on hold, held for a
+check or a receipt, balance owed. Texts stay for offers, job yours, booked and arrival windows, on the way,
+arrived, not taken yet, a later time, quotes to approve, sign-in codes and guests' texts. Things that had to go to fit:
+an urgent offer no longer says how many minutes it is yours for (the offer page does); jobYours and every other text
+never carry the street address (Joe: the address is only on the job page, so it is not left in messages if the job is
+cancelled or reassigned; a taken or expired offer page says "This job has gone to another tradie").
+
+**9. App notifications (Web Push)** (`src/lib/notify/push.ts`, `public/sw.js`, `NotificationsPrompt`). The site was
+already installable (`src/app/manifest.ts`). Tradies and owners see "Turn on notifications" on their home page once
+`VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` and `VAPID_SUBJECT` are set (iPhone: Add to Home Screen first, explained).
+The library is `web-push` 3.6.7 (its README read November 2026; 4.0.0 was 13 days old and ESM-only, so not used).
+Subscriptions are stored per user (`push_subscriptions`, RLS on); a 404 or 410 from the push service removes one.
+A tradie with notifications on gets each offer as a notification first; the text is queued for
+`offer_push_sms_minutes` (3, a market setting) later and skipped if the offer page has been opened (`offers.opened_at`,
+set when the page is viewed: viewing still changes nothing about the job) or the offer has closed. An owner with
+notifications on gets their updates as notifications instead of texts. A notification's words are the text's words
+with the link removed (never an address or a code); tapping opens the link's page.
+
+**Texts per typical job** (owner logs a normal menu job, the first-choice tradie takes it, no guest):
+
+| | Before | After, nothing turned on | After, both have notifications on |
+| --- | --- | --- | --- |
+| Tradie | offer, job yours, payout sent (3) | offer, job yours, payout sent (3; payout by email if they have one) | job yours (1; the offer text only if unopened after 3 min) |
+| Owner | booked, arrived, job done (3) | booked, arrived (2; job done by email) | none (all by notification or email) |
+| Message parts | about 8 (job done and several offers ran to 2 parts) | 5, every one a single part | 1 to 2 |
+
+A guest staying adds 2 texts (booked, on the way), as before.
+
+---
+
 ## 2026-11-20 — Tradies paid whatever the card does, chargebacks by fault, guests in the house, hazards, the agreement in the app
 
 (The second entry for 20 November. Migration `supabase/migrations/20261127000000_safety_and_money.sql`.)
@@ -93,9 +192,8 @@ fee for that. Nothing is built.
 
 - Owners HostFix introduces stay at the 15% fee for every job through the app, permanently.
 - The no-direct-dealing rule lasts 12 months from the first job; before then a tradie can buy an owner out at
-  $250 per property; after 12 months they may go direct. **Not built, and the tradie agreement section 10
-  still says "12 months after your last job for them", with no buyout.** That wording needs changing to the
-  decided rule (with the buyout) before it is relied on.
+  $250 per property; after 12 months they may go direct. **Not built.** The tradie agreement section 10
+  now says the decided rule (third entry for 20 November, above).
 - 1% applies only to a tradie's pre-existing clients (their own customers they bring onto the app). Not built:
   record only.
 - Hourly jobs (later): a parts run counts as time on the job for up to 30 minutes. Record only.

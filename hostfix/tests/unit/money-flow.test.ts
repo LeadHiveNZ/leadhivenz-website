@@ -5,6 +5,7 @@ import { addGoodwillCredit, applyPendingCredits, chargeDuePayments, chargeJob, f
 import { ownerStatement } from "@/lib/billing/statements";
 import { addHours, addMinutes, setTestNow } from "@/lib/clock";
 import { getMarket } from "@/lib/markets/store";
+import { saveHourlyRate } from "@/lib/jobs/rates";
 import { acceptOffer } from "@/lib/dispatch/cascade";
 import { runTick } from "@/lib/dispatch/tick";
 import { cancelJob } from "@/lib/jobs/create";
@@ -15,7 +16,7 @@ import { addParts } from "@/lib/jobs/parts";
 import { DEMO_CARD_OK } from "@/lib/payments/demo-gateway";
 import type { Property } from "@/lib/properties/service";
 import { testDb } from "./db";
-import { addPlusTier, arrive, auditActions, gatewayFor, HOUSE, liveMarket, logJob, makeOwner, makeProperty, makeTradie, MONDAY_10AM, MONDAY_9PM, offersFor, openExceptions, photo, textsTo } from "./factory";
+import { addPlusTier, arrive, auditActions, gatewayFor, HOUSE, liveMarket, logJob, makeOwner, makeProperty, makeTradie, MONDAY_10AM, MONDAY_9PM, offersFor, openExceptions, photo, textsTo, messagesTo } from "./factory";
 
 /**
  * THE PRICES THESE TESTS ARE BUILT ON. They come from seed/menu-queenstown.json
@@ -111,9 +112,9 @@ describe("a finished menu job", () => {
     expect(due).toMatchObject({ status: "scheduled", amount_cents: 19000 });
     expect(new Date(due!.release_at).getTime()).toBe(addHours(addMinutes(MONDAY_10AM, 90), 24).getTime());
 
-    const told = await textsTo(t.db, s.owner.user.phone!, "job_done");
+    const told = await messagesTo(t.db, s.owner.user.phone!, "job_done");
     expect(told).toHaveLength(1);
-    expect(told[0]!.body).toContain("NZ$225 charged to your card");
+    expect(told[0]!.body).toContain("is done, NZ$225 charged.");
 
     // 23 hours on: still held. 24 hours on: sent.
     setTestNow(addHours(addMinutes(MONDAY_10AM, 90), 23));
@@ -121,7 +122,7 @@ describe("a finished menu job", () => {
     setTestNow(addHours(addMinutes(MONDAY_10AM, 90), 24));
     expect(await releaseDuePayouts(t.db, gatewayFor(t.db))).toBe(1);
     expect(await payout(job.id)).toMatchObject({ status: "sent", amount_cents: 19000 });
-    expect((await textsTo(t.db, s.tradie.phone, "payout_sent"))[0]!.body).toContain("NZ$190 for job");
+    expect((await messagesTo(t.db, s.tradie.phone, "payout_sent"))[0]!.body).toContain("NZ$190 for job");
 
     expect(await moneyLog(job.id)).toEqual(["job.created:22500", "job.completed:22500", "payment.succeeded:22500", "payout.sent:19000"]);
     // What the platform keeps is the difference. The menu sets each owner price at the tradie's
@@ -178,7 +179,7 @@ describe("a finished menu job", () => {
 
     expect((await moneyLog(job.id)).filter((line) => line.startsWith("payment.succeeded"))).toHaveLength(1);
     expect((await moneyLog(job.id)).filter((line) => line.startsWith("payout.sent"))).toHaveLength(1);
-    expect(await textsTo(t.db, s.owner.user.phone!, "job_done")).toHaveLength(1);
+    expect(await messagesTo(t.db, s.owner.user.phone!, "job_done")).toHaveLength(1);
     expect((await t.db.query("select 1 from public.payments where job_id = $1::uuid", [job.id])).length).toBe(1);
   });
 
@@ -363,8 +364,8 @@ describe("when the card is declined", () => {
     expect(new Date(failed!.next_retry_at!).getTime()).toBe(addHours(MONDAY_10AM, 24).getTime());
     expect(await payout(job.id)).toMatchObject({ status: "scheduled" });
     expect(await openExceptions(t.db, job.id)).toEqual(["payment_failed"]);
-    expect((await textsTo(t.db, s.owner.user.phone!, "payment_failed"))[0]!.body).toContain("could not charge your card NZ$225");
-    expect(await textsTo(t.db, s.owner.user.phone!, "job_done")).toHaveLength(0);
+    expect((await messagesTo(t.db, s.owner.user.phone!, "payment_failed"))[0]!.body).toContain("could not charge your card NZ$225");
+    expect(await messagesTo(t.db, s.owner.user.phone!, "job_done")).toHaveLength(0);
 
     // 23 hours on: inside the usual 24-hour hold, so nothing is sent yet (tests/unit/safety-and-money.test.ts
     // follows a declined card to the tradie being paid at 24 hours).
@@ -380,7 +381,7 @@ describe("when the card is declined", () => {
     expect(await payout(job.id)).toMatchObject({ status: "scheduled" });
     expect(await openExceptions(t.db, job.id)).toEqual([]);
     // The owner is only texted about the failure once, however many times it fails.
-    expect(await textsTo(t.db, s.owner.user.phone!, "payment_failed")).toHaveLength(1);
+    expect(await messagesTo(t.db, s.owner.user.phone!, "payment_failed")).toHaveLength(1);
   });
 
   it("gives up after four tries and leaves it with the dispatcher", async () => {
@@ -441,8 +442,8 @@ describe("when the owner says something is wrong", () => {
     expect(dispute).toMatchObject({ ok: true, payoutPaused: true });
     expect(await payout(job.id)).toMatchObject({ status: "paused" });
     expect(await openExceptions(t.db, job.id)).toEqual(["dispute"]);
-    expect(await textsTo(t.db, s.tradie.phone, "payout_on_hold")).toHaveLength(1);
-    expect(await textsTo(t.db, s.owner.user.phone!, "dispute_received")).toHaveLength(1);
+    expect(await messagesTo(t.db, s.tradie.phone, "payout_on_hold")).toHaveLength(1);
+    expect(await messagesTo(t.db, s.owner.user.phone!, "dispute_received")).toHaveLength(1);
 
     // The hold window passing does not release it.
     setTestNow(addHours(MONDAY_10AM, 48));
@@ -611,15 +612,16 @@ describe("the promised time", () => {
     await markEnRoute(t.db, job.id, s.tradie.tradieId);
     const arrived = await arrive(t.db, job.id, s.tradie.tradieId, HOUSE);
     if (!arrived.ok) throw new Error(arrived.message);
-    // The tradie quotes 60000 of work, exactly the 60000 limit, so it goes ahead.
-    const quoted = await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Replace waste trap and isolating valve", labourCents: 60000, uploadIds: [] });
+    // The tradie quotes 3.75 hours at the plumber's NZ$160: 60000 of work. The call-out credit (DECISIONS.md, 2026-11-20,
+    // third entry) takes the 22500 call-out off it, so the owner is asked for 37500 more, inside the 60000 limit.
+    const quoted = await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Replace waste trap and isolating valve", hours: 3.75, uploadIds: [] });
     if (!quoted.ok) throw new Error(quoted.message);
     const done = await finish(s, job.id);
-    // Owner: 22500 call-out + 60000 quote = 82500. Tradie: 19000 + 60000 x 0.85 (51000) = 70000.
-    expect(done).toMatchObject({ ownerTotalCents: 82500, tradieTotalCents: 70000 });
-    // Charged 82500 - 22500 = 60000. The tradie still gets all 70000.
-    expect(await payment(job.id)).toMatchObject({ status: "pending", amount_cents: 60000 });
-    expect(await payout(job.id)).toMatchObject({ amount_cents: 70000 });
+    // Owner: 22500 call-out + 60000 - 22500 credit = 60000. Tradie: 19000 + (60000 - 22500) x 0.85 = 19000 + 31875 = 50875.
+    expect(done).toMatchObject({ ownerTotalCents: 60000, tradieTotalCents: 50875 });
+    // Charged 60000 - the old 22500 missed-time credit = 37500. The tradie still gets all 50875.
+    expect(await payment(job.id)).toMatchObject({ status: "pending", amount_cents: 37500 });
+    expect(await payout(job.id)).toMatchObject({ amount_cents: 50875 });
     expect(await chargeJob(t.db, gatewayFor(t.db), job.id)).toBe("succeeded");
     expect((await t.db.query<{ status: string }>("select status from public.credits where job_id = $1::uuid", [job.id]))[0]!.status).toBe("applied");
     // It came off this job, so nothing goes to the payment company as a separate credit.
@@ -628,9 +630,9 @@ describe("the promised time", () => {
     const market = (await getMarket(t.db, "queenstown"))!;
     const statement = await ownerStatement(t.db, s.owner.ownerId, market, "2026-11");
     expect(statement.lines.filter((line) => line.kind === "job").map((line) => [line.description, line.amountCents])).toEqual([
-      [`Job ${job.number}: Leak under the sink (NZ$225 off: we missed our promised time)`, 60000],
+      [`Job ${job.number}: Leak under the sink (NZ$225 off: we missed our promised time)`, 37500],
     ]);
-    expect(statement).toMatchObject({ jobsCents: 60000, creditsCents: 0, membershipCents: 0, totalCents: 60000 });
+    expect(statement).toMatchObject({ jobsCents: 37500, creditsCents: 0, membershipCents: 0, totalCents: 37500 });
   });
 
   it("does not mark a miss when the tradie arrived in time, even by a minute", async () => {
@@ -691,74 +693,119 @@ describe("off-menu work and quotes", () => {
     expect(done).toMatchObject({ outcome: "diagnosis_only", ownerTotalCents: 22500, tradieTotalCents: 19000 });
   });
 
-  it("a quote of NZ$600 or less goes ahead and the owner is told", async () => {
+  it("an off-menu quote the owner approves has the NZ$225 call-out taken off it, for both sides in proportion (DECISIONS.md, 2026-11-20, third entry)", async () => {
     const s = await setup();
     const job = await onSite(s, { menuItemId: null, offMenuTrade: "plumber", offMenuTitle: "Leak under the sink" });
-    // Exactly NZ$600 of work. "Over NZ$600" needs a yes, so NZ$600 itself does not.
-    const result = await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Replace waste trap and isolating valve", labourCents: 60000, uploadIds: [] });
+    // 3.75 hours at NZ$160 = 60000 of work. Less the 22500 call-out credit: the owner is asked for 37500 more,
+    // inside the NZ$600 limit, so it goes ahead. The tradie gets 85% of 37500 = 31875 more (the fee is 5625).
+    const result = await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Replace waste trap and isolating valve", hours: 3.75, uploadIds: [] });
     if (!result.ok) throw new Error(result.message);
-    // The tradie gets 85% of it: 600 x 0.85 = NZ$510.
-    expect(result.quote).toMatchObject({ status: "auto_approved", needsApproval: false, ownerTotalCents: 60000, tradieTotalCents: 51000 });
-    expect(result.job).toMatchObject({ status: "on_site", ownerTotalCents: 22500 + 60000, tradieTotalCents: 19000 + 51000 });
-    expect((await textsTo(t.db, s.owner.user.phone!, "quote_going_ahead"))[0]!.body).toContain("inside your pre-approved limit");
+    expect(result.quote).toMatchObject({ status: "auto_approved", needsApproval: false, hours: 3.75, rateCents: 16000, labourCents: 60000, creditCents: 22500, ownerTotalCents: 37500, tradieTotalCents: 31875 });
+    // Owner: 22500 + 60000 - 22500 = 60000. Tradie: the 19000 call-out payout + 31875 = 50875. HostFix keeps 9125.
+    expect(result.job).toMatchObject({ status: "on_site", ownerTotalCents: 60000, tradieTotalCents: 50875 });
+    const lines = (await listLines(t.db, job.id)).filter((line) => line.status === "active").map((line) => [line.kind, line.ownerCents, line.tradieCents]);
+    // The credit line: owner -22500; tradie 31875 - 51000 = -19125.
+    expect(lines).toEqual([["diagnosis", 22500, 19000], ["quote", 60000, 51000], ["adjustment", -22500, -19125]]);
+    expect((await textsTo(t.db, s.owner.user.phone!, "quote_going_ahead"))[0]!.body).toContain("is doing NZ$375 more work");
     const done = await finish(s, job.id);
     expect(done.outcome).toBe("done");
   });
 
-  it("one dollar over the limit needs the owner's yes", async () => {
-    const s = await setup();
-    const job = await onSite(s, { menuItemId: null, offMenuTrade: "plumber", offMenuTitle: "Leak under the sink" });
-    const result = await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Replace waste trap and isolating valve", labourCents: 60100, uploadIds: [] });
-    expect(result.ok && result.quote).toMatchObject({ status: "pending", needsApproval: true, ownerTotalCents: 60100 });
-  });
-
-  it("a quote over NZ$600 stops everything until the owner says yes", async () => {
+  it("an off-menu quote the owner declines leaves the NZ$225 call-out standing", async () => {
     const s = await setup();
     const job = await onSite(s, { menuItemId: null, offMenuTrade: "plumber", offMenuTitle: "Hot water cylinder leaking" });
-    // NZ$670 of work.
-    const result = await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Replace cylinder valve", labourCents: 67000, uploadIds: [] });
+    // 5.75 hours = 92000. Less 22500: 69500 more, over the 60000 limit, so it waits for the owner.
+    const result = await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Replace cylinder", hours: 5.75, uploadIds: [] });
     if (!result.ok) throw new Error(result.message);
-    expect(result.quote).toMatchObject({ status: "pending", needsApproval: true, ownerTotalCents: 67000 });
-    // Nothing is added to the bill yet, and the job cannot be finished.
-    expect(result.job).toMatchObject({ status: "awaiting_approval", ownerTotalCents: 22500 });
-    expect((await textsTo(t.db, s.owner.user.phone!, "quote_needs_approval"))[0]!.body).toContain("Nothing starts until you say yes");
-    expect(await completeJob(t.db, job.id, s.tradie.tradieId, { note: "", uploadIds: [await photo(t.db, `tradie:${s.tradie.tradieId}`)], ...HOUSE })).toMatchObject({ ok: false });
-    expect(await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Another", labourCents: 1000, uploadIds: [] })).toMatchObject({ ok: false });
-
-    const approved = await decideQuote(t.db, result.quote.id, true, `owner:${s.owner.ownerId}`);
-    if (!approved.ok) throw new Error(approved.message);
-    // The platform keeps 15% of the NZ$670 (NZ$100.50), so the tradie gets NZ$569.50 of it.
-    expect(approved.job).toMatchObject({ status: "on_site", ownerTotalCents: 22500 + 67000, tradieTotalCents: 19000 + 56950 });
-    expect((await textsTo(t.db, s.tradie.phone, "quote_approved"))[0]!.body).toContain("approved your quote of NZ$670");
-    const done = await finish(s, job.id);
-    // The call-out and the quote together: 225 + 670.
-    expect(done).toMatchObject({ outcome: "done", ownerTotalCents: 89500 });
-    // Deciding again changes nothing.
-    await decideQuote(t.db, result.quote.id, false, `owner:${s.owner.ownerId}`);
-    expect((await listQuotes(t.db, job.id))[0]!.status).toBe("approved");
-  });
-
-  it("a declined quote leaves only the call-out to pay", async () => {
-    const s = await setup();
-    const job = await onSite(s, { menuItemId: null, offMenuTrade: "plumber", offMenuTitle: "Hot water cylinder leaking" });
-    const result = await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Replace cylinder", labourCents: 90000, uploadIds: [] });
-    if (!result.ok) throw new Error(result.message);
+    expect(result.quote).toMatchObject({ status: "pending", needsApproval: true, ownerTotalCents: 69500 });
     const declined = await decideQuote(t.db, result.quote.id, false, `owner:${s.owner.ownerId}`);
     if (!declined.ok) throw new Error(declined.message);
     expect(declined.job).toMatchObject({ status: "on_site", ownerTotalCents: 22500, tradieTotalCents: 19000 });
     expect(await textsTo(t.db, s.tradie.phone, "quote_declined")).toHaveLength(1);
     const done = await finish(s, job.id);
     expect(done).toMatchObject({ outcome: "diagnosis_only", ownerTotalCents: 22500 });
-    expect((await listLines(t.db, job.id)).filter((line) => line.status === "void").map((line) => line.kind)).toEqual(["quote"]);
+    expect((await listLines(t.db, job.id)).filter((line) => line.status === "void").map((line) => line.kind)).toEqual(["quote", "adjustment"]);
+  });
+
+  it("an off-menu quote over the limit stops everything until the owner says yes", async () => {
+    const s = await setup();
+    const job = await onSite(s, { menuItemId: null, offMenuTrade: "plumber", offMenuTitle: "Hot water cylinder leaking" });
+    // 5.5 hours = 88000 of work. Less the 22500 credit: 65500 more, over 60000.
+    const result = await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Replace cylinder valve", hours: 5.5, uploadIds: [] });
+    if (!result.ok) throw new Error(result.message);
+    // The tradie's share: 65500 less 15% (9825) = 55675.
+    expect(result.quote).toMatchObject({ status: "pending", needsApproval: true, ownerTotalCents: 65500, tradieTotalCents: 55675 });
+    // Nothing is added to the bill yet, and the job cannot be finished.
+    expect(result.job).toMatchObject({ status: "awaiting_approval", ownerTotalCents: 22500 });
+    expect((await textsTo(t.db, s.owner.user.phone!, "quote_needs_approval"))[0]!.body).toContain("quoted NZ$655 for more work");
+    expect(await completeJob(t.db, job.id, s.tradie.tradieId, { note: "", uploadIds: [await photo(t.db, `tradie:${s.tradie.tradieId}`)], ...HOUSE })).toMatchObject({ ok: false });
+    expect(await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Another", hours: 0.25, uploadIds: [] })).toMatchObject({ ok: false });
+
+    const approved = await decideQuote(t.db, result.quote.id, true, `owner:${s.owner.ownerId}`);
+    if (!approved.ok) throw new Error(approved.message);
+    // Owner: 22500 + 88000 - 22500 = 88000. Tradie: 19000 + 55675 = 74675.
+    expect(approved.job).toMatchObject({ status: "on_site", ownerTotalCents: 88000, tradieTotalCents: 74675 });
+    expect((await textsTo(t.db, s.tradie.phone, "quote_approved"))[0]!.body).toContain("approved your NZ$655 quote");
+    const done = await finish(s, job.id);
+    expect(done).toMatchObject({ outcome: "done", ownerTotalCents: 88000 });
+    // Deciding again changes nothing.
+    await decideQuote(t.db, result.quote.id, false, `owner:${s.owner.ownerId}`);
+    expect((await listQuotes(t.db, job.id))[0]!.status).toBe("approved");
+  });
+
+  it("on a menu job, extra work up to the NZ$600 limit goes ahead: 3.75 hours at NZ$160 is exactly 60000", async () => {
+    const s = await setup();
+    const job = await onSite(s, { code: "PL-01" });
+    const result = await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Replace waste trap and isolating valve", hours: 3.75, uploadIds: [] });
+    if (!result.ok) throw new Error(result.message);
+    // No call-out credit on a menu job: the described job is still done at the menu price. 600 x 0.85 = 510.
+    expect(result.quote).toMatchObject({ status: "auto_approved", ownerTotalCents: 60000, tradieTotalCents: 51000, creditCents: 0 });
+    expect(result.job).toMatchObject({ ownerTotalCents: 22500 + 60000, tradieTotalCents: 19000 + 51000 });
+    expect((await textsTo(t.db, s.owner.user.phone!, "quote_going_ahead"))[0]!.body).toContain("in your limit");
+  });
+
+  it("a quarter hour over the limit needs the owner's yes: 4 hours is 64000", async () => {
+    const s = await setup();
+    const job = await onSite(s, { code: "PL-01" });
+    const result = await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Replace waste trap and isolating valve", hours: 4, uploadIds: [] });
+    expect(result.ok && result.quote).toMatchObject({ status: "pending", needsApproval: true, ownerTotalCents: 64000 });
+  });
+
+  it("work up to NZ$1,000 is quoted in quarter hours at the fixed rate; above it the tradie prices it their own way", async () => {
+    const s = await setup();
+    const job = await onSite(s, { code: "PL-01" });
+    const own = (labourCents: number) => submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Re-pipe the bathroom", labourCents, uploadIds: [] });
+    // Their own price for NZ$1,000 or less is refused: it goes in hours at NZ$160.
+    expect(await own(100000)).toEqual({ ok: false, message: "Work up to NZ$1,000 is quoted in hours at the fixed rate of NZ$160 an hour." });
+    // Hours that come to more than NZ$1,000 are refused: 6.5 hours is 104000.
+    expect(await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Re-pipe", hours: 6.5, uploadIds: [] })).toMatchObject({ ok: false });
+    // Not a quarter hour.
+    expect(await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Re-pipe", hours: 1.1, uploadIds: [] })).toMatchObject({ ok: false });
+    // 6.25 hours is exactly 100000, allowed.
+    const quarters = await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Re-pipe", hours: 6.25, uploadIds: [] });
+    expect(quarters.ok && quarters.quote).toMatchObject({ labourCents: 100000, hours: 6.25, rateCents: 16000, status: "pending" });
+    await decideQuote(t.db, quarters.ok ? quarters.quote.id : "", false, `owner:${s.owner.ownerId}`);
+    // Over NZ$1,000 their own price: 150000, tradie 127500.
+    const big = await own(150000);
+    expect(big.ok && big.quote).toMatchObject({ labourCents: 150000, hours: null, rateCents: null, ownerTotalCents: 150000, tradieTotalCents: 127500 });
+  });
+
+  it("the hourly rate is the market's, set on the admin screen, and the tradie cannot type another", async () => {
+    const s = await setup();
+    await saveHourlyRate(t.db, "queenstown", "plumber", 15000, "admin:test");
+    const job = await onSite(s, { code: "PL-01" });
+    // 1.5 hours at NZ$150 = 22500; the tradie gets 85%: 19125.
+    const result = await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Replace isolating valve", hours: 1.5, uploadIds: [] });
+    expect(result.ok && result.quote).toMatchObject({ labourCents: 22500, rateCents: 15000, tradieTotalCents: 19125 });
   });
 
   it("small quotes cannot be stacked up past the limit without approval", async () => {
     const s = await setup();
     const job = await onSite(s, { code: "PL-01" });
-    // NZ$350 is inside the NZ$600 limit by itself. A second NZ$300 would take the extras to NZ$650, so it waits for a yes.
-    const first = await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Replace pan connector", labourCents: 35000, uploadIds: [] });
+    // 2.25 hours (36000) is inside the NZ$600 limit by itself. A second 1.75 hours (28000) would take the extras to 64000, so it waits for a yes.
+    const first = await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Replace pan connector", hours: 2.25, uploadIds: [] });
     expect(first.ok && first.quote.status).toBe("auto_approved");
-    const second = await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Replace isolating valve", labourCents: 30000, uploadIds: [] });
+    const second = await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Replace isolating valve", hours: 1.75, uploadIds: [] });
     expect(second.ok && second.quote.status).toBe("pending");
   });
 
@@ -766,7 +813,7 @@ describe("off-menu work and quotes", () => {
     const s = await setup();
     await t.db.query("update public.properties set spend_limit_cents = 10000 where id = $1::uuid", [s.property.id]);
     const job = await onSite(s, { code: "PL-01" }, { ...s.property, spendLimitCents: 10000 });
-    const quote = await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Extra", labourCents: 15000, uploadIds: [] });
+    const quote = await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Extra", hours: 1, uploadIds: [] });
     expect(quote.ok && quote.quote.needsApproval).toBe(true);
   });
 
@@ -829,7 +876,7 @@ describe("other money rules", () => {
   it("every amount in the money tables is a whole number of cents", async () => {
     const s = await setup({ market: { tax_registered: true } });
     const job = await onSite(s, { urgent: true });
-    await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Odd amount", labourCents: 3333, uploadIds: [] });
+    await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Odd amount", hours: 0.25, uploadIds: [] });
     const receipt = await photo(t.db, `tradie:${s.tradie.tradieId}`, "receipt");
     const parts = await addParts(t.db, job.id, s.tradie.tradieId, { list: [], offList: { description: "Odd part", receiptTotalCents: 3333, amountCents: 3333, uploadId: receipt } });
     expect(parts).toMatchObject({ ok: true, needsApproval: false });
@@ -845,9 +892,9 @@ describe("other money rules", () => {
     // What the owner paid is exactly what the tradie gets plus what the platform keeps.
     const platform = lines.filter((l) => l.status === "active").reduce((sum, l) => sum + l.ownerCents - l.tradieCents, 0);
     expect(paid!.amount_cents).toBe(owed!.amount_cents + platform);
-    // NZ$35 on the menu job. On the urgent surcharge: 15% of 5000 is 750. On the quote: the tradie's 85% of
-    // 3333 cents is 2833.05, paid as 2833, which leaves 500. On the part off the list: 20% of 3333 is 666.6,
-    // charged as 667, and 15% of that is 100.05, kept as 100. 3500 + 750 + 500 + 100 = 4850.
-    expect(platform).toBe(3500 + 750 + 500 + 100);
+    // NZ$35 on the menu job. On the urgent surcharge: 15% of 5000 is 750. On the quote: a quarter hour at NZ$160
+    // is 4000, and 15% of it is 600. On the part off the list: 20% of 3333 is 666.6, charged as 667, and 15% of
+    // that is 100.05, kept as 100. 3500 + 750 + 600 + 100 = 4950.
+    expect(platform).toBe(3500 + 750 + 600 + 100);
   });
 });

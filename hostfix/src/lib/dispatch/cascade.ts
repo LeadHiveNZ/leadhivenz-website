@@ -9,7 +9,6 @@ import type { Job, Offer } from "@/lib/jobs/types";
 import { texts } from "@/lib/notify/messages";
 import { enqueue } from "@/lib/notify/outbox";
 import { raiseException, resolveExceptionsFor } from "@/lib/ops/exceptions";
-import { addressLine } from "@/lib/properties/service";
 import { laterWave, onTimeRecords } from "@/lib/tradies/reliability";
 import { canStillTake, eligibleTradies, getTradie, type Candidate } from "@/lib/tradies/service";
 import { addTextingHours, formatDeadline, isQuietHours, nextTextingTime } from "@/lib/time";
@@ -70,6 +69,8 @@ async function offerTo(db: Db, context: JobContext, candidates: Candidate[], sta
         minutes: market.offerMinutes, urgent: job.urgency === "urgent", urgentShareCents: urgentLine?.tradieCents ?? null, link: offerUrl(offer),
       }),
       dedupeKey: `offer:${offer.id}`,
+      // With app notifications on, the offer goes by notification first; the text follows only if it is still unopened.
+      offer: { id: offer.id, textAfterMinutes: market.offerPushSmsMinutes },
     });
   }
   return created;
@@ -237,7 +238,7 @@ export async function acceptOffer(db: Db, offerId: string, via: "link" | "text" 
       channel: "sms", to: tradie.phone, template: choice.agreed ? "later_time_accepted" : "job_yours", audience: "tradie", jobId: job.id, userId: tradie.userId,
       body: choice.agreed
         ? texts.laterTimeAccepted({ number: job.number, when, link: offerUrl(accepted) })
-        : texts.jobYours({ number: job.number, address: addressLine(property), link: offerUrl(accepted) }),
+        : texts.jobYours({ number: job.number, link: offerUrl(accepted) }),
       dedupeKey: `job_yours:${offerId}`,
     });
   }

@@ -48,6 +48,9 @@ const sharedEnv = {
   // No address lookups, and no map pictures: the tests never ask LINZ or OpenStreetMap for anything.
   LINZ_DATA_KEY: "",
   LINZ_BASEMAPS_KEY: "",
+  VAPID_PUBLIC_KEY: "",
+  VAPID_PRIVATE_KEY: "",
+  VAPID_SUBJECT: "",
   MAP_TILES: "off",
 };
 

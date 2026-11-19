@@ -5,6 +5,7 @@ import { attachUploads, canView, checkFile, getUpload, recordUpload } from "@/li
 import { getJobForOwner, getJobForStaff, getJobForTradie, listJobsForOwner, listJobsForTradie, listLiveOffersForTradie } from "@/lib/jobs/store";
 import { completeJob, markArrived, markEnRoute, reportHazard, reportNoAccess, reportTradieAbsent, submitQuote } from "@/lib/jobs/work";
 import { balanceOwed } from "@/lib/billing/chargebacks";
+import { removePushSubscriptions, savePushSubscription } from "@/lib/notify/push";
 import { confirmFixed } from "@/lib/jobs/confirm";
 import { addParts } from "@/lib/jobs/parts";
 import { confirmPin, propertiesNeedingPin } from "@/lib/properties/pin";
@@ -335,6 +336,32 @@ describe("guests, hazards and chargebacks (DECISIONS.md, 2026-11-20, second entr
     expect(rls).toEqual([
       { relname: "balance_recoveries", relrowsecurity: true }, { relname: "chargebacks", relrowsecurity: true }, { relname: "tradie_balances", relrowsecurity: true },
     ]);
+  });
+});
+
+describe("app notifications and \"not the job described\" (DECISIONS.md, 2026-11-20, third entry)", () => {
+  it("a person's notification devices are their own: saving someone's address moves it to them, and removing only touches their own", async () => {
+    const { alice, bob } = await twoOfEverything();
+    const endpoint = "https://push.example.com/send/alice-phone";
+    await savePushSubscription(t.db, alice.user.id, { endpoint, keys: { p256dh: "k", auth: "a" } });
+    await removePushSubscriptions(t.db, bob.user.id, endpoint);
+    expect(await t.db.query("select 1 from public.push_subscriptions where user_id = $1::uuid", [alice.user.id])).toHaveLength(1);
+    await removePushSubscriptions(t.db, bob.user.id);
+    expect(await t.db.query("select 1 from public.push_subscriptions where user_id = $1::uuid", [alice.user.id])).toHaveLength(1);
+    const rls = await t.db.query<{ relname: string; relrowsecurity: boolean }>(
+      "select relname, relrowsecurity from pg_class where relname in ('push_subscriptions', 'sms_opt_outs', 'trade_rates') order by relname",
+    );
+    expect(rls.every((row) => row.relrowsecurity)).toBe(true);
+    expect(rls).toHaveLength(3);
+  });
+
+  it("only the tradie on the job can say it is not the job described", async () => {
+    const { mike, dave, aliceJob } = await twoOfEverything();
+    await arrive(t.db, aliceJob.id, mike.tradieId, HOUSE);
+    const uploadId = await photo(t.db, `tradie:${dave.tradieId}`, "quote");
+    expect(await submitQuote(t.db, aliceJob.id, dave.tradieId, { description: "Not it", hours: 1, uploadIds: [uploadId], notDescribed: { reason: "It is a different job." } })).toEqual({
+      ok: false, message: "That job is not one of yours.",
+    });
   });
 });
 

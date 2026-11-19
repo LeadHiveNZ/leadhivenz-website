@@ -14,7 +14,7 @@ import { DEMO_CARD_OK } from "@/lib/payments/demo-gateway";
 import { getProperty, type Property } from "@/lib/properties/service";
 import { agreeToAgreement, getTradie, TRADIE_AGREEMENT_VERSION } from "@/lib/tradies/service";
 import { testDb } from "./db";
-import { arrive, gatewayFor, HOUSE, liveMarket, logJob, makeOwner, makeProperty, makeTradie, menuItem, MONDAY_10AM, offersFor, openExceptions, photo, textsTo } from "./factory";
+import { arrive, gatewayFor, HOUSE, liveMarket, logJob, makeOwner, makeProperty, makeTradie, menuItem, MONDAY_10AM, offersFor, openExceptions, photo, textsTo, messagesTo } from "./factory";
 
 /**
  * TRADIES PAID WHATEVER THE CARD DOES, CHARGEBACKS BY FAULT, GUESTS IN THE
@@ -101,7 +101,7 @@ describe("a usable card before a job goes out", () => {
     expect(await openExceptions(t.db, result.job.id)).toEqual(["card_needed"]);
     const asked = await textsTo(t.db, s.owner.user.phone!, "card_needed");
     expect(asked).toHaveLength(1);
-    expect(asked[0]!.body).toContain("there is no card saved");
+    expect(asked[0]!.body).toContain("no card saved. Update it:");
     expect(asked[0]!.body).toContain("/app/billing");
 
     // Nothing changes until the card is there.
@@ -155,7 +155,7 @@ describe("a declined card never stops the tradie being paid", () => {
     expect(await releaseDuePayouts(t.db, gatewayFor(t.db))).toBe(1);
     expect(await payout(job.id)).toMatchObject({ status: "sent", amount_cents: 19000, deducted_cents: 0 });
     expect((await payment(job.id))!.tradie_paid_ahead_at).not.toBeNull();
-    expect((await textsTo(t.db, s.tradie.phone, "payout_sent"))[0]!.body).toContain("NZ$190 for job");
+    expect((await messagesTo(t.db, s.tradie.phone, "payout_sent"))[0]!.body).toContain("NZ$190 for job");
     const sent = await t.db.query<{ amount: number; detail: { owner_charged: boolean } }>("select amount, detail from public.audit_log where entity_id = $1 and action = 'payout.sent'", [job.id]);
     expect(sent).toEqual([{ amount: 19000, detail: expect.objectContaining({ owner_charged: false, deducted: 0 }) }]);
 
@@ -211,9 +211,9 @@ describe("chargebacks", () => {
     expect(await decideChargebackFault(t.db, chargeback!.id, "tradie", "staff:test")).toEqual({ ok: true, owedCents: 0, cancelledCents: 0 });
     expect(await balanceOwed(t.db, s.tradie.tradieId)).toBe(19000);
     expect(await openExceptions(t.db, first.id)).toEqual([]);
-    const told = await textsTo(t.db, s.tradie.phone, "balance_owed");
+    const told = await messagesTo(t.db, s.tradie.phone, "balance_owed");
     expect(told).toHaveLength(1);
-    expect(told[0]!.body).toContain("NZ$190 will come off your next payments, never more than half of any one");
+    expect(told[0]!.body).toContain("NZ$190 comes off later pay, max half of each.");
 
     // The next job pays 20000 (PL-03): half is 10000, so 10000 comes off and 10000 is sent. 9000 still owed.
     const second = await chargedAndPaid(s, "PL-03");
@@ -221,8 +221,8 @@ describe("chargebacks", () => {
     expect(await releaseDuePayouts(t.db, gatewayFor(t.db))).toBe(1);
     expect(await payout(second.id)).toMatchObject({ status: "sent", amount_cents: 20000, deducted_cents: 10000 });
     expect(await balanceOwed(t.db, s.tradie.tradieId)).toBe(9000);
-    const secondText = (await textsTo(t.db, s.tradie.phone, "payout_sent")).find((message) => message.body?.includes(`job ${second.number}`));
-    expect(secondText!.body).toBe(`HostFix: NZ$100 for job ${second.number} is on its way to your bank account. NZ$100 came off it towards what you owe us.`);
+    const secondText = (await messagesTo(t.db, s.tradie.phone, "payout_sent")).find((message) => message.body?.includes(`job ${second.number}`));
+    expect(secondText!.body).toBe(`HostFix: NZ$100 for job ${second.number} is on its way to your bank. NZ$100 came off towards what you owe us.`);
 
     // The one after pays 19000 (PL-01): half is 9500, more than the 9000 left, so 9000 comes off and 10000 is sent.
     const third = await chargedAndPaid(s);
@@ -294,7 +294,7 @@ describe("guests in the house", () => {
     await t.db.tx((tx) => acceptOffer(tx, offer!.id, "link"));
     const booked = await textsTo(t.db, "+64215550002", "guest_booked");
     expect(booked).toHaveLength(1);
-    expect(booked[0]!.body).toMatch(/^HostFix: a HostFix tradie, Dave, is coming to fix ".+" .+\. They'll knock first\.$/);
+    expect(booked[0]!.body).toMatch(/^HostFix: a HostFix tradie, Dave, is coming to fix .+\. They'll knock first\. Reply STOP to opt out$/);
     await markEnRoute(t.db, job.id, s.tradie.tradieId);
     await markEnRoute(t.db, job.id, s.tradie.tradieId);
     const onWay = await textsTo(t.db, "+64215550002", "guest_on_the_way");
@@ -329,7 +329,7 @@ describe("guests in the house", () => {
     expect(guest.job).toMatchObject({ status: "offering", guestStaying: "yes", mayLetIn: false });
     const [offer] = await offersFor(t.db, guest.job.id);
     await t.db.tx((tx) => acceptOffer(tx, offer!.id, "link"));
-    expect((await textsTo(t.db, "+64215550001", "reporter_booked"))[0]!.body).toMatch(/A tradie is booked and will be there .+\. They'll knock first\.$/);
+    expect((await textsTo(t.db, "+64215550001", "reporter_booked"))[0]!.body).toMatch(/a tradie will be at .+\. They'll knock first\.( Reply STOP to opt out)?$/);
     expect(await textsTo(t.db, "+64215550001", "guest_booked")).toHaveLength(0);
     await markEnRoute(t.db, guest.job.id, s.tradie.tradieId);
     expect(await textsTo(t.db, "+64215550001", "guest_on_the_way")).toHaveLength(1);
@@ -350,7 +350,7 @@ describe("hazards at a property", () => {
     expect(property.hazards).toMatch(/^.*16.*Nov.*, noted by Dave Smith: Rotten boards on the back deck$/);
     const told = await textsTo(t.db, s.owner.user.phone!, "hazard_added");
     expect(told).toHaveLength(1);
-    expect(told[0]!.body).toContain('Dave Smith has noted a safety hazard at Lakeview: "Rotten boards on the back deck"');
+    expect(told[0]!.body).toContain('Dave Smith noted a hazard at Lakeview: "Rotten boards on the back..."');
   });
 });
 

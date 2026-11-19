@@ -30,6 +30,7 @@ export type JobRow = {
   finish_check?: ArrivalCheck | null; finish_distance_m?: number | null; minutes_on_site?: number | null; check_flags?: string[] | null;
   confirm_status?: ConfirmStatus | null; confirm_by?: Date | null; confirm_decided_at?: Date | null; confirm_decided_by?: string | null;
   card_hold?: Job["cardHold"]; guest_staying?: Job["guestStaying"]; guest_name?: string | null; guest_phone?: string | null; may_let_in?: boolean | null;
+  not_described_at?: Date | null; not_described_reason?: string | null; not_described_status?: Job["notDescribedStatus"]; not_described_by?: Date | null;
 };
 
 const num = (value: number | string | null | undefined) => (value === null || value === undefined ? null : Number(value));
@@ -61,6 +62,8 @@ export function rowToJob(row: JobRow): Job {
     confirmDecidedAt: d(row.confirm_decided_at ?? null), confirmDecidedBy: row.confirm_decided_by ?? null,
     cardHold: row.card_hold ?? null, guestStaying: row.guest_staying ?? null, guestName: row.guest_name ?? null, guestPhone: row.guest_phone ?? null,
     mayLetIn: row.may_let_in ?? true,
+    notDescribedAt: d(row.not_described_at ?? null), notDescribedReason: row.not_described_reason ?? null,
+    notDescribedStatus: row.not_described_status ?? null, notDescribedBy: d(row.not_described_by ?? null),
   };
 }
 
@@ -247,6 +250,7 @@ export async function listLiveOffersForTradie(db: Db, tradieId: string, at: Date
 type QuoteRow = {
   id: string; created_at: Date; job_id: string; tradie_id: string; description: string; labour_cents: number; parts_cents: number;
   owner_total_cents: number; tradie_total_cents: number; needs_approval: boolean; status: QuoteStatus; decided_at: Date | null; decided_by: string | null;
+  hours?: number | string | null; rate_cents?: number | null; credit_cents?: number | null; not_described?: boolean | null;
 };
 
 export function rowToQuote(row: QuoteRow): Quote {
@@ -254,6 +258,8 @@ export function rowToQuote(row: QuoteRow): Quote {
     id: row.id, createdAt: new Date(row.created_at), jobId: row.job_id, tradieId: row.tradie_id, description: row.description,
     labourCents: row.labour_cents, partsCents: row.parts_cents, ownerTotalCents: row.owner_total_cents, tradieTotalCents: row.tradie_total_cents,
     needsApproval: row.needs_approval, status: row.status, decidedAt: d(row.decided_at), decidedBy: row.decided_by,
+    hours: row.hours === null || row.hours === undefined ? null : Number(row.hours), rateCents: row.rate_cents ?? null,
+    creditCents: Number(row.credit_cents ?? 0), notDescribed: Boolean(row.not_described),
   };
 }
 
