@@ -64,7 +64,8 @@ td.get { font-weight: 700; color: var(--good); }
   .wrap { gap: 26px; }
   .pair, .rule, .ask, tr { break-inside: avoid; }
   h2 { break-after: avoid; }
-  .scroll { overflow: visible; }
+  .scroll { overflow: visible; break-inside: avoid; }
+  .foot { display: none; }
   table { min-width: 0; }
 }
 </style>
@@ -97,7 +98,7 @@ td.get { font-weight: 700; color: var(--good); }
       </div>
       <div class="pair">
         <div class="said"><span class="lab">You said</span><p>Most jobs can wait a few days, and managers use the sparky they trust.</p></div>
-        <div><span class="lab">We changed</span><p>Small jobs stay within 24 hours: between guests, that speed is the whole point. Bigger or quoted work that needs planning gets a "within 5 days" option, so it can be fitted around other jobs. And an owner's own tradie always gets first offer on their properties. The network only sees it if he passes.</p></div>
+        <div><span class="lab">We changed</span><p>Small jobs stay within 24 hours: between guests, that speed is the whole point. Bigger or quoted work that needs planning gets a "within 5 days" option, so it can be fitted around other jobs. And an owner's own tradie always gets first offer on their properties. If he can't make the time, he can suggest another, and the owner decides. Details below.</p></div>
       </div>
       <div class="pair">
         <div class="said"><span class="lab">You said</span><p>15% won't work on big jobs, and the 12-month rule doesn't fit a small town where everyone already knows each other.</p></div>
@@ -144,6 +145,23 @@ td.get { font-weight: 700; color: var(--good); }
   </section>
 
   <section>
+    <span class="eyebrow">When it's the owner's own sparky</span>
+    <h2>"Can't make that time" is not a no</h2>
+    <p>A manager's regular sparky shouldn't have to hit "pass" just because he's booked solid tomorrow. So the tradie an owner has chosen gets three buttons, not two:</p>
+    <div class="scroll">
+      <table>
+        <thead><tr><th>He taps</th><th>What the owner sees</th></tr></thead>
+        <tbody>
+          <tr><td><b>Accept</b>, and picks an arrival time</td><td>"Dave's coming tomorrow, 9 to 11am."</td></tr>
+          <tr><td><b>Can't make that time, suggest another</b></td><td>"Dave can't make it within 24 hours. He can come Thursday, 9 to 11am. <b>Wait for Dave</b> or <b>send it to another HostFix tradie now</b>." The owner decides. If they wait, Thursday becomes the time Dave is held to, and if the job was urgent, nobody pays the urgent fee.</td></tr>
+          <tr><td><b>Pass</b></td><td>"Dave isn't available for this one, so we've sent it to another HostFix tradie." Never "passed" or "declined".</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="muted">Neither suggesting a time nor passing ever counts against a tradie. What does count is turning up when he said he would: tradies who are on time on the jobs they accept are offered network jobs first. Urgent jobs pay the extra $42.50 when he's on site within 4 hours; late, and the owner isn't charged it.</p>
+  </section>
+
+  <section>
     <div class="rule">
       <h2>The 12-month rule, rewritten</h2>
       <p>HostFix pays to find owners. The rule protects that, and nothing more.</p>
@@ -163,6 +181,7 @@ td.get { font-weight: 700; color: var(--good); }
         <li>Would your partner read the electrical items on the menu, line by line? Ten minutes from a real sparky beats anything I can work out on my own.</li>
         <li>With these changes, would he put his own property-manager clients through the app at 1%, and take HostFix jobs when he has a gap? A straight no is just as useful to me.</li>
       </ol>
+      <p class="muted">Prices may still move a little once tradies like your partner have had their say.</p>
       <p>Thanks again. This is the most useful feedback I've had.</p>
       <p><b>Joe</b><br><span class="muted">HostFix · hostfix.co.nz</span></p>
     </div>
