@@ -1,7 +1,7 @@
 # Wellco Project Brain: runbook
 
 Client: **Wellco Developments Pty Ltd** (ABN 81 096 401 400, ACN 096 401 400), Milton NSW, est. 2001.
-Contact: Dan Wellman, Managing Director, dan.wellman@wellco.au.
+Contact: Dan Wellman, Managing Director, dan.wellman@wellco.net.au.
 Build: Joe Ingram, LeadHive (hello@leadhivenz.com). Source: Zoom with Dan + his build brief, 2 Nov 2026.
 
 One app for Dan to run the admin of each project company: stage checklists (9 stages by default,
@@ -77,9 +77,9 @@ which sits on top of A or B). On the call Joe pitched A: build it on Dan's accou
 Dan owns the data and the PDFs and pays Supabase directly. Joe is invited as a team member.
 
 **A1. Dan creates the account** (do it together on a 10-minute Zoom)
-1. supabase.com > Start your project > sign up with **dan.wellman@wellco.au**.
+1. supabase.com > Start your project > sign up with **dan.wellman@wellco.net.au**.
 2. It creates an organisation. Name it `Wellco Developments`. Plan: start Free, move to Pro at go-live (see costs).
-3. Organisation > Team > Invite > `hello@leadhivenz.com` as **Developer** (or Administrator).
+3. Organisation > Team > Invite > `hello@leadhivenz.com` as **Administrator** (Dan stays Owner).
 
 **A2. Create the project** (Joe, from the invite)
 1. New project > name `wellco-project-brain`.
@@ -108,7 +108,7 @@ Dan owns the data and the PDFs and pays Supabase directly. Joe is invited as a t
 
 **A5. Login for Dan only**
 1. Authentication > Sign In / Providers > **Email** on. Confirm email: on.
-2. Authentication > Users > Add user > Create new user > `dan.wellman@wellco.au`, a strong password,
+2. Authentication > Users > Add user > Create new user > `dan.wellman@wellco.net.au`, a strong password,
    tick Auto Confirm. (His settings row and default lists are created automatically.)
    Check in SQL Editor: `select project_type, count(*) from stage_templates group by 1;` gives
    commercial_industrial 9, land_subdivision 9, residential_build 8. Then fill in Wellco's ABN on the

@@ -5,7 +5,7 @@ JOE ONLY. Delete this whole comment block before sending to Dan.
 
 BEFORE SENDING
 - Demo link is the private claude.ai page https://claude.ai/artifact/PLBSD85NfHUDxkKS8Z3tiB. Share it with
-  dan.wellman@wellco.au from the page's Share menu BEFORE sending, or he can't open it. Test it on your
+  dan.wellman@wellco.net.au from the page's Share menu BEFORE sending, or he can't open it. Test it on your
   phone on mobile data first. Backup: attach clients/wellco/wellco-demo.html, it opens offline on any device.
 - Square-bracket numbers are placeholders: [6,500] [250] [390] [50%]. Remove the brackets once set.
 - GST on your fees: LeadHive is NZ based. Check with your accountant whether you add anything for
