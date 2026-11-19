@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { brand } from "@config/brand";
 import { launchMarket } from "@config/markets";
 import { LegalPage, Section } from "@/components/LegalPage";
-import { PROPOSAL_DAYS, WINDOW_HOURS } from "@/lib/jobs/arrival";
+import { FAR_METRES, PROPOSAL_DAYS, WINDOW_HOURS } from "@/lib/jobs/arrival";
+import { FLAG_DAYS, TRUSTED_FINISHED_JOBS } from "@/lib/tradies/reliability";
 import { formatHourOfDay, TEXTING_ENDS, TEXTING_STARTS } from "@/lib/time";
 
 /**
@@ -15,7 +16,7 @@ export const metadata: Metadata = {
   description: `How ${brand.name} works for property owners: free to join, fixed prices, charged when a job is done.`,
 };
 
-const UPDATED = "18 November 2026";
+const UPDATED = "19 November 2026";
 
 /**
  * The hours in section 4 come from the launch market's settings (config/markets.ts), so the page cannot say
@@ -25,6 +26,9 @@ const UPDATED = "18 November 2026";
 const notTaken = launchMarket.unacceptedAlertHours;
 const answerHours = launchMarket.counterOfferHours;
 const quiet = `${formatHourOfDay(TEXTING_ENDS)} and ${formatHourOfDay(TEXTING_STARTS)}`;
+// The checks on every finished job (DECISIONS.md, 2026-11-19), from the same settings and constants the app uses.
+const minMinutes = launchMarket.minMinutesOnSite;
+const confirmHours = launchMarket.ownerConfirmHours;
 
 export default function Page() {
   const n = brand.name;
@@ -137,6 +141,10 @@ export default function Page() {
 
       <Section n={6} title="Access to your property">
         <p>
+          Each property has a pin on a map, which you check on the property page: we look the address up, and you can move the pin onto
+          the house. It is how we check a tradie is really at your property.
+        </p>
+        <p>
           You give us the access notes a tradie needs. They are shown only to the tradie who accepted the job, and only after accepting. We
           recommend a lockbox or smart lock with a code you can change. You are responsible for the notes being right; a tradie who cannot get in
           because of them is paid the call-out, and that is charged to you.
@@ -153,6 +161,15 @@ export default function Page() {
       </Section>
 
       <Section n={8} title="If something is wrong with the work">
+        <p>
+          <strong>Every job is checked.</strong> The tradie takes a before photo when they tap &ldquo;I have arrived&rdquo; and an after photo when
+          they finish, in the app. Their phone&rsquo;s location at both taps is compared with your property&rsquo;s pin. If either tap has no location
+          or is more than {FAR_METRES} m away, or the job is finished less than {minMinutes} minutes after the tradie arrived (except a diagnosis or a visit
+          to look and price, or when they could not get in), the job is flagged. Your card is charged as normal, but the tradie&rsquo;s payment may be held
+          while we ask you to look at the before and after photos on the job page and press &ldquo;Yes, it&rsquo;s fixed&rdquo; or &ldquo;Something&rsquo;s
+          wrong&rdquo;. If you have not answered within {confirmHours} hours, a tradie with {TRUSTED_FINISHED_JOBS} or more finished jobs and no other flagged
+          job in the last {FLAG_DAYS} days is paid; for anyone else, our team looks at the photos and decides.
+        </p>
         <p>
           Raise it from the job page. If you do so within a day of the job, the tradie&rsquo;s payment is held. We look at the photos, the notes and
           both sides and decide within 5 working days: the work stands, a part refund, or a full refund to your card. If work fails within 30 days

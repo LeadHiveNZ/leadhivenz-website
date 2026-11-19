@@ -6,6 +6,7 @@ import { getFileStore } from "@/lib/files/store";
 import { flushOutbox, type FlushDeps } from "@/lib/notify/outbox";
 import { raiseException } from "@/lib/ops/exceptions";
 import { paymentsFor } from "@/lib/payments";
+import { geocoder } from "@/lib/maps/geocode";
 
 /**
  * What happens straight after someone presses a button: the texts and emails
@@ -55,5 +56,6 @@ export async function runTimer(db: Db): Promise<TickReport> {
     gatewayFor: gatewayFor(db),
     flush: flushDeps,
     removeFiles: files ? (keys) => files.remove(keys) : undefined,
+    geocoder: geocoder(),
   });
 }

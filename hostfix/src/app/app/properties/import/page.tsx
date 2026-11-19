@@ -3,6 +3,7 @@ import Link from "next/link";
 import { importProperties } from "@/app/actions/owner";
 import { PasteImport } from "@/components/properties/PasteImport";
 import { Card, Notice, PageTitle } from "@/components/ui/Bits";
+import { geocoder } from "@/lib/maps/geocode";
 import { requireOwner } from "@/lib/auth/current";
 import { getDb } from "@/lib/db";
 import { listMarkets, listTiers } from "@/lib/markets/store";
@@ -62,6 +63,9 @@ export default async function ImportPropertiesPage({ searchParams }: { searchPar
           {portfolio
             ? "They join your Portfolio: your one monthly retainer covers them."
             : "Nothing is charged now. Each property is covered once a card is on file, and jobs are charged at the fixed price when they are done."}
+        </p>
+        <p className="mt-2 text-sm text-muted">
+          {geocoder() ? "We look up each address on the map. Afterwards, open each property once to check its pin is on the house." : "Afterwards, open each property once to put its pin on the map."}
         </p>
       </Card>
     </div>

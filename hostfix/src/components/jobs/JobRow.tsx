@@ -25,6 +25,9 @@ export function JobRow({ job, href, audience, now, timeZone }: { job: JobListIte
       <span className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1.5">
         <JobStatus job={job} audience={audience} />
         {job.urgency === "urgent" && isOpen(job.status) && <Chip tone="alert">Urgent</Chip>}
+        {job.status === "completed" && audience !== "tradie" && (job.confirmStatus === "waiting" || job.confirmStatus === "staff_queue" || job.confirmStatus === "staff_held") && (
+          <Chip tone="waiting">{audience === "owner" ? "Please check the photos" : "Flagged: waiting for a check"}</Chip>
+        )}
         {isOpen(job.status) && job.status !== "awaiting_owner" && <Deadline job={job} now={now} timeZone={timeZone} />}
       </span>
     </Link>

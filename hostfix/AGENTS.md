@@ -31,8 +31,11 @@ it when you change one.
 | Charging, paying tradies, credits, disputes, refunds | `src/lib/billing/settle.ts` |
 | Memberships and referrals | `src/lib/properties/service.ts` |
 | The dispatcher's queue | `src/lib/ops/exceptions.ts` |
-| Arrival windows, surcharges settled at Arrived, the location check | `src/lib/jobs/arrival.ts` |
-| On-time record, network order, no-shows (never declines) | `src/lib/tradies/reliability.ts` |
+| Arrival windows, surcharges settled at Arrived, distances | `src/lib/jobs/arrival.ts` |
+| The checks on every finished job: location at both taps, photos, time on site, the flags | `src/lib/jobs/checks.ts` |
+| A flagged job: the owner's answer, the 48 hours, trusted tradies, the dispatcher's Approve or Hold | `src/lib/jobs/confirm.ts` |
+| Each property's map pin, the address lookup (LINZ) and the map pictures | `src/lib/properties/pin.ts`, `src/lib/maps/geocode.ts`, `src/lib/maps/tiles.ts` |
+| On-time record, network order, no-shows, trust and flagged jobs (never declines) | `src/lib/tradies/reliability.ts` |
 | Who is signed in and what they may open | `src/lib/auth/current.ts` |
 | One-tap links in texts | `src/lib/links.ts`, `src/lib/access/links.ts` |
 | Cleaners and co-hosts: the team, groups, each person's one link and their list of houses | `src/lib/team/service.ts`, `src/lib/team/device.ts`, `src/app/r/[token]/page.tsx` |
@@ -77,9 +80,8 @@ it when you change one.
   line for anyone (owner 0, tradie 0, us 0), and the after-hours line stays only if the tap is outside
   working hours. A normal job's tradie picks a two-hour window inside the promise when accepting, and on
   time means by its end. A normal job nobody accepts in the market's hours (3 by default) texts the owner
-  ("you pay nothing unless a tradie does the job") and alerts the team. An Arrived tap with no location
-  or over 500 m from earlier trusted taps at the house is flagged, and the owner has "The tradie isn't
-  here" (a button). The first choice or backup may suggest a later time; the owner waits (the promise
+  ("you pay nothing unless a tradie does the job") and alerts the team. The owner has "The tradie isn't
+  here" (a button) once Arrived is tapped. The first choice or backup may suggest a later time; the owner waits (the promise
   moves, urgent stops being urgent) or sends it on, and no answer in the market's hours (2) sends it on.
   Those two owner texts are never sent 9pm to 7am (held until 7am), and on a normal job both clocks count
   only 7am to 9pm (`addTextingHours`, `src/lib/time.ts`). Urgent jobs run any time. The terms and tradie
@@ -89,6 +91,23 @@ it when you change one.
   arrivals) puts them in a later wave of network offers, never out of a first-choice or backup slot. A
   no-show (accepted, nobody there by the promised time) goes to the queue; 3 in 90 days flags them for a
   conversation. Only a person removes a tradie. The owner is never told a tradie "passed" or "declined".
+- **Every finished job is checked, and the owner is asked before the team** (`DECISIONS.md`, 2026-11-19).
+  Every property has a map pin (`src/lib/properties/pin.ts`): looked up from the address in the LINZ address
+  list when `LINZ_DATA_KEY` is set, confirmed or moved by the owner on a small map, and cleared when the
+  street address changes. Arrived needs a "before" photo and Job done an "after" photo, taken in the app,
+  each stamped with the server's time and the phone's location. Both taps are compared with the pin (with
+  no pin, the middle of earlier trusted arrivals): over 300 m (`FAR_METRES`) or no location is a flag, and
+  the tap is never refused. Job done under `min_minutes_on_site` (10) after Arrived is a flag, except
+  diagnosis and look-and-price jobs and "could not get in"; so is a photo dated 30 minutes or more before the job was logged.
+  A job with no flags pays exactly as before. A flagged one charges the owner as normal, holds the payout
+  (`held`) and asks the owner, in neutral words that never accuse the tradie, to look at the before and
+  after photos and press "Yes, it's fixed" (released) or "Something's wrong" (the dispute). No answer in
+  `owner_confirm_hours` (48): a trusted tradie (10 or more finished jobs before this one, no other flag in
+  90 days) is paid and the flag is logged; anyone else goes to the queue for one-tap Approve or Hold
+  (`src/lib/jobs/confirm.ts`). 3 flagged jobs in 90 days flags the tradie for a conversation, never removal.
+  Only accepted, finished jobs can be flagged. The terms, privacy page and tradie agreement read these
+  numbers from the market and the constants (`tests/unit/legal.test.ts`). Never call any other map or
+  address service, or a paid one, without the founder's yes.
 - **No insurance, no jobs.** A tradie needs public liability insurance (insurer, policy number, expiry) on
   file and the certificate of currency uploaded (an `insurance_certificate` file, `src/lib/tradies/certificate.ts`)
   before approval, and the offer query skips anyone whose insurance has run out or has no certificate, the

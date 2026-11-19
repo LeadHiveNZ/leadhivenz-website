@@ -1,12 +1,13 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { exifTakenAt, exifToDate } from "@/lib/files/exif";
 import { Icon } from "../ui/Icon";
 
 type Photo = { id: string; url: string };
 
 type Props = {
-  kind: "property" | "report" | "completion" | "quote" | "receipt" | "licence" | "dispute";
+  kind: "property" | "report" | "before" | "completion" | "quote" | "receipt" | "licence" | "dispute";
   /** The name the photo ids are sent under when the form is submitted. */
   name?: string;
   label: string;
@@ -15,7 +16,39 @@ type Props = {
   /** For people who are not signed in: the link they arrived by. */
   token?: string;
   offer?: string;
+  /**
+   * Opens the phone's camera straight away, one photo at a time, instead of
+   * the photo gallery (DECISIONS.md, 2026-11-19). Some phones still offer the
+   * gallery from the camera screen: the photo's own date is checked for that.
+   */
+  camera?: boolean;
+  /** Sends where the phone is, and when the photo says it was taken, with each photo. */
+  stamp?: boolean;
 };
+
+/** The time inside the photo file, read before it is shrunk (which drops it). */
+async function takenAt(file: File): Promise<string | null> {
+  try {
+    const head = new Uint8Array(await file.slice(0, 256 * 1024).arrayBuffer());
+    const found = exifTakenAt(head);
+    const at = found ? exifToDate(found) : null;
+    return at ? at.toISOString() : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Where the phone is now, if it will say within a few seconds. */
+function whereNow(): Promise<{ lat: number; lng: number } | null> {
+  if (typeof navigator === "undefined" || !("geolocation" in navigator)) return Promise.resolve(null);
+  return new Promise((resolve) => {
+    navigator.geolocation.getCurrentPosition(
+      (position) => resolve({ lat: position.coords.latitude, lng: position.coords.longitude }),
+      () => resolve(null),
+      { timeout: 5000, maximumAge: 60_000 },
+    );
+  });
+}
 
 const MAX_EDGE = 1600;
 
@@ -42,7 +75,7 @@ async function shrink(file: File): Promise<Blob> {
 }
 
 /** Add photos to a form. Each one is sent as soon as it is chosen, so the form itself stays quick to send. */
-export function PhotoUploader({ kind, name = "uploadIds", label, hint, max = 6, token, offer }: Props) {
+export function PhotoUploader({ kind, name = "uploadIds", label, hint, max = 6, token, offer, camera = false, stamp = false }: Props) {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [busy, setBusy] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -58,8 +91,15 @@ export function PhotoUploader({ kind, name = "uploadIds", label, hint, max = 6, 
     for (const file of chosen) {
       setBusy((count) => count + 1);
       try {
+        const taken = stamp ? await takenAt(file) : null;
+        const place = stamp ? await whereNow() : null;
         const small = await shrink(file);
         const body = new FormData();
+        if (taken) body.set("takenAt", taken);
+        if (place) {
+          body.set("lat", String(place.lat));
+          body.set("lng", String(place.lng));
+        }
         body.set("file", new File([small], "photo.jpg", { type: small.type || file.type }));
         body.set("kind", kind);
         if (token) body.set("token", token);
@@ -100,8 +140,12 @@ export function PhotoUploader({ kind, name = "uploadIds", label, hint, max = 6, 
         {photos.length + busy < max && (
           <label className="flex aspect-square cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-line bg-white text-sm font-semibold text-brand hover:border-brand hover:bg-tint">
             <Icon name="camera" size={24} />
-            Add photo
-            <input ref={input} type="file" accept="image/*" multiple className="sr-only" onChange={(event) => void add(event.target.files)} />
+            {camera ? "Take photo" : "Add photo"}
+            {camera ? (
+              <input ref={input} type="file" accept="image/*" capture="environment" className="sr-only" onChange={(event) => void add(event.target.files)} />
+            ) : (
+              <input ref={input} type="file" accept="image/*" multiple className="sr-only" onChange={(event) => void add(event.target.files)} />
+            )}
           </label>
         )}
       </div>

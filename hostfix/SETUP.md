@@ -28,6 +28,7 @@ business, no accounts and no real money. See "Try the demo" at the bottom.
 | Resend | Free | Up to 3,000 emails a month, 100 a day. |
 | Texts | About 1 to 3 US cents each | A job sends 6 to 10 texts. Pay as you go. |
 | Domain name | About NZ$25 to NZ$40 a year | |
+| LINZ address lookup and aerial map | Free | Optional (step 7b). Government data, licensed CC BY 4.0. No card needed. |
 
 On a NZ$235 job (a dripping tap) where you keep NZ$35, Stripe's card fee is about NZ$6.53, the payout fee
 about NZ$0.75 and the texts about NZ$0.30. Roughly NZ$27 is left before your own time. The membership fee is where
@@ -260,6 +261,26 @@ only ever sent to Meta in scrambled (hashed) form. Nothing inside the signed-in 
 To tag your ad links so the leads list shows the source and campaign, add this to the end of the link:
 `?utm_source=facebook&utm_medium=paid&utm_campaign=YOUR-CAMPAIGN-NAME&utm_content=YOUR-AD-NAME`
 
+## Step 7b. Maps: each property's pin (15 minutes, optional, free)
+
+Every property has a pin on a small map. When a tradie taps Arrived and Job done, the app checks they are within
+300 m of it (DECISIONS.md, 2026-11-19). Without these two keys the pin still works: owners place it by tapping the
+map, or with "I'm at the property now", on OpenStreetMap's street map. With them, the pin starts on the house by
+itself and owners see aerial photos. Both are free, from Toitū Te Whenua Land Information New Zealand (LINZ).
+Nothing here costs money, and nothing needs a card.
+
+- [ ] **Address lookup.** Go to data.linz.govt.nz, make a free account, open your account menu, then API keys,
+  and create a key (tick the box for access to the data services, "WFS"; the exact wording may differ). Add it as
+  `LINZ_DATA_KEY`. The app uses LINZ's "NZ Addresses" list. Not confirmed from here: the menu names in the LINZ
+  site, because this could not be tried with a real account.
+- [ ] **Aerial photos.** Email LINZ Basemaps (the address is on basemaps.linz.govt.nz, under Help or Contact) and
+  ask for a free "developer" API key for a public website, giving the site's address. It never expires. The key
+  the Basemaps website shows you straight away also works, but runs out after 90 days. Add it as
+  `LINZ_BASEMAPS_KEY`. The key is visible in owners' browsers: that is how LINZ map keys work.
+- [ ] Redeploy, then check the setup checklist says **Address lookup** and **Map pictures** are ready.
+- [ ] Existing properties: each owner is asked to check their pin on the Properties page. The timer looks up
+  addresses that have never been looked up, ten a minute.
+
 ## Step 8. Your own domain (10 minutes)
 
 1. Buy the domain anywhere.
@@ -333,6 +354,9 @@ keys (step 6) and, for texts, whatever registration that country requires.
 | `NEXT_PUBLIC_META_PIXEL_ID` | Meta Pixel | Meta Events Manager |
 | `META_CAPI_ACCESS_TOKEN` | Meta Conversions API | Meta Events Manager > Settings > Conversions API |
 | `META_TEST_EVENT_CODE` | Optional. Only while testing | Meta Events Manager > Test Events |
+| `LINZ_DATA_KEY` | Optional. Finding each property's map pin from its address | data.linz.govt.nz > your account > API keys (free) |
+| `LINZ_BASEMAPS_KEY` | Optional. Aerial photos under the pin map | A developer key from LINZ Basemaps (free) |
+| `MAP_TILES` | Optional. `off` shows no map pictures (used by the browser tests) | You choose it |
 
 ## Try the demo
 

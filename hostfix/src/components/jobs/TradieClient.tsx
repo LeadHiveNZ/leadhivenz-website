@@ -2,15 +2,17 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useFormStatus } from "react-dom";
-import { buttonClass } from "../forms/styles";
+import { buttonClass, dangerButtonClass } from "../forms/styles";
 import { Icon } from "../ui/Icon";
 
 /**
- * "I have arrived". Asks the phone where it is as it sends, so there is a
- * record that the tradie was at the property at that time. If the phone will
- * not say, the button still works.
+ * A button that asks the phone where it is as it sends, so there is a record
+ * that the tradie was at the property at that time: "I have arrived", "Job
+ * done" and "I could not get in" (DECISIONS.md, 2026-11-19). If the phone will
+ * not say, the button still works: no location is a flag for the owner to
+ * check, never a reason to refuse the tap.
  */
-export function ArrivedButton() {
+export function LocatedButton({ label, busyLabel, variant = "primary", icon }: { label: string; busyLabel: string; variant?: "primary" | "danger"; icon?: "market" | "check" }) {
   const { pending } = useFormStatus();
   const [locating, setLocating] = useState(false);
   const lat = useRef<HTMLInputElement>(null);
@@ -25,7 +27,7 @@ export function ArrivedButton() {
         type="submit"
         disabled={pending || locating}
         aria-busy={pending || locating}
-        className={`${buttonClass} w-full`}
+        className={`${variant === "danger" ? dangerButtonClass : buttonClass} w-full`}
         onClick={(event) => {
           if (asked.current || !("geolocation" in navigator)) return;
           event.preventDefault();
@@ -35,6 +37,10 @@ export function ArrivedButton() {
           const send = () => {
             setLocating(false);
             button.form?.requestSubmit(button);
+            // A refused form (no photo yet) can be sent again, asking the phone again.
+            setTimeout(() => {
+              asked.current = false;
+            }, 1500);
           };
           navigator.geolocation.getCurrentPosition(
             (position) => {
@@ -47,11 +53,16 @@ export function ArrivedButton() {
           );
         }}
       >
-        <Icon name="market" size={20} />
-        {pending || locating ? "Marking you as arrived..." : "I have arrived"}
+        {icon && <Icon name={icon} size={20} />}
+        {pending || locating ? busyLabel : label}
       </button>
     </>
   );
+}
+
+/** "I have arrived". */
+export function ArrivedButton() {
+  return <LocatedButton label="I have arrived" busyLabel="Marking you as arrived..." icon="market" />;
 }
 
 function left(until: number): string {

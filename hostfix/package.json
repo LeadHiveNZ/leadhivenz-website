@@ -24,6 +24,7 @@
     "@vercel/analytics": "^2.0.1",
     "@vercel/functions": "^3.11.3",
     "geist": "^1.9.2",
+    "leaflet": "^1.9.4",
     "libphonenumber-js": "^1.13.16",
     "marked": "^18.2.0",
     "next": "16.4.6",
@@ -38,6 +39,7 @@
   "devDependencies": {
     "@playwright/test": "^1.63.0",
     "@tailwindcss/turbopack": "4.3.3",
+    "@types/leaflet": "^1.9.22",
     "@types/node": "^22.20.5",
     "@types/pg": "^8.23.1",
     "@types/qrcode": "^1.5.6",

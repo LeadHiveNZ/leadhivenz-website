@@ -18,7 +18,9 @@ import { listInsuranceCertificates } from "@/lib/tradies/certificate";
 import { listJobsForTradie } from "@/lib/jobs/store";
 import { getMarket } from "@/lib/markets/store";
 import { displayPhone } from "@/lib/phone";
-import { laterWave, MIN_ARRIVALS, needsReview, NO_SHOW_DAYS, ON_TIME_TARGET, onTimeRecords, recentNoShows } from "@/lib/tradies/reliability";
+import {
+  FLAG_DAYS, flagsNeedReview, laterWave, MIN_ARRIVALS, needsReview, NO_SHOW_DAYS, ON_TIME_TARGET, onTimeRecords, recentFlags, recentNoShows, tradieTrust, TRUSTED_FINISHED_JOBS,
+} from "@/lib/tradies/reliability";
 import { SCORE_DAYS, scorecards } from "@/lib/tradies/scorecard";
 import { getTradie, listLicences, listSlots, insuranceProblem } from "@/lib/tradies/service";
 import { dateKey, formatDate } from "@/lib/time";
@@ -56,6 +58,9 @@ export default async function StaffTradiePage({ params, searchParams }: { params
   const jobs = await listJobsForTradie(db, tradie.id, { limit: 12 });
   const at = now();
   const noShows = await recentNoShows(db, tradie.id, at);
+  // Jobs the app could not confirm (DECISIONS.md, 2026-11-19), and whether an unanswered one is paid without the team.
+  const flagged = await recentFlags(db, tradie.id, at);
+  const trust = await tradieTrust(db, tradie.id, null, at);
   const record = (await onTimeRecords(db, [tradie.id])).get(tradie.id);
   const today = dateKey(at, market.timezone);
   const licensed = tradie.trades.filter((key) => findTrade(key)?.licenceRequired);
@@ -94,6 +99,12 @@ export default async function StaffTradiePage({ params, searchParams }: { params
         <Notice tone="warn" title={`For review: ${noShows} no-shows in the last ${NO_SHOW_DAYS} days`}>
           They accepted {noShows} jobs and were not there by the promised time. Talk to them before deciding anything. Nothing on their account has been changed, and only a person can pause or
           remove a tradie. Passing on offers is never counted.
+        </Notice>
+      )}
+      {flagsNeedReview(flagged) && (
+        <Notice tone="warn" title={`For review: ${flagged} flagged jobs in the last ${FLAG_DAYS} days`}>
+          The app could not confirm {flagged} of their jobs (location, photos or time on site). Open their recent jobs below, look at the before and after photos, and talk to them before
+          deciding anything. Nothing on their account has been changed, and only a person can pause or remove a tradie.
         </Notice>
       )}
       {query.added && (
@@ -181,6 +192,12 @@ export default async function StaffTradiePage({ params, searchParams }: { params
         <div className="grid grid-cols-2 content-start gap-3">
           <Stat label="On site in time" value={pct(card?.onTimeRate ?? null)} note={card && card.jobs > 0 ? `${card.onTime} of ${card.jobs} accepted, last ${SCORE_DAYS} days` : `Last ${SCORE_DAYS} days`} tone={card?.belowTarget ? "alert" : undefined} />
           <Stat label={`No-shows, last ${NO_SHOW_DAYS} days`} value={String(noShows)} note="Accepted, nobody there by the promised time" tone={needsReview(noShows) ? "alert" : undefined} />
+          <Stat label={`Flagged jobs, last ${FLAG_DAYS} days`} value={String(flagged)} note="Location, photos or time on site not confirmed" tone={flagsNeedReview(flagged) ? "alert" : undefined} />
+          <Stat
+            label="Trusted"
+            value={trust.trusted ? "Yes" : "Not yet"}
+            note={trust.trusted ? `${trust.finishedJobs} finished jobs, no flags in ${FLAG_DAYS} days: paid if an owner does not answer` : `${trust.finishedJobs} of ${TRUSTED_FINISHED_JOBS} finished jobs${trust.otherFlags > 0 ? `, ${trust.otherFlags} flagged in ${FLAG_DAYS} days` : ""}`}
+          />
           <div className="col-span-2">
             <Stat
               label="Network order"

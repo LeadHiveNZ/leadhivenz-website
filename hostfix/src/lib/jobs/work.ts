@@ -1,14 +1,16 @@
 import { audit } from "@/lib/audit";
-import { now } from "@/lib/clock";
+import { addHours, now } from "@/lib/clock";
 import type { Db } from "@/lib/db/types";
 import { attachUploads, countUploads } from "@/lib/files/uploads";
 import { texts } from "@/lib/notify/messages";
 import { enqueue } from "@/lib/notify/outbox";
 import { raiseException, resolveExceptionsFor } from "@/lib/ops/exceptions";
+import { FLAG_DAYS, flagsNeedReview, recentFlags } from "@/lib/tradies/reliability";
 import { formatClock } from "@/lib/time";
 import { openSettlement } from "@/lib/billing/settle";
 import { loadContext, offerUrl, ownerJobUrl } from "./context";
-import { arrivedOnTime, checkArrival, linesToDrop, surchargeVerdict } from "./arrival";
+import { arrivedOnTime, linesToDrop, surchargeVerdict } from "./arrival";
+import { checkTap, chooseReference, jobFlags, minutesOnSite, photoIsStale, pointFrom, tooQuick } from "./checks";
 import { noAccessLines, quoteAmounts } from "./pricing";
 import { getQuote, insertLines, listLines, lockJob, recalcTotals, rowToQuote } from "./store";
 import type { Job, Quote } from "./types";
@@ -62,42 +64,47 @@ export async function markEnRoute(db: Db, jobId: string, tradieId: string): Prom
  *   after hours, but the tap is  the after-hours line comes off, the same way
  *   inside working hours
  *
- * Everything else on the job is charged and paid as normal. The tap's location
- * is checked against where trusted arrivals at the property were, and an
- * Arrived tap that cannot be trusted goes to the dispatcher.
+ * Everything else on the job is charged and paid as normal.
+ *
+ * At least one "before" photo, taken in the app, is needed (DECISIONS.md,
+ * 2026-11-19). The tap's location is compared with the property's map pin, or
+ * with where trusted arrivals at the property were when it has none, and the
+ * distance is recorded. A tap with no location, or over 300 m away, is never
+ * refused (phones get it wrong): it is one of the job's flags when the job is
+ * finished, and a flagged job's payment waits for the owner to confirm. It no
+ * longer goes to the dispatcher's queue on its own.
  */
-export async function markArrived(db: Db, jobId: string, tradieId: string, where: { lat?: number | null; lng?: number | null } = {}): Promise<StepResult> {
+export async function markArrived(
+  db: Db, jobId: string, tradieId: string, input: { lat?: number | null; lng?: number | null; uploadIds?: string[] } = {},
+): Promise<StepResult> {
   return db.tx(async (tx) => {
     const job = await theirs(tx, jobId, tradieId);
     if (!job) return { ok: false, message: NOT_YOURS };
     if (job.status !== "accepted") return job.arrivedAt ? { ok: true, job } : { ok: false, message: "This job cannot be marked as arrived right now." };
+    await attachUploads(tx, input.uploadIds ?? [], { kind: "before", uploadedBy: `tradie:${tradieId}`, jobId });
+    const beforePhotos = await countUploads(tx, jobId, "before");
+    if (beforePhotos === 0) return { ok: false, message: "Take at least one \"before\" photo of the problem first, then tap I have arrived." };
     const at = now();
-    const lat = typeof where.lat === "number" && Number.isFinite(where.lat) && Math.abs(where.lat) <= 90 ? where.lat : null;
-    const lng = typeof where.lng === "number" && Number.isFinite(where.lng) && Math.abs(where.lng) <= 180 ? where.lng : null;
-    const point = lat !== null && lng !== null ? { lat, lng } : null;
+    const point = pointFrom(input);
     const context = await loadContext(tx, job);
     const { market, property, owner, tradie } = context;
 
-    // Where tradies were when they arrived at this house before, leaving out any tap that was flagged or that the owner disputed.
-    const earlier = await tx.query<{ arrived_lat: string | number; arrived_lng: string | number }>(
-      `select arrived_lat, arrived_lng from public.jobs
-        where property_id = $1::uuid and id <> $2::uuid and arrived_lat is not null and arrived_lng is not null
-          and arrival_check in ('ok', 'no_reference') and owner_says_absent_at is null
-        order by arrived_at desc limit 25`,
-      [job.propertyId, jobId],
-    );
-    const trust = checkArrival(point, earlier.map((row) => ({ lat: Number(row.arrived_lat), lng: Number(row.arrived_lng) })));
+    const reference = chooseReference(property.pin, await earlierTrustedTaps(tx, job));
+    const trust = checkTap(point, reference);
 
     await tx.query(
-      "update public.jobs set status = 'on_site', arrived_at = $2::timestamptz, arrived_lat = $3, arrived_lng = $4, arrival_check = $5, arrival_distance_m = $6 where id = $1::uuid",
-      [jobId, at.toISOString(), point?.lat ?? null, point?.lng ?? null, trust.check, trust.distanceM],
+      `update public.jobs set status = 'on_site', arrived_at = $2::timestamptz, arrived_lat = $3, arrived_lng = $4, arrival_check = $5, arrival_distance_m = $6,
+              check_reference = $7
+        where id = $1::uuid`,
+      [jobId, at.toISOString(), point?.lat ?? null, point?.lng ?? null, trust.check, trust.distanceM, reference.kind],
     );
     const onTime = arrivedOnTime(job, at);
     await resolveExceptionsFor(tx, jobId, ["at_risk", "no_show"], "Tradie arrived");
     await audit(tx, {
       actor: `tradie:${tradieId}`, action: "job.arrived", entity: "job", entityId: jobId,
       detail: {
-        on_time: onTime, located: point !== null, location: trust.check, distance_m: trust.distanceM,
+        on_time: onTime, located: point !== null, location: trust.check, distance_m: trust.distanceM, reference: reference.kind,
+        before_photos: beforePhotos,
         window_end: job.arrivalWindowEnd?.toISOString() ?? null,
         minutes_from_dispatch: job.dispatchedAt ? Math.round((at.getTime() - job.dispatchedAt.getTime()) / 60_000) : null,
       },
@@ -121,17 +128,6 @@ export async function markArrived(db: Db, jobId: string, tradieId: string, where
       });
     }
 
-    if (trust.check === "far" || trust.check === "no_location") {
-      const who = tradie?.businessName ?? "The tradie";
-      await raiseException(tx, {
-        kind: "arrival_unverified", market: job.market, jobId, tradieId,
-        summary: trust.check === "no_location"
-          ? `Job ${job.number}: ${who} tapped Arrived at ${property.name} but their phone gave no location. Check they are really there.`
-          : `Job ${job.number}: ${who} tapped Arrived ${formatDistance(trust.distanceM!)} from where tradies have been at ${property.name} before. Check they are really there.`,
-        dedupeKey: `arrival_unverified:${jobId}`,
-      });
-    }
-
     if (owner.phone && tradie) {
       await enqueue(tx, {
         channel: "sms", to: owner.phone, template: "tradie_arrived", audience: "owner", jobId, userId: owner.userId,
@@ -142,10 +138,23 @@ export async function markArrived(db: Db, jobId: string, tradieId: string, where
   });
 }
 
-/** "350 m", "1.2 km". */
-function formatDistance(metres: number): string {
-  return metres < 1000 ? `${metres} m` : `${(metres / 1000).toFixed(1)} km`;
+/**
+ * Where tradies were when they arrived at this house before: the fallback
+ * reference for a property with no map pin. Taps that were flagged, or that
+ * the owner disputed, are left out.
+ */
+async function earlierTrustedTaps(db: Db, job: Job): Promise<{ lat: number; lng: number }[]> {
+  const rows = await db.query<{ arrived_lat: string | number; arrived_lng: string | number }>(
+    `select arrived_lat, arrived_lng from public.jobs
+      where property_id = $1::uuid and id <> $2::uuid and arrived_lat is not null and arrived_lng is not null
+        and arrival_check in ('ok', 'no_reference') and owner_says_absent_at is null
+        and coalesce(confirm_status, '') not in ('owner_problem', 'staff_held')
+      order by arrived_at desc limit 25`,
+    [job.propertyId, job.id],
+  );
+  return rows.map((row) => ({ lat: Number(row.arrived_lat), lng: Number(row.arrived_lng) }));
 }
+
 
 /**
  * The owner presses "The tradie isn't here" on their job page. Puts it in
@@ -278,32 +287,97 @@ export async function decideQuote(db: Db, quoteId: string, approve: boolean, act
   });
 }
 
-export type CompleteInput = { note: string; uploadIds: string[] };
+export type CompleteInput = {
+  note: string;
+  uploadIds: string[];
+  /** Where the phone was when the tradie tapped Job done (or Could not get in). */
+  lat?: number | null;
+  lng?: number | null;
+};
 
 async function finish(db: Db, job: Job, tradieId: string, outcome: "done" | "diagnosis_only" | "no_access", input: CompleteInput): Promise<StepResult> {
   const context = await loadContext(db, job);
+  const { market, property, owner } = context;
   const at = now();
   await attachUploads(db, input.uploadIds, { kind: "completion", uploadedBy: `tradie:${tradieId}`, jobId: job.id });
   if ((await countUploads(db, job.id, "completion")) === 0) {
-    return { ok: false, message: outcome === "no_access" ? "Add a photo showing you were at the property." : "Add at least one photo of the finished work." };
+    return { ok: false, message: outcome === "no_access" ? "Add a photo showing you were at the property." : "Add at least one \"after\" photo of the finished work." };
   }
-  const sum = await recalcTotals(db, job.id, context.market.taxRate, context.market.taxRegistered);
-  await db.query("update public.jobs set status = 'completed', completed_at = $2::timestamptz, outcome = $3, completion_note = $4 where id = $1::uuid", [
-    job.id, at.toISOString(), outcome, input.note.trim().slice(0, 2000) || null,
-  ]);
+
+  // The checks (DECISIONS.md, 2026-11-19): where Job done was tapped, how long after Arrived, and whether the photos are fresh.
+  const point = pointFrom(input);
+  let reference = chooseReference(property.pin, await earlierTrustedTaps(db, job));
+  if (!reference.point && job.arrivedLat !== null && job.arrivedLng !== null) reference = { point: { lat: job.arrivedLat, lng: job.arrivedLng }, kind: "own_arrival" };
+  const finishTap = checkTap(point, reference);
+  const minutes = job.arrivedAt ? minutesOnSite(job.arrivedAt, at) : 0;
+  const quick = tooQuick(job, outcome, minutes, market.minMinutesOnSite);
+  const photos = await db.query<{ taken_at: Date | null }>(
+    "select taken_at from public.uploads where job_id = $1::uuid and kind in ('before', 'completion') and attached and taken_at is not null",
+    [job.id],
+  );
+  const stalePhoto = photos.some((row) => photoIsStale(row.taken_at ? new Date(row.taken_at) : null, job.createdAt));
+  const flags = jobFlags({ arrival: job.arrivalCheck, finish: finishTap.check, quick, stalePhoto });
+  const confirmBy = flags.length > 0 ? addHours(at, market.ownerConfirmHours) : null;
+
+  const sum = await recalcTotals(db, job.id, market.taxRate, market.taxRegistered);
+  await db.query(
+    `update public.jobs set status = 'completed', completed_at = $2::timestamptz, outcome = $3, completion_note = $4,
+            finished_lat = $5, finished_lng = $6, finish_check = $7, finish_distance_m = $8, minutes_on_site = $9,
+            check_flags = $10::text[], confirm_status = $11, confirm_by = $12::timestamptz,
+            check_reference = case when $13::text = 'own_arrival' then 'own_arrival' else check_reference end
+      where id = $1::uuid`,
+    [
+      job.id, at.toISOString(), outcome, input.note.trim().slice(0, 2000) || null,
+      point?.lat ?? null, point?.lng ?? null, finishTap.check, finishTap.distanceM, job.arrivedAt ? minutes : null,
+      flags, flags.length > 0 ? "waiting" : null, confirmBy?.toISOString() ?? null, reference.kind,
+    ],
+  );
   await resolveExceptionsFor(db, job.id, ["at_risk", "quote_waiting"], "Job completed");
   await audit(db, {
     actor: `tradie:${tradieId}`, action: "job.completed", entity: "job", entityId: job.id, amount: sum.ownerCents, currency: job.currency,
-    detail: { outcome, tradie_gets: sum.tradieCents, platform_keeps: sum.ownerCents - sum.tradieCents },
+    detail: {
+      outcome, tradie_gets: sum.tradieCents, platform_keeps: sum.ownerCents - sum.tradieCents,
+      located: point !== null, location: finishTap.check, distance_m: finishTap.distanceM, reference: reference.kind, minutes_on_site: minutes,
+    },
   });
+  if (flags.length > 0) {
+    await audit(db, {
+      actor: "system", action: "job.flagged", entity: "job", entityId: job.id, amount: sum.tradieCents, currency: job.currency,
+      detail: {
+        flags, arrival_m: job.arrivalDistanceM, finish_m: finishTap.distanceM, minutes_on_site: minutes, min_minutes: market.minMinutesOnSite,
+        reference: reference.kind, owner_confirm_by: confirmBy!.toISOString(), payout_held: sum.tradieCents,
+      },
+    });
+    // 3 flagged jobs in 90 days: the team talks to the tradie. Nothing is changed on their account.
+    const flagged = await recentFlags(db, tradieId, at);
+    if (flagsNeedReview(flagged)) {
+      await raiseException(db, {
+        kind: "tradie_flags", market: job.market, tradieId,
+        summary: `${context.tradie?.businessName ?? "A tradie"} has had ${flagged} jobs in the last ${FLAG_DAYS} days that the app could not confirm (location, photos or time on site). Look at them and talk to the tradie. Nothing has been changed on their account.`,
+        dedupeKey: `tradie_flags:${tradieId}`,
+      });
+    }
+  }
   const done = (await lockJob(db, job.id))!;
-  await openSettlement(db, done, context.market);
+  await openSettlement(db, done, market);
+  // Nothing to charge means no "job done" text from the charge, so the owner is asked here instead.
+  if (flags.length > 0 && owner.phone) {
+    const charge = await db.query("select 1 from public.payments where job_id = $1::uuid", [job.id]);
+    if (charge.length === 0) {
+      await enqueue(db, {
+        channel: "sms", to: owner.phone, template: "job_check", audience: "owner", jobId: job.id, userId: owner.userId,
+        body: texts.jobCheck({ title: job.title, property: property.name, flags, link: ownerJobUrl(job) }), dedupeKey: `job_done:${job.id}`,
+      });
+    }
+  }
   return { ok: true, job: done };
 }
 
 /**
- * The work is finished. Needs at least one photo. This records what is owed;
- * charging the card happens straight after (see billing/settle.ts).
+ * The work is finished. Needs at least one "after" photo. This records what
+ * is owed and runs the checks (src/lib/jobs/checks.ts); charging the card
+ * happens straight after (see billing/settle.ts). A flagged job's payment is
+ * held for the owner to confirm (src/lib/jobs/confirm.ts).
  */
 export async function completeJob(db: Db, jobId: string, tradieId: string, input: CompleteInput): Promise<StepResult> {
   return db.tx(async (tx) => {

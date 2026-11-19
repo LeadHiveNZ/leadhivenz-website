@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { resolveItem } from "@/app/actions/staff";
+import { resolveItem, staffCheckJob } from "@/app/actions/staff";
 import { ActionForm, Field } from "@/components/forms/ActionForm";
 import { SubmitButton } from "@/components/forms/SubmitButton";
 import { smallButtonClass } from "@/components/forms/styles";
@@ -107,6 +107,17 @@ export default async function QueuePage({ searchParams }: { searchParams: Search
                       </Link>
                     )}
                   </div>
+                  {item.kind === "job_check" && item.jobId && (
+                    <ActionForm action={staffCheckJob} className="mt-3 flex flex-wrap gap-2">
+                      <input type="hidden" name="jobId" value={item.jobId} />
+                      <SubmitButton name="decision" value="approve" pendingLabel="Paying...">
+                        Approve: pay the tradie
+                      </SubmitButton>
+                      <SubmitButton name="decision" value="hold" variant="secondary" pendingLabel="Holding...">
+                        Hold the payment
+                      </SubmitButton>
+                    </ActionForm>
+                  )}
                   <div className="mt-3">
                     <Reveal label="Mark as dealt with">
                       <ActionForm action={resolveItem} className="space-y-3">

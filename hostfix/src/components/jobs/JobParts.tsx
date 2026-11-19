@@ -2,11 +2,12 @@ import type { ReactNode } from "react";
 import { Card, Chip, Money, SectionTitle, Timeline } from "@/components/ui/Bits";
 import { Icon } from "@/components/ui/Icon";
 import type { Upload } from "@/lib/files/uploads";
-import { arrivedOnTime, onTimeDeadline, windowBetween } from "@/lib/jobs/arrival";
+import { arrivedOnTime, distanceMetres, onTimeDeadline, windowBetween, type Point } from "@/lib/jobs/arrival";
+import { formatMetres } from "@/lib/jobs/checks";
 import type { JobLine } from "@/lib/jobs/types";
 import { statusLabel, statusTone, type Job } from "@/lib/jobs/types";
 import type { Audience, JobView } from "@/lib/jobs/view";
-import { formatDateTime, formatDeadline, formatDuration } from "@/lib/time";
+import { formatClock, formatDateTime, formatDeadline, formatDuration } from "@/lib/time";
 
 /** The pieces of a job screen, shared by the owner's, the tradie's and the team's views. */
 
@@ -61,6 +62,43 @@ export function PhotoGrid({ photos, query = "", empty }: { photos: Upload[]; que
         </li>
       ))}
     </ul>
+  );
+}
+
+/**
+ * The before and after photos side by side (DECISIONS.md, 2026-11-19). Each
+ * photo shows when it reached us (the server's clock). For the team, with
+ * `reference`, also how far from the property the phone said it was.
+ */
+export function BeforeAfter({ before, after, query = "", timeZone, reference }: { before: Upload[]; after: Upload[]; query?: string; timeZone: string; reference?: Point | null }) {
+  const column = (title: string, photos: Upload[], empty: string) => (
+    <div className="min-w-0">
+      <p className="mb-2 text-sm font-bold tracking-wide text-muted uppercase">{title}</p>
+      {photos.length === 0 ? (
+        <p className="text-sm text-muted">{empty}</p>
+      ) : (
+        <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {photos.map((photo) => (
+            <li key={photo.id}>
+              <a href={`/files/${photo.id}${query}`} target="_blank" rel="noreferrer" className="block aspect-square overflow-hidden rounded-xl border border-line bg-tint">
+                {/* eslint-disable-next-line @next/next/no-img-element -- a private photo served by this site */}
+                <img src={`/files/${photo.id}${query}`} alt={`${title} photo. Opens larger in a new tab.`} loading="lazy" className="h-full w-full object-cover" />
+              </a>
+              <p className="mt-1 text-xs text-muted">
+                {formatClock(photo.createdAt, timeZone)}
+                {reference !== undefined && (photo.lat === null || photo.lng === null ? " · no location" : reference ? ` · ${formatMetres(distanceMetres({ lat: photo.lat, lng: photo.lng }, reference))} from the house` : " · located")}
+              </p>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+  return (
+    <div className="grid grid-cols-2 gap-3">
+      {column("Before", before, "No before photo (from before photos were asked for).")}
+      {column("After", after, "No after photo.")}
+    </div>
   );
 }
 

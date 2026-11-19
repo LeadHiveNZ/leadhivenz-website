@@ -10,7 +10,21 @@ async function statusOf(key: string): Promise<StatusItem> {
 describe("the setup checklist", () => {
   it("lists every part of the system once", async () => {
     const keys = (await setupStatus()).map((item) => item.key);
-    expect(keys).toEqual(["database", "email", "sms", "payments", "timer", "photos", "pixel", "capi", "analytics", "copy", "legal"]);
+    expect(keys).toEqual(["database", "email", "sms", "payments", "timer", "photos", "address-lookup", "map-pictures", "pixel", "capi", "analytics", "copy", "legal"]);
+  });
+
+  it("lists the two free map keys as still to do until they are set (DECISIONS.md, 2026-11-19)", async () => {
+    expect(await statusOf("address-lookup")).toMatchObject({ state: "todo", detail: expect.stringContaining("LINZ_DATA_KEY is not set") });
+    expect(await statusOf("map-pictures")).toMatchObject({ state: "todo", detail: expect.stringContaining("OpenStreetMap") });
+    process.env.LINZ_DATA_KEY = "abc";
+    process.env.LINZ_BASEMAPS_KEY = "def";
+    try {
+      expect(await statusOf("address-lookup")).toMatchObject({ state: "ok" });
+      expect(await statusOf("map-pictures")).toMatchObject({ state: "ok" });
+    } finally {
+      delete process.env.LINZ_DATA_KEY;
+      delete process.env.LINZ_BASEMAPS_KEY;
+    }
   });
 
   it("marks nothing that needs a key or an account as ready on a fresh install", async () => {

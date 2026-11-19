@@ -5,6 +5,7 @@ import { now } from "@/lib/clock";
 import type { Db } from "@/lib/db/types";
 import { recordUpload } from "@/lib/files/uploads";
 import { createJob, type NewJob } from "@/lib/jobs/create";
+import { markArrived, type StepResult } from "@/lib/jobs/work";
 import type { Job } from "@/lib/jobs/types";
 import { saveTier } from "@/lib/markets/admin";
 import { getMarket, listMenu, listTiers, type MenuItem, type Tier } from "@/lib/markets/store";
@@ -179,10 +180,24 @@ export async function logJob(db: Db, property: Property, overrides: Partial<NewJ
   return result.job;
 }
 
-/** A photo the tradie has uploaded, ready to attach when they finish. */
-export async function photo(db: Db, uploadedBy: string, kind: "completion" | "report" | "quote" = "completion"): Promise<string> {
-  const upload = await recordUpload(db, { kind, storageKey: `${kind}/test/${randomUUID()}.jpg`, contentType: "image/jpeg", bytes: 1234, uploadedBy });
+/** A photo the tradie has uploaded, ready to attach when they arrive ("before") or finish ("completion", the after photo). */
+export async function photo(
+  db: Db, uploadedBy: string, kind: "before" | "completion" | "report" | "quote" = "completion",
+  stamp: { lat?: number | null; lng?: number | null; takenAt?: Date | null } = {},
+): Promise<string> {
+  const upload = await recordUpload(db, { kind, storageKey: `${kind}/test/${randomUUID()}.jpg`, contentType: "image/jpeg", bytes: 1234, uploadedBy, ...stamp });
   return upload.id;
+}
+
+/** Where the test houses are: on Lake Esplanade, Queenstown. */
+export const HOUSE = { lat: -45.03, lng: 168.66 };
+
+/**
+ * The tradie taps "I have arrived" with a before photo, as the app needs
+ * (DECISIONS.md, 2026-11-19). `where` is the phone's location, or {} for none.
+ */
+export async function arrive(db: Db, jobId: string, tradieId: string, where: { lat?: number | null; lng?: number | null } | null = {}): Promise<StepResult> {
+  return markArrived(db, jobId, tradieId, { ...(where ?? {}), uploadIds: [await photo(db, `tradie:${tradieId}`, "before")] });
 }
 
 export function gatewayFor(db: Db): GatewayFor {

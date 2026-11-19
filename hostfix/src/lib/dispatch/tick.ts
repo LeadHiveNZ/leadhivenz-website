@@ -16,6 +16,9 @@ import { baseUrl } from "@/lib/env";
 import { randomToken } from "@/lib/ids";
 import { dateKey, formatDate } from "@/lib/time";
 import { alertNotTakenYet, expireDueOffers, expireLaterTimes } from "./cascade";
+import { settleUnansweredChecks } from "@/lib/jobs/confirm";
+import type { Geocoder } from "@/lib/maps/geocode";
+import { fillMissingPins } from "@/lib/properties/pin";
 
 /**
  * THE TIMER. Runs every minute (Vercel calls /api/cron/tick). It moves along
@@ -32,7 +35,10 @@ import { alertNotTakenYet, expireDueOffers, expireLaterTimes } from "./cascade";
  *   promises missed                   marked, and the dispatcher told; an
  *                                     accepted job with nobody there is a no-show
  *   cards to try again, payouts due   charged and paid
+ *   a flagged job the owner has not   paid if the tradie is trusted, otherwise
+ *     confirmed in 48 hours           to the dispatcher to approve or hold
  *   quotes nobody answered            a reminder, then the dispatcher
+ *   properties with no map pin        looked up from their address, a few at a time
  *   licences running out              the tradie and the admin told
  *
  * Vercel's timer is "best effort": a run can be late, skipped or doubled. So
@@ -47,6 +53,8 @@ export type TickDeps = {
   flush?: FlushDeps;
   /** Deletes files from storage. Left out in tests. */
   removeFiles?: (keys: string[]) => Promise<void>;
+  /** Looks up map pins for properties that have none (DECISIONS.md, 2026-11-19). Left out when no key is set, and in tests. */
+  geocoder?: Geocoder | null;
   log?: Pick<Console, "error">;
 };
 
@@ -301,6 +309,7 @@ export async function runTick(db: Db, deps: TickDeps): Promise<TickReport> {
   await step("guest_reports", () => chaseGuestReports(db));
   await step("at_risk", () => flagAtRisk(db));
   await step("windows", () => markMissedWindows(db));
+  await step("checks", () => settleUnansweredChecks(db));
   await step("credits_applied", () => applyPendingCredits(db, deps.gatewayFor));
   await step("cards_charged", () => chargeDuePayments(db, deps.gatewayFor));
   await step("payouts_sent", () => releaseDuePayouts(db, deps.gatewayFor));
@@ -309,6 +318,7 @@ export async function runTick(db: Db, deps: TickDeps): Promise<TickReport> {
   await step("insurance_warned", () => warnExpiringInsurance(db));
   await step("demo_renewals", () => renewDemoMemberships(db));
   await step("payout_accounts", () => refreshPayoutAccounts(db, deps.gatewayFor));
+  await step("pins_found", () => fillMissingPins(db, deps.geocoder ?? null));
   await step("files_cleared", () => tidyUp(db, deps));
   await step("messages", async () => {
     const sent = await flushOutbox(db, deps.flush);

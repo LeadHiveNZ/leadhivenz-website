@@ -28,6 +28,7 @@ const STATUS: Record<string, { label: string; tone: StatusTone }> = {
   scheduled: { label: "On its way", tone: "active" },
   waiting: { label: "Waiting on the owner's card", tone: "waiting" },
   paused: { label: "On hold", tone: "alert" },
+  held: { label: "Waiting for the owner to confirm", tone: "waiting" },
   failed: { label: "Could not be sent", tone: "alert" },
 };
 

@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  staffAssign, staffCancel, staffGoAhead, staffGoodwill, staffQuote, staffReoffer, staffResolveDispute, staffRetryCharge, staffRetryPayout,
+  staffAssign, staffCancel, staffCheckJob, staffGoAhead, staffGoodwill, staffQuote, staffReoffer, staffResolveDispute, staffRetryCharge, staffRetryPayout,
 } from "@/app/actions/staff";
 import { ActionForm, Area, Field, RadioCards, Select } from "@/components/forms/ActionForm";
 import { SubmitButton } from "@/components/forms/SubmitButton";
-import { CostLines, Deadline, History, JobStatus, Panel, PhotoGrid } from "@/components/jobs/JobParts";
+import { BeforeAfter, CostLines, Deadline, History, JobStatus, Panel, PhotoGrid } from "@/components/jobs/JobParts";
+import { flagWords, type CheckFlag } from "@/lib/jobs/checks";
 import { Card, Chip, Facts, Notice, PageTitle, SectionTitle } from "@/components/ui/Bits";
 import { Reveal } from "@/components/ui/Reveal";
 import { findTrade } from "@config/trades";
@@ -40,11 +41,46 @@ const PAYOUT_WORDS: Record<string, string> = {
   waiting: "Waiting for the owner's card to be charged",
   scheduled: "Will be sent on",
   paused: "On hold (owner raised a problem)",
+  held: "Held until the flagged job is confirmed",
   sent: "Sent",
   failed: "Could not be sent",
   cancelled: "Cancelled",
   reversed: "Taken back after a refund",
 };
+
+const CONFIRM_WORDS: Record<string, string> = {
+  waiting: "waiting for the owner to confirm",
+  owner_confirmed: "the owner confirmed it is fixed",
+  owner_problem: "the owner says something is wrong (see the dispute)",
+  released_trusted: "no answer from the owner; paid because the tradie is trusted",
+  staff_queue: "no answer from the owner; in the queue for you",
+  staff_approved: "approved by the team",
+  staff_held: "payment held by the team",
+};
+
+function tapWords(check: string | null, metres: number | null, reference: string | null): string {
+  const from = reference === "pin" ? "the property's pin" : reference === "own_arrival" ? "where they tapped Arrived" : "where tradies have been at this house before";
+  switch (check) {
+    case "ok":
+      return `${metres ?? 0} m from ${from}.`;
+    case "far":
+      return `${metres} m from ${from}.`;
+    case "no_location":
+      return "the phone gave no location.";
+    case "no_reference":
+      return "location recorded, nothing to compare it with yet (no pin, no earlier visits).";
+    default:
+      return "recorded before location checks.";
+  }
+}
+
+function MapLink({ lat, lng }: { lat: number; lng: number }) {
+  return (
+    <a href={`https://www.google.com/maps/search/?api=1&query=${lat},${lng}`} target="_blank" rel="noreferrer" className="font-normal underline underline-offset-2">
+      See on a map
+    </a>
+  );
+}
 
 function Tel({ phone }: { phone: string | null }) {
   if (!phone) return <span className="text-muted">No number</span>;
@@ -132,26 +168,51 @@ export default async function StaffJobPage({ params, searchParams }: { params: P
           </p>
         )}
         {job.arrivedAt && (
-          <p className={`mt-3 rounded-xl px-4 py-3 text-sm font-semibold ${job.arrivalCheck === "far" || job.arrivalCheck === "no_location" ? "bg-alert-soft text-alert" : "bg-tint text-ink"}`}>
-            Arrived tap:{" "}
-            {job.arrivalCheck === "ok"
-              ? `${job.arrivalDistanceM ?? 0} m from where tradies have been at this house before.`
-              : job.arrivalCheck === "far"
-                ? `${job.arrivalDistanceM} m from where tradies have been at this house before. Check they were really there.`
-                : job.arrivalCheck === "no_location"
-                  ? "the phone gave no location."
-                  : job.arrivalCheck === "no_reference"
-                    ? "location recorded, no reference yet (the first trusted visit to this house)."
-                    : "recorded before location checks."}
-            {job.arrivedLat !== null && job.arrivedLng !== null && (
-              <>
-                {" "}
-                <a href={`https://www.google.com/maps/search/?api=1&query=${job.arrivedLat},${job.arrivedLng}`} target="_blank" rel="noreferrer" className="underline underline-offset-2">
-                  See on a map
-                </a>
-              </>
+          <div className={`mt-3 space-y-1 rounded-xl px-4 py-3 text-sm font-semibold ${job.checkFlags.length > 0 || job.arrivalCheck === "far" || job.arrivalCheck === "no_location" ? "bg-alert-soft text-alert" : "bg-tint text-ink"}`}>
+            <p>
+              Arrived tap: {tapWords(job.arrivalCheck, job.arrivalDistanceM, job.checkReference)}{" "}
+              {job.arrivedLat !== null && job.arrivedLng !== null && <MapLink lat={job.arrivedLat} lng={job.arrivedLng} />}
+            </p>
+            {job.completedAt && (
+              <p>
+                Job done tap: {tapWords(job.finishCheck, job.finishDistanceM, job.checkReference)}{" "}
+                {job.finishedLat !== null && job.finishedLng !== null && <MapLink lat={job.finishedLat} lng={job.finishedLng} />}
+              </p>
             )}
-          </p>
+            {job.minutesOnSite !== null && <p>On site {job.minutesOnSite} minutes (flagged under {market.minMinutesOnSite}, except diagnosis, look-and-price and could-not-get-in).</p>}
+            {property.pin ? (
+              <p className="font-normal">
+                The property&apos;s pin: {property.pinSource === "owner_moved" ? "placed by the owner" : "looked up from the address"}{property.pinConfirmedAt ? ", confirmed by the owner" : ", not confirmed by the owner yet"}.{" "}
+                <MapLink lat={property.pin.lat} lng={property.pin.lng} />
+              </p>
+            ) : (
+              <p className="font-normal">The property has no map pin yet, so taps are compared with earlier trusted visits.</p>
+            )}
+          </div>
+        )}
+        {job.checkFlags.length > 0 && (
+          <div className="mt-3 rounded-xl bg-wait-soft px-4 py-3 text-sm text-ink">
+            <p className="font-bold">Flagged at Job done: {CONFIRM_WORDS[job.confirmStatus ?? "waiting"] ?? job.confirmStatus}</p>
+            <ul className="mt-1 list-disc pl-5">
+              {(job.checkFlags as CheckFlag[]).map((flag) => (
+                <li key={flag}>{flagWords(flag, { arrivalM: job.arrivalDistanceM, finishM: job.finishDistanceM, minutes: job.minutesOnSite, minMinutes: market.minMinutesOnSite })}</li>
+              ))}
+            </ul>
+            {job.confirmStatus === "waiting" && job.confirmBy && <p className="mt-1">The owner has until {formatDateTime(job.confirmBy, market.timezone)} to answer. You do not need to do anything yet.</p>}
+            {job.confirmStatus && ["waiting", "staff_queue", "staff_held"].includes(job.confirmStatus) && (
+              <ActionForm action={staffCheckJob} className="mt-3 flex flex-wrap gap-2">
+                <input type="hidden" name="jobId" value={job.id} />
+                <SubmitButton name="decision" value="approve" pendingLabel="Paying...">
+                  Approve: pay the tradie
+                </SubmitButton>
+                {job.confirmStatus !== "staff_held" && (
+                  <SubmitButton name="decision" value="hold" variant="secondary" pendingLabel="Holding...">
+                    Hold the payment
+                  </SubmitButton>
+                )}
+              </ActionForm>
+            )}
+          </div>
         )}
         {job.ownerSaysAbsentAt && (
           <p className="mt-3 rounded-xl bg-alert-soft px-4 py-3 text-sm font-semibold text-alert">
@@ -357,6 +418,12 @@ export default async function StaffJobPage({ params, searchParams }: { params: P
           </div>
         )}
       </Panel>
+
+      {(view.beforePhotos.length > 0 || view.afterPhotos.length > 0) && (
+        <Panel title="Before and after">
+          <BeforeAfter before={view.beforePhotos} after={view.afterPhotos} timeZone={market.timezone} reference={property.pin ?? (job.arrivedLat !== null && job.arrivedLng !== null ? { lat: job.arrivedLat, lng: job.arrivedLng } : null)} />
+        </Panel>
+      )}
 
       {(job.completionNote || view.workPhotos.length > 0) && (
         <Panel title="What the tradie did">

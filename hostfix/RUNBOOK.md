@@ -91,12 +91,34 @@ someone accepts.
    them. Never remove a tradie because of the count alone: removal is a person's decision after a
    conversation. Passing on offers is never a reason.
 
-### Arrival not confirmed / Owner says the tradie isn't there
-**Means.** The tradie tapped "I have arrived" with no location from their phone, or more than 500 m
-from where tradies have been at that house before, or the owner pressed "The tradie isn't here".
+### Owner says the tradie isn't there
+**Means.** The owner pressed "The tradie isn't here" after the app said the tradie had arrived.
+(Older items called **Arrival not confirmed** came from a tap with no location or far away; since
+19 November 2026 those are flags on the job instead, and the owner is asked first.)
 
 **Do.** Ring the tradie now and check where they are. Then ring the owner back. If the tradie was not
 there, note it and tell the admin.
+
+### Check a job, then pay or hold
+**Means.** The app could not confirm a finished job: the phone gave no location, or was more than 300 m
+from the property's pin, at Arrived or Job done; or the job took under 10 minutes; or a photo's own date
+was from before the job. The owner was asked to check the photos and did not answer in 48 hours, and the
+tradie is not yet trusted (10 finished jobs and no other flags in 90 days). The tradie's payment is held.
+
+**Do.**
+1. Open the job. Look at the before and after photos side by side, the note, and the distances.
+2. Looks done? Press **Approve: pay the tradie**. The payment goes at its usual time.
+3. Not sure? Press **Hold the payment** (the tradie is texted that it is on hold while we check), ring
+   the owner and the tradie, then come back and press **Approve**. If the work was not done, ask the owner
+   to press **Something's wrong** on their job page (it stays there while the payment is held): it then
+   becomes a problem you settle, with a refund if needed. Never tell either side the tradie cheated: say we
+   could not confirm the job.
+
+### Tradie's jobs keep being flagged
+**Means.** 3 or more of a tradie's jobs in 90 days could not be confirmed. Their page shows it too.
+
+**Do.** Look at those jobs, then talk to the tradie. Often it is a phone with location switched off.
+Nothing changes on their account by itself; removal is a person's decision after a conversation.
 
 ### Owner raised a problem
 **Means.** After a job, the owner said something is wrong. If they said it inside the first day, the

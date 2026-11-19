@@ -136,7 +136,7 @@ export async function tradieStatement(
        from public.payouts po join public.jobs j on j.id = po.job_id join public.properties p on p.id = j.property_id
       where po.tradie_id = $1::uuid
         and ((po.status = 'sent' and po.sent_at >= $2::timestamptz and po.sent_at < $3::timestamptz)
-          or (po.status in ('waiting', 'scheduled', 'paused', 'failed') and po.created_at >= $2::timestamptz and po.created_at < $3::timestamptz))
+          or (po.status in ('waiting', 'scheduled', 'paused', 'held', 'failed') and po.created_at >= $2::timestamptz and po.created_at < $3::timestamptz))
       order by coalesce(po.sent_at, po.created_at)`,
     [tradie.id, start.toISOString(), end.toISOString()],
   );

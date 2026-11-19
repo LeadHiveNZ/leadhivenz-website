@@ -21,6 +21,10 @@
 >   and then the job page, photos included. They sign in only for their pay, profile and job list.
 > - **The app talks to the database directly** and brings the tables up to date on every deploy. No SQL is
 >   pasted anywhere by hand.
+> - **Every finished job is checked, and the owner is asked before the team** (DECISIONS.md, 2026-11-19).
+>   Each property has a map pin (LINZ address lookup, free, optional); Arrived and Job done need before and
+>   after photos and are compared with the pin; a flagged job's payout waits for the owner, then a trusted
+>   tradie is paid or the dispatcher approves or holds.
 > - **Push notifications were not built.** Texts carry everything.
 > - **Statements are pages with a Print or save button, not emailed PDFs:** Billing for owners and Pay for
 >   tradies, month by month.

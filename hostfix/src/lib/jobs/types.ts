@@ -13,11 +13,16 @@ export type JobStatus =
   | "cancelled";
 
 /**
- * ok: within 500 m of where trusted arrivals at this property were.
- * far: more than 500 m from it. no_location: the phone gave no location.
+ * What the app made of a tap's location (Arrived or Job done).
+ * ok: within 300 m of the property's pin (or, with no pin, of where trusted
+ * arrivals at this property were). far: more than 300 m from it.
+ * no_location: the phone gave no location.
  * no_reference: a location, but nothing yet to compare it with.
  */
 export type ArrivalCheck = "ok" | "far" | "no_location" | "no_reference";
+
+/** A flagged job's check (DECISIONS.md, 2026-11-19). Null on a job with no flags. */
+export type ConfirmStatus = "waiting" | "owner_confirmed" | "owner_problem" | "released_trusted" | "staff_queue" | "staff_approved" | "staff_held";
 
 export type ReportedBy = "owner" | "team" | "guest" | "staff";
 export type JobOutcome = "done" | "diagnosis_only" | "no_access";
@@ -68,6 +73,21 @@ export type Job = {
   arrivedLng: number | null;
   /** The owner pressed "The tradie isn't here". */
   ownerSaysAbsentAt: Date | null;
+  /** What the taps were measured against: the property's pin, earlier trusted taps, this job's own Arrived tap, or nothing. */
+  checkReference: "pin" | "earlier_taps" | "own_arrival" | "none" | null;
+  /** Where the phone was at Job done (or Could not get in), and what the app made of it. */
+  finishedLat: number | null;
+  finishedLng: number | null;
+  finishCheck: ArrivalCheck | null;
+  finishDistanceM: number | null;
+  minutesOnSite: number | null;
+  /** Why the job was flagged at Job done. Empty when it was not. */
+  checkFlags: string[];
+  confirmStatus: ConfirmStatus | null;
+  /** When the owner's answer on a flagged job is due. */
+  confirmBy: Date | null;
+  confirmDecidedAt: Date | null;
+  confirmDecidedBy: string | null;
   outcome: JobOutcome | null;
   completionNote: string | null;
   currency: string;

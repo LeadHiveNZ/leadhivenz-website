@@ -20,6 +20,16 @@ export function clip(text: string, max: number): string {
 }
 
 const money = (cents: number, currency: string) => formatMoney(cents, currency);
+
+/** What a flagged job's owner is asked about, in a few neutral words: never that the tradie did anything wrong. */
+export function checkSubject(flags: string[]): string {
+  const location = flags.some((flag) => flag.startsWith("arrived_") || flag.startsWith("finished_"));
+  const time = flags.includes("quick_finish");
+  const photos = flags.includes("old_photo");
+  const count = [location, time, photos].filter(Boolean).length;
+  if (count !== 1) return "everything";
+  return location ? "the tradie's location" : time ? "how long the job took" : "when the photos were taken";
+}
 const first = (name: string) => name.trim().split(/\s+/)[0] ?? name;
 
 type OfferWords = {
@@ -66,6 +76,10 @@ export const texts = {
 
   payoutOnHold: (o: { number: number }) =>
     `${B} job ${o.number}: the owner has raised a problem, so your payment is on hold while we sort it out. We will be in touch today.`,
+
+  /** The team chose to hold a flagged job's payment (DECISIONS.md, 2026-11-19). Neutral: it never says the tradie did anything wrong. */
+  payoutCheckHeld: (o: { number: number }) =>
+    `${B} job ${o.number}: we are checking this job before paying it, so your payment is on hold for now. One of our team will be in touch.`,
 
   tradieApproved: (o: { market: string; link: string }) =>
     `${B}: you are approved for jobs in ${o.market}. Add your bank details so we can pay you: ${o.link}`,
@@ -120,6 +134,13 @@ export const texts = {
 
   jobDone: (o: { title: string; property: string; totalCents: number; currency: string; link: string }) =>
     `${B}: "${clip(o.title, 36)}" at ${clip(o.property, 24)} is done. ${money(o.totalCents, o.currency)} charged to your card. Photos, and what to do if something is wrong: ${o.link}`,
+
+  /**
+   * A flagged job (DECISIONS.md, 2026-11-19): the same news as jobDone, and a
+   * neutral question. The link only opens the page; the answer is a button.
+   */
+  jobCheck: (o: { title: string; property: string; totalCents?: number | null; currency?: string; flags: string[]; link: string }) =>
+    `${B}: "${clip(o.title, 30)}" at ${clip(o.property, 22)} is done${o.totalCents && o.currency ? `, ${money(o.totalCents, o.currency)} charged` : ""}. We couldn't confirm ${checkSubject(o.flags)} for this job. Can you check the photos and confirm it's fixed? ${o.link}`,
 
   jobCancelledOwner: (o: { title: string; property: string }) =>
     `${B}: "${clip(o.title, 40)}" at ${clip(o.property, 28)} has been cancelled. You have not been charged.`,

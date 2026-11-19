@@ -11,7 +11,8 @@ import type { Db } from "@/lib/db/types";
  * uploaded a file can attach it.
  */
 
-export type UploadKind = "property" | "report" | "completion" | "quote" | "receipt" | "licence" | "insurance_certificate" | "dispute";
+/** "before" is the tradie's photo at Arrived; "completion" is the "after" photo at Job done (DECISIONS.md, 2026-11-19). */
+export type UploadKind = "property" | "report" | "before" | "completion" | "quote" | "receipt" | "licence" | "insurance_certificate" | "dispute";
 
 export type Upload = {
   id: string;
@@ -27,17 +28,25 @@ export type Upload = {
   leadId: string | null;
   uploadedBy: string;
   attached: boolean;
+  /** Where the phone said it was when this photo was sent, if it said. The time is createdAt, from the server's clock. */
+  lat: number | null;
+  lng: number | null;
+  /** The time the photo file itself says it was taken, when the phone put one in it. */
+  takenAt: Date | null;
 };
 
 type UploadRow = {
   id: string; created_at: Date; kind: UploadKind; storage_key: string; content_type: string; bytes: number;
   property_id: string | null; job_id: string | null; tradie_id: string | null; lead_id?: string | null; uploaded_by: string; attached: boolean;
+  lat?: number | string | null; lng?: number | string | null; taken_at?: Date | null;
 };
 
 function rowToUpload(row: UploadRow): Upload {
   return {
     id: row.id, createdAt: new Date(row.created_at), kind: row.kind, storageKey: row.storage_key, contentType: row.content_type,
     bytes: row.bytes, propertyId: row.property_id, jobId: row.job_id, tradieId: row.tradie_id, leadId: row.lead_id ?? null, uploadedBy: row.uploaded_by, attached: row.attached,
+    lat: row.lat === null || row.lat === undefined ? null : Number(row.lat), lng: row.lng === null || row.lng === undefined ? null : Number(row.lng),
+    takenAt: row.taken_at ? new Date(row.taken_at) : null,
   };
 }
 
@@ -86,12 +95,19 @@ export function newStorageKey(kind: UploadKind, ext: string, at: Date = now()): 
 
 export async function recordUpload(
   db: Db,
-  input: { kind: UploadKind; storageKey: string; contentType: string; bytes: number; uploadedBy: string },
+  input: {
+    kind: UploadKind; storageKey: string; contentType: string; bytes: number; uploadedBy: string;
+    /** Sent with a tradie's before and after photos (DECISIONS.md, 2026-11-19). */
+    lat?: number | null; lng?: number | null; takenAt?: Date | null;
+  },
 ): Promise<Upload> {
+  const located = typeof input.lat === "number" && typeof input.lng === "number" && Number.isFinite(input.lat) && Number.isFinite(input.lng)
+    && Math.abs(input.lat) <= 90 && Math.abs(input.lng) <= 180;
+  const takenAt = input.takenAt && Number.isFinite(input.takenAt.getTime()) ? input.takenAt.toISOString() : null;
   const rows = await db.query<UploadRow>(
-    `insert into public.uploads (created_at, kind, storage_key, content_type, bytes, uploaded_by)
-     values ($1::timestamptz, $2, $3, $4, $5, $6) returning *`,
-    [now().toISOString(), input.kind, input.storageKey, input.contentType, input.bytes, input.uploadedBy],
+    `insert into public.uploads (created_at, kind, storage_key, content_type, bytes, uploaded_by, lat, lng, taken_at)
+     values ($1::timestamptz, $2, $3, $4, $5, $6, $7, $8, $9::timestamptz) returning *`,
+    [now().toISOString(), input.kind, input.storageKey, input.contentType, input.bytes, input.uploadedBy, located ? input.lat : null, located ? input.lng : null, takenAt],
   );
   return rowToUpload(rows[0]!);
 }

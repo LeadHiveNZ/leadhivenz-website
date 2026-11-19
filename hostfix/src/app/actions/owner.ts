@@ -16,12 +16,15 @@ import { getJobForOwner, getQuote } from "@/lib/jobs/store";
 import type { Job } from "@/lib/jobs/types";
 import { answerLaterTime } from "@/lib/dispatch/cascade";
 import { decideQuote, reportTradieAbsent } from "@/lib/jobs/work";
+import { confirmFixed } from "@/lib/jobs/confirm";
 import { getMarket } from "@/lib/markets/store";
 import { getBilling, updateOwnerContact } from "@/lib/owners/service";
 import { paymentsFor } from "@/lib/payments";
 import { normalisePhone } from "@/lib/phone";
 import { isUuid } from "@/lib/uuid";
 import { IMPORT_MAX_ROWS, parsePropertyRows } from "@/lib/properties/import";
+import { geocoder } from "@/lib/maps/geocode";
+import { confirmPin, fillMissingPins, lookUpPin } from "@/lib/properties/pin";
 import { cancelPortfolio, choosePortfolio, getPortfolio, PortfolioError, startPortfolio } from "@/lib/properties/portfolio";
 import { activateFreeMembership, changeTier, createProperty, getProperty, PropertyError, requestCancel, rotateReportLink, startMembership, updateProperty } from "@/lib/properties/service";
 
@@ -67,6 +70,8 @@ export async function addProperty(_previous: FormState, formData: FormData): Pro
     if (error instanceof PropertyError) return problem(formData, error.message);
     throw error;
   }
+  // Put the pin where the address is, for the owner to check on the next page (DECISIONS.md, 2026-11-19).
+  await lookUpPin(db, geocoder(), property.id);
   redirect(`/app/properties/${property.id}?added=1`);
 }
 
@@ -138,10 +143,30 @@ export async function saveProperty(_previous: FormState, formData: FormData): Pr
   } else spendLimitCents = null;
   if (Object.keys(errors).length > 0) return problem(formData, "Please check the highlighted fields.", errors);
 
-  const saved = await updateProperty(await getDb(), viewer.ownerId, propertyId, { ...fields, guestAutoDispatch: ticked(formData, "guestAutoDispatch"), spendLimitCents });
-  if (!saved) return problem(formData, "We could not find that property.");
+  const db = await getDb();
+  const before = await getProperty(db, viewer.ownerId, propertyId);
+  const saved = await updateProperty(db, viewer.ownerId, propertyId, { ...fields, guestAutoDispatch: ticked(formData, "guestAutoDispatch"), spendLimitCents });
+  if (!saved || !before) return problem(formData, "We could not find that property.");
+  // A new address clears the old pin (updateProperty): look the new one up, for the owner to check.
+  const moved = before.addressLine1 !== saved.addressLine1 || before.suburb !== saved.suburb || before.postcode !== saved.postcode;
+  if (moved) await lookUpPin(db, geocoder(), propertyId);
   revalidatePath(`/app/properties/${propertyId}`);
-  return { done: "Saved." };
+  return { done: moved ? "Saved. The address changed, so check the map pin at the top of this page." : "Saved." };
+}
+
+/** The owner confirms or moves the property's map pin (DECISIONS.md, 2026-11-19). */
+export async function savePin(_previous: FormState, formData: FormData): Promise<FormState> {
+  const viewer = await requireOwner();
+  const propertyId = text(formData, "propertyId");
+  const lat = Number(text(formData, "pinLat"));
+  const lng = Number(text(formData, "pinLng"));
+  const result = await confirmPin(await getDb(), viewer.ownerId, propertyId, {
+    lat: text(formData, "pinLat") === "" ? Number.NaN : lat, lng: text(formData, "pinLng") === "" ? Number.NaN : lng, moved: text(formData, "pinMoved") === "1",
+  });
+  if (!result.ok) return { message: result.message };
+  revalidatePath(`/app/properties/${propertyId}`);
+  revalidatePath("/app/properties");
+  redirect(`/app/properties/${propertyId}?pinned=1`);
 }
 
 /** Starts the membership: for a free one, the card on file (or the card page); for a paid one, the monthly payment. */
@@ -322,6 +347,20 @@ export async function answerLater(_previous: FormState, formData: FormData): Pro
   redirect(`${found.back}?${result.waited ? "waiting" : "sent"}=1`);
 }
 
+/**
+ * "Yes, it's fixed" on a flagged job (DECISIONS.md, 2026-11-19). A button on
+ * the job page, never the link in the text. The job must be the owner's own.
+ */
+export async function confirmJob(_previous: FormState, formData: FormData): Promise<FormState> {
+  const db = await getDb();
+  const found = await ownersJob(db, formData);
+  if (!found) return { message: NOT_FOUND };
+  const result = await confirmFixed(db, found.job.id, found.job.ownerId, found.actor);
+  await sendQueued(db);
+  if (!result.ok) return { message: result.message };
+  redirect(`${found.back}?confirmed=1`);
+}
+
 /** "The tradie isn't here": the app says they arrived, the owner says they did not. Goes to the team straight away. */
 export async function tradieNotHere(_previous: FormState, formData: FormData): Promise<FormState> {
   const db = await getDb();
@@ -433,6 +472,8 @@ export async function importProperties(_previous: FormState, formData: FormData)
     if (error instanceof PropertyError) return problem(formData, `Nothing was saved. ${error.message}`);
     throw error;
   }
+  // Each address is looked up for its map pin. A big paste is finished off by the timer, a few at a time.
+  await fillMissingPins(db, geocoder(), 25);
   revalidatePath("/app/properties");
   redirect(`/app/properties?imported=${good.length}`);
 }

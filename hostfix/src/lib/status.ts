@@ -15,6 +15,7 @@ import { stripeAccount } from "@/lib/payments/stripe";
 import { foundingBillingLine, foundingSpotsTaken } from "@/lib/leads/founding";
 import { listMarkets } from "@/lib/markets/store";
 import { storageSettings } from "@/lib/files/store";
+import { mapTiles } from "@/lib/maps/tiles";
 import { getStore, storeKind } from "@/lib/store";
 
 /**
@@ -181,6 +182,27 @@ export async function setupStatus(): Promise<StatusItem[]> {
         ? { key: "photos", label: "Photo storage", state: "todo", detail: "Demo mode: photos are kept in a folder on this computer. Connect Supabase Storage before going live." }
         : { key: "photos", label: "Photo storage", state: "problem", detail: `${storage.problem} Until it is set, nobody can add photos, and a tradie cannot finish a job without one.` }
       : { key: "photos", label: "Photo storage", state: "ok", detail: `Photos are kept privately in the "${storage.bucket}" bucket.` },
+  );
+
+  // Maps: finding each property from its address, and the pictures under the pin (DECISIONS.md, 2026-11-19).
+  items.push(
+    env("LINZ_DATA_KEY")
+      ? { key: "address-lookup", label: "Address lookup", state: "ok", detail: "New properties are found on the map from their address, in the LINZ address list (free)." }
+      : {
+          key: "address-lookup", label: "Address lookup", state: "todo",
+          detail: "LINZ_DATA_KEY is not set, so addresses are not looked up: owners put each property's pin on the map by hand. The key is free from the LINZ Data Service (SETUP.md).",
+        },
+  );
+  const tiles = mapTiles();
+  items.push(
+    tiles?.kind === "aerial"
+      ? { key: "map-pictures", label: "Map pictures", state: "ok", detail: "Owners place the pin on LINZ aerial photos (free)." }
+      : {
+          key: "map-pictures", label: "Map pictures", state: "todo",
+          detail: tiles
+            ? "LINZ_BASEMAPS_KEY is not set, so the pin map uses OpenStreetMap's street map, which is fine for light use. A free LINZ Basemaps key shows aerial photos instead (SETUP.md)."
+            : "MAP_TILES is set to off, so the pin map has no pictures. Remove it, or add LINZ_BASEMAPS_KEY (SETUP.md).",
+        },
   );
 
   // Meta

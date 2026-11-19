@@ -9,6 +9,117 @@ price, a fee or a promise, add a line here saying what and why.
 
 ---
 
+## 2026-11-19 — Checking that a job was really done, without the founder looking at every one
+
+What the founder decided (summarised from his brief, not his exact words): stop a tradie tapping
+"Arrived", photographing his shoe, tapping "Finished" and getting paid, without Joe reviewing every
+job. A map pin for every property; the location checked at Arrived and at Finished; before and after
+photos taken in the app; a minimum time on site; and the owner, not the team, asked first about a job
+the app could not confirm. Only what is left goes to the dispatcher. Declining still never counts.
+
+**The rules, as built:**
+
+1. **A map pin for every property** (`src/lib/properties/pin.ts`). Adding a property, changing its
+   street address or pasting a spreadsheet looks the address up and puts the pin there
+   (`looked_up`). The property page shows it on a small map; the owner drags it, taps the map or uses
+   "I'm at the property now", and presses "Yes, the pin is on the house" (`owner_moved` if they moved
+   it). Until they do, the property list and page ask them to. A pasted spreadsheet is looked up 25 at
+   once and the timer finishes the rest, ten a minute. A new street address clears the old pin.
+2. **The location is checked at Arrived and at Job done** (`src/lib/jobs/checks.ts`), against the pin;
+   with no pin, against the middle of earlier trusted arrivals (the 18 Nov rule); with neither, against
+   this job's own Arrived tap at Job done. **Over 300 m, or no location, is a flag** (was 500 m; the pin
+   is far more exact than the median). The tap is never refused. Both distances are on the job.
+3. **Before and after photos in the app.** Arrived needs at least one "before" photo (a new upload kind)
+   and Job done at least one "after" photo; "could not get in" keeps its photo rule. The photo button opens
+   the camera (`capture="environment"`, one at a time). **Honestly: some phones still offer the gallery
+   from the camera screen**, and a browser on a computer always does. Each photo is stamped with the
+   server's time and the phone's location. The phone reads the photo's own date (EXIF DateTimeOriginal,
+   with no extra library, `src/lib/files/exif.ts`) before shrinking it, and a date 30 minutes or more
+   before the job was logged is a flag. A screenshot or saved image has no date, so no date is not a flag.
+4. **Time on site.** Job done less than `min_minutes_on_site` (a market setting, 10) after Arrived is a
+   flag. Diagnosis jobs, off-menu (look-and-price) jobs and "could not get in" are exempt. 0 switches it off.
+5. **Who checks a flagged job.** No flags: paid exactly as before. Flagged: the owner's card is charged as
+   normal, the tradie's payout is **held** (a new payout status), and the "job done" text asks the owner,
+   in neutral words ("We couldn't confirm the tradie's location for this job. Can you check the photos and
+   confirm it's fixed?"), linking to the job page, where the before and after photos sit side by side with
+   **Yes, it's fixed** and **Something's wrong** (buttons; the link only opens the page).
+   - Yes: the payout is released, due at its usual time (24 hours after the job) or now if later.
+   - Something's wrong: the existing dispute (payout paused, dispatcher's queue).
+   - No answer in `owner_confirm_hours` (a market setting, 48): a **trusted** tradie (10 or more finished
+     jobs before this one, and no other flagged job in the last 90 days) is paid and the flag stays on the
+     record; anyone else goes to the queue as **Check a job, then pay or hold**, with one-tap Approve and Hold
+     on the queue and the job page. Hold texts the tradie, neutrally, that the payment is on hold.
+   - **3 flagged jobs in 90 days** shows the tradie for review on the admin tradie page and list, and puts
+     **Tradie's jobs keep being flagged** in the queue. Nothing is changed on their account.
+   - Only jobs a tradie accepted and finished are checked. A test proves 12 passes and a lapsed offer
+     create no flag and change nothing.
+6. **Tradie agreement:** a job reported as done that was not done, including faked location or photos,
+   means removal, and any money paid for it **must be repaid**. Clawback from future payouts was not
+   practical: `settle.ts` has no step that takes money off a later payout. What it does have is a Stripe
+   transfer reversal when a dispute ends in a refund, so section 7 now says that, and "if that cannot be
+   done, you agree to repay it" (it previously promised "from your next payments", which the code never did).
+   Owner terms (section 8) say a flagged job's payment may be held for the owner to confirm.
+
+**What the dispatcher's queue sees now, and an estimate of the load.** Only: an owner saying something
+is wrong (as before), a flagged job whose owner was silent for 48 hours and whose tradie is not yet
+trusted, and a tradie with 3 flagged jobs in 90 days. An Arrived tap with no location or far away **no
+longer** raises "Arrival not confirmed" by itself (the owner still has "The tradie isn't here"). Estimate,
+on assumptions, not measurements: at 150 jobs a month (about 100 properties), if 10 to 15% are flagged
+(phones refusing location, small menu jobs done fast), that is 15 to 25 owner questions a month. If two in
+three owners answer, 5 to 8 go unanswered; once the regular tradies pass 10 jobs, perhaps half of those
+are trusted, so **about 3 to 4 "check a job" items a month, plus disputes and the odd repeat offender:
+roughly one a week**, against about 25 a month if every flagged tap went to the queue. Measure it after a
+month: the admin job pages show every flag, and the audit log has `job.flagged`.
+
+**The map service, and what it costs.** Researched in each provider's current documentation, 19 Nov 2026.
+
+| Option | What it costs | Why not, or why |
+| --- | --- | --- |
+| **LINZ Data Service, "NZ Addresses"** (chosen, for the lookup) | **Free.** A free account and API key; the data is CC BY 4.0 | The government's own address points for New Zealand. Called by the server (WFS GetFeature with a `full_address ILIKE` filter). `LINZ_DATA_KEY`. No published request limit was found; the app sends one request per property, plus a few a minute from the timer. |
+| **LINZ Basemaps aerial photos** (chosen, for the map) | **Free.** A "developer" key (ask LINZ) never expires and has no limit; the standard key expires after 90 days and allows 1,000 tiles a minute and 1,000,000 a month | Aerial photos, so the owner puts the pin on their own roof. Must show "LINZ CC BY 4.0 © Imagery Basemap contributors". `LINZ_BASEMAPS_KEY`. |
+| OpenStreetMap tiles (the fallback map) | Free | Allowed for light use with the "© OpenStreetMap contributors" credit shown; may be blocked without notice if use degrades the service. Used only when no Basemaps key is set. |
+| OpenStreetMap Nominatim | Free | Not used: one request a second for everyone, no autocomplete, bulk lookups (a spreadsheet import) discouraged. |
+| Google Geocoding | US$5 per 1,000 after 10,000 free a month (third-party summaries of the March 2025 pricing; a billing account is needed) | A paid service: Joe approves those first. Not needed. |
+| Mapbox | Storing a result needs "permanent" geocoding, which has no free tier | Paid. |
+| Addressfinder | From about A$19 a month for 200 lookups (their plans page); 30-day trial | Paid. |
+
+Nothing was signed up for. With no keys the app still works: no lookup, OpenStreetMap's street map, and
+the owner places the pin. The map itself is Leaflet 1.9.4 (BSD licence, a new dependency of about 40 kB compressed),
+loaded only on the property page.
+
+**What changed:** migration `20261125000000_job_checks.sql` (adds only: two market settings and a map
+centre, the property pin columns, the job check columns, photo stamps and the "before" kind, the `held`
+payout status, two queue kinds); `src/lib/jobs/checks.ts`, `src/lib/jobs/confirm.ts`,
+`src/lib/properties/pin.ts`, `src/lib/maps/geocode.ts`, `src/lib/maps/tiles.ts`, `src/lib/files/exif.ts`;
+`markArrived` and `finish` in `work.ts`; `openSettlement`, `chargeJob` and `raiseDispute` in `settle.ts`;
+`reliability.ts` (trust and flag counts); the timer; the upload route; the photo uploader and located
+buttons; the owner's, tradie's and team's job pages; the queue; the admin tradie and market pages; the
+property pages and import; the texts (`jobCheck`, `payoutCheckHeld`); the terms (6, 8), privacy, tradie
+agreement (4, 6, 7, 8, 11), the landing copy; SETUP.md (step 7b), the setup checklist, the demo (pins, before
+photos, and one flagged job waiting for its owner) and AGENTS.md.
+
+**Decided while building, to confirm:**
+
+- A looked-up pin counts as the reference before the owner confirms it. LINZ address points are the
+  official position of each address; waiting for every owner would leave pasted properties unchecked.
+- "10 or more finished jobs" means before this one, with any outcome ("could not get in" included).
+- "Diagnosis/quote jobs" was read as every off-menu (look-and-price) job, even when a quote was then
+  approved and done, a diagnosis-only outcome, and the menu's five diagnosis jobs (PL-06, EL-02, EL-03,
+  HP-03, AP-01). The database does not store the menu file's "isDiagnosis" mark, so these are known by
+  "diagnosis" in their name (`isDiagnosisJob`, `src/lib/jobs/checks.ts`); renaming one on the admin screen
+  would bring it under the 10-minute rule.
+- The owner's card is still charged straight away on a flagged job; only the tradie's payout waits. A
+  refund then goes through the dispute as before.
+- Released payouts keep the usual 24-hour hold: an owner who says yes after 1 hour does not make the
+  tradie's money go sooner than a clean job's.
+- After Hold, the queue item is closed with a note; the job page keeps the Approve button, and the payment
+  stays held until someone presses it or the owner raises a problem.
+- A stale photo is one dated 30 minutes or more before the job was logged (room for phone clocks).
+- Flags are decided at Job done, from both taps. "No location" at Arrived alone no longer reaches the
+  dispatcher during the job.
+
+---
+
 ## 2026-11-18 — Missing the time no longer costs HostFix; the owner pays for what actually happened
 
 What the founder decided (summarised from his brief, not his exact words):

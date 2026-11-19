@@ -21,6 +21,8 @@ import { NO_SHOW_DAYS, needsReview, recentNoShows } from "@/lib/tradies/reliabil
  *
  *   job done      the owner's card is charged the total straight away
  *   24 hours on   the tradie's share is sent, unless the owner has raised a problem
+ *   a flagged job the tradie's share is held until the owner confirms, or the
+ *                 timer or the team decides (src/lib/jobs/confirm.ts)
  *   a problem     pauses the tradie's money and puts the job in front of the dispatcher
  *   a refund      comes off the platform's share and the tradie's share in proportion
  *   missed promise  nothing is credited any more (DECISIONS.md, 2026-11-18).
@@ -95,8 +97,9 @@ export async function openSettlement(db: Db, job: Job, market: Market): Promise<
        on conflict (job_id) do nothing`,
       [
         at.toISOString(), job.id, job.tradieId, job.tradieTotalCents, job.currency,
-        // With nothing to charge the owner there is nothing to wait for.
-        chargeCents > 0 ? "waiting" : "scheduled", addHours(at, market.payoutHoldHours).toISOString(),
+        // A flagged job's payment is held for the owner to confirm (DECISIONS.md, 2026-11-19).
+        // Otherwise: with nothing to charge the owner there is nothing to wait for.
+        job.confirmStatus === "waiting" ? "held" : chargeCents > 0 ? "waiting" : "scheduled", addHours(at, market.payoutHoldHours).toISOString(),
       ],
     );
   }
@@ -163,9 +166,13 @@ export async function chargeJob(db: Db, gatewayFor: GatewayFor, jobId: string, o
         detail: { payment_intent: result.paymentIntentId, attempt: payment.attempts, tax: payment.tax_cents }, dedupeKey: `payment.succeeded:${jobId}`,
       });
       if (context.owner.phone) {
+        // A flagged job: the same text asks the owner to look at the photos and confirm, on the job page (DECISIONS.md, 2026-11-19).
+        const check = job.confirmStatus === "waiting";
         await enqueue(tx, {
-          channel: "sms", to: context.owner.phone, template: "job_done", audience: "owner", jobId, userId: context.owner.userId,
-          body: texts.jobDone({ title: job.title, property: context.property.name, totalCents: payment.amount_cents, currency: payment.currency, link: ownerJobUrl(job) }),
+          channel: "sms", to: context.owner.phone, template: check ? "job_check" : "job_done", audience: "owner", jobId, userId: context.owner.userId,
+          body: check
+            ? texts.jobCheck({ title: job.title, property: context.property.name, totalCents: payment.amount_cents, currency: payment.currency, flags: job.checkFlags, link: ownerJobUrl(job) })
+            : texts.jobDone({ title: job.title, property: context.property.name, totalCents: payment.amount_cents, currency: payment.currency, link: ownerJobUrl(job) }),
           dedupeKey: `job_done:${jobId}`,
         });
       }
@@ -349,7 +356,12 @@ export async function raiseDispute(db: Db, jobId: string, actor: string, reason:
       "insert into public.disputes (created_at, job_id, raised_by, reason) values ($1::timestamptz, $2::uuid, $3, $4) returning id",
       [at.toISOString(), jobId, actor, words.slice(0, 2000)],
     );
-    const paused = await tx.query("update public.payouts set status = 'paused' where job_id = $1::uuid and status in ('waiting', 'scheduled') returning id", [jobId]);
+    const paused = await tx.query("update public.payouts set status = 'paused' where job_id = $1::uuid and status in ('waiting', 'scheduled', 'held') returning id", [jobId]);
+    // On a flagged job this is the owner's "Something's wrong" (DECISIONS.md, 2026-11-19).
+    if (job.confirmStatus && job.confirmStatus !== "owner_problem") {
+      await tx.query("update public.jobs set confirm_status = 'owner_problem', confirm_decided_at = $2::timestamptz, confirm_decided_by = $3 where id = $1::uuid", [jobId, at.toISOString(), actor]);
+      await resolveExceptionsFor(tx, jobId, ["job_check"], "The owner raised a problem");
+    }
     const context = await loadContext(tx, job);
     await audit(tx, { actor, action: "dispute.opened", entity: "job", entityId: jobId, detail: { reason: words, payout_paused: paused.length > 0 } });
     await raiseException(tx, {
@@ -458,7 +470,7 @@ export async function resolveDispute(db: Db, gatewayFor: GatewayFor, disputeId: 
     });
     if (payout) {
       const remaining = payout.amount_cents - split.fromTradieCents;
-      if (["paused", "waiting", "scheduled"].includes(payout.status)) {
+      if (["paused", "waiting", "scheduled", "held"].includes(payout.status)) {
         if (remaining <= 0) {
           await tx.query("update public.payouts set status = 'cancelled' where id = $1::uuid", [payout.id]);
         } else {

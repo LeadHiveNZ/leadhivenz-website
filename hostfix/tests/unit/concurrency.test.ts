@@ -1,11 +1,11 @@
 import { afterEach, beforeEach, describe, expect, inject, it } from "vitest";
 import { chargeJob, releaseDuePayouts } from "@/lib/billing/settle";
-import { addHours, setTestNow } from "@/lib/clock";
+import { addHours, addMinutes, setTestNow } from "@/lib/clock";
 import { acceptOffer, expireDueOffers } from "@/lib/dispatch/cascade";
 import { getJobForStaff } from "@/lib/jobs/store";
-import { completeJob, markArrived } from "@/lib/jobs/work";
+import { completeJob } from "@/lib/jobs/work";
 import { testDb } from "./db";
-import { gatewayFor, liveMarket, logJob, makeOwner, makeProperty, makeTradie, MONDAY_10AM, offersFor, photo } from "./factory";
+import { arrive, gatewayFor, HOUSE, liveMarket, logJob, makeOwner, makeProperty, makeTradie, MONDAY_10AM, offersFor, photo } from "./factory";
 
 /**
  * THINGS HAPPENING AT THE SAME MOMENT.
@@ -65,8 +65,10 @@ describe.skipIf(!real)("at the same moment", () => {
     const job = await logJob(t.db, property);
     const [offer] = await offersFor(t.db, job.id);
     await t.db.tx((tx) => acceptOffer(tx, offer!.id, "link"));
-    await markArrived(t.db, job.id, tradie.tradieId);
-    await completeJob(t.db, job.id, tradie.tradieId, { note: "", uploadIds: [await photo(t.db, `tradie:${tradie.tradieId}`)] });
+    await arrive(t.db, job.id, tradie.tradieId, HOUSE);
+    // 30 minutes on site, so the job is not flagged and its payout is released as normal (DECISIONS.md, 2026-11-19).
+    setTestNow(addMinutes(MONDAY_10AM, 30));
+    await completeJob(t.db, job.id, tradie.tradieId, { note: "", uploadIds: [await photo(t.db, `tradie:${tradie.tradieId}`)], ...HOUSE });
 
     const charges = await Promise.all([1, 2, 3, 4].map(() => chargeJob(t.db, gatewayFor(t.db), job.id)));
     expect(charges.filter((outcome) => outcome === "succeeded")).toHaveLength(1);

@@ -12,7 +12,7 @@ import { getDb } from "@/lib/db";
 import type { StatusTone } from "@/lib/jobs/types";
 import { listMarkets } from "@/lib/markets/store";
 import { displayPhone } from "@/lib/phone";
-import { needsReview, NO_SHOW_DAYS, noShowCounts } from "@/lib/tradies/reliability";
+import { flagCounts, flagsNeedReview, needsReview, NO_SHOW_DAYS, noShowCounts } from "@/lib/tradies/reliability";
 import { SCORE_DAYS, scorecards, swapPrompts, TARGET } from "@/lib/tradies/scorecard";
 import { coverage, listSlots, listTradies, type TradieStatus } from "@/lib/tradies/service";
 import { dateKey } from "@/lib/time";
@@ -42,6 +42,7 @@ export default async function TradiesPage({ searchParams }: { searchParams: Sear
   const tradies = await listTradies(db, { market: market.slug });
   const cards = new Map((await scorecards(db, market.slug)).map((card) => [card.tradieId, card]));
   const noShows = await noShowCounts(db, market.slug);
+  const flags = await flagCounts(db, market.slug);
   const prompts = await swapPrompts(db, market.slug);
   const cover = await coverage(db, market.slug, dateKey(now(), market.timezone));
   const slots = await listSlots(db, market.slug);
@@ -181,6 +182,7 @@ export default async function TradiesPage({ searchParams }: { searchParams: Sear
                       <td className={`tabular px-4 py-3 text-right font-semibold ${needsReview(noShows.get(tradie.id) ?? 0) ? "text-alert" : "text-ink"}`}>
                         {noShows.get(tradie.id) ?? 0}
                         {needsReview(noShows.get(tradie.id) ?? 0) && <span className="block text-xs font-normal text-alert">Talk to them</span>}
+                        {flagsNeedReview(flags.get(tradie.id) ?? 0) && <span className="block text-xs font-normal text-alert">{flags.get(tradie.id)} flagged jobs</span>}
                       </td>
                       <td className={`tabular px-4 py-3 text-right font-semibold ${card && card.onTimeRate !== null && card.onTimeRate < TARGET && card.jobs >= 3 ? "text-alert" : "text-ink"}`}>
                         {pct(card?.onTimeRate ?? null)}

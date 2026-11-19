@@ -45,6 +45,10 @@ const sharedEnv = {
   CLICKSEND_API_KEY: "",
   NEXT_PUBLIC_META_PIXEL_ID: "",
   META_CAPI_ACCESS_TOKEN: "",
+  // No address lookups, and no map pictures: the tests never ask LINZ or OpenStreetMap for anything.
+  LINZ_DATA_KEY: "",
+  LINZ_BASEMAPS_KEY: "",
+  MAP_TILES: "off",
 };
 
 export default defineConfig({

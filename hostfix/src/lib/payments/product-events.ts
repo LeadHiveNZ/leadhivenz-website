@@ -193,7 +193,7 @@ export async function handleProductMessage(db: Db, message: StripeMessage, accou
         : [];
       const job = found[0];
       if (job) {
-        const paused = await db.query("update public.payouts set status = 'paused' where job_id = $1::uuid and status in ('waiting', 'scheduled') returning id", [job.job_id]);
+        const paused = await db.query("update public.payouts set status = 'paused' where job_id = $1::uuid and status in ('waiting', 'scheduled', 'held') returning id", [job.job_id]);
         await audit(db, {
           actor: "stripe", action: "chargeback.opened", entity: "job", entityId: job.job_id, amount: dispute.amount, currency: dispute.currency.toUpperCase(),
           detail: { dispute: dispute.id, reason: dispute.reason, payout_paused: paused.length > 0 }, dedupeKey: `chargeback.opened:${dispute.id}`,

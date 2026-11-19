@@ -6,7 +6,7 @@ import { arrivalWindows, checkArrival, distanceMetres, laterWindows, linesToDrop
 import { getJobForStaff, listLines } from "@/lib/jobs/store";
 import type { Job } from "@/lib/jobs/types";
 import { loadJobView } from "@/lib/jobs/view";
-import { completeJob, markArrived, reportTradieAbsent } from "@/lib/jobs/work";
+import { completeJob, reportTradieAbsent } from "@/lib/jobs/work";
 import { getMarket } from "@/lib/markets/store";
 import { setStaffContacts } from "@/lib/ops/exceptions";
 import type { Property } from "@/lib/properties/service";
@@ -15,7 +15,7 @@ import { addTextingHours, isQuietHours, nextTextingTime } from "@/lib/time";
 import { scorecards } from "@/lib/tradies/scorecard";
 import { getTradie } from "@/lib/tradies/service";
 import { testDb } from "./db";
-import { addPlusTier, auditActions, gatewayFor, liveMarket, logJob, makeOwner, makeProperty, makeTradie, MONDAY_10AM, MONDAY_9PM, offersFor, openExceptions, photo, textsTo } from "./factory";
+import { addPlusTier, arrive, auditActions, gatewayFor, liveMarket, logJob, makeOwner, makeProperty, makeTradie, MONDAY_10AM, MONDAY_9PM, offersFor, openExceptions, photo, textsTo } from "./factory";
 
 /**
  * THE RULES OF 18 NOVEMBER 2026 (DECISIONS.md): HostFix no longer pays for an
@@ -46,7 +46,7 @@ afterEach(() => {
 
 const MONDAY_2PM = new Date("2026-11-16T01:00:00.000Z");
 const MONDAY_630AM = new Date("2026-11-15T17:30:00.000Z");
-const HOUSE = { lat: -45.03, lng: 168.66 };
+const HOUSE = { lat: -45.03, lng: 168.66 }; // the same spot as the factory's HOUSE
 
 async function setup(options: { tier?: "essential" | "plus"; market?: Record<string, unknown> } = {}) {
   await liveMarket(t.db, options.market ?? {});
@@ -66,11 +66,13 @@ async function accepted(s: Setup, job: Job, windowEnd?: string) {
   return result.job;
 }
 
+/** Arrives at `at` with a before photo, and finishes 30 minutes later from the same spot (so the job is not flagged as too quick). */
 async function arriveAndFinish(s: Setup, jobId: string, at: Date, where: { lat: number; lng: number } | null = HOUSE) {
   setTestNow(at);
-  const arrived = await markArrived(t.db, jobId, s.first.tradieId, where ?? {});
+  const arrived = await arrive(t.db, jobId, s.first.tradieId, where ?? {});
   if (!arrived.ok) throw new Error(arrived.message);
-  const done = await completeJob(t.db, jobId, s.first.tradieId, { note: "Done.", uploadIds: [await photo(t.db, `tradie:${s.first.tradieId}`)] });
+  setTestNow(addMinutes(at, 30));
+  const done = await completeJob(t.db, jobId, s.first.tradieId, { note: "Done.", uploadIds: [await photo(t.db, `tradie:${s.first.tradieId}`)], ...(where ?? {}) });
   if (!done.ok) throw new Error(done.message);
   return done.job;
 }
@@ -220,7 +222,7 @@ describe("checking where the Arrived tap came from", () => {
     expect(checkArrival({ lat: -45.04, lng: 168.66 }, [HOUSE])).toMatchObject({ check: "far", distanceM: 1112 });
   });
 
-  it("the first visit says 'no reference yet' and raises nothing; a later tap 1.1 km away is flagged for the dispatcher", async () => {
+  it("the first visit says 'no reference yet' and raises nothing; a later tap 1.1 km away is recorded as far, for the owner to check rather than the dispatcher", async () => {
     const s = await setup();
     const first = await logJob(t.db, s.property, { code: "PL-01" });
     await accepted(s, first);
@@ -238,20 +240,20 @@ describe("checking where the Arrived tap came from", () => {
     const third = await logJob(t.db, s.property, { code: "PL-01" });
     await accepted(s, third);
     setTestNow(addHours(MONDAY_10AM, 6));
-    await markArrived(t.db, third.id, s.first.tradieId, { lat: -45.04, lng: 168.66 });
-    // The reference is the middle of the two trusted taps: -45.03025, 168.66. 0.00975 degrees is 1084 m.
-    expect((await getJobForStaff(t.db, third.id))!).toMatchObject({ arrivalCheck: "far", arrivalDistanceM: 1084 });
-    expect(await openExceptions(t.db, third.id)).toContain("arrival_unverified");
+    await arrive(t.db, third.id, s.first.tradieId, { lat: -45.04, lng: 168.66 });
+    // The property has no map pin, so the reference is the middle of the two trusted taps: -45.03025, 168.66. 0.00975 degrees is 1084 m.
+    expect((await getJobForStaff(t.db, third.id))!).toMatchObject({ arrivalCheck: "far", arrivalDistanceM: 1084, checkReference: "earlier_taps" });
+    // Since 19 November 2026 the dispatcher is not called for this: it is one of the job's flags when it is finished (DECISIONS.md).
+    expect(await openExceptions(t.db, third.id)).not.toContain("arrival_unverified");
   });
 
-  it("no location from the phone is flagged", async () => {
+  it("no location from the phone is recorded, and the tap still works", async () => {
     const s = await setup();
     const job = await logJob(t.db, s.property, { code: "PL-01" });
     await accepted(s, job);
-    await markArrived(t.db, job.id, s.first.tradieId);
-    expect((await getJobForStaff(t.db, job.id))!.arrivalCheck).toBe("no_location");
-    const [raised] = await t.db.query<{ summary: string }>("select summary from public.exceptions where job_id = $1::uuid and kind = 'arrival_unverified'", [job.id]);
-    expect(raised!.summary).toContain("their phone gave no location");
+    expect(await arrive(t.db, job.id, s.first.tradieId)).toMatchObject({ ok: true });
+    expect((await getJobForStaff(t.db, job.id))!).toMatchObject({ status: "on_site", arrivalCheck: "no_location" });
+    expect(await openExceptions(t.db, job.id)).toEqual([]);
   });
 
   it("the owner's 'tradie has arrived' text points to the job page, and 'The tradie isn't here' raises an urgent exception once", async () => {
@@ -261,7 +263,7 @@ describe("checking where the Arrived tap came from", () => {
     await accepted(s, job);
     // Before the tradie taps Arrived the button does nothing.
     expect(await reportTradieAbsent(t.db, job.id, `owner:${s.owner.ownerId}`)).toMatchObject({ ok: false });
-    await markArrived(t.db, job.id, s.first.tradieId, HOUSE);
+    await arrive(t.db, job.id, s.first.tradieId, HOUSE);
     const [arrivedText] = await textsTo(t.db, s.owner.user.phone!, "tradie_arrived");
     expect(arrivedText!.body).toContain("Not there? Tell us on the job page:");
     expect(arrivedText!.body).toMatch(/\/j\/\d+\.[A-Za-z0-9]{12}/);
@@ -306,7 +308,7 @@ describe("the arrival window", () => {
 
     // 3:01pm: inside the 24-hour promise, but after the window they chose, so not on time. No money changes on a normal job.
     setTestNow(addMinutes(threePm, 1));
-    await markArrived(t.db, job.id, s.first.tradieId, HOUSE);
+    await arrive(t.db, job.id, s.first.tradieId, HOUSE);
     const [arrived] = await t.db.query<{ detail: { on_time: boolean } }>("select detail from public.audit_log where entity_id = $1 and action = 'job.arrived'", [job.id]);
     expect(arrived!.detail.on_time).toBe(false);
     expect((await getJobForStaff(t.db, job.id))!).toMatchObject({ ownerTotalCents: 22500, tradieTotalCents: 19000 });
@@ -392,7 +394,7 @@ async function history(owner: { ownerId: string }, tradieId: string, onTime: num
     if (took.result !== "accepted") throw new Error(took.result);
     // No window chosen, so the promise (24 hours) is the deadline.
     setTestNow(addHours(job.dispatchedAt!, arrivesLate ? 25 : 2));
-    await markArrived(t.db, job.id, tradieId, HOUSE);
+    await arrive(t.db, job.id, tradieId, HOUSE);
   }
   setTestNow(MONDAY_10AM);
 }

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { answerLater, answerQuote, cancelOwnerJob, goAhead, reportProblem, tradieNotHere } from "@/app/actions/owner";
+import { answerLater, answerQuote, cancelOwnerJob, confirmJob, goAhead, reportProblem, tradieNotHere } from "@/app/actions/owner";
 import { ActionForm, Area } from "@/components/forms/ActionForm";
 import { SubmitButton } from "@/components/forms/SubmitButton";
 import { secondaryButtonClass } from "@/components/forms/styles";
@@ -14,9 +14,10 @@ import { addressLine } from "@/lib/properties/service";
 import { windowBetween } from "@/lib/jobs/arrival";
 import { brand } from "@config/brand";
 import { formatDateTime, formatDeadline, formatHourOfDay } from "@/lib/time";
-import { CostLines, Deadline, History, JobStatus, Panel, PhotoGrid } from "./JobParts";
+import { ownerCheckWords, type CheckFlag } from "@/lib/jobs/checks";
+import { BeforeAfter, CostLines, Deadline, History, JobStatus, Panel, PhotoGrid } from "./JobParts";
 
-export type OwnerJobFlash = { sent?: boolean; already?: boolean; cancelled?: boolean; answered?: boolean; told?: boolean; waiting?: boolean; absent?: boolean };
+export type OwnerJobFlash = { sent?: boolean; already?: boolean; cancelled?: boolean; answered?: boolean; told?: boolean; waiting?: boolean; absent?: boolean; confirmed?: boolean };
 
 type Props = {
   view: JobView;
@@ -65,6 +66,9 @@ export function OwnerJob({ view, now, code, flash = {}, prices }: Props) {
   const billingHref = code ? `/sign-in?next=${encodeURIComponent("/app/billing")}` : "/app/billing";
   const activeTotal = view.lines.filter((line) => line.status === "active").reduce((sum, line) => sum + line.ownerCents, 0);
   const quotePhotos = view.workPhotos.filter((photo) => photo.kind === "quote");
+  // A flagged job waiting for the owner's answer (DECISIONS.md, 2026-11-19). Never worded as the tradie's fault.
+  const askToCheck = job.status === "completed" && !money.dispute && (job.confirmStatus === "waiting" || job.confirmStatus === "staff_queue" || job.confirmStatus === "staff_held");
+  const otherWork = view.workPhotos.filter((photo) => photo.kind !== "completion");
 
   return (
     <div className="space-y-5">
@@ -96,6 +100,11 @@ export function OwnerJob({ view, now, code, flash = {}, prices }: Props) {
           A person on our team will call you back. You are not charged for anything that was not done.
         </Notice>
       )}
+      {flash.confirmed && (
+        <Notice tone="good" title="Thanks for confirming">
+          The tradie will be paid as normal.
+        </Notice>
+      )}
       {flash.told && (
         <Notice tone="good" title="Thanks for telling us">
           A person on our team will look into it and come back to you.
@@ -120,6 +129,37 @@ export function OwnerJob({ view, now, code, flash = {}, prices }: Props) {
           </p>
         )}
       </Card>
+
+      {askToCheck && (
+        <Card className="border-brand/30 sm:p-6">
+          <SectionTitle>Can you check this job?</SectionTitle>
+          <p className="text-lg text-ink">{ownerCheckWords(job.checkFlags as CheckFlag[])}</p>
+          <div className="mt-4">
+            <BeforeAfter before={view.beforePhotos} after={view.afterPhotos} query={photoQuery} timeZone={market.timezone} />
+          </div>
+          {job.completionNote && <p className="mt-3 whitespace-pre-line text-muted">&ldquo;{job.completionNote}&rdquo;</p>}
+          <ActionForm action={confirmJob} className="mt-4 space-y-2.5">
+            {which}
+            <SubmitButton pendingLabel="Sending..." className="w-full">
+              Yes, it&rsquo;s fixed
+            </SubmitButton>
+          </ActionForm>
+          <div className="mt-2.5">
+            <Reveal label="Something's wrong" tone="alert">
+              <ActionForm action={reportProblem} className="space-y-3">
+                {which}
+                <Area label="What is wrong?" name="reason" rows={3} required maxLength={1500} placeholder="The tap is still dripping." hint="A person on our team looks at every one of these. The tradie's payment stays on hold until it is sorted." />
+                <SubmitButton variant="danger" pendingLabel="Sending...">
+                  Tell the team
+                </SubmitButton>
+              </ActionForm>
+            </Reveal>
+          </div>
+          {job.confirmStatus === "waiting" && job.confirmBy && (
+            <p className="mt-3 text-center text-sm text-muted">If we have not heard from you by {formatDeadline(job.confirmBy, now, market.timezone)}, our team takes it from there. You do not have to do anything else.</p>
+          )}
+        </Card>
+      )}
 
       {job.status === "awaiting_owner" && (
         <Card className="border-brand/30 sm:p-6">
@@ -258,12 +298,17 @@ export function OwnerJob({ view, now, code, flash = {}, prices }: Props) {
         </p>
       </Panel>
 
-      {job.status === "completed" && (job.completionNote || view.workPhotos.length > 0) && (
+      {job.status === "completed" && !askToCheck && (job.completionNote || view.workPhotos.length > 0 || view.beforePhotos.length > 0) && (
         <Panel title="What was done">
           {job.completionNote && <p className="whitespace-pre-line text-ink">{job.completionNote}</p>}
-          {view.workPhotos.length > 0 && (
+          {(view.beforePhotos.length > 0 || view.afterPhotos.length > 0) && (
             <div className="mt-3">
-              <PhotoGrid photos={view.workPhotos} query={photoQuery} />
+              <BeforeAfter before={view.beforePhotos} after={view.afterPhotos} query={photoQuery} timeZone={market.timezone} />
+            </div>
+          )}
+          {otherWork.length > 0 && (
+            <div className="mt-3">
+              <PhotoGrid photos={otherWork} query={photoQuery} />
             </div>
           )}
         </Panel>
@@ -306,7 +351,7 @@ export function OwnerJob({ view, now, code, flash = {}, prices }: Props) {
           )}
         </Notice>
       ) : (
-        job.status === "completed" && (
+        job.status === "completed" && !askToCheck && (
           <Reveal label="Something not right with this job?">
             <ActionForm action={reportProblem} className="space-y-3">
               {which}

@@ -13,8 +13,10 @@ import { displayPhone } from "@/lib/phone";
 import { addressLine } from "@/lib/properties/service";
 import { formatDate, formatDateTime } from "@/lib/time";
 import { payTiming } from "@/lib/markets/display";
-import { CostLines, Deadline, History, JobStatus, Panel, PhotoGrid } from "./JobParts";
-import { ArrivedButton } from "./TradieClient";
+import { FAR_METRES } from "@/lib/jobs/arrival";
+import { flagWords, type CheckFlag } from "@/lib/jobs/checks";
+import { BeforeAfter, CostLines, Deadline, History, JobStatus, Panel, PhotoGrid } from "./JobParts";
+import { ArrivedButton, LocatedButton } from "./TradieClient";
 
 export type TradieJobFlash = { yours?: boolean; here?: boolean; quoted?: "wait" | "go" | null; done?: boolean };
 
@@ -40,6 +42,8 @@ function payoutLine(view: JobView): { text: string; tone: "good" | "info" | "war
       return { text: `${amount} will be sent on ${formatDateTime(payout.releaseAt, zone)}. It reaches your bank ${payTiming(view.market).arrives}.`, tone: "good" };
     case "waiting":
       return { text: `${amount} will be sent once the owner's card has been charged. If the card fails we chase it, not you.`, tone: "info" };
+    case "held":
+      return { text: `${amount} is waiting for the owner to confirm the job, because ${heldBecause(view)} If they have not answered within ${view.market.ownerConfirmHours} hours, it is paid if you are a trusted tradie, or our team looks at the photos.`, tone: "info" };
     case "paused":
       return { text: `${amount} is on hold while we look into a problem the owner raised. We will be in touch.`, tone: "warn" };
     case "failed":
@@ -49,6 +53,15 @@ function payoutLine(view: JobView): { text: string; tone: "good" | "info" | "war
     default:
       return { text: "No payment is due for this job.", tone: "info" };
   }
+}
+
+/** Why a payment is waiting, in plain words for the tradie. */
+function heldBecause(view: JobView): string {
+  const { job, market } = view;
+  const words = (job.checkFlags as CheckFlag[]).map((flag) =>
+    flagWords(flag, { arrivalM: job.arrivalDistanceM, finishM: job.finishDistanceM, minutes: job.minutesOnSite, minMinutes: market.minMinutesOnSite }).replace(/\.$/, "").toLowerCase(),
+  );
+  return words.length > 0 ? `${words.join("; ")}.` : "the app could not confirm everything.";
 }
 
 /** One job, as the tradie doing it sees it: where, what, the steps, and what they get. */
@@ -112,8 +125,9 @@ export function TradieJob({ view, now, code, flash = {}, propertyPhotos }: Props
         <Card className="border-brand/30 sm:p-6">
           <SectionTitle>Next step</SectionTitle>
           <div className="space-y-2.5">
-            <ActionForm action={arrived} className="space-y-2">
+            <ActionForm action={arrived} className="space-y-3">
               {which}
+              <PhotoUploader kind="before" name="beforeUploadIds" label="Before photo: the problem as you found it (at least one)" offer={code} max={4} camera stamp />
               <ArrivedButton />
             </ActionForm>
             {!job.enRouteAt ? (
@@ -127,7 +141,10 @@ export function TradieJob({ view, now, code, flash = {}, propertyPhotos }: Props
               <p className="text-center text-sm text-muted">The owner can see you are on the way.</p>
             )}
           </div>
-          <p className="mt-3 text-sm text-muted">Tap &ldquo;I have arrived&rdquo; at the door, with your phone&rsquo;s location on. That is the time your arrival is measured against: the end of the window you chose, or the urgent deadline.</p>
+          <p className="mt-3 text-sm text-muted">
+            At the door, take a before photo, then tap &ldquo;I have arrived&rdquo; with your phone&rsquo;s location on. That is the time your arrival is measured against: the end of the window you chose, or the urgent deadline.
+            Your location is checked against the property&rsquo;s pin at Arrived and again at Job done. If it is missing or over {FAR_METRES} m out, the tap still works, and your payment waits for the owner to confirm the job.
+          </p>
         </Card>
       )}
 
@@ -166,11 +183,9 @@ export function TradieJob({ view, now, code, flash = {}, propertyPhotos }: Props
             <SectionTitle>{job.offMenu && !hasApprovedWork ? "Finish (call-out only)" : "Finish the job"}</SectionTitle>
             <ActionForm action={finishJob} className="space-y-4">
               {which}
-              <PhotoUploader kind="completion" label="Photos of the finished work (at least one)" offer={code} max={8} />
-              <Area label="What did you do?" name="note" rows={3} maxLength={1500} placeholder="Cleared the blockage in the kitchen waste. Ran the tap for five minutes, draining well." hint="The owner sees this with your photos." />
-              <SubmitButton pendingLabel="Finishing..." className="w-full">
-                Job done
-              </SubmitButton>
+              <PhotoUploader kind="completion" label="After photos: the finished work (at least one)" offer={code} max={8} camera stamp />
+              <Area label="What did you do?" name="note" rows={3} maxLength={1500} placeholder="Cleared the blockage in the kitchen waste. Ran the tap for five minutes, draining well." hint="The owner sees this with your before and after photos." />
+              <LocatedButton label="Job done" busyLabel="Finishing..." icon="check" />
             </ActionForm>
           </Card>
         </>
@@ -181,11 +196,9 @@ export function TradieJob({ view, now, code, flash = {}, propertyPhotos }: Props
           <ActionForm action={noAccess} className="space-y-4">
             {which}
             <Area label="What happened?" name="noAccessNote" rows={3} required maxLength={1000} placeholder="Lockbox code did not work and nobody answered the door." />
-            <PhotoUploader kind="completion" name="noAccessUploadIds" label="A photo showing you were at the property" offer={code} max={3} />
+            <PhotoUploader kind="completion" name="noAccessUploadIds" label="A photo showing you were at the property" offer={code} max={3} camera stamp />
             <p className="text-sm text-muted">Try calling the contact below first. If you still cannot get in, you are paid the call-out and the owner is charged it.</p>
-            <SubmitButton variant="danger" pendingLabel="Sending...">
-              I could not get in
-            </SubmitButton>
+            <LocatedButton label="I could not get in" busyLabel="Sending..." variant="danger" />
           </ActionForm>
         </Reveal>
       )}
@@ -253,10 +266,15 @@ export function TradieJob({ view, now, code, flash = {}, propertyPhotos }: Props
         </Panel>
       )}
 
-      {job.status === "completed" && view.workPhotos.length > 0 && (
+      {job.status === "completed" && (view.workPhotos.length > 0 || view.beforePhotos.length > 0) && (
         <Panel title="Your photos">
           {job.completionNote && <p className="mb-3 whitespace-pre-line text-ink">{job.completionNote}</p>}
-          <PhotoGrid photos={view.workPhotos} query={photoQuery} />
+          <BeforeAfter before={view.beforePhotos} after={view.afterPhotos} query={photoQuery} timeZone={market.timezone} />
+          {view.workPhotos.some((photo) => photo.kind !== "completion") && (
+            <div className="mt-3">
+              <PhotoGrid photos={view.workPhotos.filter((photo) => photo.kind !== "completion")} query={photoQuery} />
+            </div>
+          )}
         </Panel>
       )}
 

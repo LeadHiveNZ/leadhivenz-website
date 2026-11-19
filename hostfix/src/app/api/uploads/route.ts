@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { offerFromLink } from "@/lib/access/links";
 import { currentStaff, currentViewer } from "@/lib/auth/current";
+import { now } from "@/lib/clock";
 import { getDb } from "@/lib/db";
 import { appSecret } from "@/lib/env";
 import { getFileStore } from "@/lib/files/store";
@@ -18,10 +19,28 @@ import { findTeamLink } from "@/lib/team/service";
  * sent, and only the person who uploaded it can attach it.
  */
 
-const KINDS: UploadKind[] = ["property", "report", "completion", "quote", "receipt", "licence", "dispute"];
+const KINDS: UploadKind[] = ["property", "report", "before", "completion", "quote", "receipt", "licence", "dispute"];
 const OWNER_KINDS: UploadKind[] = ["property", "report", "dispute"];
 // The insurance certificate is not sent here: it may be a PDF, so it goes with the profile or sign-up form itself.
-const TRADIE_KINDS: UploadKind[] = ["completion", "quote", "receipt", "licence"];
+const TRADIE_KINDS: UploadKind[] = ["before", "completion", "quote", "receipt", "licence"];
+// A tradie's before and after photos carry where the phone was and when the photo says it was taken (DECISIONS.md, 2026-11-19).
+const STAMPED: UploadKind[] = ["before", "completion"];
+
+function numberField(form: FormData, name: string): number | null {
+  const raw = form.get(name);
+  if (typeof raw !== "string" || raw.trim() === "") return null;
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : null;
+}
+
+/** The time the photo file says it was taken, sent by the phone. Ignored unless it is a real time, not in the future. */
+function takenAtField(form: FormData): Date | null {
+  const raw = form.get("takenAt");
+  if (typeof raw !== "string" || raw === "") return null;
+  const at = new Date(raw);
+  if (!Number.isFinite(at.getTime()) || at.getTime() > now().getTime() + 24 * 3_600_000 || at.getUTCFullYear() < 2000) return null;
+  return at;
+}
 
 function refuse(status: number, message: string) {
   return NextResponse.json({ error: message }, { status });
@@ -89,6 +108,10 @@ export async function POST(request: NextRequest) {
     console.error("[uploads] storing a photo failed:", error instanceof Error ? error.message : error);
     return refuse(502, "That photo could not be saved. Please try again.");
   }
-  const upload = await recordUpload(db, { kind: wanted, storageKey: key, contentType: file.type, bytes: bytes.byteLength, uploadedBy });
+  const stamped = STAMPED.includes(wanted);
+  const upload = await recordUpload(db, {
+    kind: wanted, storageKey: key, contentType: file.type, bytes: bytes.byteLength, uploadedBy,
+    lat: stamped ? numberField(form, "lat") : null, lng: stamped ? numberField(form, "lng") : null, takenAt: stamped ? takenAtField(form) : null,
+  });
   return NextResponse.json({ id: upload.id, url: `/files/${upload.id}` });
 }

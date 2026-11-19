@@ -32,14 +32,22 @@ export type ExceptionKind =
   | "portfolio_band"
   /** A normal job nobody has accepted after the market's hours (3 by default): ring round (DECISIONS.md, 2026-11-18). */
   | "not_taken_yet"
-  /** The tradie tapped Arrived with no location, or far from where trusted arrivals at the property were. */
+  /**
+   * The tradie tapped Arrived with no location, or far from the property. Raised
+   * until 19 November 2026; since then such a tap is one of the job's flags
+   * instead, and the owner is asked first (DECISIONS.md, 2026-11-19).
+   */
   | "arrival_unverified"
   /** The owner pressed "The tradie isn't here". */
   | "owner_says_absent"
   /** An accepted job reached its promised time with nobody on site: call the tradie. */
   | "no_show"
   /** A tradie has reached 3 no-shows in 90 days: talk to them. Never removed automatically. */
-  | "tradie_review";
+  | "tradie_review"
+  /** A flagged job whose owner did not answer in 48 hours, by a tradie who is not yet trusted: Approve or Hold the payment. */
+  | "job_check"
+  /** A tradie has had 3 flagged jobs in 90 days: look at them and talk to the tradie. Never removed automatically. */
+  | "tradie_flags";
 
 /** The ones worth a text to the founder as well as an email. */
 const URGENT: ExceptionKind[] = ["nobody_accepted", "missed_window", "dispute", "chargeback", "not_taken_yet", "owner_says_absent", "no_show"];
@@ -217,6 +225,8 @@ export const EXCEPTION_LABELS: Record<ExceptionKind, string> = {
   owner_says_absent: "Owner says the tradie isn't there",
   no_show: "Tradie not there: call them",
   tradie_review: "Tradie to talk to",
+  job_check: "Check a job, then pay or hold",
+  tradie_flags: "Tradie's jobs keep being flagged",
 };
 
 /** One line on what to do about each kind. The runbook (RUNBOOK.md) has the longer version. */
@@ -241,4 +251,6 @@ export const EXCEPTION_ACTIONS: Record<ExceptionKind, string> = {
   owner_says_absent: "The owner says the tradie is not at the property although the app says they arrived. Ring the tradie now, then ring the owner back.",
   no_show: "A tradie accepted this job and is not on site by the promised time. Call the tradie. If they are not coming, cancel and log the job again so it goes to someone else.",
   tradie_review: "This tradie has not turned up for 3 accepted jobs in 90 days. Talk to them before deciding anything. Only a person can pause or remove a tradie.",
+  job_check: "The app could not confirm this job (location, photos or time on site) and the owner did not answer. Look at the before and after photos. If it looks done, press Approve. If not, press Hold and ring the owner and the tradie.",
+  tradie_flags: "This tradie has had 3 or more jobs in 90 days the app could not confirm. Look at those jobs, then talk to them. Only a person can pause or remove a tradie.",
 };

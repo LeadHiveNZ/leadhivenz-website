@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   description: `What ${brand.name} holds about you, why, who sees it, and how to ask for it or have it removed.`,
 };
 
-const UPDATED = "18 November 2026";
+const UPDATED = "19 November 2026";
 
 export default function Page() {
   const n = brand.name;
@@ -55,8 +55,15 @@ export default function Page() {
           you landed on, so we know which ads work.
         </p>
         <p>
-          <strong>Where a tradie was when they tapped &ldquo;I have arrived&rdquo;</strong>, if their phone allowed it. We ask once, at that moment only, so
-          we can show that our response promise was kept. We do not track anyone&rsquo;s location at any other time.
+          <strong>Where a tradie was when they tapped &ldquo;I have arrived&rdquo;, &ldquo;Job done&rdquo; or &ldquo;Could not get in&rdquo;, and when they sent each
+          before and after photo</strong>, if their phone allowed it. We ask at those moments only, to show that our response promise was kept and that the
+          tradie was at the property, and compare it with the property&rsquo;s map pin. We do not track anyone&rsquo;s location at any other time. From each
+          photo we also keep the time the photo itself says it was taken, if it has one; the rest of the hidden details a phone adds to a photo,
+          including where it was taken, are removed on the phone before it is sent, where the phone allows it.
+        </p>
+        <p>
+          <strong>Each property&rsquo;s map pin</strong>, looked up from its address and checked by the owner. If an owner presses &ldquo;I&rsquo;m at the property
+          now&rdquo;, their phone&rsquo;s location is used once, to place the pin, and nothing else is kept.
         </p>
         <p>
           <strong>Every text and email we send</strong>, with its wording, so we can show what was said and when. Sign-in codes and one-tap links
@@ -111,6 +118,11 @@ export default function Page() {
           <li>Stripe: takes payments from owners, pays tradies, and checks tradies&rsquo; identity for payouts. Stripe is based in the United States.</li>
           <li>Resend: sends our emails.</li>
           <li>ClickSend or Twilio: sends our texts.</li>
+          <li>
+            Toitū Te Whenua Land Information New Zealand (LINZ): when a property is added or its address changes, we send the street address (not your
+            name) to the government&rsquo;s address list to find it on the map. The map on the property page loads its pictures from LINZ Basemaps or
+            OpenStreetMap, which see the address of your internet connection, as any website does.
+          </li>
           <li>
             Meta (Facebook and Instagram): when someone fills in a form on our public pages after seeing one of our ads, we send Meta a scrambled
             copy of the email address and phone number so Meta can tell us the ad worked. Meta cannot read the scrambled values. Nothing inside

@@ -7,7 +7,7 @@ import { chargeJob, markMissedWindows } from "@/lib/billing/settle";
 import { ownerStatement } from "@/lib/billing/statements";
 import { addHours, addMinutes, setTestNow } from "@/lib/clock";
 import { acceptOffer } from "@/lib/dispatch/cascade";
-import { completeJob, markArrived, markEnRoute } from "@/lib/jobs/work";
+import { completeJob, markEnRoute } from "@/lib/jobs/work";
 import { AdminInputError, saveTier, type TierInput } from "@/lib/markets/admin";
 import { bandFor, bandProblem, minimumProperties } from "@/lib/markets/bands";
 import { getMarket, listTiers } from "@/lib/markets/store";
@@ -16,7 +16,7 @@ import type { PaymentsGateway } from "@/lib/payments/gateway";
 import { activatePortfolio, countPortfolioProperties, getPortfolio, rebandPortfolio, setAgreedRetainer, startPortfolio } from "@/lib/properties/portfolio";
 import { endMembership, getProperty, recordMembershipPaymentFailed, recordRenewal, requestCancel } from "@/lib/properties/service";
 import { testDb } from "./db";
-import { gatewayFor, liveMarket, logJob, makeOwner, makePortfolio, makeProperty, makeTradie, MONDAY_10AM, offersFor, photo, textsTo } from "./factory";
+import { arrive, gatewayFor, HOUSE, liveMarket, logJob, makeOwner, makePortfolio, makeProperty, makeTradie, MONDAY_10AM, offersFor, photo, textsTo } from "./factory";
 
 /**
  * PORTFOLIO (DECISIONS.md, 2026-11-17).
@@ -309,8 +309,8 @@ describe("a job at a Portfolio property", () => {
       const [offer] = await offersFor(t.db, job.id);
       await t.db.tx((tx) => acceptOffer(tx, offer!.id, "link"));
       await markEnRoute(t.db, job.id, tradie.tradieId);
-      await markArrived(t.db, job.id, tradie.tradieId, { lat: -45.03, lng: 168.66 });
-      const done = await completeJob(t.db, job.id, tradie.tradieId, { note: "Sorted.", uploadIds: [await photo(t.db, `tradie:${tradie.tradieId}`)] });
+      await arrive(t.db, job.id, tradie.tradieId, HOUSE);
+      const done = await completeJob(t.db, job.id, tradie.tradieId, { note: "Sorted.", uploadIds: [await photo(t.db, `tradie:${tradie.tradieId}`)], ...HOUSE });
       if (!done.ok) throw new Error(done.message);
       expect(await chargeJob(t.db, gatewayFor(t.db), job.id)).toBe("succeeded");
       const [payment] = await t.db.query<{ amount_cents: number; status: string }>("select amount_cents, status from public.payments where job_id = $1::uuid", [job.id]);

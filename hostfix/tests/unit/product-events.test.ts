@@ -4,7 +4,7 @@ import { chargeJob } from "@/lib/billing/settle";
 import { addMinutes, setTestNow } from "@/lib/clock";
 import { acceptOffer } from "@/lib/dispatch/cascade";
 import { createJob } from "@/lib/jobs/create";
-import { completeJob, markArrived } from "@/lib/jobs/work";
+import { completeJob } from "@/lib/jobs/work";
 import { getBilling, saveBilling } from "@/lib/owners/service";
 import type { StripeMessage } from "@/lib/payments/deposit";
 import { addMonths } from "@/lib/payments/gateway";
@@ -12,7 +12,7 @@ import { handleProductMessage, type ProductDeps } from "@/lib/payments/product-e
 import type { StripeAccount } from "@/lib/payments/stripe";
 import { activateMembership, getProperty } from "@/lib/properties/service";
 import { testDb } from "./db";
-import { addPaidTier, gatewayFor, liveMarket, logJob, makeOwner, makeProperty, makeTradie, menuItem, MONDAY_10AM, offersFor, photo, textsTo } from "./factory";
+import { addPaidTier, arrive, gatewayFor, HOUSE, liveMarket, logJob, makeOwner, makeProperty, makeTradie, menuItem, MONDAY_10AM, offersFor, photo, textsTo } from "./factory";
 
 /**
  * WHAT STRIPE TELLS US, and what the app does about it. These use made-up
@@ -232,9 +232,9 @@ async function chargedJob() {
   const job = await logJob(t.db, property, { code: "PL-01" });
   const [offer] = await offersFor(t.db, job.id);
   await t.db.tx((tx) => acceptOffer(tx, offer!.id, "link"));
-  await markArrived(t.db, job.id, tradie.tradieId, { lat: -45.03, lng: 168.66 });
+  await arrive(t.db, job.id, tradie.tradieId, HOUSE);
   setTestNow(addMinutes(MONDAY_10AM, 60));
-  await completeJob(t.db, job.id, tradie.tradieId, { note: "Done.", uploadIds: [await photo(t.db, `tradie:${tradie.tradieId}`)] });
+  await completeJob(t.db, job.id, tradie.tradieId, { note: "Done.", uploadIds: [await photo(t.db, `tradie:${tradie.tradieId}`)], ...HOUSE });
   await chargeJob(t.db, gatewayFor(t.db), job.id);
   const rows = await t.db.query<{ payment_intent_id: string }>("select payment_intent_id from public.payments where job_id = $1::uuid", [job.id]);
   return { owner, property, tradie, job, paymentIntentId: rows[0]!.payment_intent_id };

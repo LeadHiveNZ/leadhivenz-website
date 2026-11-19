@@ -14,6 +14,7 @@ import { dollarsToCents, list, problem, text, ticked, type FormState } from "@/l
 import { approveGuestReport, cancelJob, createJob } from "@/lib/jobs/create";
 import { getQuote } from "@/lib/jobs/store";
 import { decideQuote } from "@/lib/jobs/work";
+import { staffDecideCheck } from "@/lib/jobs/confirm";
 import { getMarket } from "@/lib/markets/store";
 import { texts } from "@/lib/notify/messages";
 import { enqueue } from "@/lib/notify/outbox";
@@ -44,6 +45,24 @@ export async function resolveItem(_previous: FormState, formData: FormData): Pro
   const done = await resolveException(await getDb(), text(formData, "exceptionId"), staff.actor, text(formData, "note") || null);
   revalidatePath("/admin/queue");
   return done ? { done: "Marked as dealt with." } : { message: "That item was already dealt with." };
+}
+
+/**
+ * A flagged job the owner did not answer about (DECISIONS.md, 2026-11-19):
+ * one tap to pay the tradie, or to keep holding the payment. From the queue
+ * or the job page.
+ */
+export async function staffCheckJob(_previous: FormState, formData: FormData): Promise<FormState> {
+  const staff = await requireStaff();
+  const jobId = text(formData, "jobId");
+  const approve = text(formData, "decision") === "approve";
+  const db = await getDb();
+  const result = await staffDecideCheck(db, jobId, approve, staff.actor, text(formData, "note"));
+  await sendQueued(db);
+  if (!result.ok) return { message: result.message };
+  revalidatePath("/admin/queue");
+  revalidatePath(jobPath(jobId));
+  return { done: approve ? "Approved. The tradie's payment is on its way." : "Held. The tradie has been told their payment is on hold while we check." };
 }
 
 // ---------------------------------------------------------------------------

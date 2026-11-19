@@ -32,6 +32,7 @@ type MarketRow = {
   parts_included_cents: number; parts_approval_cents: number;
   offer_minutes: number; hours_start: number; hours_end: number; work_days: string[]; payout_hold_hours: number;
   unaccepted_alert_hours?: number | null; counter_offer_hours?: number | null;
+  min_minutes_on_site?: number | null; owner_confirm_hours?: number | null; map_lat?: number | string | null; map_lng?: number | string | null;
   referral_reward_cents: number; referral_paid_months: number;
   deposit_enabled: boolean; deposit_cents: number; deposit_terms: string[]; deposit_spots: number | null; reply_by_text: boolean;
 };
@@ -110,6 +111,9 @@ function rowToMarket(row: MarketRow, tiers: Tier[]): Market {
     payoutHoldHours: row.payout_hold_hours,
     unacceptedAlertHours: Number(row.unaccepted_alert_hours ?? 3),
     counterOfferHours: Number(row.counter_offer_hours ?? 2),
+    minMinutesOnSite: Number(row.min_minutes_on_site ?? 10),
+    ownerConfirmHours: Number(row.owner_confirm_hours ?? 48),
+    mapCentre: row.map_lat === null || row.map_lat === undefined || row.map_lng === null || row.map_lng === undefined ? null : { lat: Number(row.map_lat), lng: Number(row.map_lng) },
     referralRewardCents: row.referral_reward_cents,
     referralPaidMonths: row.referral_paid_months,
     replyByText: row.reply_by_text,

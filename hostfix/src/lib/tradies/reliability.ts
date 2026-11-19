@@ -80,3 +80,68 @@ export async function noShowCounts(db: Db, market: string, at: Date = now()): Pr
   );
   return new Map(rows.map((row) => [row.tradie_id, Number(row.count)]));
 }
+
+// ---------------------------------------------------------------------------
+// FLAGGED JOBS AND TRUST (DECISIONS.md, 2026-11-19)
+// ---------------------------------------------------------------------------
+//
+// A finished job is flagged when the checks in src/lib/jobs/checks.ts could
+// not confirm it (location, photos, time on site). Only jobs the tradie
+// accepted and finished can be flagged: passing on an offer, or letting one
+// run out, never creates a flag.
+//
+//   trusted       10 or more finished jobs before this one, and no other
+//                 flagged job in the last 90 days. When the owner does not
+//                 answer about a flagged job, a trusted tradie is paid and
+//                 the flag is only logged.
+//   for review    3 or more flagged jobs in 90 days: flagged on the admin
+//                 tradie page and in the queue, for a conversation. Nobody is
+//                 removed automatically.
+
+export const TRUSTED_FINISHED_JOBS = 10;
+export const FLAG_DAYS = 90;
+export const FLAG_REVIEW = 3;
+
+export type Trust = { finishedJobs: number; otherFlags: number; trusted: boolean };
+
+/** Whether this tradie is trusted, leaving out the job being decided. */
+export async function tradieTrust(db: Db, tradieId: string, exceptJobId: string | null, at: Date = now()): Promise<Trust> {
+  const rows = await db.query<{ finished: number; flagged: number }>(
+    `select count(*) filter (where status = 'completed') as finished,
+            count(*) filter (where cardinality(check_flags) > 0 and completed_at > $3::timestamptz) as flagged
+       from public.jobs
+      where tradie_id = $1::uuid and ($2::uuid is null or id <> $2::uuid)`,
+    [tradieId, exceptJobId, addHours(at, -24 * FLAG_DAYS).toISOString()],
+  );
+  const finishedJobs = Number(rows[0]?.finished ?? 0);
+  const otherFlags = Number(rows[0]?.flagged ?? 0);
+  return { finishedJobs, otherFlags, trusted: isTrusted(finishedJobs, otherFlags) };
+}
+
+export function isTrusted(finishedJobs: number, otherFlags: number): boolean {
+  return finishedJobs >= TRUSTED_FINISHED_JOBS && otherFlags === 0;
+}
+
+/** Flagged jobs for this tradie in the last 90 days, this one included. */
+export async function recentFlags(db: Db, tradieId: string, at: Date = now()): Promise<number> {
+  const rows = await db.query<{ count: number }>(
+    "select count(*) as count from public.jobs where tradie_id = $1::uuid and cardinality(check_flags) > 0 and completed_at > $2::timestamptz",
+    [tradieId, addHours(at, -24 * FLAG_DAYS).toISOString()],
+  );
+  return Number(rows[0]?.count ?? 0);
+}
+
+export function flagsNeedReview(flagged: number): boolean {
+  return flagged >= FLAG_REVIEW;
+}
+
+/** Flagged jobs in the last 90 days for every tradie in a market, for the admin's list. */
+export async function flagCounts(db: Db, market: string, at: Date = now()): Promise<Map<string, number>> {
+  const rows = await db.query<{ tradie_id: string; count: number }>(
+    `select tradie_id, count(*) as count from public.jobs
+      where market = $1 and tradie_id is not null and cardinality(check_flags) > 0 and completed_at > $2::timestamptz
+      group by tradie_id`,
+    [market, addHours(at, -24 * FLAG_DAYS).toISOString()],
+  );
+  return new Map(rows.map((row) => [row.tradie_id, Number(row.count)]));
+}

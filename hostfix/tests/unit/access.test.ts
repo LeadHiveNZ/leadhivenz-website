@@ -2,8 +2,10 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { setTestNow } from "@/lib/clock";
 import { acceptOffer, suggestLaterTime } from "@/lib/dispatch/cascade";
 import { attachUploads, canView, checkFile, getUpload, recordUpload } from "@/lib/files/uploads";
-import { getJobForOwner, getJobForTradie, listJobsForOwner, listJobsForTradie, listLiveOffersForTradie } from "@/lib/jobs/store";
+import { getJobForOwner, getJobForStaff, getJobForTradie, listJobsForOwner, listJobsForTradie, listLiveOffersForTradie } from "@/lib/jobs/store";
 import { completeJob, markArrived, markEnRoute, reportNoAccess, reportTradieAbsent, submitQuote } from "@/lib/jobs/work";
+import { confirmFixed } from "@/lib/jobs/confirm";
+import { confirmPin, propertiesNeedingPin } from "@/lib/properties/pin";
 import { laterWindows } from "@/lib/jobs/arrival";
 import { loadJobView } from "@/lib/jobs/view";
 import { getMarket } from "@/lib/markets/store";
@@ -21,7 +23,7 @@ import {
   updateGroup, updateTeamMember,
 } from "@/lib/team/service";
 import { testDb } from "./db";
-import { auditActions, certificate, liveMarket, logJob, makeOwner, makePortfolio, makeProperty, makeTradie, MONDAY_10AM, offersFor, photo } from "./factory";
+import { arrive, auditActions, certificate, HOUSE, liveMarket, logJob, makeOwner, makePortfolio, makeProperty, makeTradie, MONDAY_10AM, offersFor, photo } from "./factory";
 
 /**
  * PEOPLE ONLY SEE THEIR OWN DATA.
@@ -209,11 +211,11 @@ describe("tradies", () => {
     const { mike, dave, aliceJob } = await twoOfEverything();
     const mine = await photo(t.db, `tradie:${dave.tradieId}`);
     expect(await markEnRoute(t.db, aliceJob.id, dave.tradieId)).toMatchObject({ ok: false });
-    expect(await markArrived(t.db, aliceJob.id, dave.tradieId)).toMatchObject({ ok: false });
-    await markArrived(t.db, aliceJob.id, mike.tradieId);
+    expect(await arrive(t.db, aliceJob.id, dave.tradieId, HOUSE)).toMatchObject({ ok: false });
+    await arrive(t.db, aliceJob.id, mike.tradieId, HOUSE);
     expect(await submitQuote(t.db, aliceJob.id, dave.tradieId, { description: "Extra", labourCents: 5000, partsCents: 0, uploadIds: [] })).toMatchObject({ ok: false });
-    expect(await completeJob(t.db, aliceJob.id, dave.tradieId, { note: "", uploadIds: [mine] })).toMatchObject({ ok: false });
-    expect(await reportNoAccess(t.db, aliceJob.id, dave.tradieId, { note: "Could not get in at all", uploadIds: [mine] })).toMatchObject({ ok: false });
+    expect(await completeJob(t.db, aliceJob.id, dave.tradieId, { note: "", uploadIds: [mine], ...HOUSE })).toMatchObject({ ok: false });
+    expect(await reportNoAccess(t.db, aliceJob.id, dave.tradieId, { note: "Could not get in at all", uploadIds: [mine], ...HOUSE })).toMatchObject({ ok: false });
     expect((await getJobForTradie(t.db, mike.tradieId, aliceJob.id))!.status).toBe("on_site");
   });
 
@@ -236,18 +238,51 @@ describe("tradies", () => {
   it("an owner cannot say the tradie is missing from another owner's job, and the button does nothing before Arrived", async () => {
     const { alice, aliceJob, mike } = await twoOfEverything();
     expect(await reportTradieAbsent(t.db, aliceJob.id, `owner:${alice.ownerId}`)).toMatchObject({ ok: false });
-    await markArrived(t.db, aliceJob.id, mike.tradieId, { lat: -45.03, lng: 168.66 });
+    await arrive(t.db, aliceJob.id, mike.tradieId, HOUSE);
     // The action finds the job through the owner's own id or their one-tap link first: Bob's id finds nothing.
     expect(await getJobForOwner(t.db, (await makeOwner(t.db)).ownerId, aliceJob.id)).toBeNull();
+  });
+});
+
+describe("checking a finished job (DECISIONS.md, 2026-11-19)", () => {
+  it("an owner cannot confirm another owner's flagged job, or move another owner's map pin", async () => {
+    const { alice, bob, aliceHome, mike, aliceJob } = await twoOfEverything();
+    // No location at either tap: flagged, and the payment held for Alice to confirm.
+    await arrive(t.db, aliceJob.id, mike.tradieId);
+    await completeJob(t.db, aliceJob.id, mike.tradieId, { note: "", uploadIds: [await photo(t.db, `tradie:${mike.tradieId}`)] });
+    expect((await getJobForStaff(t.db, aliceJob.id))!.confirmStatus).toBe("waiting");
+    expect(await confirmFixed(t.db, aliceJob.id, bob.ownerId, `owner:${bob.ownerId}`)).toMatchObject({ ok: false });
+    expect((await getJobForStaff(t.db, aliceJob.id))!.confirmStatus).toBe("waiting");
+    expect(await confirmFixed(t.db, aliceJob.id, alice.ownerId, `owner:${alice.ownerId}`)).toMatchObject({ ok: true });
+
+    expect(await confirmPin(t.db, bob.ownerId, aliceHome.id, { lat: -45.03, lng: 168.66, moved: true })).toMatchObject({ ok: false });
+    expect((await getProperty(t.db, alice.ownerId, aliceHome.id))!.pin).toBeNull();
+    expect(await propertiesNeedingPin(t.db, bob.ownerId)).toEqual([expect.objectContaining({ name: "Bob's apartment" })]);
+  });
+
+  it("before photos are seen by the job's owner, the tradie on it and staff. Nobody else", async () => {
+    const { alice, bob, mike, dave, aliceJob } = await twoOfEverything();
+    const before = await photo(t.db, `tradie:${mike.tradieId}`, "before");
+    // Dave cannot attach his own before photo to Mike's job, nor Mike's.
+    expect(await markArrived(t.db, aliceJob.id, dave.tradieId, { uploadIds: [before] })).toMatchObject({ ok: false });
+    expect(await markArrived(t.db, aliceJob.id, mike.tradieId, { uploadIds: [before] })).toMatchObject({ ok: true });
+    const upload = (await getUpload(t.db, before))!;
+    expect(upload).toMatchObject({ kind: "before", attached: true, jobId: aliceJob.id });
+    expect(await canView(t.db, upload, { ownerId: alice.ownerId })).toBe(true);
+    expect(await canView(t.db, upload, { tradieId: mike.tradieId })).toBe(true);
+    expect(await canView(t.db, upload, { staff: true })).toBe(true);
+    expect(await canView(t.db, upload, { ownerId: bob.ownerId })).toBe(false);
+    expect(await canView(t.db, upload, { tradieId: dave.tradieId })).toBe(false);
+    expect(await canView(t.db, upload, {})).toBe(false);
   });
 });
 
 describe("photos", () => {
   it("are visible to the job's owner, the tradie on the job, and staff. Nobody else", async () => {
     const { alice, bob, mike, dave, aliceJob } = await twoOfEverything();
-    await markArrived(t.db, aliceJob.id, mike.tradieId);
+    await arrive(t.db, aliceJob.id, mike.tradieId, HOUSE);
     const id = await photo(t.db, `tradie:${mike.tradieId}`);
-    await completeJob(t.db, aliceJob.id, mike.tradieId, { note: "", uploadIds: [id] });
+    await completeJob(t.db, aliceJob.id, mike.tradieId, { note: "", uploadIds: [id], ...HOUSE });
     const upload = (await getUpload(t.db, id))!;
     expect(upload).toMatchObject({ attached: true, jobId: aliceJob.id });
 
@@ -275,8 +310,8 @@ describe("photos", () => {
     expect(await canView(t.db, upload, {})).toBe(false);
 
     // Once the job is finished, Mike can no longer see how to get into the property.
-    await markArrived(t.db, aliceJob.id, mike.tradieId);
-    await completeJob(t.db, aliceJob.id, mike.tradieId, { note: "", uploadIds: [await photo(t.db, `tradie:${mike.tradieId}`)] });
+    await arrive(t.db, aliceJob.id, mike.tradieId, HOUSE);
+    await completeJob(t.db, aliceJob.id, mike.tradieId, { note: "", uploadIds: [await photo(t.db, `tradie:${mike.tradieId}`)], ...HOUSE });
     expect(await canView(t.db, upload, { tradieId: mike.tradieId })).toBe(false);
     expect(await canView(t.db, upload, { ownerId: alice.ownerId })).toBe(true);
   });

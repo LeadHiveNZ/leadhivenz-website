@@ -30,6 +30,8 @@ import { membershipLabel } from "@/lib/properties/display";
 import { getPortfolio, openPortfolio } from "@/lib/properties/portfolio";
 import { addressLine, getProperty } from "@/lib/properties/service";
 import { qrSvg } from "@/lib/qr";
+import { mapTiles } from "@/lib/maps/tiles";
+import { PinCard } from "@/components/properties/PinCard";
 import { listGroups, listTeam } from "@/lib/team/service";
 import { formatDate } from "@/lib/time";
 
@@ -88,6 +90,11 @@ export default async function PropertyPage({ params, searchParams }: { params: P
               : "Start the membership below and this property is covered."}
         </Notice>
       )}
+      {query.pinned && property.pinConfirmedAt && (
+        <Notice tone="good" title="Pin saved">
+          Tradies&rsquo; Arrived and Job done taps are checked against it. You can move it any time under &ldquo;The map pin for this house&rdquo;.
+        </Notice>
+      )}
       {query.member && member && (
         <Notice tone="good" title="You are covered">
           Next: print the QR card for the property, and add your cleaner to your team. Both are just below.
@@ -110,6 +117,9 @@ export default async function PropertyPage({ params, searchParams }: { params: P
           This usually takes under a minute. Refresh this page shortly.
         </Notice>
       )}
+
+      {/* THE MAP PIN: checked by the owner first, then kept one tap away (DECISIONS.md, 2026-11-19) */}
+      {!property.pinConfirmedAt && property.status !== "cancelled" && <PinCard property={property} centre={market.mapCentre} tiles={mapTiles()} />}
 
       {/* ON A PORTFOLIO, NOT COVERED: the retainer covers it, nothing to pay here */}
       {!member && portfolio && (
@@ -399,6 +409,8 @@ export default async function PropertyPage({ params, searchParams }: { params: P
       )}
 
       {/* DETAILS */}
+      {property.pinConfirmedAt && <PinCard property={property} centre={market.mapCentre} tiles={mapTiles()} />}
+
       <Reveal label="Address, access notes and guest reports" open={Boolean(query.edit)}>
         <ActionForm action={saveProperty} className="space-y-4">
           <input type="hidden" name="propertyId" value={property.id} />

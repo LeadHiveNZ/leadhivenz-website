@@ -126,18 +126,24 @@ export async function onMyWay(_previous: FormState, formData: FormData): Promise
   redirect(who.back);
 }
 
+/** The phone's location sent with a button press, if it gave one. */
+function where(formData: FormData): { lat: number | null; lng: number | null } {
+  const lat = Number(text(formData, "lat"));
+  const lng = Number(text(formData, "lng"));
+  return {
+    lat: text(formData, "lat") !== "" && Number.isFinite(lat) ? lat : null,
+    lng: text(formData, "lng") !== "" && Number.isFinite(lng) ? lng : null,
+  };
+}
+
 export async function arrived(_previous: FormState, formData: FormData): Promise<FormState> {
   const db = await getDb();
   const who = await whoAndJob(db, formData);
   if (!who) return { message: NO_JOB };
-  const lat = Number(text(formData, "lat"));
-  const lng = Number(text(formData, "lng"));
-  const result = await markArrived(db, who.job.id, who.tradieId, {
-    lat: text(formData, "lat") !== "" && Number.isFinite(lat) ? lat : null,
-    lng: text(formData, "lng") !== "" && Number.isFinite(lng) ? lng : null,
-  });
+  // At least one "before" photo, taken in the app (DECISIONS.md, 2026-11-19).
+  const result = await markArrived(db, who.job.id, who.tradieId, { ...where(formData), uploadIds: list(formData, "beforeUploadIds") });
   await sendQueued(db);
-  if (!result.ok) return { message: result.message };
+  if (!result.ok) return problem(formData, result.message);
   redirect(`${who.back}?here=1`);
 }
 
@@ -165,7 +171,7 @@ export async function finishJob(_previous: FormState, formData: FormData): Promi
   const db = await getDb();
   const who = await whoAndJob(db, formData);
   if (!who) return problem(formData, NO_JOB);
-  const result = await completeJob(db, who.job.id, who.tradieId, { note: text(formData, "note"), uploadIds: list(formData, "uploadIds") });
+  const result = await completeJob(db, who.job.id, who.tradieId, { note: text(formData, "note"), uploadIds: list(formData, "uploadIds"), ...where(formData) });
   if (!result.ok) return problem(formData, result.message);
   await settleNow(db, who.job.id);
   redirect(`${who.back}?done=1`);
@@ -175,7 +181,7 @@ export async function noAccess(_previous: FormState, formData: FormData): Promis
   const db = await getDb();
   const who = await whoAndJob(db, formData);
   if (!who) return problem(formData, NO_JOB);
-  const result = await reportNoAccess(db, who.job.id, who.tradieId, { note: text(formData, "noAccessNote"), uploadIds: list(formData, "noAccessUploadIds") });
+  const result = await reportNoAccess(db, who.job.id, who.tradieId, { note: text(formData, "noAccessNote"), uploadIds: list(formData, "noAccessUploadIds"), ...where(formData) });
   if (!result.ok) return problem(formData, result.message);
   await settleNow(db, who.job.id);
   redirect(`${who.back}?done=1`);

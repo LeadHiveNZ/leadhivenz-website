@@ -83,14 +83,25 @@ test("a tradie takes a job from the link in a text, without signing in, and fini
   await expect(shown(page, "14B Lake Esplanade, Queenstown 9300").first()).toBeVisible();
   await expect(shown(page, /code 4821/).first()).toBeVisible();
 
-  await page.getByRole("button", { name: "I have arrived" }).click();
+  // The tradie's phone is at the door of Lakeview Apartment, on the property's pin (src/lib/demo/sample.ts).
+  await page.context().grantPermissions(["geolocation"], { origin: BASE });
+  await page.context().setGeolocation({ latitude: -45.0336, longitude: 168.6551 });
+
+  // Arrived needs a before photo, taken in the app (DECISIONS.md, 2026-11-19). The photo button opens the camera.
+  const arrival = page.locator("form", { has: page.getByRole("button", { name: "I have arrived" }) });
+  await expect(arrival.locator('input[type="file"]')).toHaveAttribute("capture", "environment");
+  await arrival.getByRole("button", { name: "I have arrived" }).click();
+  await expect(arrival.locator('[role="alert"]')).toContainText('Take at least one "before" photo of the problem first');
+  await arrival.locator('input[type="file"]').setInputFiles(PHOTO);
+  await expect(arrival.locator('img[alt="Photo added"]')).toBeVisible();
+  await arrival.getByRole("button", { name: "I have arrived" }).click();
   await page.waitForURL(/here=1/);
   await ready(page);
 
-  // A job cannot be finished without a photo.
+  // A job cannot be finished without an after photo.
   const finish = page.locator("form", { has: page.getByRole("button", { name: "Job done" }) });
   await finish.getByRole("button", { name: "Job done" }).click();
-  await expect(finish.locator('[role="alert"]')).toContainText("Add at least one photo of the finished work.");
+  await expect(finish.locator('[role="alert"]')).toContainText('Add at least one "after" photo of the finished work.');
 
   await finish.locator('input[type="file"]').setInputFiles(PHOTO);
   await expect(finish.locator('img[alt="Photo added"]')).toBeVisible();
@@ -99,13 +110,27 @@ test("a tradie takes a job from the link in a text, without signing in, and fini
   await page.waitForURL(/done=1/);
   await ready(page);
   await expect(shown(page, "Job finished. Thank you.").first()).toBeVisible();
-  await expect(shown(page, /NZ\$200 will be sent on .+\. It reaches your bank about 5 to 6 working days after the job\./).first()).toBeVisible();
+  // Finished a few seconds after arriving: under the 10 minutes expected, so the payment waits for the owner to confirm.
+  await expect(shown(page, /NZ\$200 is waiting for the owner to confirm the job, because job done came 0 minutes after arrived/).first()).toBeVisible();
 
-  // The owner was texted at each step, and charged the fixed price.
+  // The owner was texted at each step, charged the fixed price, and asked to check the job, neutrally.
   const owner = await phone(page, "sam");
   await expect(owner.filter({ hasText: "Dave's Plumbing & Gas is booked for Lakeview Apartment, on site between" }).last()).toBeVisible();
   await expect(owner.filter({ hasText: "has arrived at Lakeview Apartment. Not there? Tell us on the job page" }).last()).toBeVisible();
-  await expect(owner.filter({ hasText: '"Dripping tap or tap washer" at Lakeview Apartment is done. NZ$235 charged to your card.' })).toHaveCount(1);
+  const check = owner.filter({ hasText: '"Dripping tap or tap washer" at Lakeview Apartment is done, NZ$235 charged. We couldn\'t confirm how long the job took for this job. Can you check the photos and confirm it\'s fixed?' });
+  await expect(check).toHaveCount(1);
+
+  // Opening the link changes nothing. The owner sees the before and after photos side by side, and presses the button.
+  await check.locator('a[href^="/j/"]').click();
+  await ready(page);
+  await expect(shown(page, "Can you check this job?").first()).toBeVisible();
+  await expect(page.locator('img[alt^="Before photo"]').filter({ visible: true })).toHaveCount(1);
+  await expect(page.locator('img[alt^="After photo"]').filter({ visible: true })).toHaveCount(1);
+  await page.getByRole("button", { name: "Yes, it’s fixed" }).click();
+  await page.waitForURL(/confirmed=1/);
+  await ready(page);
+  await expect(shown(page, "Thanks for confirming").first()).toBeVisible();
+  await expect(shown(page, "Can you check this job?")).toHaveCount(0);
 });
 
 test("an owner answers a quote from the link in their text, without signing in", async ({ page }) => {
@@ -267,11 +292,21 @@ test("people only see their own data", async ({ page, request }) => {
   await ready(page);
   const managedPath = new URL(page.url()).pathname;
 
+  // Sam's heat pump job is flagged (the Job done tap gave no location), waiting for him to check.
+  await be(page, "Sam Taylor");
+  await open(page, "/app/jobs");
+  await page.getByRole("link", { name: /Heat pump/ }).click();
+  await page.waitForURL(/\/app\/jobs\/[0-9a-f-]{36}$/);
+  await ready(page);
+  await expect(shown(page, "Can you check this job?").first()).toBeVisible();
+  await expect(shown(page, "We couldn't confirm the tradie's location for this job. Can you check the photos and confirm it's fixed?").first()).toBeVisible();
+  const flaggedPath = new URL(page.url()).pathname;
+
   // Another owner cannot open any of them. Her own home screen warns her about her own unpaid job, and only that.
   await be(page, "Priya Patel");
   await expect(shown(page, "We could not charge your card for job 1004")).toHaveCount(1);
   await expect(page.getByRole("link", { name: "check or change your card" })).toHaveAttribute("href", "/app/billing");
-  for (const path of [jobPath, propertyPath, `${propertyPath}/card`, managedPath]) {
+  for (const path of [jobPath, flaggedPath, propertyPath, `${propertyPath}/card`, managedPath]) {
     await open(page, path);
     await expect(page.getByRole("heading", { name: "We can't find that page." })).toBeVisible();
     await expect(shown(page, "Lakeview Apartment")).toHaveCount(0);
@@ -438,6 +473,20 @@ test("a new owner joins free, adds a card and gets their QR card", async ({ page
   await page.getByRole("button", { name: "Save and continue" }).click();
   await page.waitForURL(/added=1/);
   await ready(page);
+
+  // The map pin (DECISIONS.md, 2026-11-19). No address lookup in the tests, so she places it from her phone at the house.
+  await expect(shown(page, "Check where the house is").first()).toBeVisible();
+  await page.getByRole("button", { name: "Yes, the pin is on the house" }).click();
+  await expect(page.locator('[role="alert"]').filter({ visible: true }).first()).toContainText("Put the pin on the house first");
+  await page.context().grantPermissions(["geolocation"], { origin: BASE });
+  await page.context().setGeolocation({ latitude: -45.0272, longitude: 168.6489 });
+  await page.getByRole("button", { name: "I'm at the property now" }).click();
+  await expect(shown(page, "Pin moved. Save it below.").first()).toBeVisible();
+  await page.getByRole("button", { name: "Yes, the pin is on the house" }).click();
+  await page.waitForURL(/pinned=1/);
+  await ready(page);
+  await expect(shown(page, "Pin saved").first()).toBeVisible();
+  await expect(shown(page, "Check where the house is")).toHaveCount(0);
 
   // Not covered yet: jobs cannot be logged.
   await open(page, "/app/jobs/new");
@@ -627,4 +676,6 @@ test("a manager prints every QR card at once and pastes a spreadsheet of propert
   await expect(shown(page, "2 properties added").first()).toBeVisible();
   await expect(page.getByRole("link", { name: /Kawarau Flat/ })).toBeVisible();
   await expect(page.getByRole("link", { name: /Shotover Loft/ })).toBeVisible();
+  // Every property without a checked pin is asked about: her ten from before, and these two.
+  await expect(shown(page, "Check where 12 houses are on the map").first()).toBeVisible();
 });

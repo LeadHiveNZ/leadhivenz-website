@@ -17,7 +17,7 @@ One place for every trade your holiday home needs. A checked local tradie on sit
 1. **Anyone can report it.** You, your cleaner from their own link (one link for every house you give them, signed with their name), or your guest from the QR card in the house. A photo and a minute.
 2. **We find the tradie, not you.** It goes straight to our first-choice tradie for that trade. If they can't take it, it goes to the next one. The tradie who takes it picks a two-hour window to arrive in, and you get a text with it.
 3. **They get in without you.** Your lockbox code and access notes are shown only to the tradie who accepts the job.
-4. **You get photos and a fixed price.** Your card is charged the menu price when the job is done. One statement a month.
+4. **You get before and after photos and a fixed price.** Your card is charged the menu price when the job is done. One statement a month. If the app can't confirm the tradie's visit (where they were, or how long they stayed), we may ask you to check the photos before they're paid.
 
 ## What it costs
 

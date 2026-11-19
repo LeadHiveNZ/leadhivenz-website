@@ -13,8 +13,10 @@ import type { ArrivalCheck, Job } from "./types";
  *   urgent           arrived after the urgent deadline: the urgent line is not
  *                    charged to anyone (owner pays 0, tradie gets 0, we keep 0).
  *   after hours      charged only if the Arrived tap is outside working hours.
- *   location         an Arrived tap with no location, or more than 500 m from
- *                    where trusted arrivals at the property were, is flagged.
+ *   location         an Arrived tap with no location, or more than 300 m from
+ *                    the property's map pin (or, with no pin, from where
+ *                    trusted arrivals at the property were), is flagged
+ *                    (DECISIONS.md, 2026-11-19: src/lib/jobs/checks.ts).
  *
  * Pure sums and checks, no database, so every rule can be tested by hand.
  */
@@ -27,8 +29,12 @@ export const WINDOW_HOURS = 2;
 const LEAD_MINUTES = 30;
 /** How far ahead a chosen tradie may suggest a later time. */
 export const PROPOSAL_DAYS = 7;
-/** An Arrived tap further than this from the property's reference point is flagged. */
-export const FAR_METRES = 500;
+/**
+ * An Arrived or Job done tap further than this from the property's pin (or
+ * reference point) is flagged. 500 m until 19 November 2026, when properties
+ * got their own map pin (DECISIONS.md, 2026-11-19).
+ */
+export const FAR_METRES = 300;
 
 type Hours = Pick<Market, "timezone" | "hoursStart" | "hoursEnd" | "workDays">;
 
@@ -152,10 +158,10 @@ function median(values: number[]): number {
 }
 
 /**
- * Properties have no map position of their own, and nothing here asks an
- * outside map service for one. The reference is the middle (median) of where
- * earlier trusted Arrived taps at the same property were. One bad tap cannot
- * move a median far once there are three or more.
+ * For a property with no map pin yet (src/lib/properties/pin.ts), the
+ * reference is the middle (median) of where earlier trusted Arrived taps at
+ * the same property were. One bad tap cannot move a median far once there are
+ * three or more.
  */
 export function referencePoint(earlier: Point[]): Point | null {
   if (earlier.length === 0) return null;
@@ -164,7 +170,7 @@ export function referencePoint(earlier: Point[]): Point | null {
 
 export type ArrivalTrust = { check: ArrivalCheck; distanceM: number | null; reference: Point | null };
 
-/** Whether an Arrived tap can be trusted. */
+/** Whether an Arrived tap can be trusted, against earlier taps only (the fallback when a property has no pin). */
 export function checkArrival(where: Point | null, earlier: Point[]): ArrivalTrust {
   const reference = referencePoint(earlier);
   if (!where) return { check: "no_location", distanceM: null, reference };

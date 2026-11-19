@@ -59,11 +59,14 @@ describe("the demo's sample data", () => {
     const noShow = await t.db.query<{ no_show_at: Date | null }>("select no_show_at from public.jobs where number = $1", [jobs[1]!.number]);
     expect(noShow[0]!.no_show_at).not.toBeNull();
 
-    // Money: three charged, one declined; one payout sent, one on hold, one waiting on the card.
+    // Money: three charged, one declined; one payout sent, one held for the owner to confirm (job 2, whose
+    // Job done tap gave no location: DECISIONS.md, 2026-11-19), one on hold for a problem, one waiting on the card.
     const payments = await t.db.query<{ status: string }>("select p.status from public.payments p join public.jobs j on j.id = p.job_id order by j.number");
     expect(payments.map((row) => row.status)).toEqual(["succeeded", "succeeded", "succeeded", "failed"]);
     const payouts = await t.db.query<{ status: string }>("select p.status from public.payouts p join public.jobs j on j.id = p.job_id order by j.number");
-    expect(payouts.map((row) => row.status)).toEqual(["sent", "sent", "paused", "waiting"]);
+    expect(payouts.map((row) => row.status)).toEqual(["sent", "held", "paused", "waiting"]);
+    const checks = await t.db.query<{ check_flags: string[]; confirm_status: string | null }>("select check_flags, confirm_status from public.jobs where status = 'completed' order by number");
+    expect(checks.map((row) => [row.check_flags, row.confirm_status])).toEqual([[[], null], [["finished_no_location"], "waiting"], [[], null], [[], null]]);
 
     // A missed promise is no longer credited (DECISIONS.md, 2026-11-18): there are no credits at all.
     const credits = await t.db.query<{ reason: string; status: string }>("select reason, status from public.credits");

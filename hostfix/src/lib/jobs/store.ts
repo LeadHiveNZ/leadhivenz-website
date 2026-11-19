@@ -2,7 +2,7 @@ import { isUuid } from "@/lib/uuid";
 import type { Db } from "@/lib/db/types";
 import type { Line, LineKind } from "./pricing";
 import { taxPortion, totals } from "./pricing";
-import type { ArrivalCheck, Job, JobLine, JobOutcome, JobStatus, Offer, OfferStatus, Quote, QuoteStatus, ReportedBy } from "./types";
+import type { ArrivalCheck, ConfirmStatus, Job, JobLine, JobOutcome, JobStatus, Offer, OfferStatus, Quote, QuoteStatus, ReportedBy } from "./types";
 
 /**
  * READING AND WRITING JOBS.
@@ -26,7 +26,12 @@ export type JobRow = {
   arrival_window_start?: Date | null; arrival_window_end?: Date | null; no_show_at?: Date | null;
   arrival_check?: ArrivalCheck | null; arrival_distance_m?: number | null; arrived_lat?: number | string | null; arrived_lng?: number | string | null;
   owner_says_absent_at?: Date | null;
+  check_reference?: Job["checkReference"]; finished_lat?: number | string | null; finished_lng?: number | string | null;
+  finish_check?: ArrivalCheck | null; finish_distance_m?: number | null; minutes_on_site?: number | null; check_flags?: string[] | null;
+  confirm_status?: ConfirmStatus | null; confirm_by?: Date | null; confirm_decided_at?: Date | null; confirm_decided_by?: string | null;
 };
+
+const num = (value: number | string | null | undefined) => (value === null || value === undefined ? null : Number(value));
 
 const d = (value: Date | null) => (value ? new Date(value) : null);
 
@@ -47,6 +52,12 @@ export function rowToJob(row: JobRow): Job {
     arrivedLat: row.arrived_lat === null || row.arrived_lat === undefined ? null : Number(row.arrived_lat),
     arrivedLng: row.arrived_lng === null || row.arrived_lng === undefined ? null : Number(row.arrived_lng),
     ownerSaysAbsentAt: d(row.owner_says_absent_at ?? null),
+    checkReference: row.check_reference ?? null,
+    finishedLat: num(row.finished_lat), finishedLng: num(row.finished_lng),
+    finishCheck: row.finish_check ?? null, finishDistanceM: num(row.finish_distance_m), minutesOnSite: num(row.minutes_on_site),
+    checkFlags: row.check_flags ?? [],
+    confirmStatus: row.confirm_status ?? null, confirmBy: d(row.confirm_by ?? null),
+    confirmDecidedAt: d(row.confirm_decided_at ?? null), confirmDecidedBy: row.confirm_decided_by ?? null,
   };
 }
 

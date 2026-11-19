@@ -1,6 +1,6 @@
 # More paid jobs in {{market}}. No quoting. No invoicing. No chasing money.
 
-We send you fixed-price maintenance jobs at holiday homes, straight to your phone. Tap to accept, do the job, upload a photo, and you are paid automatically. No invoice to write, nobody to chase.
+We send you fixed-price maintenance jobs at holiday homes, straight to your phone. Tap to accept, do the job with a photo before and after, and you are paid automatically. No invoice to write, nobody to chase.
 
 - Paid automatically, in your bank about {{payout_days}} after the job
 - You see what you'll be paid before you accept
@@ -17,8 +17,8 @@ We send you fixed-price maintenance jobs at holiday homes, straight to your phon
 
 1. **We text you a job.** You see what it is, where it is and what you'll be paid.
 2. **You have 15 minutes to take it.** Pick when you'll be there and tap to accept, or pass. If you pass, it goes to the next tradie, and that never counts against you.
-3. **Do the job and upload a photo.** That's your proof of work.
-4. **Get paid.** Your payment is sent within two days of the job and is in your bank about {{payout_days}} after the job. No invoice.
+3. **Do the job, with a photo before and after.** Take them in the app at the property, with your phone's location on. That's your proof of work.
+4. **Get paid.** Your payment is sent within two days of the job and is in your bank about {{payout_days}} after the job. No invoice. If the app can't confirm a job (no location, too far from the house, or finished very quickly), the owner is asked to check your photos first.
 
 ## Who we're looking for
 
@@ -39,7 +39,7 @@ No. Passing on a job never leads to fewer offers or to being removed. What count
 
 ### How do I get paid?
 
-By bank transfer, automatically. You set up your bank details once. Your payment is sent within two days of each job and takes a few working days to reach your bank. If an owner's card is declined, we chase it, not you, and you are paid as soon as it goes through.
+By bank transfer, automatically. You set up your bank details once. Your payment is sent within two days of each job and takes a few working days to reach your bank. A job the app couldn't confirm waits for the owner to check the before and after photos, or for our team if the owner doesn't answer. If an owner's card is declined, we chase it, not you, and you are paid as soon as it goes through.
 
 ### When do you start?
 

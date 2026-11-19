@@ -18,6 +18,7 @@ import { createDemoGateway, DEMO_CARD_DECLINES, DEMO_CARD_OK } from "@/lib/payme
 import { addMonths } from "@/lib/payments/gateway";
 import { openPortfolio, startPortfolio } from "@/lib/properties/portfolio";
 import { activateFreeMembership, activateMembership, createProperty, type Property } from "@/lib/properties/service";
+import { confirmPin } from "@/lib/properties/pin";
 import { addTeamMember } from "@/lib/team/service";
 import { createTradie, listLicences, markLicenceVerified, saveLicence, savePayoutAccount, setSlot, setTradieStatus, updateTradie } from "@/lib/tradies/service";
 import { recordInsuranceCertificate } from "@/lib/tradies/certificate";
@@ -68,7 +69,7 @@ async function owner(ctx: Ctx, input: { name: string; email: string; phone: stri
 
 async function property(
   ctx: Ctx, ownerId: string,
-  input: { name: string; address: string; suburb: string; postcode: string; access: string; referralCode?: string },
+  input: { name: string; address: string; suburb: string; postcode: string; access: string; referralCode?: string; pin: { lat: number; lng: number } },
 ): Promise<Property> {
   // Owners are on Essential, free to join (DECISIONS.md, 2026-11-17): covered once a card is on file.
   const tier = ctx.tiers.get("essential")!;
@@ -76,6 +77,8 @@ async function property(
     market: MARKET, name: input.name, addressLine1: input.address, suburb: input.suburb, postcode: input.postcode, accessNotes: input.access,
     tierId: tier.id, referralCode: input.referralCode ?? null,
   });
+  // The owner put the pin on the house (DECISIONS.md, 2026-11-19). The manager's ten have not been checked yet.
+  await confirmPin(ctx.db, ownerId, created.id, { ...input.pin, moved: true });
   const at = new Date(ctx.real.getTime() - 20 * DAY);
   setTestNow(at);
   if (tier.priceCents === 0) {
@@ -161,15 +164,30 @@ async function accept(ctx: Ctx, jobId: string, tradieId: string): Promise<void> 
   if (result.result !== "accepted") throw new Error(`Sample data: accepting gave "${result.result}".`);
 }
 
-async function finish(ctx: Ctx, jobId: string, tradieId: string, note: string, photos = 2): Promise<void> {
+/** "I have arrived", with a before photo taken at the door and the phone's location (DECISIONS.md, 2026-11-19). */
+async function arrive(ctx: Ctx, jobId: string, tradieId: string, where: { lat: number; lng: number }): Promise<void> {
+  const before = await picture(ctx, `tradie:${tradieId}`, "before", "before");
+  const result = await markArrived(ctx.db, jobId, tradieId, { ...where, uploadIds: [before] });
+  if (!result.ok) throw new Error(`Sample data: arriving gave "${result.message}".`);
+}
+
+/** "Job done", with after photos and, unless `where` is null (the phone gave no location), where the phone was. */
+async function finish(ctx: Ctx, jobId: string, tradieId: string, note: string, where: { lat: number; lng: number } | null, photos = 2): Promise<void> {
   const uploadIds: string[] = [];
   for (let index = 0; index < photos; index += 1) uploadIds.push(await picture(ctx, `tradie:${tradieId}`, "completion", "after"));
-  const result = await completeJob(ctx.db, jobId, tradieId, { note, uploadIds });
+  const result = await completeJob(ctx.db, jobId, tradieId, { note, uploadIds, ...(where ?? {}) });
   if (!result.ok) throw new Error(`Sample data: finishing gave "${result.message}".`);
   await chargeJob(ctx.db, ctx.gatewayFor, jobId);
 }
 
-const QUEENSTOWN = { lat: -45.0312, lng: 168.6626 };
+/** Where the sample houses are (made up, but in the right streets), and a phone a few metres away at the door. */
+const PINS = {
+  lakeview: { lat: -45.0336, lng: 168.6551 },
+  cabin: { lat: -44.9895, lng: 168.6762 },
+  studio: { lat: -45.0383, lng: 168.6321 },
+  house: { lat: -45.0474, lng: 168.6957 },
+};
+const door = (pin: { lat: number; lng: number }) => ({ lat: pin.lat + 0.0001, lng: pin.lng + 0.0001 });
 
 /** Returns the people the demo menu offers to sign in as. */
 export async function buildSampleData(db: Db, files: FileStore | null, real: Date): Promise<DemoPerson[]> {
@@ -222,17 +240,18 @@ export async function buildSampleData(db: Db, files: FileStore | null, real: Dat
   const lakeview = await property(ctx, sam.ownerId, {
     name: "Lakeview Apartment", address: "14B Lake Esplanade", suburb: "Queenstown", postcode: "9300",
     access: "Lockbox on the left of the front door, code 4821. Park in space 14B. Water shut-off is under the kitchen sink. Switchboard is in the hall cupboard.",
+    pin: PINS.lakeview,
   });
   const cabin = await property(ctx, sam.ownerId, {
     name: "Arthurs Point Cabin", address: "27 Atley Road", suburb: "Arthurs Point", postcode: "9371",
-    access: "Key safe by the back door, code 0915. Steep drive: park at the top in winter.",
+    access: "Key safe by the back door, code 0915. Steep drive: park at the top in winter.", pin: PINS.cabin,
   });
   const studio = await property(ctx, priya.ownerId, {
-    name: "Fernhill Studio", address: "3/88 Fernhill Road", suburb: "Fernhill", postcode: "9300", access: "Smart lock. Ring the owner for a one-day code.",
+    name: "Fernhill Studio", address: "3/88 Fernhill Road", suburb: "Fernhill", postcode: "9300", access: "Smart lock. Ring the owner for a one-day code.", pin: PINS.studio,
   });
   const house = await property(ctx, tane.ownerId, {
     name: "Kelvin Heights House", address: "5 Peninsula Road", suburb: "Kelvin Heights", postcode: "9300",
-    access: "Lockbox on the gate post, code 7730. Gas bottles are down the right-hand side of the house.", referralCode: cleaner.code,
+    access: "Lockbox on the gate post, code 7730. Gas bottles are down the right-hand side of the house.", referralCode: cleaner.code, pin: PINS.house,
   });
 
   // Sam's cleaner is on his team (DECISIONS.md, 2026-11-18): one link for both of his houses, signed with her name.
@@ -278,9 +297,9 @@ export async function buildSampleData(db: Db, files: FileStore | null, real: Dat
   ago(ctx, 6 * DAY - 2 * HOUR);
   await markEnRoute(db, one.id, dave.tradieId);
   ago(ctx, 6 * DAY - 2.5 * HOUR);
-  await markArrived(db, one.id, dave.tradieId, QUEENSTOWN);
+  await arrive(ctx, one.id, dave.tradieId, door(PINS.lakeview));
   ago(ctx, 6 * DAY - 3.25 * HOUR);
-  await finish(ctx, one.id, dave.tradieId, "Cleared a fat blockage in the kitchen waste and flushed the trap. Ran hot water for five minutes: draining well.");
+  await finish(ctx, one.id, dave.tradieId, "Cleared a fat blockage in the kitchen waste and flushed the trap. Ran hot water for five minutes: draining well.", door(PINS.lakeview));
   ago(ctx, 6 * DAY - 28 * HOUR);
   await releaseDuePayouts(db, gatewayFor);
 
@@ -297,9 +316,11 @@ export async function buildSampleData(db: Db, files: FileStore | null, real: Dat
   ago(ctx, 3 * DAY - 24.5 * HOUR);
   if (missed[0]) await resolveException(db, missed[0].id, `staff:${mariaId}`, "Rang Tom: held up on an emergency and on his way. Rang Sam to say sorry.");
   ago(ctx, 3 * DAY - 26 * HOUR);
-  await markArrived(db, two.id, tom.tradieId, QUEENSTOWN);
+  await arrive(ctx, two.id, tom.tradieId, door(PINS.cabin));
   ago(ctx, 3 * DAY - 27 * HOUR);
-  await finish(ctx, two.id, tom.tradieId, "Filters were blocked solid. Cleaned both, checked the outdoor unit, tested on heat for 20 minutes: 38 degrees at the vent.");
+  // Tom's phone gave no location when he tapped Job done, so the job is flagged: his payment waits for Sam to
+  // confirm on the job page (DECISIONS.md, 2026-11-19). Sam has not answered yet.
+  await finish(ctx, two.id, tom.tradieId, "Filters were blocked solid. Cleaned both, checked the outdoor unit, tested on heat for 20 minutes: 38 degrees at the vent.", null);
   ago(ctx, 3 * DAY - 52 * HOUR);
   await releaseDuePayouts(db, gatewayFor);
 
@@ -309,9 +330,9 @@ export async function buildSampleData(db: Db, files: FileStore | null, real: Dat
   ago(ctx, 2 * DAY - 6 * MINUTE);
   await accept(ctx, three.id, andy.tradieId);
   ago(ctx, 2 * DAY - 2 * HOUR);
-  await markArrived(db, three.id, andy.tradieId, QUEENSTOWN);
+  await arrive(ctx, three.id, andy.tradieId, door(PINS.lakeview));
   ago(ctx, 2 * DAY - 3 * HOUR);
-  await finish(ctx, three.id, andy.tradieId, "Cut out the old silicone, cleaned and dried, re-sealed the tray and screen. Leave it 24 hours before using the shower.");
+  await finish(ctx, three.id, andy.tradieId, "Cut out the old silicone, cleaned and dried, re-sealed the tray and screen. Leave it 24 hours before using the shower.", door(PINS.lakeview));
   ago(ctx, 2 * DAY - 22 * HOUR);
   await raiseDispute(db, three.id, `owner:${sam.ownerId}`, "The new silicone is already lifting at the left corner and the cleaner says water is getting behind it.");
 
@@ -321,9 +342,9 @@ export async function buildSampleData(db: Db, files: FileStore | null, real: Dat
   ago(ctx, 27 * HOUR - 3 * MINUTE);
   await accept(ctx, four.id, tom.tradieId);
   ago(ctx, 25 * HOUR);
-  await markArrived(db, four.id, tom.tradieId, QUEENSTOWN);
+  await arrive(ctx, four.id, tom.tradieId, door(PINS.studio));
   ago(ctx, 24.25 * HOUR);
-  await finish(ctx, four.id, tom.tradieId, "Replaced the power point. The old one had a burnt terminal. Tested and safe.", 1);
+  await finish(ctx, four.id, tom.tradieId, "Replaced the power point. The old one had a burnt terminal. Tested and safe.", door(PINS.studio), 1);
 
   // ---- 5. Off-menu: the tradie has quoted NZ$685, over the NZ$600 limit, and is waiting for the owner -----
   ago(ctx, 3 * HOUR);
@@ -336,7 +357,7 @@ export async function buildSampleData(db: Db, files: FileStore | null, real: Dat
   ago(ctx, 3 * HOUR - 9 * MINUTE);
   await accept(ctx, five.id, mere.tradieId);
   ago(ctx, 75 * MINUTE);
-  await markArrived(db, five.id, mere.tradieId, QUEENSTOWN);
+  await arrive(ctx, five.id, mere.tradieId, door(PINS.cabin));
   ago(ctx, 40 * MINUTE);
   const found = await picture(ctx, `tradie:${mere.tradieId}`, "quote", "found");
   await submitQuote(db, five.id, mere.tradieId, { description: "Replace the leaking shower mixer and the section of pipe behind it", labourCents: 60000, partsCents: 8500, uploadIds: [found] });

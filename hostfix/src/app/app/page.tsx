@@ -53,9 +53,12 @@ export default async function OwnerHome() {
     );
   }
 
-  const needsYou = jobs.filter((job) => job.status === "awaiting_owner" || job.status === "awaiting_approval");
+  // A finished job the app could not confirm asks the owner to check its photos (DECISIONS.md, 2026-11-19).
+  const toCheck = (job: (typeof jobs)[number]) => job.status === "completed" && (job.confirmStatus === "waiting" || job.confirmStatus === "staff_queue" || job.confirmStatus === "staff_held");
+  const needsYou = jobs.filter((job) => job.status === "awaiting_owner" || job.status === "awaiting_approval" || toCheck(job));
+  const unpinned = properties.filter((property) => property.status !== "cancelled" && !property.pinConfirmedAt);
   const underWay = jobs.filter((job) => ["offering", "unfilled", "accepted", "on_site"].includes(job.status));
-  const recent = jobs.filter((job) => job.status === "completed" && job.completedAt && at.getTime() - job.completedAt.getTime() < 14 * DAY).slice(0, 4);
+  const recent = jobs.filter((job) => job.status === "completed" && !toCheck(job) && job.completedAt && at.getTime() - job.completedAt.getTime() < 14 * DAY).slice(0, 4);
   const notStarted = properties.filter((property) => property.status === "setup");
   const cardProblems = properties.filter((property) => property.status === "past_due");
   const unpaid = await unpaidJobs(db, viewer.ownerId);
@@ -95,6 +98,15 @@ export default async function OwnerHome() {
           </Link>
         </Notice>
       ))}
+
+      {unpinned.length > 0 && (
+        <Notice tone="info" title={unpinned.length === 1 ? `Check where ${unpinned[0]!.name} is on the map` : `Check where ${unpinned.length} of your houses are on the map`}>
+          We check a tradie is at the house when they tap Arrived and Job done.{" "}
+          <Link href={`/app/properties/${unpinned[0]!.id}`} className="font-semibold underline underline-offset-2">
+            Check the pin
+          </Link>
+        </Notice>
+      )}
 
       {covered.length > 0 && (
         <Link href="/app/jobs/new" className="on-dark flex items-center gap-4 rounded-3xl bg-brand p-5 text-white shadow-sm transition hover:bg-brand-dark">

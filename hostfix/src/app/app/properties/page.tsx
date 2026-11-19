@@ -23,6 +23,8 @@ export default async function PropertiesPage({ searchParams }: { searchParams: S
   const covered = properties.filter((property) => property.status === "active").length;
   const imported = typeof query.imported === "string" && /^\d{1,3}$/.test(query.imported) ? Number(query.imported) : 0;
   const markets = new Map((await listMarkets(db)).map((market) => [market.slug, market]));
+  // Properties whose map pin the owner has not checked yet (DECISIONS.md, 2026-11-19).
+  const unpinned = properties.filter((property) => property.status !== "cancelled" && !property.pinConfirmedAt);
 
   return (
     <div>
@@ -53,6 +55,15 @@ export default async function PropertiesPage({ searchParams }: { searchParams: S
           {imported > 0 && (
             <Notice tone="good" title={`${imported} ${imported === 1 ? "property" : "properties"} added`}>
               Any marked Finish setting up need a card on file before they are covered.
+            </Notice>
+          )}
+          {unpinned.length > 0 && (
+            <Notice tone="info" title={unpinned.length === 1 ? "Check where 1 house is on the map" : `Check where ${unpinned.length} houses are on the map`}>
+              We check a tradie is at the house when they tap Arrived and Job done, so the pin needs to be on the house. It takes a few seconds each:{" "}
+              <Link href={`/app/properties/${unpinned[0]!.id}`} className="font-semibold underline underline-offset-2">
+                start with {unpinned[0]!.name}
+              </Link>
+              .
             </Notice>
           )}
           <div className="grid gap-2.5 sm:grid-cols-2">
@@ -92,7 +103,12 @@ export default async function PropertiesPage({ searchParams }: { searchParams: S
                     <Icon name="property" />
                   </span>
                 }
-                right={<Chip tone={membership.tone}>{membership.label}</Chip>}
+                right={
+                  <span className="flex flex-col items-end gap-1">
+                    <Chip tone={membership.tone}>{membership.label}</Chip>
+                    {property.status !== "cancelled" && !property.pinConfirmedAt && <span className="text-xs font-semibold text-wait">Check the map pin</span>}
+                  </span>
+                }
               />
             );
           })}

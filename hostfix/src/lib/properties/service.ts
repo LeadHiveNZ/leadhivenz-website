@@ -53,7 +53,17 @@ export type Property = {
   referrerId: string | null;
   /** Set when the property is under a Portfolio account: its cover comes from the one retainer, not its own membership. */
   portfolioId: string | null;
+  /** The property's map pin (DECISIONS.md, 2026-11-19). Null until it is looked up or placed. */
+  pin: { lat: number; lng: number } | null;
+  /** looked_up: found from the address. owner_moved: placed or moved by the owner. none: no pin yet. */
+  pinSource: PinSource;
+  /** The owner said "Yes, the pin is on the house". */
+  pinConfirmedAt: Date | null;
+  /** When the address was last looked up. */
+  pinLookupAt: Date | null;
 };
+
+export type PinSource = "looked_up" | "owner_moved" | "none";
 
 type PropertyRow = {
   id: string; created_at: Date; owner_id: string; market: string; name: string; address_line1: string;
@@ -62,6 +72,8 @@ type PropertyRow = {
   current_period_end: Date | null; cancel_at_period_end: boolean; member_since: Date | null; cancelled_at: Date | null;
   team_token: string; guest_token: string; guest_auto_dispatch: boolean; spend_limit_cents: number | null; referrer_id: string | null;
   portfolio_id: string | null;
+  pin_lat?: number | string | null; pin_lng?: number | string | null; pin_source?: PinSource | null;
+  pin_confirmed_at?: Date | null; pin_lookup_at?: Date | null;
 };
 
 const date = (value: Date | null) => (value ? new Date(value) : null);
@@ -75,6 +87,10 @@ export function rowToProperty(row: PropertyRow): Property {
     memberSince: date(row.member_since), cancelledAt: date(row.cancelled_at), teamToken: row.team_token, guestToken: row.guest_token,
     guestAutoDispatch: row.guest_auto_dispatch, spendLimitCents: row.spend_limit_cents, referrerId: row.referrer_id,
     portfolioId: row.portfolio_id ?? null,
+    pin: row.pin_lat === null || row.pin_lat === undefined || row.pin_lng === null || row.pin_lng === undefined ? null : { lat: Number(row.pin_lat), lng: Number(row.pin_lng) },
+    pinSource: row.pin_source ?? "none",
+    pinConfirmedAt: date(row.pin_confirmed_at ?? null),
+    pinLookupAt: date(row.pin_lookup_at ?? null),
   };
 }
 
@@ -165,10 +181,19 @@ export type PropertyPatch = Partial<Pick<PropertyInput, "name" | "addressLine1" 
 export async function updateProperty(db: Db, ownerId: string, propertyId: string, patch: PropertyPatch): Promise<Property | null> {
   const current = await getProperty(db, ownerId, propertyId);
   if (!current) return null;
+  // A new street address means the old map pin may be somewhere else: it is cleared, and looked up again (DECISIONS.md, 2026-11-19).
+  const moved = (patch.addressLine1 !== undefined && patch.addressLine1.trim() !== current.addressLine1)
+    || (patch.suburb !== undefined && patch.suburb.trim() !== current.suburb)
+    || (patch.postcode !== undefined && patch.postcode.trim() !== current.postcode);
   const rows = await db.query<PropertyRow>(
     `update public.properties set
         name = $3, address_line1 = $4, address_line2 = $5, suburb = $6, postcode = $7, access_notes = $8,
-        guest_auto_dispatch = $9, spend_limit_cents = $10
+        guest_auto_dispatch = $9, spend_limit_cents = $10,
+        pin_lat = case when $11::boolean then null else pin_lat end,
+        pin_lng = case when $11::boolean then null else pin_lng end,
+        pin_source = case when $11::boolean then 'none' else pin_source end,
+        pin_confirmed_at = case when $11::boolean then null else pin_confirmed_at end,
+        pin_lookup_at = case when $11::boolean then null else pin_lookup_at end
       where id = $1::uuid and owner_id = $2::uuid
       returning *`,
     [
@@ -181,9 +206,10 @@ export async function updateProperty(db: Db, ownerId: string, propertyId: string
       patch.accessNotes?.trim() ?? current.accessNotes,
       patch.guestAutoDispatch ?? current.guestAutoDispatch,
       patch.spendLimitCents === undefined ? current.spendLimitCents : patch.spendLimitCents,
+      moved,
     ],
   );
-  await audit(db, { actor: `owner:${ownerId}`, action: "property.updated", entity: "property", entityId: propertyId, detail: { fields: Object.keys(patch) } });
+  await audit(db, { actor: `owner:${ownerId}`, action: "property.updated", entity: "property", entityId: propertyId, detail: { fields: Object.keys(patch), pin_cleared: moved && current.pin !== null } });
   return rows[0] ? rowToProperty(rows[0]) : null;
 }
 

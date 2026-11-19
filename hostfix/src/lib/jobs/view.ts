@@ -8,6 +8,7 @@ import { formatDeadline } from "@/lib/time";
 import { waitingLaterTime, type LaterTime } from "@/lib/dispatch/cascade";
 import { brand } from "@config/brand";
 import { windowBetween } from "./arrival";
+import { flagWords, ownerCheckWords, type CheckFlag } from "./checks";
 import { loadContext } from "./context";
 import { listLines, listOffers, listQuotes, type OfferWithTradie } from "./store";
 import type { Job, JobLine, Quote, StatusTone } from "./types";
@@ -45,7 +46,11 @@ export type JobView = {
   quotes: Quote[];
   offers: OfferWithTradie[];
   reportPhotos: Upload[];
+  /** The tradie's photos, quotes and receipts. */
   workPhotos: Upload[];
+  /** Taken at Arrived and at Job done, shown side by side (DECISIONS.md, 2026-11-19). */
+  beforePhotos: Upload[];
+  afterPhotos: Upload[];
   history: HistoryEntry[];
   money: JobMoney;
   /** The owner's chosen tradie has suggested a later time and is waiting for the owner's answer. */
@@ -116,12 +121,29 @@ function describe(row: AuditRow, audience: Audience, job: Job, market: Market): 
     case "job.arrived": {
       const timing = d.on_time === false ? (d.window_end ? "After the time they chose." : "After the promised time.") : audience === "staff" ? "On time." : null;
       const place = audience !== "staff" ? null
-        : d.location === "far" ? ` ${String(d.distance_m)} m from where tradies have been here before.`
+        : d.location === "far" ? ` ${String(d.distance_m)} m from ${d.reference === "pin" ? "the property's pin" : "where tradies have been here before"}.`
         : d.location === "no_location" ? " The phone gave no location."
-        : d.location === "no_reference" ? " Location recorded: no reference yet for this house."
-        : d.location === "ok" ? " Location matches earlier visits." : "";
+        : d.location === "no_reference" ? " Location recorded: no pin and no earlier visits to compare with."
+        : d.location === "ok" ? (d.reference === "pin" ? ` ${String(d.distance_m)} m from the property's pin.` : " Location matches earlier visits.") : "";
       return entry(audience === "tradie" ? "You arrived" : "Tradie on site", "active", timing || place ? `${timing ?? ""}${place ?? ""}`.trim() : null);
     }
+    case "job.flagged": {
+      // The owner is asked in neutral words; the tradie is told plainly why; the team sees every reason.
+      const flags = (Array.isArray(d.flags) ? d.flags : []) as CheckFlag[];
+      if (audience === "owner") return entry("We asked you to check the photos", "alert", ownerCheckWords(flags));
+      const words = flags.map((flag) => flagWords(flag, { arrivalM: d.arrival_m as number | null, finishM: d.finish_m as number | null, minutes: d.minutes_on_site as number | null, minMinutes: d.min_minutes as number | undefined })).join(" ");
+      return entry(audience === "tradie" ? "Payment waiting for the owner to confirm the job" : "Flagged: the owner is asked to confirm", "alert", words || null);
+    }
+    case "job.owner_confirmed":
+      return entry(audience === "owner" ? "You confirmed it is fixed" : "The owner confirmed it is fixed", "done", audience === "owner" ? null : "The payment is released as normal.");
+    case "job.check_released":
+      return audience === "owner" ? null : entry("No answer from the owner: paid, as a trusted tradie", "done", audience === "staff" ? "The flag stays on the record." : null);
+    case "job.check_to_staff":
+      return audience === "staff" ? entry("No answer from the owner: in the queue to approve or hold", "alert") : audience === "tradie" ? entry("Our team is looking at this job before paying it", "waiting") : null;
+    case "job.check_approved":
+      return audience === "owner" ? null : entry(audience === "tradie" ? "Checked: your payment is on its way" : "Approved by the team", "done");
+    case "job.check_held":
+      return audience === "owner" ? null : entry(audience === "tradie" ? "Your payment is on hold while we check this job" : "Payment held by the team", "alert", audience === "staff" ? str(d.note) || null : null);
     case "quote.submitted":
       return entry(`Quote: ${amount}`, d.needs_approval ? "alert" : "active", `${str(d.description)}${d.needs_approval ? ". Waiting for the owner's answer." : ". Inside the pre-approved limit, so it went ahead."}`);
     case "quote.approved":
@@ -197,6 +219,8 @@ export async function loadJobView(db: Db, job: Job, audience: Audience): Promise
     offers,
     reportPhotos: uploads.filter((upload) => upload.kind === "report"),
     workPhotos: uploads.filter((upload) => upload.kind === "completion" || upload.kind === "quote" || upload.kind === "receipt"),
+    beforePhotos: uploads.filter((upload) => upload.kind === "before"),
+    afterPhotos: uploads.filter((upload) => upload.kind === "completion"),
     history,
     money: {
       payment: p ? { status: p.status, amountCents: p.amount_cents, refundedCents: p.refunded_cents, paidAt: p.paid_at ? new Date(p.paid_at) : null, lastError: p.last_error, attempts: p.attempts } : null,

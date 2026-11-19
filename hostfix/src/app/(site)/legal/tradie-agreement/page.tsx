@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
 import { brand } from "@config/brand";
 import { LegalPage, Section } from "@/components/LegalPage";
-import { PROPOSAL_DAYS, WINDOW_HOURS } from "@/lib/jobs/arrival";
-import { MIN_ARRIVALS, NO_SHOW_DAYS, NO_SHOW_REVIEW, ON_TIME_TARGET, RECENT_ARRIVALS } from "@/lib/tradies/reliability";
+import { launchMarket } from "@config/markets";
+import { FAR_METRES, PROPOSAL_DAYS, WINDOW_HOURS } from "@/lib/jobs/arrival";
+import {
+  FLAG_DAYS, FLAG_REVIEW, MIN_ARRIVALS, NO_SHOW_DAYS, NO_SHOW_REVIEW, ON_TIME_TARGET, RECENT_ARRIVALS, TRUSTED_FINISHED_JOBS,
+} from "@/lib/tradies/reliability";
 
 /**
  * THE TRADIE AGREEMENT. One page, plain English, written from what the
@@ -14,7 +17,7 @@ export const metadata: Metadata = {
   description: `How working with ${brand.name} works: the offers, the prices, the pay, and what we expect from each other.`,
 };
 
-const UPDATED = "18 November 2026";
+const UPDATED = "19 November 2026";
 
 export default function Page() {
   const n = brand.name;
@@ -88,12 +91,21 @@ export default function Page() {
         <ul>
           <li>Being on site by the end of the window you chose for a normal job, or by the deadline for an urgent one (within 4 hours).</li>
           <li>
-            Tapping <strong>I have arrived</strong> at the door, with your phone&rsquo;s location on. That tap is how we measure the time, and it decides
-            whether the urgent and after-hours shares are paid. A tap with no location, or far from the property, is checked by our team, and the owner
-            can tell us if you are not there.
+            Taking at least one <strong>before</strong> photo in the app and tapping <strong>I have arrived</strong> at the door, with your phone&rsquo;s
+            location on. That tap is how we measure the time, and it decides whether the urgent and after-hours shares are paid. The owner can tell us if
+            you are not there.
           </li>
           <li>Doing the job described, to a tradesperson&rsquo;s standard, and tidying up after yourself.</li>
-          <li>Taking at least one photo of the finished work and writing what you did. The app will not let you finish a job without them.</li>
+          <li>
+            Taking at least one <strong>after</strong> photo of the finished work in the app, writing what you did, and tapping <strong>Job done</strong> at
+            the property, with your location on. The app will not let you arrive without a before photo or finish without an after photo.
+          </li>
+          <li>
+            <strong>The checks.</strong> Your location at Arrived and at Job done is compared with the property&rsquo;s map pin. A tap with no location, or more
+            than {FAR_METRES} m from the pin, still works (phones get it wrong), but the job is flagged. So is a job finished less than {launchMarket.minMinutesOnSite} minutes after
+            you arrived (a diagnosis, a visit to look and price, and &ldquo;could not get in&rdquo; are never flagged for time), and a photo whose own date is from before the job
+            was logged. A flagged job is not an accusation: it only means the owner is asked to confirm it (section 6).
+          </li>
           <li>Treating the house, the access code and the owner&rsquo;s details as confidential. Never share a code, and never leave a door unsecured.</li>
           <li>If something you fixed fails within 30 days because of your work, coming back and putting it right at no charge.</li>
         </ul>
@@ -136,6 +148,12 @@ export default function Page() {
             never does, we will talk to you about it; we do not simply leave you unpaid without a conversation.
           </li>
           <li>If you could not get in through no fault of yours, tap <strong>Could not get in</strong> with a photo, and you are paid the call-out.</li>
+          <li>
+            <strong>A flagged job&rsquo;s payment waits for the owner.</strong> They are asked to look at your before and after photos and confirm it is fixed.
+            When they do, you are paid as normal. If they say something is wrong, section 7 applies. If they have not answered within {launchMarket.ownerConfirmHours} hours, you
+            are paid if you are trusted ({TRUSTED_FINISHED_JOBS} or more finished jobs, and no other flagged job in the last {FLAG_DAYS} days); otherwise our team looks at
+            the photos and either pays you or holds the payment while they talk to you and the owner.
+          </li>
         </ul>
       </Section>
 
@@ -143,8 +161,8 @@ export default function Page() {
         <p>
           An owner can raise a problem from their job page. If they do within a day of the job, your payment is held until it is sorted. Our
           team looks at the photos, the notes and both sides, then decides: the work stands and you are paid in full, or part or all of the job is
-          refunded and your payment is reduced in proportion. If you have already been paid, you agree that we may take the refunded amount back
-          from your next payments. We will always tell you why.
+          refunded and your payment is reduced in proportion. If you have already been paid, we take your share of the refund back from that
+          payment through Stripe; if that cannot be done, you agree to repay it. We will always tell you why.
         </p>
       </Section>
 
@@ -167,6 +185,10 @@ export default function Page() {
             <strong>A no-show</strong> is a job you accepted where you are not on site by the promised time. We will ring you. Repeated no-shows on
             accepted jobs ({NO_SHOW_REVIEW} in {NO_SHOW_DAYS} days) can lead to removal from the network, but only after a conversation with you. Nobody is ever removed
             automatically.
+          </li>
+          <li>
+            <strong>Flagged jobs.</strong> {FLAG_REVIEW} flagged jobs in {FLAG_DAYS} days put you in front of our team for a conversation. Nobody is removed automatically for
+            this either, and declining a job can never flag anything: only jobs you accepted and finished are checked.
           </li>
         </ul>
         <p>You can pause offers yourself at any time with the Pause switch in your profile, for a holiday or a busy week, with no penalty.</p>
@@ -192,6 +214,10 @@ export default function Page() {
           You can stop at any time: pause offers, or email us to close your account. A person on our team can remove you from the network, and
           will tell you why; the app never does it by itself, and declining jobs is never a reason. Jobs you have accepted are finished and paid
           under this agreement either way.
+        </p>
+        <p>
+          <strong>A job reported as done that was not done, including a faked location or faked photos, means removal from {n}, and any money paid to you
+          for it must be repaid.</strong>
         </p>
       </Section>
 

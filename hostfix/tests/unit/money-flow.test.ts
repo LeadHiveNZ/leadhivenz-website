@@ -9,12 +9,12 @@ import { acceptOffer } from "@/lib/dispatch/cascade";
 import { runTick } from "@/lib/dispatch/tick";
 import { cancelJob } from "@/lib/jobs/create";
 import { getJobForStaff, listLines, listQuotes } from "@/lib/jobs/store";
-import { completeJob, decideQuote, markArrived, markEnRoute, reportNoAccess, submitQuote } from "@/lib/jobs/work";
+import { completeJob, decideQuote, markEnRoute, reportNoAccess, submitQuote } from "@/lib/jobs/work";
 import { saveBilling, unpaidJobs } from "@/lib/owners/service";
 import { DEMO_CARD_OK } from "@/lib/payments/demo-gateway";
 import type { Property } from "@/lib/properties/service";
 import { testDb } from "./db";
-import { addPlusTier, auditActions, gatewayFor, liveMarket, logJob, makeOwner, makeProperty, makeTradie, MONDAY_10AM, MONDAY_9PM, offersFor, openExceptions, photo, textsTo } from "./factory";
+import { addPlusTier, arrive, auditActions, gatewayFor, HOUSE, liveMarket, logJob, makeOwner, makeProperty, makeTradie, MONDAY_10AM, MONDAY_9PM, offersFor, openExceptions, photo, textsTo } from "./factory";
 
 /**
  * THE PRICES THESE TESTS ARE BUILT ON. They come from seed/menu-queenstown.json
@@ -47,7 +47,9 @@ afterEach(() => setTestNow(null));
 type Setup = Awaited<ReturnType<typeof setup>>;
 
 async function setup(options: { tier?: "essential" | "plus"; card?: "ok" | "declines"; market?: Record<string, unknown>; trades?: string[] } = {}) {
-  await liveMarket(t.db, options.market ?? {});
+  // These tests are about the money, and finish a job in the same minute the tradie arrives. The time-on-site
+  // check (10 minutes by default) is switched off here; tests/unit/job-checks.test.ts covers it at its default.
+  await liveMarket(t.db, { min_minutes_on_site: 0, ...options.market });
   const owner = await makeOwner(t.db, { card: options.card ?? "ok" });
   const property = await makeProperty(t.db, owner.ownerId, { tier: options.tier ?? "essential" });
   const tradie = await makeTradie(t.db, { slot: 1, afterHours: true, trades: options.trades ?? ["plumber"], licence: options.trades?.[0] === "handyman" ? "none" : "valid", name: "Wakatipu Plumbing" });
@@ -60,13 +62,13 @@ async function onSite(s: Setup, overrides: Parameters<typeof logJob>[2] = {}, pr
   const [offer] = await offersFor(t.db, job.id);
   await t.db.tx((tx) => acceptOffer(tx, offer!.id, "link"));
   await markEnRoute(t.db, job.id, s.tradie.tradieId);
-  const arrived = await markArrived(t.db, job.id, s.tradie.tradieId, { lat: -45.03, lng: 168.66 });
+  const arrived = await arrive(t.db, job.id, s.tradie.tradieId, HOUSE);
   if (!arrived.ok) throw new Error(arrived.message);
   return arrived.job;
 }
 
 async function finish(s: Setup, jobId: string) {
-  const result = await completeJob(t.db, jobId, s.tradie.tradieId, { note: "All sorted.", uploadIds: [await photo(t.db, `tradie:${s.tradie.tradieId}`)] });
+  const result = await completeJob(t.db, jobId, s.tradie.tradieId, { note: "All sorted.", uploadIds: [await photo(t.db, `tradie:${s.tradie.tradieId}`)], ...HOUSE });
   if (!result.ok) throw new Error(result.message);
   return result.job;
 }
@@ -165,7 +167,7 @@ describe("a finished menu job", () => {
     const s = await setup();
     const job = await onSite(s);
     await finish(s, job.id);
-    expect((await completeJob(t.db, job.id, s.tradie.tradieId, { note: "", uploadIds: [] })).ok).toBe(true);
+    expect((await completeJob(t.db, job.id, s.tradie.tradieId, { note: "", uploadIds: [], ...HOUSE })).ok).toBe(true);
     expect(await chargeJob(t.db, gatewayFor(t.db), job.id)).toBe("succeeded");
     expect(await chargeJob(t.db, gatewayFor(t.db), job.id)).toBe("skipped");
     setTestNow(addHours(MONDAY_10AM, 30));
@@ -181,7 +183,7 @@ describe("a finished menu job", () => {
   it("cannot be finished without a photo", async () => {
     const s = await setup();
     const job = await onSite(s);
-    const result = await completeJob(t.db, job.id, s.tradie.tradieId, { note: "Done", uploadIds: [] });
+    const result = await completeJob(t.db, job.id, s.tradie.tradieId, { note: "Done", uploadIds: [], ...HOUSE });
     expect(result).toMatchObject({ ok: false });
     expect(!result.ok && result.message).toContain("photo");
     expect((await getJobForStaff(t.db, job.id))!.status).toBe("on_site");
@@ -194,11 +196,11 @@ describe("a finished menu job", () => {
     const [offer] = await offersFor(t.db, job.id);
     await t.db.tx((tx) => acceptOffer(tx, offer!.id, "link"));
     const mine = await photo(t.db, `tradie:${s.tradie.tradieId}`);
-    expect(await completeJob(t.db, job.id, s.tradie.tradieId, { note: "", uploadIds: [mine] })).toMatchObject({ ok: false });
+    expect(await completeJob(t.db, job.id, s.tradie.tradieId, { note: "", uploadIds: [mine], ...HOUSE })).toMatchObject({ ok: false });
 
-    await markArrived(t.db, job.id, s.tradie.tradieId);
+    await arrive(t.db, job.id, s.tradie.tradieId, HOUSE);
     const stranger = await photo(t.db, "tradie:00000000-0000-4000-8000-000000000000");
-    expect(await completeJob(t.db, job.id, s.tradie.tradieId, { note: "", uploadIds: [stranger] })).toMatchObject({ ok: false });
+    expect(await completeJob(t.db, job.id, s.tradie.tradieId, { note: "", uploadIds: [stranger], ...HOUSE })).toMatchObject({ ok: false });
   });
 
   it("is run end to end by the timer alone", async () => {
@@ -571,7 +573,7 @@ describe("the promised time", () => {
 
     // The tradie gets there late and finishes. PL-01 has no surcharge, so the owner pays 22500 and the tradie gets 19000.
     await markEnRoute(t.db, job.id, s.tradie.tradieId);
-    const arrived = await markArrived(t.db, job.id, s.tradie.tradieId, { lat: -45.03, lng: 168.66 });
+    const arrived = await arrive(t.db, job.id, s.tradie.tradieId, HOUSE);
     if (!arrived.ok) throw new Error(arrived.message);
     const done = await finish(s, job.id);
     expect(done).toMatchObject({ ownerTotalCents: 22500, tradieTotalCents: 19000 });
@@ -602,7 +604,7 @@ describe("the promised time", () => {
     const [offer] = await offersFor(t.db, job.id);
     await t.db.tx((tx) => acceptOffer(tx, offer!.id, "link"));
     await markEnRoute(t.db, job.id, s.tradie.tradieId);
-    const arrived = await markArrived(t.db, job.id, s.tradie.tradieId, { lat: -45.03, lng: 168.66 });
+    const arrived = await arrive(t.db, job.id, s.tradie.tradieId, HOUSE);
     if (!arrived.ok) throw new Error(arrived.message);
     // The tradie quotes 52000 labour + 8000 parts = 60000, inside the 60000 limit, so it goes ahead.
     const quoted = await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Replace waste trap and isolating valve", labourCents: 52000, partsCents: 8000, uploadIds: [] });
@@ -632,7 +634,7 @@ describe("the promised time", () => {
     const [offer] = await offersFor(t.db, job.id);
     await t.db.tx((tx) => acceptOffer(tx, offer!.id, "link"));
     setTestNow(addMinutes(addHours(MONDAY_10AM, 24), -1));
-    await markArrived(t.db, job.id, s.tradie.tradieId);
+    await arrive(t.db, job.id, s.tradie.tradieId, HOUSE);
     setTestNow(addHours(MONDAY_10AM, 30));
     expect(await markMissedWindows(t.db)).toEqual({ missed: 0, noShows: 0 });
     const arrived = await t.db.query<{ detail: { on_time: boolean } }>("select detail from public.audit_log where entity_id = $1 and action = 'job.arrived'", [job.id]);
@@ -670,7 +672,7 @@ describe("the promised time", () => {
     // Arriving clears it.
     const [offer] = await offersFor(t.db, job.id);
     await t.db.tx((tx) => acceptOffer(tx, offer!.id, "link"));
-    await markArrived(t.db, job.id, s.tradie.tradieId, { lat: -45.03, lng: 168.66 });
+    await arrive(t.db, job.id, s.tradie.tradieId, HOUSE);
     expect(await openExceptions(t.db, job.id)).toEqual([]);
   });
 });
@@ -715,7 +717,7 @@ describe("off-menu work and quotes", () => {
     // Nothing is added to the bill yet, and the job cannot be finished.
     expect(result.job).toMatchObject({ status: "awaiting_approval", ownerTotalCents: 22500 });
     expect((await textsTo(t.db, s.owner.user.phone!, "quote_needs_approval"))[0]!.body).toContain("Nothing starts until you say yes");
-    expect(await completeJob(t.db, job.id, s.tradie.tradieId, { note: "", uploadIds: [await photo(t.db, `tradie:${s.tradie.tradieId}`)] })).toMatchObject({ ok: false });
+    expect(await completeJob(t.db, job.id, s.tradie.tradieId, { note: "", uploadIds: [await photo(t.db, `tradie:${s.tradie.tradieId}`)], ...HOUSE })).toMatchObject({ ok: false });
     expect(await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Another", labourCents: 1000, partsCents: 0, uploadIds: [] })).toMatchObject({ ok: false });
 
     const approved = await decideQuote(t.db, result.quote.id, true, `owner:${s.owner.ownerId}`);
@@ -779,7 +781,7 @@ describe("when the tradie cannot get in", () => {
     const s = await setup();
     const job = await onSite(s, { code: "PL-06", urgent: true });
     expect(job.ownerTotalCents).toBe(23500 + 5000);
-    const result = await reportNoAccess(t.db, job.id, s.tradie.tradieId, { note: "Lockbox code did not work, nobody answering.", uploadIds: [await photo(t.db, `tradie:${s.tradie.tradieId}`)] });
+    const result = await reportNoAccess(t.db, job.id, s.tradie.tradieId, { note: "Lockbox code did not work, nobody answering.", uploadIds: [await photo(t.db, `tradie:${s.tradie.tradieId}`)], ...HOUSE });
     if (!result.ok) throw new Error(result.message);
     // The job's own price is replaced by the call-out (225 to the owner, 190 to the tradie). The urgent surcharge
     // stays, with its fee: owner 22500 + 5000 = 27500, tradie 19000 + 4250 = 23250.
@@ -790,8 +792,8 @@ describe("when the tradie cannot get in", () => {
   it("needs a reason and a photo", async () => {
     const s = await setup();
     const job = await onSite(s);
-    expect(await reportNoAccess(t.db, job.id, s.tradie.tradieId, { note: "", uploadIds: [] })).toMatchObject({ ok: false });
-    expect(await reportNoAccess(t.db, job.id, s.tradie.tradieId, { note: "Gate locked, no answer", uploadIds: [] })).toMatchObject({ ok: false });
+    expect(await reportNoAccess(t.db, job.id, s.tradie.tradieId, { note: "", uploadIds: [], ...HOUSE })).toMatchObject({ ok: false });
+    expect(await reportNoAccess(t.db, job.id, s.tradie.tradieId, { note: "Gate locked, no answer", uploadIds: [], ...HOUSE })).toMatchObject({ ok: false });
     expect((await getJobForStaff(t.db, job.id))!.status).toBe("on_site");
   });
 });

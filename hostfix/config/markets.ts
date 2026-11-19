@@ -120,6 +120,20 @@ export type Market = {
    * other tradies, as if the owner had said "send it now".
    */
   counterOfferHours: number;
+  /**
+   * A job finished sooner than this many minutes after the tradie tapped
+   * Arrived is flagged for the owner to check (DECISIONS.md, 2026-11-19).
+   * Diagnosis and look-and-price jobs, and "could not get in", are never flagged for this.
+   * 0 switches the check off.
+   */
+  minMinutesOnSite: number;
+  /**
+   * Hours the owner has to answer "is it fixed?" on a flagged job before the
+   * app decides: paid if the tradie is trusted, otherwise to the dispatcher.
+   */
+  ownerConfirmHours: number;
+  /** Where the map opens for a property that has no pin yet. Null: the whole country. */
+  mapCentre: { lat: number; lng: number } | null;
 
   referralRewardCents: number;
   referralPaidMonths: number;
@@ -198,6 +212,9 @@ export function defineMarket(input: MarketInput): Market {
     payoutHoldHours: 24,
     unacceptedAlertHours: 3,
     counterOfferHours: 2,
+    minMinutesOnSite: 10,
+    ownerConfirmHours: 48,
+    mapCentre: null,
     referralRewardCents: 10000,
     referralPaidMonths: 3,
     replyByText: false,
@@ -223,6 +240,8 @@ export const markets: Market[] = [
     name: "Queenstown",
     country: "NZ",
     timezone: "Pacific/Auckland",
+    // The middle of town, where the map opens for a property with no pin yet.
+    mapCentre: { lat: -45.0312, lng: 168.6626 },
     tiers: [
       // Essential, for owners. Free to join (DECISIONS.md, 2026-11-17, "Free
       // to join"): a property is covered as soon as a card is on file, and the
