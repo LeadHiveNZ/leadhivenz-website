@@ -141,7 +141,15 @@ describe("the offer cascade", () => {
 
     const done = await status(job.id);
     expect(done).toMatchObject({ status: "accepted", tradieId: a.tradieId });
-    expect((await offersFor(t.db, job.id)).map((o) => o.status)).toEqual(["expired", "expired", "accepted", "superseded"]);
+    // a and b are made in the same instant, so their stage-3 offers can be numbered either way round:
+    // read each tradie's own offer rather than relying on the order.
+    const statusOf = new Map((await offersFor(t.db, job.id)).map((o) => [o.tradie_id, o.status]));
+    expect(Object.fromEntries(statusOf)).toEqual({
+      [first.tradieId]: "expired",
+      [backup.tradieId]: "expired",
+      [a.tradieId]: "accepted",
+      [b.tradieId]: "superseded",
+    });
     expect(await textsTo(t.db, owner.user.phone!, "job_booked")).toHaveLength(1);
     expect(first.tradieId).not.toBe(backup.tradieId);
   });

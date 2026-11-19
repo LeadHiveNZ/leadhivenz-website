@@ -13,7 +13,7 @@ import { enqueue } from "@/lib/notify/outbox";
 import { raiseException, resolveExceptionsFor } from "@/lib/ops/exceptions";
 import { getBilling } from "@/lib/owners/service";
 import { holdReasons } from "./holds";
-import { PlatformBalanceTooLow, type PaymentsGateway, type Provider } from "@/lib/payments/gateway";
+import { PlatformBalanceTooLow, TransferRefused, type PaymentsGateway, type Provider } from "@/lib/payments/gateway";
 import { formatDeadline, monthKey, monthLabel } from "@/lib/time";
 import { formatMoney } from "@/lib/money";
 import { NO_SHOW_DAYS, needsReview, recentNoShows } from "@/lib/tradies/reliability";
@@ -51,7 +51,7 @@ type PaymentRow = {
 
 type PayoutRow = {
   id: string; job_id: string; tradie_id: string; amount_cents: number; currency: string; status: string; release_at: Date;
-  transfer_id: string | null; attempts: number; provider: Provider | null; deducted_cents?: number; balance_waits?: number;
+  transfer_id: string | null; attempts: number; provider: Provider | null; deducted_cents?: number; balance_waits?: number; refusals?: number;
 };
 
 /**
@@ -266,9 +266,15 @@ export async function chargeDuePayments(db: Db, gatewayFor: GatewayFor): Promise
  */
 export type PayoutOutcome = "sent" | "failed" | "retry" | "waiting" | "skipped";
 
-/** The idempotency key for a payout. A new one only after Stripe said a definite "not enough balance". */
-export function payoutKey(jobId: string, balanceWaits: number): string {
-  return balanceWaits > 0 ? `hostfix-job-${jobId}-payout-w${balanceWaits}` : `hostfix-job-${jobId}-payout`;
+/**
+ * The idempotency key for a payout. It moves on (-w1, -w2, ...) only after Stripe definitely refused the last
+ * try and that refusal was saved: "not enough balance" (balance_waits) or any other refusal (refusals). Both
+ * only ever go up, so every key is used for one try's worth of calls and never comes back. A try whose outcome
+ * is unknown (timeout, network, Stripe server error) or that never got saved (the server stopped mid-call)
+ * keeps the same key, so a transfer that did go through is replayed, never sent twice.
+ */
+export function payoutKey(jobId: string, refusedTries: number): string {
+  return refusedTries > 0 ? `hostfix-job-${jobId}-payout-w${refusedTries}` : `hostfix-job-${jobId}-payout`;
 }
 
 /**
@@ -336,18 +342,20 @@ export async function releasePayout(db: Db, gatewayFor: GatewayFor, payoutId: st
   let transferId: string | null = null;
   let failure: string | null = null;
   let balanceTooLow = false;
+  let refused = false;
   if (!gateway) failure = "Payments are not set up for this country.";
   else if (!tradie.payout_account_id) failure = `${tradie.business_name} has not added bank details yet.`;
   else {
     try {
       const sent = await gateway.transfer({
         accountId: tradie.payout_account_id, amountCents: sendCents, currency: payout.currency, chargeId, jobNumber: job.number,
-        idempotencyKey: payoutKey(job.id, Number(payout.balance_waits ?? 0)),
+        idempotencyKey: payoutKey(job.id, Number(payout.balance_waits ?? 0) + Number(payout.refusals ?? 0)),
       });
       transferId = sent.transferId;
     } catch (error) {
       failure = error instanceof Error ? error.message : String(error);
       balanceTooLow = error instanceof PlatformBalanceTooLow;
+      refused = error instanceof TransferRefused;
     }
   }
 
@@ -410,7 +418,10 @@ export async function releasePayout(db: Db, gatewayFor: GatewayFor, payoutId: st
       return "sent";
     }
     const giveUp = payout.attempts >= MAX_PAYOUT_ATTEMPTS || !gateway || !tradie.payout_account_id;
-    await tx.query("update public.payouts set status = $2, last_error = $3 where id = $1::uuid", [payoutId, giveUp ? "failed" : "scheduled", failure!.slice(0, 500)]);
+    // A definite refusal moves the next try (here ten minutes on, or the dispatcher's retry) to a new key.
+    await tx.query("update public.payouts set status = $2, last_error = $3, refusals = refusals + $4 where id = $1::uuid", [
+      payoutId, giveUp ? "failed" : "scheduled", failure!.slice(0, 500), refused ? 1 : 0,
+    ]);
     if (giveUp) {
       await audit(tx, { actor: "system", action: "payout.failed", entity: "job", entityId: job.id, amount: payout.amount_cents, currency: payout.currency, detail: { reason: failure } });
       await raiseException(tx, {

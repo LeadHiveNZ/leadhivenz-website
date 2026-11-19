@@ -60,6 +60,19 @@ export class PlatformBalanceTooLow extends Error {
   }
 }
 
+/**
+ * The payment company answered and definitely refused the transfer: nothing was sent. Only then may the next
+ * try use a new idempotency key (Stripe replays a saved error for the same key for 24 hours). A timeout, a
+ * network error, a 409 or a 5xx leaves it unknown whether money moved, so those keep the same key
+ * (docs.stripe.com/api/idempotent_requests, docs.stripe.com/error-low-level, read 19 Nov 2026).
+ */
+export class TransferRefused extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "TransferRefused";
+  }
+}
+
 export type TierForBilling = { id: string; key: string; name: string; priceCents: number; providerProductId: string | null };
 
 export interface PaymentsGateway {
@@ -148,7 +161,8 @@ export interface PaymentsGateway {
 
   /**
    * Moves the tradie's share to their account. The same key never pays twice.
-   * Throws PlatformBalanceTooLow when the platform's available balance cannot cover it.
+   * Throws PlatformBalanceTooLow when the platform's available balance cannot cover it, and TransferRefused
+   * for any other definite refusal (nothing sent). Anything else thrown means the outcome is unknown.
    */
   transfer(input: { accountId: string; amountCents: number; currency: string; chargeId: string | null; jobNumber: number; idempotencyKey: string }): Promise<{ transferId: string }>;
   reverseTransfer(input: { transferId: string; amountCents: number; idempotencyKey: string }): Promise<void>;

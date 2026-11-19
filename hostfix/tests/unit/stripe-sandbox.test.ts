@@ -2,14 +2,14 @@ import http from "node:http";
 import type { AddressInfo } from "node:net";
 import type Stripe from "stripe";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { chargeJob, raiseDispute, releaseDuePayouts, resolveDispute } from "@/lib/billing/settle";
+import { chargeJob, raiseDispute, releaseDuePayouts, resolveDispute, retryPayout } from "@/lib/billing/settle";
 import { addHours, setTestNow } from "@/lib/clock";
 import { acceptOffer } from "@/lib/dispatch/cascade";
 import { completeJob } from "@/lib/jobs/work";
 import { saveBilling } from "@/lib/owners/service";
 import type { StripeMessage } from "@/lib/payments/deposit";
 import { DEMO_CARD_OK } from "@/lib/payments/demo-gateway";
-import { PlatformBalanceTooLow, type PaymentsGateway } from "@/lib/payments/gateway";
+import { PlatformBalanceTooLow, TransferRefused, type PaymentsGateway } from "@/lib/payments/gateway";
 import { handleProductMessage } from "@/lib/payments/product-events";
 import type { StripeAccount } from "@/lib/payments/stripe";
 import { createStripeGateway, payoutAccountProfile } from "@/lib/payments/stripe-gateway";
@@ -57,7 +57,7 @@ async function finishedJob(options: { card?: "ok" | "declines" } = {}) {
 type TransferCall = Parameters<PaymentsGateway["transfer"]>[0];
 
 /** The demo payment company, with every transfer written down, and optionally a platform balance that is too low. */
-function recording(options: { balanceLow?: () => boolean } = {}) {
+function recording(options: { balanceLow?: () => boolean; before?: (input: TransferCall) => void } = {}) {
   const transfers: TransferCall[] = [];
   const gateways = () => {
     const base = gatewayFor(t.db)("NZ")!;
@@ -67,6 +67,7 @@ function recording(options: { balanceLow?: () => boolean } = {}) {
         transfers.push(input);
         // Stripe: a transfer tied to a charge works off the charge; one without needs available balance.
         if (!input.chargeId && options.balanceLow?.()) throw new PlatformBalanceTooLow("Insufficient funds in Stripe account.");
+        options.before?.(input);
         return base.transfer(input);
       },
     };
@@ -75,7 +76,7 @@ function recording(options: { balanceLow?: () => boolean } = {}) {
 }
 
 const payoutRow = async (jobId: string) =>
-  (await t.db.query<{ status: string; amount_cents: number; attempts: number; balance_waits: number }>("select status, amount_cents, attempts, balance_waits from public.payouts where job_id = $1::uuid", [jobId]))[0]!;
+  (await t.db.query<{ status: string; amount_cents: number; attempts: number; balance_waits: number; refusals: number }>("select status, amount_cents, attempts, balance_waits, refusals from public.payouts where job_id = $1::uuid", [jobId]))[0]!;
 const paymentRow = async (jobId: string) =>
   (await t.db.query<{ amount_cents: number; refunded_cents: number; status: string; payment_intent_id: string }>("select amount_cents, refunded_cents, status, payment_intent_id from public.payments where job_id = $1::uuid", [jobId]))[0]!;
 
@@ -255,6 +256,74 @@ describe("a tradie's new Stripe payout account (sandbox: Stripe asked for a busi
       expect(sent.get("source_transaction")).toBeNull();
     } finally {
       await stripe.close();
+    }
+  });
+});
+
+describe("a payout Stripe refuses for another reason (DECISIONS.md, 2026-11-21, second entry)", () => {
+  it("a definite refusal moves the next try to a new key; an unknown outcome keeps the same key", async () => {
+    const { job } = await finishedJob();
+    await chargeJob(t.db, gatewayFor(t.db), job.id);
+    // Try 1: Stripe says no (nothing sent). Try 2: the connection drops, so the transfer may exist. Try 3: it goes.
+    const outcomes: (Error | null)[] = [new TransferRefused("This account cannot currently receive transfers."), new Error("Connection reset"), null];
+    const { transfers, gateways } = recording({ before: () => { const next = outcomes.shift(); if (next) throw next; } });
+
+    // Due 24 hours after Job done. Each failed try puts the next one ten minutes on.
+    const due = addHours(MONDAY_10AM, 24);
+    for (const minutes of [0, 10, 20]) {
+      setTestNow(new Date(due.getTime() + minutes * 60_000));
+      await releaseDuePayouts(t.db, gateways);
+    }
+    // Stripe keeps the refusal under the first key for 24 hours, so try 2 needs -w1. Try 2's outcome is unknown,
+    // so try 3 asks again under -w1: if try 2 did go through, Stripe hands back that transfer instead of a second one.
+    expect(transfers.map((call) => call.idempotencyKey)).toEqual([
+      `hostfix-job-${job.id}-payout`, `hostfix-job-${job.id}-payout-w1`, `hostfix-job-${job.id}-payout-w1`,
+    ]);
+    // Every try asks for the same amount from the same charge, as an idempotent retry must.
+    expect(new Set(transfers.map((call) => `${call.amountCents}:${call.chargeId}`)).size).toBe(1);
+    expect(await payoutRow(job.id)).toMatchObject({ status: "sent", amount_cents: 20000, attempts: 3, balance_waits: 0, refusals: 1 });
+    expect(await t.db.query("select 1 from public.audit_log where action = 'payout.sent' and entity_id = $1", [job.id])).toHaveLength(1);
+  });
+
+  it("a refusal on the last try still gives up after three, and the dispatcher's retry starts on a fresh key", async () => {
+    const { job } = await finishedJob();
+    await chargeJob(t.db, gatewayFor(t.db), job.id);
+    let refuse = true;
+    const { transfers, gateways } = recording({ before: () => { if (refuse) throw new TransferRefused("No such destination."); } });
+    const due = addHours(MONDAY_10AM, 24);
+    for (const minutes of [0, 10, 20]) {
+      setTestNow(new Date(due.getTime() + minutes * 60_000));
+      await releaseDuePayouts(t.db, gateways);
+    }
+    expect(await payoutRow(job.id)).toMatchObject({ status: "failed", attempts: 3, refusals: 3 });
+    expect(await openExceptions(t.db, job.id)).toEqual(["payout_failed"]);
+
+    refuse = false;
+    expect(await retryPayout(t.db, gateways, job.id, "staff")).toBe("sent");
+    expect(transfers.map((call) => call.idempotencyKey)).toEqual([
+      `hostfix-job-${job.id}-payout`, `hostfix-job-${job.id}-payout-w1`, `hostfix-job-${job.id}-payout-w2`, `hostfix-job-${job.id}-payout-w3`,
+    ]);
+  });
+
+  it("only a definite 4xx from Stripe counts as refused: not a 409, a 429 or a 500", async () => {
+    const cases: { status: number; error: Record<string, string>; refused: boolean }[] = [
+      { status: 400, error: { type: "invalid_request_error", code: "account_invalid", message: "No such destination." }, refused: true },
+      { status: 409, error: { type: "invalid_request_error", code: "lock_timeout", message: "Request in progress." }, refused: false },
+      { status: 429, error: { type: "invalid_request_error", code: "rate_limit", message: "Too many requests." }, refused: false },
+      { status: 400, error: { type: "idempotency_error", message: "Keys for idempotent requests can only be used with the same parameters." }, refused: false },
+      { status: 500, error: { type: "api_error", message: "Something went wrong on Stripe's end." }, refused: false },
+    ];
+    for (const { status, error, refused } of cases) {
+      const stripe = await standInStripe(() => ({ status, body: { error } }));
+      try {
+        const gateway = createStripeGateway(stripe.account);
+        const thrown = await gateway.transfer({ accountId: "acct_1", amountCents: 20000, currency: "NZD", chargeId: null, jobNumber: 7, idempotencyKey: "k" }).then(() => null, (e: unknown) => e);
+        expect(thrown, `${status} ${error.type}`).toBeInstanceOf(Error);
+        expect(thrown instanceof TransferRefused, `${status} ${error.type}`).toBe(refused);
+        expect(thrown instanceof PlatformBalanceTooLow).toBe(false);
+      } finally {
+        await stripe.close();
+      }
     }
   });
 });
