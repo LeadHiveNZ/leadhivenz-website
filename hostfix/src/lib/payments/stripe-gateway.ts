@@ -2,7 +2,7 @@ import Stripe from "stripe";
 import { brand } from "@config/brand";
 import type { Market } from "@config/markets";
 import { formatMoney } from "@/lib/money";
-import { PlatformBalanceTooLow, type CardSummary, type ChargeResult, type InvoiceSummary, type MembershipStart, type PaymentsGateway, type TierForBilling } from "./gateway";
+import { PlatformBalanceTooLow, TransferRefused, type CardSummary, type ChargeResult, type InvoiceSummary, type MembershipStart, type PaymentsGateway, type TierForBilling } from "./gateway";
 import { stripeClient, type StripeAccount } from "./stripe";
 
 /**
@@ -530,6 +530,17 @@ export function createStripeGateway(account: StripeAccount): PaymentsGateway {
         // "balance_insufficient": the platform's available balance is too low (docs.stripe.com/error-codes).
         if (error instanceof Stripe.errors.StripeError && error.code === "balance_insufficient") {
           throw new PlatformBalanceTooLow(error.message);
+        }
+        // Any other 4xx is a definite "no": Stripe answered and made no transfer. Not a 409 (the same key is still
+        // running, or another request holds it), a 429 (try again later with the same key), or an idempotency
+        // error (an earlier request with this key was different and may have gone through). A 5xx, a timeout or
+        // a dropped connection is not a "no" either: the transfer may exist, so the same key must be used again.
+        if (
+          error instanceof Stripe.errors.StripeError && !(error instanceof Stripe.errors.StripeRateLimitError) &&
+          !(error instanceof Stripe.errors.StripeIdempotencyError) &&
+          error.statusCode !== undefined && error.statusCode >= 400 && error.statusCode < 500 && error.statusCode !== 409
+        ) {
+          throw new TransferRefused(error.message);
         }
         throw error;
       }

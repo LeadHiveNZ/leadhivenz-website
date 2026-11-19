@@ -9,6 +9,24 @@ price, a fee or a promise, add a line here saying what and why.
 
 ---
 
+## 2026-11-21 — A payout Stripe refuses for any other reason is retried with a new key
+
+(Migration `supabase/migrations/20261130000000_payout_refusals.sql`. Tests: `tests/unit/stripe-sandbox.test.ts`, "a payout Stripe refuses for another reason".)
+A failed payout (other than the platform balance) is tried three times, ten minutes apart (`MAX_PAYOUT_ATTEMPTS`), but every
+try used the same idempotency key, and Stripe replays a saved error for the same key for at least 24 hours, so tries 2 and 3
+could never work. Stripe's documentation (docs.stripe.com/api/idempotent_requests, docs.stripe.com/error-low-level, read
+19 Nov 2026): a new key is only safe once the first request has definitely failed; after a timeout, a dropped connection, a
+`409` or a `500` the outcome is unknown and the same key must be used, or the tradie could be paid twice. Now:
+- Stripe's definite "no" (any `4xx` except `409`, rate limits and an idempotency mismatch) is `TransferRefused`
+  (`src/lib/payments/gateway.ts`, `stripe-gateway.ts`). It adds one to `payouts.refusals` in the same database step that records
+  the failure, and the next try (ten minutes on, or the dispatcher's **Retry**) uses the next key: `-w1`, `-w2`, ... counting
+  balance waits and refusals together (`payoutKey` in `src/lib/billing/settle.ts`).
+- Anything else keeps the key it had, so a transfer that did go through is handed back by Stripe, never sent again. The same
+  goes for a server that stops mid-call: the refusal was never saved, so the key does not move.
+- Still three tries before it is marked failed and goes to the queue; the amount and charge of every try stay the same.
+
+---
+
 ## 2026-11-21 — What the first Stripe sandbox run found: the website question, a refund before the payout, paying ahead with no balance
 
 (Migration `supabase/migrations/20261129000000_platform_balance.sql`. Tests: `tests/unit/stripe-sandbox.test.ts`, worked by hand.)
