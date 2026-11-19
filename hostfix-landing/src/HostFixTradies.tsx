@@ -324,6 +324,7 @@ function HandUpForm({ saveLead, onDone }: { saveLead: Props["saveLead"]; onDone:
       </Field>
       <Field id="phone" label="Mobile number" error={errors.phone}>
         <input id="phone" name="phone" type="tel" inputMode="tel" autoComplete="tel" maxLength={30} className="hf-input" />
+        <span className="hf-fine">We'll text you about job offers and your sign-up. Reply STOP any time to opt out.</span>
       </Field>
       <Field id="email" label="Email" error={errors.email}>
         <input id="email" name="email" type="email" inputMode="email" autoComplete="email" maxLength={255} className="hf-input" />
