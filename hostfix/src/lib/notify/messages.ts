@@ -22,18 +22,35 @@ export function clip(text: string, max: number): string {
 const money = (cents: number, currency: string) => formatMoney(cents, currency);
 const first = (name: string) => name.trim().split(/\s+/)[0] ?? name;
 
+type OfferWords = {
+  title: string; suburb: string; payoutCents: number; currency: string; deadline: string; minutes: number; urgent: boolean; link: string;
+  /** Urgent only: the tradie's share of the urgent surcharge, paid only if they are on site by the deadline. */
+  urgentShareCents?: number | null;
+};
+
+function offerHead(o: OfferWords): string {
+  const start = `${B}${o.urgent ? " URGENT" : ""}: ${clip(o.title, 44)}, ${clip(o.suburb || "local", 18)}. Pays ${money(o.payoutCents, o.currency)}.`;
+  if (o.urgent && o.urgentShareCents) return `${start} ${money(o.urgentShareCents, o.currency)} of it only if on site by ${o.deadline}.`;
+  return `${start} On site by ${o.deadline}.`;
+}
+
 export const texts = {
   signInCode: (code: string) => `${B} code: ${code}. It works for 10 minutes. Do not share it with anyone.`,
 
   // ---- to tradies -------------------------------------------------------
-  offer: (o: { title: string; suburb: string; payoutCents: number; currency: string; deadline: string; minutes: number; urgent: boolean; link: string }) =>
-    `${B}${o.urgent ? " URGENT" : ""}: ${clip(o.title, 44)}, ${clip(o.suburb || "local", 18)}. Pays ${money(o.payoutCents, o.currency)}. On site by ${o.deadline}. Yours for ${o.minutes} min: ${o.link}`,
+  // An urgent offer says the urgent share is only paid if they are there by the deadline (DECISIONS.md, 2026-11-18).
+  offer: (o: OfferWords) => `${offerHead(o)} Yours for ${o.minutes} min: ${o.link}`,
 
-  offerOpen: (o: { title: string; suburb: string; payoutCents: number; currency: string; deadline: string; minutes: number; urgent: boolean; link: string }) =>
-    `${B}${o.urgent ? " URGENT" : ""}: ${clip(o.title, 44)}, ${clip(o.suburb || "local", 18)}. Pays ${money(o.payoutCents, o.currency)}. On site by ${o.deadline}. First to accept gets it: ${o.link}`,
+  offerOpen: (o: OfferWords) => `${offerHead(o)} First to accept gets it: ${o.link}`,
 
   jobYours: (o: { number: number; address: string; link: string }) =>
     `${B}: job ${o.number} is yours. ${clip(o.address, 60)}. Access notes and next steps: ${o.link}`,
+
+  laterTimeAccepted: (o: { number: number; when: string; link: string }) =>
+    `${B}: the owner will wait for you. Job ${o.number} is yours, on site ${o.when}. Address and details: ${o.link}`,
+
+  laterTimeSentOn: (o: { number: number }) =>
+    `${B} job ${o.number}: the owner needs someone sooner, so it has gone to another tradie. Thanks for offering a time. This never counts against you.`,
 
   jobCancelledTradie: (o: { number: number; suburb: string }) =>
     `${B}: job ${o.number}${o.suburb ? ` in ${clip(o.suburb, 20)}` : ""} has been cancelled. No need to attend.`,
@@ -79,13 +96,21 @@ export const texts = {
   jobLogged: (o: { reporter: string; property: string; title: string; totalCents: number; currency: string; link: string }) =>
     `${B}: ${clip(o.reporter, 20)} logged "${clip(o.title, 36)}" at ${clip(o.property, 24)} (${money(o.totalCents, o.currency)}). Finding a tradie now. ${o.link}`,
 
-  jobBooked: (o: { tradie: string; property: string; deadline: string; link: string }) =>
-    `${B}: ${clip(o.tradie, 30)} is booked for ${clip(o.property, 28)}, on site by ${o.deadline}. ${o.link}`,
+  /** `when` is "by 4:15pm today" for urgent, or the window the tradie chose: "between 9am and 11am tomorrow". */
+  jobBooked: (o: { tradie: string; property: string; when: string; link: string }) =>
+    `${B}: ${clip(o.tradie, 30)} is booked for ${clip(o.property, 28)}, on site ${o.when}. ${o.link}`,
 
-  tradieArrived: (o: { tradie: string; property: string }) => `${B}: ${clip(o.tradie, 30)} has arrived at ${clip(o.property, 28)}.`,
+  tradieArrived: (o: { tradie: string; property: string; link: string }) =>
+    `${B}: ${clip(o.tradie, 30)} has arrived at ${clip(o.property, 28)}. Not there? Tell us on the job page: ${o.link}`,
 
   stillArranging: (o: { property: string }) =>
     `${B}: we are still arranging a tradie for ${clip(o.property, 28)}. Our team is on it and will text you as soon as someone is booked.`,
+
+  notTakenYet: (o: { property: string; link: string }) =>
+    `${B}: no tradie has taken the job at ${clip(o.property, 28)} yet. Our team is ringing round now. You pay nothing unless a tradie does the job. ${o.link}`,
+
+  laterTimeOffered: (o: { tradie: string; hours: number; when: string; link: string }) =>
+    `${B}: ${clip(o.tradie, 26)} can't make it within ${o.hours} hours. They can come ${o.when}. Wait for them, or send it to another ${B} tradie now? ${o.link}`,
 
   quoteNeedsApproval: (o: { tradie: string; amountCents: number; currency: string; property: string; link: string }) =>
     `${B}: ${clip(o.tradie, 26)} has quoted ${money(o.amountCents, o.currency)} for more work at ${clip(o.property, 24)}. Nothing starts until you say yes: ${o.link}`,
@@ -102,9 +127,6 @@ export const texts = {
   paymentFailed: (o: { amountCents: number; currency: string; number: number; link: string }) =>
     `${B}: we could not charge your card ${money(o.amountCents, o.currency)} for job ${o.number}. Please update your card: ${o.link}`,
 
-  windowMissed: (o: { property: string; amountCents: number; currency: string }) =>
-    `${B}: we missed our promised time at ${clip(o.property, 28)}, so ${money(o.amountCents, o.currency)} of this job is on us. It comes off the bill when the job is done. We are sorry, and we are still on it.`,
-
   membershipFailed: (o: { property: string; link: string }) =>
     `${B}: your membership payment for ${clip(o.property, 28)} did not go through. Update your card to keep your cover: ${o.link}`,
 
@@ -112,8 +134,8 @@ export const texts = {
     `${B}: thanks for telling us about job ${o.number}. The tradie's payment is on hold and one of our team will be in touch.`,
 
   // ---- to cleaners and guests who reported -------------------------------
-  reporterBooked: (o: { property: string; deadline: string }) =>
-    `${B}: thanks for reporting the problem at ${clip(o.property, 28)}. A tradie is booked and will be there by ${o.deadline}.`,
+  reporterBooked: (o: { property: string; when: string }) =>
+    `${B}: thanks for reporting the problem at ${clip(o.property, 28)}. A tradie is booked and will be there ${o.when}.`,
 
   reporterDone: (o: { property: string }) => `${B}: the problem you reported at ${clip(o.property, 28)} has been fixed. Thank you.`,
 

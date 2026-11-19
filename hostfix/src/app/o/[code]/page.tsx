@@ -2,8 +2,11 @@ import { connection } from "next/server";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { acceptJob, passJob } from "@/app/actions/tradie";
-import { ActionForm } from "@/components/forms/ActionForm";
+import { acceptJob, passJob, suggestLater } from "@/app/actions/tradie";
+import { ActionForm, Select } from "@/components/forms/ActionForm";
+import { Reveal } from "@/components/ui/Reveal";
+import { canSuggestLater, laterTimeForOffer, windowsForAccepting } from "@/lib/dispatch/cascade";
+import { laterWindows, windowBetween, windowLabel } from "@/lib/jobs/arrival";
 import { SubmitButton } from "@/components/forms/SubmitButton";
 import { CostLines } from "@/components/jobs/JobParts";
 import { Countdown } from "@/components/jobs/TradieClient";
@@ -22,7 +25,7 @@ import { loadJobView } from "@/lib/jobs/view";
 import { getMarket } from "@/lib/markets/store";
 import { formatMoney } from "@/lib/money";
 import { getPropertyForStaff } from "@/lib/properties/service";
-import { formatDeadline } from "@/lib/time";
+import { formatDeadline, formatHourOfDay } from "@/lib/time";
 import { payTiming } from "@/lib/markets/display";
 
 export const metadata: Metadata = { title: "Job offer", robots: { index: false, follow: false } };
@@ -82,8 +85,19 @@ async function Opened({ params, searchParams }: { params: Params; searchParams: 
     );
   }
 
-  if (offer.status === "passed") return <Closed title="You passed on this job">It has been offered to someone else. Thanks for letting us know quickly.</Closed>;
+  if (offer.status === "passed") return <Closed title="You passed on this job">It has been offered to someone else. Thanks for letting us know quickly. Passing never counts against you.</Closed>;
   if (job.status === "cancelled") return <Closed title="This job was cancelled">The owner no longer needs it. Nothing for you to do.</Closed>;
+  const suggested = offer.status === "superseded" ? await laterTimeForOffer(db, offer.id) : null;
+  if (suggested?.status === "waiting") {
+    return (
+      <Closed title="We have asked the owner">
+        {`You can come ${windowBetween({ start: suggested.start, end: suggested.end }, at, market.timezone)}. We will text you as soon as they answer: wait for you, or send it to someone sooner. Either way it never counts against you.`}
+      </Closed>
+    );
+  }
+  if (suggested && (suggested.status === "declined" || suggested.status === "expired")) {
+    return <Closed title="The owner needed someone sooner">It has gone to another tradie. Thanks for offering a time. This never counts against you.</Closed>;
+  }
   const canTake = (offer.status === "pending" || offer.status === "expired") && (job.status === "offering" || job.status === "unfilled");
   if (!canTake) return <Closed title="This job has gone">Another tradie took it. There will be more.</Closed>;
 
@@ -92,6 +106,12 @@ async function Opened({ params, searchParams }: { params: Params; searchParams: 
   const photos = await countUploads(db, job.id, "report");
   const trade = findTrade(job.trade);
   const late = offer.status === "expired" || offer.expiresAt.getTime() <= at.getTime();
+  // A normal job: the tradie picks when they will be there, inside the promise (DECISIONS.md, 2026-11-18).
+  const windows = windowsForAccepting(job, market, at);
+  const urgentLine = lines.find((line) => line.kind === "urgent" && line.status === "active");
+  const afterHoursLine = lines.find((line) => line.kind === "after_hours" && line.status === "active");
+  const canSuggest = canSuggestLater(offer, job);
+  const later = canSuggest && job.respondBy ? laterWindows(market, job.respondBy, at) : [];
 
   return (
     <div className="space-y-5">
@@ -112,7 +132,7 @@ async function Opened({ params, searchParams }: { params: Params; searchParams: 
             <p className="display tabular text-5xl text-ink">{formatMoney(offer.payoutCents, job.currency)}</p>
           </div>
           <div className="text-right">
-            <p className="text-sm font-semibold text-muted">Be on site by</p>
+            <p className="text-sm font-semibold text-muted">{job.urgency === "urgent" ? "Be on site by" : "Promised on site by"}</p>
             <p className="text-lg font-bold text-ink">{job.respondBy ? formatDeadline(job.respondBy, at, market.timezone) : "As soon as you can"}</p>
           </div>
         </div>
@@ -127,13 +147,43 @@ async function Opened({ params, searchParams }: { params: Params; searchParams: 
           )}
         </p>
 
+        {(urgentLine || afterHoursLine) && (
+          <ul className="mt-3 space-y-1 text-sm text-muted">
+            {urgentLine && job.respondBy && (
+              <li>
+                The urgent share ({formatMoney(urgentLine.tradieCents, job.currency)}) is paid only if you tap Arrived by {formatDeadline(job.respondBy, at, market.timezone)}. After that, the
+                urgent fee is not charged to anyone.
+              </li>
+            )}
+            {afterHoursLine && (
+              <li>
+                The after-hours share ({formatMoney(afterHoursLine.tradieCents, job.currency)}) is paid only if you arrive before {formatHourOfDay(market.hoursStart)}, after{" "}
+                {formatHourOfDay(market.hoursEnd)} or on a non-working day.
+              </li>
+            )}
+          </ul>
+        )}
+
         <div className="mt-4 space-y-2.5">
-          <ActionForm action={acceptJob} className="space-y-2">
-            <input type="hidden" name="code" value={code} />
-            <SubmitButton pendingLabel="Accepting..." className="min-h-14 w-full text-lg">
-              Accept job
-            </SubmitButton>
-          </ActionForm>
+          {windows.length > 0 ? (
+            <ActionForm action={acceptJob} className="space-y-2">
+              <input type="hidden" name="code" value={code} />
+              <p className="font-bold text-ink">When will you be there? Tap a time to accept.</p>
+              {windows.map((window) => (
+                <SubmitButton key={window.end.toISOString()} name="window" value={window.end.toISOString()} pendingLabel="Accepting..." className="w-full">
+                  Accept: {windowLabel(window, at, market.timezone)}
+                </SubmitButton>
+              ))}
+              <p className="text-sm text-muted">The owner is told the time you pick. Being there by the end of it is what counts as on time.</p>
+            </ActionForm>
+          ) : (
+            <ActionForm action={acceptJob} className="space-y-2">
+              <input type="hidden" name="code" value={code} />
+              <SubmitButton pendingLabel="Accepting..." className="min-h-14 w-full text-lg">
+                Accept job
+              </SubmitButton>
+            </ActionForm>
+          )}
           <ActionForm action={passJob} className="space-y-2">
             <input type="hidden" name="code" value={code} />
             <SubmitButton variant="secondary" pendingLabel="Passing..." className="w-full">
@@ -141,7 +191,33 @@ async function Opened({ params, searchParams }: { params: Params; searchParams: 
             </SubmitButton>
           </ActionForm>
         </div>
-        <p className="mt-3 text-center text-sm text-muted">Accepting means you will be at the property by the time above. Can&apos;t make it? Pass, so it moves on quickly.</p>
+        <p className="mt-3 text-center text-sm text-muted">
+          Accepting means you will be at the property by the time you pick. Can&apos;t make it? Pass, so it moves on quickly. Passing never counts against you.
+        </p>
+
+        {canSuggest && later.length > 0 && (
+          <div className="mt-4">
+            <Reveal label="Can't make that time? Suggest a later one">
+              <ActionForm action={suggestLater} className="space-y-3">
+                <input type="hidden" name="code" value={code} />
+                <Select
+                  label="When can you come?"
+                  name="laterWindow"
+                  required
+                  placeholder="Choose a time"
+                  options={later.map((window) => ({ key: window.end.toISOString(), label: windowLabel(window, at, market.timezone) }))}
+                />
+                <p className="text-sm text-muted">
+                  We ask the owner whether to wait for you or send it to another tradie now. If they wait, the job is yours at that time
+                  {job.urgency === "urgent" ? " and is no longer urgent, so there is no urgent share" : ""}. Like passing, this never counts against you.
+                </p>
+                <SubmitButton variant="secondary" pendingLabel="Asking the owner...">
+                  Suggest this time
+                </SubmitButton>
+              </ActionForm>
+            </Reveal>
+          </div>
+        )}
       </Card>
 
       <Card>

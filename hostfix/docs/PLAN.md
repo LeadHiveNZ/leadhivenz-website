@@ -14,7 +14,7 @@
 >   Australia. Every screen and the tradie page now say that. Section 9 explains the one way to make it
 >   faster (pay tradies out of money already sitting in your Stripe balance) and why it is not switched on.
 > - **The timer is Vercel's**, once a minute (`/api/cron/tick`), not the database's own scheduler. It moves
->   offers on, credits missed promises, retries cards and pays tradies. Each step is safe to run twice.
+>   offers on, flags missed promises and no-shows, retries cards and pays tradies. Each step is safe to run twice.
 > - **Sign-in is a six-digit code** sent by email or text, made by the app itself. Supabase is used for the
 >   database and for photo storage only, not for login.
 > - **A tradie does not need to sign in for a job they were offered.** The link in the text is the accept page
@@ -34,7 +34,7 @@
 >   add-on the owner pays for. (Since 18 Nov 2026 the tradie gets the surcharge less the 15% fee: see below.)
 > - **Free to join** (`DECISIONS.md`, 17 Nov 2026): Essential is NZ$0, a property is covered as soon as a
 >   card is on file (no subscription, no monthly invoice), and the money is the 15% inside every menu price.
->   A missed promise takes the call-out portion of that job off its charge. Tradies need public liability
+>   (A missed promise took the call-out portion of that job off its charge until 18 Nov 2026: see below.) Tradies need public liability
 >   insurance on file, with its certificate uploaded, to be approved or offered work. The founding deposit is no longer offered; paid ones
 >   are refunded. The Essential-at-NZ$99 line above is history.
 > - **The real Queenstown prices are loaded** (59 researched jobs, `seed/menu-queenstown.json`): urgent
@@ -46,7 +46,15 @@
 > - **Portfolio, the second tier, is built** (`DECISIONS.md`, 17 Nov 2026): managers with 10+ properties pay
 >   one monthly retainer per account, banded by property count (NZ$600 / 900 / 1,200, 100+ by arrangement),
 >   re-banded from the next payment when properties are added or taken off. The 15% job fee is unchanged.
->   100+ pricing, missed-promise credits on Portfolio properties and the 60-day pilot are handled by a person.
+>   100+ pricing and the 60-day pilot are handled by a person.
+> - **Paid for what happened, and an on-time record** (`DECISIONS.md`, 18 Nov 2026). Missed promises are no
+>   longer credited. An urgent job reached after its deadline has no urgent line for anyone; the after-hours
+>   line is charged only if the Arrived tap is outside working hours. A normal job's tradie picks a two-hour
+>   arrival window when accepting. Nobody accepting in 3 hours texts the owner and alerts the team. Arrived
+>   taps with no location or far from earlier visits are flagged, and the owner has "The tradie isn't here".
+>   Network offers go first to tradies on time for 90% of their last 20 arrivals (from 10); declines never
+>   count. No-shows go to the queue; 3 in 90 days flags a tradie for a conversation, never automatic removal.
+>   The first choice or backup can suggest a later time, and the owner chooses to wait or send it on.
 > - **The demand test is built** (`docs/DEMAND-TEST.md`): the owner page sells founding spots for a
 >   refundable NZ$99 deposit or sends the full price list, and the leads page keeps the 14-day scorecard.
 >

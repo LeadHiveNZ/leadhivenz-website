@@ -166,13 +166,75 @@ export function monthBounds(key: string, timeZone: string): { start: Date; end: 
 
 /** The instant at which it is 00:00 on that date in that timezone. */
 function zonedMidnight(year: number, month: number, day: number, timeZone: string): Date {
+  return zonedInstant(year, month, day, 0, timeZone);
+}
+
+/**
+ * The instant at which the wall clock in that timezone shows that date and
+ * hour of day. Hours can be on the half hour: 16.5 is 4:30pm.
+ */
+export function zonedInstant(year: number, month: number, day: number, hourOfDay: number, timeZone: string): Date {
+  const hour = Math.floor(hourOfDay);
+  const minute = Math.round((hourOfDay - hour) * 60);
+  const target = Date.UTC(year, month - 1, day, hour, minute, 0);
   // Start from the same wall time in UTC, then correct by the zone's offset
   // at that moment. Twice, in case the first guess straddles a clock change.
-  let guess = Date.UTC(year, month - 1, day, 0, 0, 0);
+  let guess = target;
   for (let i = 0; i < 2; i += 1) {
     const p = localParts(new Date(guess), timeZone);
     const asUtc = Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, 0);
-    guess -= asUtc - Date.UTC(year, month - 1, day, 0, 0, 0);
+    guess -= asUtc - target;
   }
   return new Date(guess);
+}
+
+/**
+ * QUIET HOURS (DECISIONS.md, 2026-11-18). The texts about a normal job that
+ * nobody has taken yet, and a tradie's suggested later time, are never sent
+ * between 9pm and 7am on the wall in the market: they wait until 7am. The
+ * clocks that decide when those texts are due (3 hours, 2 hours) also count
+ * only the hours from 7am to 9pm, so they do not run out overnight. Urgent jobs
+ * are not affected: they go out at any time.
+ *
+ * The market's working hours (7am to 4:30pm in Queenstown) are when tradies
+ * work, which is a different question from when it is fine to text an owner,
+ * so these are their own constants.
+ */
+export const TEXTING_STARTS = 7;
+export const TEXTING_ENDS = 21;
+
+function awakeBounds(date: Date, timeZone: string): { start: Date; end: Date; nextStart: Date } {
+  const p = localParts(date, timeZone);
+  const start = zonedInstant(p.year, p.month, p.day, TEXTING_STARTS, timeZone);
+  const end = zonedInstant(p.year, p.month, p.day, TEXTING_ENDS, timeZone);
+  const tomorrow = localParts(new Date(zonedInstant(p.year, p.month, p.day, 12, timeZone).getTime() + 24 * 60 * 60 * 1000), timeZone);
+  return { start, end, nextStart: zonedInstant(tomorrow.year, tomorrow.month, tomorrow.day, TEXTING_STARTS, timeZone) };
+}
+
+/** True between 9pm and 7am on the wall in that timezone. */
+export function isQuietHours(date: Date, timeZone: string): boolean {
+  const { start, end } = awakeBounds(date, timeZone);
+  return date.getTime() < start.getTime() || date.getTime() >= end.getTime();
+}
+
+/** The moment itself if it is between 7am and 9pm there, or else the next 7am. */
+export function nextTextingTime(date: Date, timeZone: string): Date {
+  const { start, end, nextStart } = awakeBounds(date, timeZone);
+  if (date.getTime() < start.getTime()) return start;
+  if (date.getTime() >= end.getTime()) return nextStart;
+  return date;
+}
+
+/** Adds hours, counting only the time between 7am and 9pm there. Mon 7pm plus 3 hours is Tue 8am. */
+export function addTextingHours(from: Date, hours: number, timeZone: string): Date {
+  let remaining = hours * 60 * 60 * 1000;
+  let cursor = nextTextingTime(from, timeZone);
+  for (let day = 0; day < 400; day += 1) {
+    const { end, nextStart } = awakeBounds(cursor, timeZone);
+    const left = end.getTime() - cursor.getTime();
+    if (remaining <= left) return new Date(cursor.getTime() + remaining);
+    remaining -= left;
+    cursor = nextStart;
+  }
+  return cursor;
 }

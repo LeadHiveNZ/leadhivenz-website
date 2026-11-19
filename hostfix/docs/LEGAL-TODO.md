@@ -11,8 +11,11 @@ today, and the questions each document has to answer. Where a page and this file
 what customers agreed to: fix the page, then this file.
 
 Since this brief was first written, the business changed: **owners pay nothing to join and there is no
-monthly membership** (the 15% fee is inside each fixed job price); the missed-promise credit is the
-call-out portion of the job, not a month's membership; the founding deposit is no longer offered and paid
+monthly membership** (the 15% fee is inside each fixed job price); since 18 November 2026 there is **no
+missed-promise credit at all** (the owner instead pays only for what happened: no urgent fee when the
+tradie is late, no after-hours fee in working hours, nothing unless a tradie does the job, and the tradie
+agreement now covers arrival windows, the on-time record, no-shows and "declining never counts"; see
+DECISIONS.md); the founding deposit is no longer offered and paid
 ones are refunded; and every tradie must have public liability insurance on file. Read the membership and
 deposit paragraphs below with that in mind.
 

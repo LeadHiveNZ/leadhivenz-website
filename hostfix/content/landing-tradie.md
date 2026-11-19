@@ -4,19 +4,19 @@ We send you fixed-price maintenance jobs at holiday homes, straight to your phon
 
 - Paid automatically, in your bank about {{payout_days}} after the job
 - You see what you'll be paid before you accept
-- Urgent adds {{urgent_share}} to your pay and after hours adds {{after_hours_share}}: the surcharge less our {{platform_fee}}, like the rest of the price
+- Urgent adds {{urgent_share}} to your pay when you're on site by the deadline, and after hours adds {{after_hours_share}} when you come outside working hours: the surcharge less our {{platform_fee}}, like the rest of the price
 
 ## Why tradies join
 
 - **No tyre-kickers.** The owner's card is on file before you get the job. No quotes that go nowhere.
 - **No paperwork.** No invoices, no statements, no chasing. We handle the money.
 - **Work that fits around your day.** Short jobs, close together, at homes that are often empty between guests.
-- **First pick of the jobs.** Each trade has a first-choice tradie who is offered every job first. You keep the spot while you take the jobs and turn up on time.
+- **First pick of the jobs.** Each trade has a first-choice tradie who is offered every job first. What counts is turning up on time to the jobs you accept. Passing never counts against you.
 
 ## How it works
 
 1. **We text you a job.** You see what it is, where it is and what you'll be paid.
-2. **You have 15 minutes to take it.** One tap to accept or pass. If you pass, it goes to the next tradie.
+2. **You have 15 minutes to take it.** Pick when you'll be there and tap to accept, or pass. If you pass, it goes to the next tradie, and that never counts against you.
 3. **Do the job and upload a photo.** That's your proof of work.
 4. **Get paid.** Your payment is sent within two days of the job and is in your bank about {{payout_days}} after the job. No invoice.
 
@@ -25,7 +25,7 @@ We send you fixed-price maintenance jobs at holiday homes, straight to your phon
 - Handymen, plumbers, electricians, gasfitters and appliance techs working in and around {{market}}
 - Insured. You'll need public liability insurance, and to upload the certificate from your insurer (a PDF or a photo of it)
 - Licensed where the law requires it. We'll need your licence number and expiry date. An LBP number is welcome but not needed
-- Reliable. Owners are promised a response time, so we track who turns up on time
+- Reliable. You choose your arrival time when you accept, and we track whether you're there by then
 
 ## Questions
 
@@ -35,7 +35,7 @@ Nothing to join, and no lead fees. We keep a fee out of each job, and the payout
 
 ### Do I have to take every job?
 
-No. But tradies who accept most jobs and turn up on time are offered the most work.
+No. Passing on a job never leads to fewer offers or to being removed. What counts is your on-time record on the jobs you do accept: it decides who is offered network jobs first.
 
 ### How do I get paid?
 

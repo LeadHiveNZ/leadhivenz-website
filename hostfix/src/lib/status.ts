@@ -153,7 +153,7 @@ export async function setupStatus(): Promise<StatusItem[]> {
   } else if (!cronSecret || cronSecret.length < 16) {
     items.push({
       key: "timer", label: "The timer", state: "problem",
-      detail: "CRON_SECRET is not set (it needs at least 16 characters). Without it offers never move on to the next tradie, missed promises are not credited and tradies are not paid.",
+      detail: "CRON_SECRET is not set (it needs at least 16 characters). Without it offers never move on to the next tradie, missed promises and no-shows are not flagged and tradies are not paid.",
     });
   } else {
     let last: Date | null = null;

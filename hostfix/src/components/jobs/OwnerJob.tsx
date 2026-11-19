@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { answerQuote, cancelOwnerJob, goAhead, reportProblem } from "@/app/actions/owner";
+import { answerLater, answerQuote, cancelOwnerJob, goAhead, reportProblem, tradieNotHere } from "@/app/actions/owner";
 import { ActionForm, Area } from "@/components/forms/ActionForm";
 import { SubmitButton } from "@/components/forms/SubmitButton";
 import { secondaryButtonClass } from "@/components/forms/styles";
@@ -11,10 +11,12 @@ import type { JobView } from "@/lib/jobs/view";
 import { formatMoney } from "@/lib/money";
 import { displayPhone } from "@/lib/phone";
 import { addressLine } from "@/lib/properties/service";
-import { formatDateTime } from "@/lib/time";
+import { windowBetween } from "@/lib/jobs/arrival";
+import { brand } from "@config/brand";
+import { formatDateTime, formatDeadline, formatHourOfDay } from "@/lib/time";
 import { CostLines, Deadline, History, JobStatus, Panel, PhotoGrid } from "./JobParts";
 
-export type OwnerJobFlash = { sent?: boolean; already?: boolean; cancelled?: boolean; answered?: boolean; told?: boolean };
+export type OwnerJobFlash = { sent?: boolean; already?: boolean; cancelled?: boolean; answered?: boolean; told?: boolean; waiting?: boolean; absent?: boolean };
 
 type Props = {
   view: JobView;
@@ -32,7 +34,9 @@ function explain(view: JobView): string {
     case "awaiting_owner":
       return job.reportedBy === "team" ? `${job.reporterName ?? "Your team"} reported this. Nobody has been sent yet.` : "A guest reported this. Nobody has been sent yet.";
     case "offering":
-      return "We are offering this job to our tradies now. You will get a text when one takes it.";
+      return view.laterTime
+        ? `${view.laterTime.tradieName} can't make it in time and has suggested a later time. Your answer is below.`
+        : "We are offering this job to our tradies now. You will get a text when one takes it.";
     case "unfilled":
       return "Our team is arranging a tradie for you. You will get a text when one is booked.";
     case "accepted":
@@ -82,6 +86,16 @@ export function OwnerJob({ view, now, code, flash = {}, prices }: Props) {
       {flash.answered && (
         <Notice tone="good" title="Thanks, the tradie has been told" />
       )}
+      {flash.waiting && (
+        <Notice tone="good" title="Done: they will come at the time they suggested">
+          We have told them. You are charged only when the job is done.
+        </Notice>
+      )}
+      {flash.absent && (
+        <Notice tone="good" title="Thanks. We are ringing the tradie now">
+          A person on our team will call you back. You are not charged for anything that was not done.
+        </Notice>
+      )}
       {flash.told && (
         <Notice tone="good" title="Thanks for telling us">
           A person on our team will look into it and come back to you.
@@ -123,7 +137,31 @@ export function OwnerJob({ view, now, code, flash = {}, prices }: Props) {
               Yes, and it is urgent{prices?.urgent ? ` · ${fmt(prices.urgent.ownerCents)}` : ""}
             </SubmitButton>
             <p className="text-center text-sm text-muted">
-              On site within {prices?.urgent?.responseHours ?? 4} hours{prices?.urgent?.afterHours ? ". Includes the after-hours call-out." : "."}
+              On site within {prices?.urgent?.responseHours ?? 4} hours. If the tradie is later than that, the urgent fee is not charged.
+              {prices?.urgent?.afterHours ? ` The after-hours call-out is charged only if they arrive before ${formatHourOfDay(market.hoursStart)}, after ${formatHourOfDay(market.hoursEnd)} or on a non-working day.` : ""}
+            </p>
+          </ActionForm>
+        </Card>
+      )}
+
+      {view.laterTime && job.status === "offering" && (
+        <Card className="border-brand/30 sm:p-6">
+          <SectionTitle>{view.laterTime.tradieName} can&rsquo;t make it within {job.responseHours} hours</SectionTitle>
+          <p className="text-lg text-ink">
+            They can come {windowBetween({ start: view.laterTime.start, end: view.laterTime.end }, now, market.timezone)}.
+          </p>
+          <ActionForm action={answerLater} className="mt-4 space-y-2.5">
+            {which}
+            <input type="hidden" name="proposalId" value={view.laterTime.id} />
+            <SubmitButton name="answer" value="wait" pendingLabel="Sending..." className="w-full">
+              Wait for {view.laterTime.tradieName}
+            </SubmitButton>
+            <SubmitButton name="answer" value="send" variant="secondary" pendingLabel="Sending..." className="w-full">
+              Send it to another {brand.name} tradie now
+            </SubmitButton>
+            <p className="text-center text-sm text-muted">
+              {job.urgency === "urgent" ? "If you wait, the job is no longer urgent and the urgent fee is not charged. " : ""}
+              If you have not answered by {formatDeadline(view.laterTime.answerBy, now, market.timezone)}, we send it to another tradie.
             </p>
           </ActionForm>
         </Card>
@@ -178,6 +216,18 @@ export function OwnerJob({ view, now, code, flash = {}, prices }: Props) {
               </a>
             )}
           </div>
+          {(job.status === "on_site" || job.status === "awaiting_approval") && !job.ownerSaysAbsentAt && (
+            <ActionForm action={tradieNotHere} className="mt-4 space-y-2 border-t border-line pt-4">
+              {which}
+              <p className="text-sm text-muted">The app says {tradie.businessName} has arrived. If nobody is there, tell us and we ring them straight away.</p>
+              <SubmitButton variant="secondary" pendingLabel="Telling the team..." className="w-full">
+                The tradie isn&rsquo;t here
+              </SubmitButton>
+            </ActionForm>
+          )}
+          {job.ownerSaysAbsentAt && job.status !== "completed" && (
+            <p className="mt-3 text-sm font-semibold text-wait">You told us the tradie isn&rsquo;t there. Our team is on it.</p>
+          )}
         </Panel>
       )}
 

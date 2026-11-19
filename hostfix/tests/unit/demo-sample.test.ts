@@ -46,7 +46,7 @@ describe("the demo's sample data", () => {
     );
     expect(jobs.map((job) => job.status)).toEqual([
       "completed", // 1 done and paid
-      "completed", // 2 promise missed, credited, then done
+      "completed", // 2 the tradie was not there in time (a no-show), then done
       "completed", // 3 done, then a problem raised
       "completed", // 4 done, card declined
       "awaiting_approval", // 5 quote waiting for the owner
@@ -56,6 +56,8 @@ describe("the demo's sample data", () => {
       "offering", // 9 on offer now
     ]);
     expect(jobs[1]!.window_missed_at).not.toBeNull();
+    const noShow = await t.db.query<{ no_show_at: Date | null }>("select no_show_at from public.jobs where number = $1", [jobs[1]!.number]);
+    expect(noShow[0]!.no_show_at).not.toBeNull();
 
     // Money: three charged, one declined; one payout sent, one on hold, one waiting on the card.
     const payments = await t.db.query<{ status: string }>("select p.status from public.payments p join public.jobs j on j.id = p.job_id order by j.number");
@@ -63,9 +65,9 @@ describe("the demo's sample data", () => {
     const payouts = await t.db.query<{ status: string }>("select p.status from public.payouts p join public.jobs j on j.id = p.job_id order by j.number");
     expect(payouts.map((row) => row.status)).toEqual(["sent", "sent", "paused", "waiting"]);
 
-    // The guarantee: one credit for the missed promise, passed on to the payment company.
+    // A missed promise is no longer credited (DECISIONS.md, 2026-11-18): there are no credits at all.
     const credits = await t.db.query<{ reason: string; status: string }>("select reason, status from public.credits");
-    expect(credits).toEqual([{ reason: "missed_window", status: "applied" }]);
+    expect(credits).toEqual([]);
 
     // The dispatcher's queue holds exactly the three things that need a person.
     const open = await listExceptions(t.db, { status: "open" });

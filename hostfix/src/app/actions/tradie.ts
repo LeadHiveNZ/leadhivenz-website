@@ -7,16 +7,17 @@ import { sendQueued, settleNow } from "@/lib/after";
 import { currentViewer, requireTradie } from "@/lib/auth/current";
 import { getDb } from "@/lib/db";
 import type { Db } from "@/lib/db/types";
-import { acceptOffer, passOffer } from "@/lib/dispatch/cascade";
+import { acceptOffer, passOffer, suggestLaterTime, windowsForAccepting } from "@/lib/dispatch/cascade";
 import { baseUrl } from "@/lib/env";
 import { getFileStore } from "@/lib/files/store";
 import { checkFile } from "@/lib/files/uploads";
 import { dollarsToCents, list, problem, text, ticked, type FormState } from "@/lib/forms";
 import { isUuid } from "@/lib/ids";
-import { getJobForTradie, getOffer } from "@/lib/jobs/store";
+import { getJobForStaff, getJobForTradie, getOffer } from "@/lib/jobs/store";
 import type { Job, Offer } from "@/lib/jobs/types";
 import { completeJob, markArrived, markEnRoute, reportNoAccess, submitQuote } from "@/lib/jobs/work";
 import { getMarket } from "@/lib/markets/store";
+import { now } from "@/lib/clock";
 import { paymentsFor } from "@/lib/payments";
 import { fileFromForm, saveInsuranceCertificate } from "@/lib/tradies/certificate";
 import { getTradie, saveLicence, savePayoutAccount, setTradiePaused, TradieError, updateTradie } from "@/lib/tradies/service";
@@ -64,7 +65,15 @@ export async function acceptJob(_previous: FormState, formData: FormData): Promi
   const db = await getDb();
   const found = await offerBeingAnswered(db, formData);
   if (!found) return { message: NO_OFFER };
-  const result = await db.tx((tx) => acceptOffer(tx, found.offer.id, found.via));
+  // A normal job: the tradie picks when they will be there (DECISIONS.md, 2026-11-18). An urgent one has its deadline.
+  const windowEnd = text(formData, "window");
+  // The offer is this tradie's own (checked above), so reading its job here shows them nothing new.
+  const offered = await getJobForStaff(db, found.offer.jobId);
+  const offeredMarket = offered ? await getMarket(db, offered.market) : null;
+  if (offered && offeredMarket && !windowEnd && windowsForAccepting(offered, offeredMarket, now()).length > 0) {
+    return { message: "Choose when you will be there, then the job is yours." };
+  }
+  const result = await db.tx((tx) => acceptOffer(tx, found.offer.id, found.via, undefined, { windowEnd: windowEnd || null }));
   await sendQueued(db);
   switch (result.result) {
     case "accepted":
@@ -76,6 +85,8 @@ export async function acceptJob(_previous: FormState, formData: FormData): Promi
       return { message: "This job is no longer available." };
     case "passed":
       return { message: "You passed on this one, so it went to someone else." };
+    case "window_gone":
+      return { message: "That time is no longer on the list. Choose another time." };
     case "not_eligible":
       return { message: "This job cannot be given to you right now. Check that your licence for this trade is on file and in date, and that you are not paused." };
     default:
@@ -90,6 +101,19 @@ export async function passJob(_previous: FormState, formData: FormData): Promise
   await db.tx((tx) => passOffer(tx, found.offer.id, found.via));
   await sendQueued(db);
   redirect(found.code ? `/o/${found.code}?passed=1` : "/tradie?passed=1");
+}
+
+/** The owner's chosen tradie can't make the promised time and suggests a later one. Never counts against them. */
+export async function suggestLater(_previous: FormState, formData: FormData): Promise<FormState> {
+  const db = await getDb();
+  const found = await offerBeingAnswered(db, formData);
+  if (!found) return { message: NO_OFFER };
+  const windowEnd = text(formData, "laterWindow");
+  if (!windowEnd) return problem(formData, "Choose the time you can come.", { laterWindow: "Choose the time you can come." });
+  const result = await db.tx((tx) => suggestLaterTime(tx, found.offer.id, windowEnd, found.via));
+  await sendQueued(db);
+  if (!result.ok) return { message: result.message };
+  redirect(found.code ? `/o/${found.code}?asked=1` : "/tradie?asked=1");
 }
 
 export async function onMyWay(_previous: FormState, formData: FormData): Promise<FormState> {

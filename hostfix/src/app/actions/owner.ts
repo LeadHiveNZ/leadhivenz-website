@@ -14,11 +14,13 @@ import { dollarsToCents, list, problem, text, ticked, type FormState } from "@/l
 import { approveGuestReport, cancelJob, createJob } from "@/lib/jobs/create";
 import { getJobForOwner, getQuote } from "@/lib/jobs/store";
 import type { Job } from "@/lib/jobs/types";
-import { decideQuote } from "@/lib/jobs/work";
+import { answerLaterTime } from "@/lib/dispatch/cascade";
+import { decideQuote, reportTradieAbsent } from "@/lib/jobs/work";
 import { getMarket } from "@/lib/markets/store";
 import { getBilling, updateOwnerContact } from "@/lib/owners/service";
 import { paymentsFor } from "@/lib/payments";
 import { normalisePhone } from "@/lib/phone";
+import { isUuid } from "@/lib/uuid";
 import { IMPORT_MAX_ROWS, parsePropertyRows } from "@/lib/properties/import";
 import { cancelPortfolio, choosePortfolio, getPortfolio, PortfolioError, startPortfolio } from "@/lib/properties/portfolio";
 import { activateFreeMembership, changeTier, createProperty, getProperty, PropertyError, requestCancel, rotateReportLink, startMembership, updateProperty } from "@/lib/properties/service";
@@ -304,6 +306,31 @@ export async function reportProblem(_previous: FormState, formData: FormData): P
   await sendQueued(db);
   if (!result.ok) return problem(formData, result.message, { reason: result.message });
   redirect(`${found.back}?told=1`);
+}
+
+/** The owner's chosen tradie suggested a later time: wait for them, or send it to another tradie now. Buttons only, never a link. */
+export async function answerLater(_previous: FormState, formData: FormData): Promise<FormState> {
+  const db = await getDb();
+  const found = await ownersJob(db, formData);
+  if (!found) return { message: NOT_FOUND };
+  const proposalId = text(formData, "proposalId");
+  const owned = await db.query("select 1 from public.arrival_proposals where id = $1::uuid and job_id = $2::uuid", [isUuid(proposalId) ? proposalId : null, found.job.id]);
+  if (owned.length === 0) return { message: "We could not find that choice. It may already have been answered." };
+  const result = await db.tx((tx) => answerLaterTime(tx, proposalId, text(formData, "answer") === "wait", found.actor));
+  await sendQueued(db);
+  if (!result.ok) return { message: result.message };
+  redirect(`${found.back}?${result.waited ? "waiting" : "sent"}=1`);
+}
+
+/** "The tradie isn't here": the app says they arrived, the owner says they did not. Goes to the team straight away. */
+export async function tradieNotHere(_previous: FormState, formData: FormData): Promise<FormState> {
+  const db = await getDb();
+  const found = await ownersJob(db, formData);
+  if (!found) return { message: NOT_FOUND };
+  const result = await reportTradieAbsent(db, found.job.id, found.actor);
+  await sendQueued(db);
+  if (!result.ok) return { message: result.message };
+  redirect(`${found.back}?absent=1`);
 }
 
 export async function saveAccount(_previous: FormState, formData: FormData): Promise<FormState> {

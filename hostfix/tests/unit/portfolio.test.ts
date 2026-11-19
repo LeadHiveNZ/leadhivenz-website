@@ -3,7 +3,7 @@ import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { launchMarket } from "@config/markets";
 import { marketNumbers } from "@/lib/admin/metrics";
-import { chargeJob, creditMissedWindows } from "@/lib/billing/settle";
+import { chargeJob, markMissedWindows } from "@/lib/billing/settle";
 import { ownerStatement } from "@/lib/billing/statements";
 import { addHours, addMinutes, setTestNow } from "@/lib/clock";
 import { acceptOffer } from "@/lib/dispatch/cascade";
@@ -330,11 +330,11 @@ describe("a job at a Portfolio property", () => {
     const { properties } = await makePortfolio(t.db, manager.ownerId, 10);
     const job = await logJob(t.db, properties[0]!, { code: "PL-01" });
     setTestNow(addMinutes(addHours(MONDAY_10AM, 24), 1));
-    expect(await creditMissedWindows(t.db)).toEqual({ missed: 1, credited: 0 });
+    // Missed promises are no longer credited anywhere (DECISIONS.md, 2026-11-18): Portfolio is the same as Essential.
+    expect(await markMissedWindows(t.db)).toEqual({ missed: 1, noShows: 0 });
     expect(await t.db.query("select 1 from public.credits")).toHaveLength(0);
     const [raised] = await t.db.query<{ summary: string }>("select summary from public.exceptions where job_id = $1::uuid and kind = 'missed_window'", [job.id]);
-    expect(raised!.summary).toContain("Missed window on a Portfolio property");
-    expect(raised!.summary).toContain("Nothing was credited automatically");
+    expect(raised!.summary).toContain("Nothing is charged unless a tradie does the job");
     expect(await textsTo(t.db, manager.user.phone!, "window_missed")).toHaveLength(0);
   });
 });

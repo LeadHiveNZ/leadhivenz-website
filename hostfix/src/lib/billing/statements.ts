@@ -57,9 +57,15 @@ export async function ownerStatement(db: Db, ownerId: string, market: { slug: st
     });
   }
 
-  const jobs = await db.query<{ paid_at: Date; amount_cents: number; tax_cents: number; refunded_cents: number; number: number; title: string; property: string; callout_off: number | null }>(
+  const jobs = await db.query<{
+    paid_at: Date; amount_cents: number; tax_cents: number; refunded_cents: number; number: number; title: string; property: string; callout_off: number | null;
+    urgent_off: boolean; after_hours_off: boolean;
+  }>(
     `select pay.paid_at, pay.amount_cents, pay.tax_cents, pay.refunded_cents, j.number, j.title, p.name as property,
-            (select c.amount_cents from public.credits c where c.job_id = j.id and c.reason = 'missed_window' and c.status = 'applied') as callout_off
+            (select c.amount_cents from public.credits c where c.job_id = j.id and c.reason = 'missed_window' and c.status = 'applied') as callout_off,
+            -- A surcharge taken off because of when the tradie arrived (DECISIONS.md, 2026-11-18).
+            exists (select 1 from public.job_lines l where l.job_id = j.id and l.kind = 'urgent' and l.status = 'void') as urgent_off,
+            exists (select 1 from public.job_lines l where l.job_id = j.id and l.kind = 'after_hours' and l.status = 'void') as after_hours_off
        from public.payments pay join public.jobs j on j.id = pay.job_id join public.properties p on p.id = j.property_id
       where pay.owner_id = $1::uuid and j.market = $2 and pay.paid_at is not null and pay.paid_at >= $3::timestamptz and pay.paid_at < $4::timestamptz`,
     range,
@@ -67,7 +73,9 @@ export async function ownerStatement(db: Db, ownerId: string, market: { slug: st
   for (const row of jobs) {
     // A missed promise took the call-out off this job's charge: the amount here is already the smaller one.
     const off = row.callout_off ? ` (${formatMoney(Number(row.callout_off), market.currency)} off: we missed our promised time)` : "";
-    lines.push({ date: new Date(row.paid_at), kind: "job", description: `Job ${Number(row.number)}: ${row.title}${off}`, property: row.property, amountCents: row.amount_cents, taxCents: row.tax_cents });
+    const surcharges = [row.urgent_off ? "urgent" : null, row.after_hours_off ? "after-hours" : null].filter(Boolean);
+    const dropped = surcharges.length > 0 ? ` (no ${surcharges.join(" or ")} fee charged)` : "";
+    lines.push({ date: new Date(row.paid_at), kind: "job", description: `Job ${Number(row.number)}: ${row.title}${off}${dropped}`, property: row.property, amountCents: row.amount_cents, taxCents: row.tax_cents });
     if (row.refunded_cents > 0) {
       const share = row.amount_cents > 0 ? Math.round((row.tax_cents * row.refunded_cents) / row.amount_cents) : 0;
       lines.push({ date: new Date(row.paid_at), kind: "refund", description: `Refund on job ${Number(row.number)}`, property: row.property, amountCents: -row.refunded_cents, taxCents: -share });
@@ -87,7 +95,8 @@ export async function ownerStatement(db: Db, ownerId: string, market: { slug: st
   for (const row of credits) {
     lines.push({
       date: new Date(row.created_at), kind: "credit",
-      description: row.reason === "missed_window" ? "Response guarantee credit (comes off your next membership payment)" : "Credit (comes off your next membership payment)",
+      // Missed-promise credits stopped on 18 November 2026; older ones still show.
+      description: row.reason === "missed_window" ? "Missed-time credit (comes off your next membership payment)" : "Credit (comes off your next membership payment)",
       property: row.property ?? "", amountCents: -row.amount_cents, taxCents: 0,
     });
   }

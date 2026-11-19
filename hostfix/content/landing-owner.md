@@ -3,7 +3,7 @@
 One place for every trade your holiday home needs. A checked local tradie on site within 24 hours, or 4 hours when it's urgent, at a fixed price you see before you book.
 
 - Free to join. Jobs at fixed prices, charged only when something is fixed
-- A tradie on site within 24 hours, or 4 when it's urgent. Miss it and the call-out is on us
+- A tradie on site within 24 hours, or 4 when it's urgent. Late on an urgent job? You don't pay the urgent fee
 - Your cleaner and your guests can report a problem from their phone
 
 ## Sound familiar?
@@ -15,7 +15,7 @@ One place for every trade your holiday home needs. A checked local tradie on sit
 ## How it works
 
 1. **Anyone can report it.** You, your cleaner from their own link (one link for every house you give them, signed with their name), or your guest from the QR card in the house. A photo and a minute.
-2. **We find the tradie, not you.** It goes straight to our first-choice tradie for that trade. If they can't take it, it goes to the next one. You get a text at each step.
+2. **We find the tradie, not you.** It goes straight to our first-choice tradie for that trade. If they can't take it, it goes to the next one. The tradie who takes it picks a two-hour window to arrive in, and you get a text with it.
 3. **They get in without you.** Your lockbox code and access notes are shown only to the tradie who accepts the job.
 4. **You get photos and a fixed price.** Your card is charged the menu price when the job is done. One statement a month.
 
@@ -23,15 +23,15 @@ One place for every trade your holiday home needs. A checked local tradie on sit
 
 ### Free to join. Pay per job.
 
-A tradie on site within 24 hours, at the fixed menu price. Need someone within 4 hours? Add {{urgent}} on the day and the tradie drops what they are doing, plus {{after_hours}} outside working hours.
+A tradie on site within 24 hours, at the fixed menu price. Need someone within 4 hours? Add {{urgent}} on the day and the tradie drops what they are doing, plus {{after_hours}} when they come outside working hours.
 
 ---
 
 Jobs are charged at the fixed price when the job is done, GST included. Small parts are in the price, and bigger parts are charged at cost. Not on the menu? {{callout}} for a tradie to come and look, then a quote. Nothing over {{approval_limit}} starts without your yes.
 
-## If we miss, the call-out is on us
+## You only pay for what you got
 
-> A tradie on site within 24 hours, or 4 hours when it's urgent. Miss it and the call-out portion of that job, up to {{callout}}, comes off your bill automatically. You don't have to ask.
+> Urgent, and the tradie gets there after the 4 hours? The urgent fee isn't charged. After-hours rate, but they came in working hours? Not charged either. Nobody has taken your job after 3 hours? We text you and ring round, and you pay nothing unless a tradie does the job.
 
 ## Who this is not for
 

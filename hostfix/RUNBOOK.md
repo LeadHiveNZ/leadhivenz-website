@@ -63,20 +63,40 @@ told you are finding someone by hand. The promised time is still running.
 passes. If no tradie is booked at all, treat it as "Nobody accepted". It closes when the tradie arrives.
 
 ### Missed the promise
-**Means.** Nobody was on site by the promised time. The call-out portion of that job (the market's
-call-out fee, NZ$225 in Queenstown, or the job's price if that is less) has **already been credited
-automatically** and the owner has been texted. It comes off that job's charge when the job is done; the
-tradie is still paid in full. (One credit per property per month: a second miss in the same month is not
-credited again.)
-
-On a **Portfolio** property (a manager's account) nothing is credited automatically: the note says
-"Missed window on a Portfolio property". Ask the admin what to credit, then give it with **Give the
-owner a credit** on the owner's page.
+**Means.** Nobody had taken the job and nobody was on site by the promised time. Nothing is credited:
+missed promises stopped being credited on 18 November 2026 (DECISIONS.md). The owner pays nothing
+unless a tradie does the job.
 
 **Do.**
 1. Ring the owner and say sorry. Do not make them chase you.
-2. Make sure a tradie is actually going. If not, assign one.
+2. Find a tradie and assign them on the job page.
 3. Mark as dealt with, noting what went wrong. The admin reads these.
+
+### Nobody has taken it yet
+**Means.** A normal job has gone 3 hours (the market's setting, counting only 7am to 9pm) with nobody
+accepting. The owner is texted that we are ringing round and that they pay nothing unless a tradie does
+the job (never between 9pm and 7am: the text waits for 7am, and the note says so), and the founder's
+phone has been alerted.
+
+**Do.** Ring tradies who do this trade. When one says yes, assign them on the job page. It closes when
+someone accepts.
+
+### Tradie not there: call them
+**Means.** A tradie accepted the job and was not on site by the promised time (a no-show).
+
+**Do.**
+1. Call the tradie. If they are on the way, tell the owner the new time.
+2. If they are not coming, cancel the job and log it again so it goes to someone else, and ring the owner.
+3. A tradie with 3 no-shows in 90 days shows **Tradie to talk to** in the queue and on their page. Talk to
+   them. Never remove a tradie because of the count alone: removal is a person's decision after a
+   conversation. Passing on offers is never a reason.
+
+### Arrival not confirmed / Owner says the tradie isn't there
+**Means.** The tradie tapped "I have arrived" with no location from their phone, or more than 500 m
+from where tradies have been at that house before, or the owner pressed "The tradie isn't here".
+
+**Do.** Ring the tradie now and check where they are. Then ring the owner back. If the tradie was not
+there, note it and tell the admin.
 
 ### Owner raised a problem
 **Means.** After a job, the owner said something is wrong. If they said it inside the first day, the

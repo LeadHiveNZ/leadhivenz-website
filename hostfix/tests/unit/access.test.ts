@@ -1,9 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { setTestNow } from "@/lib/clock";
-import { acceptOffer } from "@/lib/dispatch/cascade";
+import { acceptOffer, suggestLaterTime } from "@/lib/dispatch/cascade";
 import { attachUploads, canView, checkFile, getUpload, recordUpload } from "@/lib/files/uploads";
 import { getJobForOwner, getJobForTradie, listJobsForOwner, listJobsForTradie, listLiveOffersForTradie } from "@/lib/jobs/store";
-import { completeJob, markArrived, markEnRoute, reportNoAccess, submitQuote } from "@/lib/jobs/work";
+import { completeJob, markArrived, markEnRoute, reportNoAccess, reportTradieAbsent, submitQuote } from "@/lib/jobs/work";
+import { laterWindows } from "@/lib/jobs/arrival";
+import { loadJobView } from "@/lib/jobs/view";
+import { getMarket } from "@/lib/markets/store";
 import { offerLinkCode, offerLinkMatches, ownerJobLinkCode, ownerJobLinkMatches, parseLinkCode } from "@/lib/links";
 import { changeTier, findPropertyByReportToken, getProperty, listProperties, requestCancel, rotateReportLink, updateProperty } from "@/lib/properties/service";
 import { createDemoGateway } from "@/lib/payments/demo-gateway";
@@ -212,6 +215,30 @@ describe("tradies", () => {
     expect(await completeJob(t.db, aliceJob.id, dave.tradieId, { note: "", uploadIds: [mine] })).toMatchObject({ ok: false });
     expect(await reportNoAccess(t.db, aliceJob.id, dave.tradieId, { note: "Could not get in at all", uploadIds: [mine] })).toMatchObject({ ok: false });
     expect((await getJobForTradie(t.db, mike.tradieId, aliceJob.id))!.status).toBe("on_site");
+  });
+
+  it("see nothing of the owner's choice about a later time, and only a chosen tradie can suggest one (DECISIONS.md, 2026-11-18)", async () => {
+    const { bob, bobHome, mike, dave } = await twoOfEverything();
+    const job = await logJob(t.db, bobHome, { code: "PL-03" });
+    const [offer] = await offersFor(t.db, job.id);
+    expect(offer!.tradie_id).toBe(mike.tradieId);
+    const market = (await getMarket(t.db, "queenstown"))!;
+    const later = laterWindows(market, job.respondBy!, MONDAY_10AM)[0]!;
+    expect((await t.db.tx((tx) => suggestLaterTime(tx, offer!.id, later.end.toISOString(), "link"))).ok).toBe(true);
+    // The owner sees the choice. A tradie's view of the job never carries it.
+    expect((await loadJobView(t.db, (await getJobForOwner(t.db, bob.ownerId, job.id))!, "owner")).laterTime).not.toBeNull();
+    expect((await loadJobView(t.db, job, "tradie")).laterTime).toBeNull();
+    // The backup has no offer on this job, so nothing to suggest on, and Mike cannot suggest twice.
+    expect(await listLiveOffersForTradie(t.db, dave.tradieId, MONDAY_10AM)).toEqual([]);
+    expect((await t.db.tx((tx) => suggestLaterTime(tx, offer!.id, later.end.toISOString(), "link"))).ok).toBe(false);
+  });
+
+  it("an owner cannot say the tradie is missing from another owner's job, and the button does nothing before Arrived", async () => {
+    const { alice, aliceJob, mike } = await twoOfEverything();
+    expect(await reportTradieAbsent(t.db, aliceJob.id, `owner:${alice.ownerId}`)).toMatchObject({ ok: false });
+    await markArrived(t.db, aliceJob.id, mike.tradieId, { lat: -45.03, lng: 168.66 });
+    // The action finds the job through the owner's own id or their one-tap link first: Bob's id finds nothing.
+    expect(await getJobForOwner(t.db, (await makeOwner(t.db)).ownerId, aliceJob.id)).toBeNull();
   });
 });
 

@@ -4,9 +4,11 @@ import type { Db } from "@/lib/db/types";
 import { attachUploads, countUploads } from "@/lib/files/uploads";
 import { texts } from "@/lib/notify/messages";
 import { enqueue } from "@/lib/notify/outbox";
-import { resolveExceptionsFor } from "@/lib/ops/exceptions";
+import { raiseException, resolveExceptionsFor } from "@/lib/ops/exceptions";
+import { formatClock } from "@/lib/time";
 import { openSettlement } from "@/lib/billing/settle";
 import { loadContext, offerUrl, ownerJobUrl } from "./context";
+import { arrivedOnTime, checkArrival, linesToDrop, surchargeVerdict } from "./arrival";
 import { noAccessLines, quoteAmounts } from "./pricing";
 import { getQuote, insertLines, listLines, lockJob, recalcTotals, rowToQuote } from "./store";
 import type { Job, Quote } from "./types";
@@ -49,31 +51,124 @@ export async function markEnRoute(db: Db, jobId: string, tradieId: string): Prom
   });
 }
 
-/** The tradie is at the property. This is the moment the response promise is measured against. */
+/**
+ * The tradie is at the property. This is the moment the response promise is
+ * measured against, and the moment the surcharges are settled (DECISIONS.md,
+ * 2026-11-18), so the owner sees the final lines on their job page before the
+ * card is charged at the end:
+ *
+ *   urgent, after the deadline   the urgent line comes off: 0 for the owner,
+ *                                0 for the tradie, 0 for us
+ *   after hours, but the tap is  the after-hours line comes off, the same way
+ *   inside working hours
+ *
+ * Everything else on the job is charged and paid as normal. The tap's location
+ * is checked against where trusted arrivals at the property were, and an
+ * Arrived tap that cannot be trusted goes to the dispatcher.
+ */
 export async function markArrived(db: Db, jobId: string, tradieId: string, where: { lat?: number | null; lng?: number | null } = {}): Promise<StepResult> {
   return db.tx(async (tx) => {
     const job = await theirs(tx, jobId, tradieId);
     if (!job) return { ok: false, message: NOT_YOURS };
     if (job.status !== "accepted") return job.arrivedAt ? { ok: true, job } : { ok: false, message: "This job cannot be marked as arrived right now." };
     const at = now();
-    const lat = typeof where.lat === "number" && Math.abs(where.lat) <= 90 ? where.lat : null;
-    const lng = typeof where.lng === "number" && Math.abs(where.lng) <= 180 ? where.lng : null;
-    await tx.query("update public.jobs set status = 'on_site', arrived_at = $2::timestamptz, arrived_lat = $3, arrived_lng = $4 where id = $1::uuid", [
-      jobId, at.toISOString(), lat, lng,
-    ]);
-    const onTime = job.respondBy ? at.getTime() <= job.respondBy.getTime() : true;
-    await resolveExceptionsFor(tx, jobId, ["at_risk"], "Tradie arrived");
+    const lat = typeof where.lat === "number" && Number.isFinite(where.lat) && Math.abs(where.lat) <= 90 ? where.lat : null;
+    const lng = typeof where.lng === "number" && Number.isFinite(where.lng) && Math.abs(where.lng) <= 180 ? where.lng : null;
+    const point = lat !== null && lng !== null ? { lat, lng } : null;
+    const context = await loadContext(tx, job);
+    const { market, property, owner, tradie } = context;
+
+    // Where tradies were when they arrived at this house before, leaving out any tap that was flagged or that the owner disputed.
+    const earlier = await tx.query<{ arrived_lat: string | number; arrived_lng: string | number }>(
+      `select arrived_lat, arrived_lng from public.jobs
+        where property_id = $1::uuid and id <> $2::uuid and arrived_lat is not null and arrived_lng is not null
+          and arrival_check in ('ok', 'no_reference') and owner_says_absent_at is null
+        order by arrived_at desc limit 25`,
+      [job.propertyId, jobId],
+    );
+    const trust = checkArrival(point, earlier.map((row) => ({ lat: Number(row.arrived_lat), lng: Number(row.arrived_lng) })));
+
+    await tx.query(
+      "update public.jobs set status = 'on_site', arrived_at = $2::timestamptz, arrived_lat = $3, arrived_lng = $4, arrival_check = $5, arrival_distance_m = $6 where id = $1::uuid",
+      [jobId, at.toISOString(), point?.lat ?? null, point?.lng ?? null, trust.check, trust.distanceM],
+    );
+    const onTime = arrivedOnTime(job, at);
+    await resolveExceptionsFor(tx, jobId, ["at_risk", "no_show"], "Tradie arrived");
     await audit(tx, {
       actor: `tradie:${tradieId}`, action: "job.arrived", entity: "job", entityId: jobId,
-      detail: { on_time: onTime, located: lat !== null, minutes_from_dispatch: job.dispatchedAt ? Math.round((at.getTime() - job.dispatchedAt.getTime()) / 60_000) : null },
+      detail: {
+        on_time: onTime, located: point !== null, location: trust.check, distance_m: trust.distanceM,
+        window_end: job.arrivalWindowEnd?.toISOString() ?? null,
+        minutes_from_dispatch: job.dispatchedAt ? Math.round((at.getTime() - job.dispatchedAt.getTime()) / 60_000) : null,
+      },
     });
-    const context = await loadContext(tx, job);
-    if (context.owner.phone && context.tradie) {
-      await enqueue(tx, {
-        channel: "sms", to: context.owner.phone, template: "tradie_arrived", audience: "owner", jobId, userId: context.owner.userId,
-        body: texts.tradieArrived({ tradie: context.tradie.businessName, property: context.property.name }), dedupeKey: `tradie_arrived:${jobId}`,
+
+    // The surcharges follow what actually happened.
+    const verdict = surchargeVerdict(job, at, market);
+    const dropped = linesToDrop((await listLines(tx, jobId)).filter((line) => line.status === "active"), verdict);
+    if (dropped.length > 0) {
+      await tx.query("update public.job_lines set status = 'void' where id = any($1::uuid[])", [dropped.map((line) => line.id)]);
+      const sum = await recalcTotals(tx, jobId, market.taxRate, market.taxRegistered);
+      await audit(tx, {
+        actor: "system", action: "job.surcharge_dropped", entity: "job", entityId: jobId,
+        amount: dropped.reduce((total, line) => total + line.ownerCents, 0), currency: job.currency,
+        detail: {
+          urgent: dropped.some((line) => line.kind === "urgent"), after_hours: dropped.some((line) => line.kind === "after_hours"),
+          owner_off: dropped.reduce((total, line) => total + line.ownerCents, 0), tradie_off: dropped.reduce((total, line) => total + line.tradieCents, 0),
+          owner_now: sum.ownerCents, tradie_now: sum.tradieCents,
+          deadline: job.respondBy?.toISOString() ?? null,
+        },
       });
     }
+
+    if (trust.check === "far" || trust.check === "no_location") {
+      const who = tradie?.businessName ?? "The tradie";
+      await raiseException(tx, {
+        kind: "arrival_unverified", market: job.market, jobId, tradieId,
+        summary: trust.check === "no_location"
+          ? `Job ${job.number}: ${who} tapped Arrived at ${property.name} but their phone gave no location. Check they are really there.`
+          : `Job ${job.number}: ${who} tapped Arrived ${formatDistance(trust.distanceM!)} from where tradies have been at ${property.name} before. Check they are really there.`,
+        dedupeKey: `arrival_unverified:${jobId}`,
+      });
+    }
+
+    if (owner.phone && tradie) {
+      await enqueue(tx, {
+        channel: "sms", to: owner.phone, template: "tradie_arrived", audience: "owner", jobId, userId: owner.userId,
+        body: texts.tradieArrived({ tradie: tradie.businessName, property: property.name, link: ownerJobUrl(job) }), dedupeKey: `tradie_arrived:${jobId}`,
+      });
+    }
+    return { ok: true, job: (await lockJob(tx, jobId))! };
+  });
+}
+
+/** "350 m", "1.2 km". */
+function formatDistance(metres: number): string {
+  return metres < 1000 ? `${metres} m` : `${(metres / 1000).toFixed(1)} km`;
+}
+
+/**
+ * The owner presses "The tradie isn't here" on their job page. Puts it in
+ * front of the dispatcher straight away (and on the founder's phone). Safe to
+ * press twice: the second press changes nothing.
+ */
+export async function reportTradieAbsent(db: Db, jobId: string, actor: string): Promise<StepResult> {
+  return db.tx(async (tx) => {
+    const job = await lockJob(tx, jobId);
+    if (!job) return { ok: false, message: "We could not find that job." };
+    if (!job.arrivedAt || !["on_site", "awaiting_approval"].includes(job.status)) {
+      return { ok: false, message: "This button is for when the app says the tradie has arrived. For anything else, contact us." };
+    }
+    if (job.ownerSaysAbsentAt) return { ok: true, job };
+    const at = now();
+    await tx.query("update public.jobs set owner_says_absent_at = $2::timestamptz where id = $1::uuid", [jobId, at.toISOString()]);
+    const { property, tradie, market } = await loadContext(tx, job);
+    await audit(tx, { actor, action: "job.owner_says_absent", entity: "job", entityId: jobId, detail: { tradie: tradie?.businessName ?? null } });
+    await raiseException(tx, {
+      kind: "owner_says_absent", market: job.market, jobId, tradieId: job.tradieId,
+      summary: `Job ${job.number}: the owner says ${tradie?.businessName ?? "the tradie"} is not at ${property.name}, although they tapped Arrived at ${formatClock(job.arrivedAt, market.timezone)}. Ring the tradie${tradie?.phone ? ` on ${tradie.phone}` : ""}, then the owner.`,
+      dedupeKey: `owner_says_absent:${jobId}`,
+    });
     return { ok: true, job: (await lockJob(tx, jobId))! };
   });
 }

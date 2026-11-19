@@ -18,6 +18,7 @@ import { listInsuranceCertificates } from "@/lib/tradies/certificate";
 import { listJobsForTradie } from "@/lib/jobs/store";
 import { getMarket } from "@/lib/markets/store";
 import { displayPhone } from "@/lib/phone";
+import { laterWave, MIN_ARRIVALS, needsReview, NO_SHOW_DAYS, ON_TIME_TARGET, onTimeRecords, recentNoShows } from "@/lib/tradies/reliability";
 import { SCORE_DAYS, scorecards } from "@/lib/tradies/scorecard";
 import { getTradie, listLicences, listSlots, insuranceProblem } from "@/lib/tradies/service";
 import { dateKey, formatDate } from "@/lib/time";
@@ -54,6 +55,8 @@ export default async function StaffTradiePage({ params, searchParams }: { params
   const card = (await scorecards(db, market.slug)).find((candidate) => candidate.tradieId === tradie.id);
   const jobs = await listJobsForTradie(db, tradie.id, { limit: 12 });
   const at = now();
+  const noShows = await recentNoShows(db, tradie.id, at);
+  const record = (await onTimeRecords(db, [tradie.id])).get(tradie.id);
   const today = dateKey(at, market.timezone);
   const licensed = tradie.trades.filter((key) => findTrade(key)?.licenceRequired);
   const licenceOk = (key: string) => licences.some((licence) => licence.trade === key && licence.expiresOn >= today);
@@ -87,6 +90,12 @@ export default async function StaffTradiePage({ params, searchParams }: { params
       />
 
       {typeof query.did === "string" && DID[query.did] && <Notice tone="good" title={DID[query.did]} />}
+      {needsReview(noShows) && (
+        <Notice tone="warn" title={`For review: ${noShows} no-shows in the last ${NO_SHOW_DAYS} days`}>
+          They accepted {noShows} jobs and were not there by the promised time. Talk to them before deciding anything. Nothing on their account has been changed, and only a person can pause or
+          remove a tradie. Passing on offers is never counted.
+        </Notice>
+      )}
       {query.added && (
         <Notice tone="good" title="Added">
           Next: add their insurance and certificate, and check their licences, then approve them.
@@ -170,8 +179,16 @@ export default async function StaffTradiePage({ params, searchParams }: { params
           />
         </Card>
         <div className="grid grid-cols-2 content-start gap-3">
-          <Stat label="Offers accepted" value={pct(card?.acceptanceRate ?? null)} note={card && card.offers > 0 ? `${card.accepted} of ${card.offers}` : `Last ${SCORE_DAYS} days`} tone={card?.belowTarget && card.acceptanceRate !== null && card.acceptanceRate < 0.8 ? "alert" : undefined} />
-          <Stat label="On site in time" value={pct(card?.onTimeRate ?? null)} note={card && card.jobs > 0 ? `${card.onTime} of ${card.jobs}` : `Last ${SCORE_DAYS} days`} tone={card?.belowTarget && card.onTimeRate !== null && card.onTimeRate < 0.8 ? "alert" : undefined} />
+          <Stat label="On site in time" value={pct(card?.onTimeRate ?? null)} note={card && card.jobs > 0 ? `${card.onTime} of ${card.jobs} accepted, last ${SCORE_DAYS} days` : `Last ${SCORE_DAYS} days`} tone={card?.belowTarget ? "alert" : undefined} />
+          <Stat label={`No-shows, last ${NO_SHOW_DAYS} days`} value={String(noShows)} note="Accepted, nobody there by the promised time" tone={needsReview(noShows) ? "alert" : undefined} />
+          <div className="col-span-2">
+            <Stat
+              label="Network order"
+              value={record && record.arrivals >= MIN_ARRIVALS ? `${record.onTime} of last ${record.arrivals} on time` : `${record?.arrivals ?? 0} arrivals so far`}
+              note={laterWave(record) ? `Under ${Math.round(ON_TIME_TARGET * 100)}%: offered network jobs in the second wave` : `Offered network jobs in the first wave. Counted from ${MIN_ARRIVALS} arrivals.`}
+              tone={laterWave(record) ? "alert" : undefined}
+            />
+          </div>
           <div className="col-span-2">
             <Stat label="Usual time to accept" value={card?.avgMinutesToAccept !== null && card?.avgMinutesToAccept !== undefined ? `${card.avgMinutesToAccept} min` : "No history"} />
           </div>

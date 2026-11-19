@@ -29,10 +29,20 @@ export type ExceptionKind =
   | "credit_failed"
   | "needs_review"
   /** A Portfolio's band needs a person: fewer than 10 properties, 100 and more, or a price that could not be changed. */
-  | "portfolio_band";
+  | "portfolio_band"
+  /** A normal job nobody has accepted after the market's hours (3 by default): ring round (DECISIONS.md, 2026-11-18). */
+  | "not_taken_yet"
+  /** The tradie tapped Arrived with no location, or far from where trusted arrivals at the property were. */
+  | "arrival_unverified"
+  /** The owner pressed "The tradie isn't here". */
+  | "owner_says_absent"
+  /** An accepted job reached its promised time with nobody on site: call the tradie. */
+  | "no_show"
+  /** A tradie has reached 3 no-shows in 90 days: talk to them. Never removed automatically. */
+  | "tradie_review";
 
 /** The ones worth a text to the founder as well as an email. */
-const URGENT: ExceptionKind[] = ["nobody_accepted", "missed_window", "dispute", "chargeback"];
+const URGENT: ExceptionKind[] = ["nobody_accepted", "missed_window", "dispute", "chargeback", "not_taken_yet", "owner_says_absent", "no_show"];
 
 export type ExceptionInput = {
   kind: ExceptionKind;
@@ -144,7 +154,7 @@ export type QueueItem = {
 };
 
 /** The kinds where a promised time is running, so the deadline is what matters. */
-export const TIME_BOUND: ExceptionKind[] = ["nobody_accepted", "at_risk", "missed_window", "quote_waiting"];
+export const TIME_BOUND: ExceptionKind[] = ["nobody_accepted", "at_risk", "missed_window", "quote_waiting", "not_taken_yet", "no_show"];
 
 /** The queue. Open items first, the ones closest to their deadline at the top. */
 export async function listExceptions(db: Db, filter: { status?: "open" | "resolved"; market?: string | null; limit?: number } = {}): Promise<QueueItem[]> {
@@ -202,13 +212,18 @@ export const EXCEPTION_LABELS: Record<ExceptionKind, string> = {
   credit_failed: "Credit could not be applied",
   needs_review: "Needs a look",
   portfolio_band: "Portfolio price needs a person",
+  not_taken_yet: "Nobody has taken it yet",
+  arrival_unverified: "Arrival not confirmed",
+  owner_says_absent: "Owner says the tradie isn't there",
+  no_show: "Tradie not there: call them",
+  tradie_review: "Tradie to talk to",
 };
 
 /** One line on what to do about each kind. The runbook (RUNBOOK.md) has the longer version. */
 export const EXCEPTION_ACTIONS: Record<ExceptionKind, string> = {
   nobody_accepted: "Ring a tradie who does this trade. If they say yes, assign them on the job page. Or start the offers again.",
   at_risk: "The promised time is close. Ring the tradie and check they are on their way.",
-  missed_window: "On Essential the call-out portion of the job comes off the owner's bill by itself. On a Portfolio property nothing was credited: ask the admin what to credit. Ring the owner to say sorry, and make sure a tradie is going.",
+  missed_window: "Nobody was on site by the promised time. Nothing is credited automatically any more. Ring the owner to say sorry, and make sure a tradie is going.",
   dispute: "Read what the owner said, look at the photos, ring both sides, then settle it on the job page.",
   payment_failed: "The owner's card was declined. It is tried again each day. Ask them to update their card, then try again on the job page.",
   payout_failed: "The tradie could not be paid. Ask them to check their bank details in their profile, then try again on the job page.",
@@ -221,4 +236,9 @@ export const EXCEPTION_ACTIONS: Record<ExceptionKind, string> = {
   credit_failed: "A credit could not be passed to the payment company. Tell the admin.",
   needs_review: "Something happened outside the app that the app cannot sort out by itself. Read the note and tell the admin.",
   portfolio_band: "A manager's Portfolio retainer needs a decision. Tell the admin: they agree the price with the manager and set it on the manager's page under Owners.",
+  not_taken_yet: "Nobody has accepted this job yet and the owner has been told we are ringing round. Ring tradies who do this trade and assign one on the job page.",
+  arrival_unverified: "The Arrived tap had no location, or was far from where tradies usually are at this house. Ring the tradie and check they are really there. If not, ring the owner.",
+  owner_says_absent: "The owner says the tradie is not at the property although the app says they arrived. Ring the tradie now, then ring the owner back.",
+  no_show: "A tradie accepted this job and is not on site by the promised time. Call the tradie. If they are not coming, cancel and log the job again so it goes to someone else.",
+  tradie_review: "This tradie has not turned up for 3 accepted jobs in 90 days. Talk to them before deciding anything. Only a person can pause or remove a tradie.",
 };

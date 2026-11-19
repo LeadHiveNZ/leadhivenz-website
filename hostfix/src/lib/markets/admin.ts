@@ -55,6 +55,8 @@ export type MarketPatch = Partial<{
   hoursEnd: number;
   workDays: string[];
   payoutHoldHours: number;
+  unacceptedAlertHours: number;
+  counterOfferHours: number;
   referralRewardCents: number;
   referralPaidMonths: number;
   depositEnabled: boolean;
@@ -71,6 +73,7 @@ const COLUMNS: Record<keyof MarketPatch, string> = {
   diagnosisPayoutCents: "diagnosis_payout_cents", approvalThresholdCents: "approval_threshold_cents",
   partsIncludedCents: "parts_included_cents", partsApprovalCents: "parts_approval_cents", offerMinutes: "offer_minutes",
   hoursStart: "hours_start", hoursEnd: "hours_end", workDays: "work_days", payoutHoldHours: "payout_hold_hours",
+  unacceptedAlertHours: "unaccepted_alert_hours", counterOfferHours: "counter_offer_hours",
   referralRewardCents: "referral_reward_cents", referralPaidMonths: "referral_paid_months", depositEnabled: "deposit_enabled",
   depositCents: "deposit_cents", depositTerms: "deposit_terms", depositSpots: "deposit_spots", replyByText: "reply_by_text",
 };
@@ -109,6 +112,12 @@ function checkMarket(patch: MarketPatch, current: { hoursStart: number; hoursEnd
   }
   if (patch.payoutHoldHours !== undefined && (!Number.isInteger(patch.payoutHoldHours) || patch.payoutHoldHours < 0 || patch.payoutHoldHours > 48)) {
     throw new AdminInputError("The payout hold must be between 0 and 48 hours.");
+  }
+  if (patch.unacceptedAlertHours !== undefined && (!Number.isInteger(patch.unacceptedAlertHours) || patch.unacceptedAlertHours < 1 || patch.unacceptedAlertHours > 23)) {
+    throw new AdminInputError("The hours before we ring round for a tradie must be between 1 and 23.");
+  }
+  if (patch.counterOfferHours !== undefined && (!Number.isInteger(patch.counterOfferHours) || patch.counterOfferHours < 1 || patch.counterOfferHours > 12)) {
+    throw new AdminInputError("The hours an owner has to answer a later time must be between 1 and 12.");
   }
   if (patch.referralPaidMonths !== undefined && (!Number.isInteger(patch.referralPaidMonths) || patch.referralPaidMonths < 1 || patch.referralPaidMonths > 24)) {
     throw new AdminInputError("Referral months must be between 1 and 24.");
@@ -327,8 +336,8 @@ export async function createMarket(db: Db, input: NewMarket, actor: string): Pro
          slug, created_at, updated_at, name, country, currency, timezone, stage, tax_rate, tax_name,
          platform_fee_bps, urgent_surcharge_cents, after_hours_surcharge_cents, diagnosis_fee_cents, diagnosis_payout_cents,
          approval_threshold_cents, parts_included_cents, parts_approval_cents, offer_minutes, hours_start, hours_end, work_days,
-         payout_hold_hours, referral_reward_cents, referral_paid_months)
-       values ($1, $2::timestamptz, $2::timestamptz, $3, $4, $5, $6, 'draft', $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20::text[], $21, $22, $23)`,
+         payout_hold_hours, referral_reward_cents, referral_paid_months, unaccepted_alert_hours, counter_offer_hours)
+       values ($1, $2::timestamptz, $2::timestamptz, $3, $4, $5, $6, 'draft', $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20::text[], $21, $22, $23, $24, $25)`,
       [
         slug, at, input.name.trim(), input.country, defaults.currency, input.timezone, defaults.taxRate, defaults.taxName,
         template?.platformFeeBps ?? 1500, template?.urgentSurchargeCents ?? 5000, template?.afterHoursSurchargeCents ?? 14000,
@@ -336,6 +345,7 @@ export async function createMarket(db: Db, input: NewMarket, actor: string): Pro
         template?.partsIncludedCents ?? 3000, template?.partsApprovalCents ?? 15000, template?.offerMinutes ?? 15,
         template?.hoursStart ?? 7, template?.hoursEnd ?? 16.5, template?.workDays ?? ["mon", "tue", "wed", "thu", "fri"],
         template?.payoutHoldHours ?? 24, template?.referralRewardCents ?? 10000, template?.referralPaidMonths ?? 3,
+        template?.unacceptedAlertHours ?? 3, template?.counterOfferHours ?? 2,
       ],
     );
     let copiedTiers = 0;

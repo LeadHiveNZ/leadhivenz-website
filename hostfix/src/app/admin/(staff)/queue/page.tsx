@@ -20,7 +20,7 @@ export const metadata: Metadata = { title: "Queue" };
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
-const RED: ExceptionKind[] = ["nobody_accepted", "missed_window", "dispute", "chargeback", "payout_failed", "payment_failed"];
+const RED: ExceptionKind[] = ["nobody_accepted", "missed_window", "dispute", "chargeback", "payout_failed", "payment_failed", "not_taken_yet", "owner_says_absent", "no_show"];
 
 export default async function QueuePage({ searchParams }: { searchParams: SearchParams }) {
   const staff = await requireStaff();

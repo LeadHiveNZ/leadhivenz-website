@@ -9,6 +9,164 @@ price, a fee or a promise, add a line here saying what and why.
 
 ---
 
+## 2026-11-18 — Missing the time no longer costs HostFix; the owner pays for what actually happened
+
+What the founder decided (summarised from his brief, not his exact words):
+HostFix should not lose its margin because a tradie is unreliable, so the rule
+"miss the promised time and the call-out portion of that job is on us" goes.
+Instead the owner never pays for speed that was not delivered, and a tradie's
+own on-time record on the jobs they accept decides who is offered work first.
+Declining a job must never count against a tradie: it protects their standing
+as contractors. Added the same day for the owner's chosen tradies (the first
+choice and backup): besides Accept and Pass they can suggest a later time, up to
+7 days ahead, and the owner chooses to wait or send it to another HostFix tradie
+now. When a chosen tradie passes, the owner is never told "passed" or "declined".
+
+**Why.** The old credit put HostFix's margin (NZ$35 on a NZ$225 job) behind a
+tradie's punctuality, which HostFix does not control: one late tradie could wipe
+out several jobs' fees. The new rules keep the owner whole in a way that costs
+HostFix nothing: they are not charged for a speed they did not get, and they
+pay nothing at all unless a tradie does the job. Reliability is rewarded with
+work, measured only on jobs a tradie chose to accept, so nobody is penalised for
+saying no.
+
+**The rules, as built:**
+
+1. **No more missed-window credit.** `creditMissedWindows` is now
+   `markMissedWindows` (`src/lib/billing/settle.ts`): it still sets
+   `window_missed_at` and raises the queue item, and creates no credit and no
+   owner text. Old rows are left alone. **Chosen for credits already pending:**
+   a `missed_window` credit made before today still comes off its own job's
+   charge in `openSettlement`, because the owner was told it would. No new ones
+   can be made (nothing inserts them any more). Statements and the admin owner
+   page still show the old ones, labelled as from before this change.
+2. **Late on an urgent job, no urgent line for anyone.** When the tradie taps
+   Arrived after the job's `respond_by` (the urgent deadline, the tier's
+   `urgentResponseHours` from when the job was sent out, the same clock as
+   before), the urgent line is voided: the owner pays 0, the tradie gets 0,
+   HostFix keeps 0. The rest of the job is charged and paid as normal. On a tier
+   that includes urgent, the tradie's share goes too. The offer text says "NZ$42.50
+   of it only if on site by 2pm today", and the offer page says it in full.
+3. **After hours is charged for what happened.** The after-hours line stays only
+   if the Arrived tap is outside the market's working hours (`isAfterHours`:
+   before 7am, from 4:30pm, or a day that is not a working day). The decision is
+   made at Arrived (`markArrived`, `src/lib/jobs/arrival.ts`), not at finish or
+   settle, so the owner sees the final lines on the job page, with a history line
+   saying why ("No urgent fee: not charged, because the tradie arrived after the
+   urgent deadline"), before the card is charged at the end, as now.
+4. **Arrived taps that cannot be trusted are flagged.** Properties have no map
+   position and no geocoding service was added. The reference is the median of
+   earlier trusted Arrived taps at the same property (ones checked `ok` or
+   `no_reference` that the owner did not dispute). No location, or more than
+   500 m from the reference, raises **Arrival not confirmed** in the queue. The
+   first visit with a location is recorded as "no reference yet" and raises
+   nothing. The owner's "has arrived" text now links to the job page, which has a
+   **The tradie isn't here** button (a button, never a link that acts), raising
+   **Owner says the tradie isn't there** (texted to the founder too).
+5. **The tradie picks an arrival window when accepting a normal job.** Two-hour
+   windows inside working hours (by the wall clock, any day of the week, the last
+   one ending at 4:30pm), ending inside the promise; one under way starts now.
+   If none fits, the one choice is "any time before the promise". Stored on
+   `jobs.arrival_window_start/end`; texted to the owner ("on site between 1pm and
+   3pm today") and to the cleaner or guest who reported it, and shown on the job
+   pages. On time for a normal job means arrived by the window's end. An urgent
+   job's window is its deadline. The text link still only opens a page; each
+   window is a button, and pressing one accepts.
+6. **Nobody accepted within 3 hours** (normal jobs, counted from when it was sent
+   out): the owner is texted "no tradie has taken the job yet. Our team is ringing
+   round now. You pay nothing unless a tradie does the job", and **Nobody has
+   taken it yet** goes to the queue and the founder's phone. A market setting,
+   `unaccepted_alert_hours`, default 3 (More > Markets). Urgent jobs keep their
+   own alerts.
+7. **The on-time record decides network order.** After 10 arrivals, a tradie with
+   fewer than 90% of their last 20 arrivals on time is offered network ("everyone
+   else") jobs in a second wave, after the others' 15 minutes. They still get the
+   offer. The first choice and backup are never moved by this. **Declining never
+   counts**: passes and offers left to run out are not in the record, the 30-day
+   scorecard no longer has an acceptance number, and the first-choice swap prompt
+   uses on-time only. A test proves 12 passes change nothing.
+8. **No-shows.** An accepted job with nobody on site by the promised time raises
+   **Tradie not there: call them**. At 3 no-shows in 90 days the tradie is flagged
+   on the admin tradie page and list, and **Tradie to talk to** goes to the queue.
+   Nothing is changed on their account: removal stays a staff action.
+9. **"Can't make that time, suggest another"** (first choice and backup only).
+   From the offer page they pick a later two-hour window up to 7 days ahead. The
+   owner is texted and chooses on the job page: **Wait for them** or **Send it to
+   another HostFix tradie now**. Waiting makes the tradie's window the promise
+   (`respond_by`), so on time, no-shows and at-risk are judged against it; an
+   urgent job stops being urgent and its urgent and after-hours lines come off for
+   everyone. Sending it on, or no answer within `counter_offer_hours` (a market
+   setting, default 2), moves the job to the next tradie as normal and texts the
+   chosen tradie "this never counts against you". While the owner is choosing,
+   the cascade and the 3-hour alert wait. When a chosen tradie passes, the owner's
+   job page says "Name isn't available for this one, so we've sent it to another
+   HostFix tradie."
+
+**Worked example: PL-01, owner 22500, tradie 19000, an urgent job logged at 10am
+Monday (deadline 2pm).**
+
+| What happened | Owner pays | Tradie gets | HostFix keeps |
+| --- | --- | --- | --- |
+| Arrived 1:59pm (on time) | 22500 + 5000 = 27500 | 19000 + 4250 = 23250 | 3500 + 750 = 4250 |
+| Arrived 2:01pm (late) | 22500 + 0 = 22500 | 19000 + 0 = 19000 | 3500 + 0 = 3500 |
+| Logged 9pm, arrived 10pm | 22500 + 5000 + 14000 = 41500 | 19000 + 4250 + 11900 = 35150 | 6350 |
+| Logged 6:30am, arrived 7:15am | 22500 + 5000 = 27500 (no after hours) | 23250 | 4250 |
+| Owner chose to wait for a later time | 22500 | 19000 | 3500 |
+
+**What changed:** migration `20261124000000_on_time.sql` (adds only: the two
+market settings, the job columns, `arrival_proposals`, new queue kinds);
+`src/lib/jobs/arrival.ts`, `src/lib/tradies/reliability.ts`, `markArrived` and
+`reportTradieAbsent` (`work.ts`), the cascade (`acceptOffer` with a window, the
+second wave, `suggestLaterTime`, `answerLaterTime`, `expireLaterTimes`,
+`alertNotTakenYet`), the timer, the texts, the offer page, the tradie's home,
+the owner's job page, the admin job, tradie and market pages, statements, the
+terms (section 4, and section 3 on after hours), the tradie agreement (sections
+3, 4, 6, 8 and 11), the owner and tradie landing copy, the home page, the price
+list, the runbook, AGENTS.md and docs/PLAN.md. Fee percentages, menu prices and
+surcharge amounts are unchanged.
+
+**Decided while building, to confirm:**
+
+- An after-hours line is only ever removed, never added: a normal job attended at
+  night does not gain one, because the owner never agreed to it.
+- When the owner waits on an urgent job, the after-hours line goes as well as the
+  urgent one: both only exist because the job was urgent.
+- A no-show is counted when the promised time passes with the tradie not there,
+  even if they turn up later. Being late to their own window but inside the
+  promise is "not on time" (it counts in the record) but not a no-show.
+- The network-order record is the tradie's last 20 arrivals, all trades, all time,
+  so a tradie can earn their place back. 10 arrivals before it applies.
+- A text YES reply, or a job the team assigns, has no window: the promise is the
+  deadline. The tradie's home page asks for the window in a drop-down before
+  Accept.
+- The 3 hours are counted from when the job was sent out, so a guest report waiting
+  for the owner's yes is not counted.
+- **Quiet hours (added the same day).** The two new owner texts, "nobody has
+  taken it yet" and a chosen tradie's later time, are never sent between 9pm and
+  7am market time: they are held and go at 7am. The queue item still appears at
+  once. On a normal job the 3-hour and 2-hour clocks count only 7am to 9pm, so a
+  job logged at 7pm alerts at 8am, and a later time suggested at 10pm is texted at
+  7am with until 9am to answer. Urgent jobs are unchanged: any time, plain clock.
+  7am and 9pm are their own constants (`TEXTING_STARTS`, `TEXTING_ENDS` in
+  `src/lib/time.ts`), not the market's working hours (7am to 4:30pm), because
+  when tradies work and when it is fine to text an owner are different questions.
+  Other texts are not held (none were before).
+- The terms read the 3 and 2 hours from the launch market's settings
+  (`config/markets.ts`), and the tradie agreement reads its limits (10, 90%, 20,
+  3 in 90 days, 7 days, the window length) from the code's constants.
+  `tests/unit/legal.test.ts` fails if they, the market defaults and the
+  database's column defaults disagree. An admin changing the hours for a market
+  on the Markets screen still needs the terms changed by hand.
+- The dispatcher still cannot move an accepted job to another tradie from a screen;
+  for a no-show they cancel and log it again.
+- The owner's "isn't available" line is on the job page's history, not a text.
+- The terms and the tradie agreement keep the date 18 November 2026. Tradies who
+  agreed before today have not re-agreed to the new sections.
+
+Built on 2026-11-18: all of the above.
+
+---
+
 ## 2026-11-18 — A cleaner is a person, not a link
 
 The founder, in his words:

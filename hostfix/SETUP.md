@@ -92,7 +92,7 @@ private photo folder is made the first time a photo is saved.
    deploy stops and nothing changes: that is deliberate. Vercel then gives you a web address ending in `.vercel.app`.
 6. Check the timer. In the project open **Settings > Cron Jobs**. You should see `/api/cron/tick` running
    every minute. (The exact menu name could not be confirmed. It may be under the project's **Cron Jobs** tab.)
-   This timer is what moves an offer on to the next tradie after 15 minutes, credits a missed promise,
+   This timer is what moves an offer on to the next tradie after 15 minutes, flags a missed promise or a no-show,
    retries cards and pays tradies. If it is not running, none of that happens.
 7. In the project, open **Analytics** and press **Enable**. That switches on page view counting.
 8. The file `vercel.json` already tells Vercel to run the site's server code in Sydney. To confirm, look at

@@ -195,7 +195,7 @@ export function ReportForm(props: Props) {
             <Choice on={!urgent} onPick={() => setUrgent(false)}>
               <span className="flex-1">
                 <span className="block font-semibold text-ink">Standard</span>
-                <span className="block text-sm text-muted">A tradie on site within {props.standardHours} hours.</span>
+                <span className="block text-sm text-muted">A tradie on site within {props.standardHours} hours. They tell you when, as they accept.</span>
               </span>
               <span className="shrink-0 text-sm font-semibold text-muted">No extra</span>
             </Choice>
@@ -204,11 +204,11 @@ export function ReportForm(props: Props) {
                 <span className="block font-semibold text-ink">Get someone there within {props.urgentHours} hours</span>
                 <span className="block text-sm text-muted">
                   The tradie drops what they are doing to come.{" "}
-                  {props.urgentIncluded ? "Included in your membership." : `${formatMoney(props.urgentCents, currency)} more.`}
+                  {props.urgentIncluded ? "Included in your membership." : `${formatMoney(props.urgentCents, currency)} more, not charged if they get there late.`}
                 </span>
                 {props.afterHoursNow && (
                   <span className="block text-sm text-muted">
-                    It is outside working hours now, so the after-hours call-out adds {formatMoney(props.afterHoursCents, currency)}.
+                    It is outside working hours now, so the after-hours call-out adds {formatMoney(props.afterHoursCents, currency)}, charged only if the tradie arrives outside working hours.
                   </span>
                 )}
               </span>

@@ -83,8 +83,8 @@ export function priceListEmail(input: PriceListEmailInput): Pick<EmailMessage, "
   const membershipLine = !membership
     ? ""
     : membership.monthlyPriceCents === 0
-      ? `It is free to join: you only pay the fixed price when a job is done. A tradie on site within ${membership.responseHours} hours, or ${membership.urgentResponseHours} when it's urgent. Miss it and the call-out portion of that job, up to ${money(market.diagnosisFeeCents)}, is on us.`
-      : `The membership is ${money(membership.monthlyPriceCents)} a month per property: a tradie on site within ${membership.responseHours} hours, or the call-out portion of that job, up to ${money(market.diagnosisFeeCents)}, is on us.`;
+      ? `It is free to join: you only pay the fixed price when a job is done. A tradie on site within ${membership.responseHours} hours, or ${membership.urgentResponseHours} when it's urgent. If an urgent job is reached late, the urgent fee is not charged, and the after-hours fee is charged only if the tradie comes outside working hours.`
+      : `The membership is ${money(membership.monthlyPriceCents)} a month per property: a tradie on site within ${membership.responseHours} hours, or ${membership.urgentResponseHours} when it's urgent. If an urgent job is reached late, the urgent fee is not charged.`;
   const foundingLines = founding
     ? [
         `${spots ? `We are taking ${spots} founding properties in ${market.name}.` : `We are taking founding properties in ${market.name}.`} A founding spot takes a ${deposit} deposit:`,

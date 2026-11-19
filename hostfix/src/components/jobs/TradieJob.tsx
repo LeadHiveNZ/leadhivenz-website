@@ -127,7 +127,7 @@ export function TradieJob({ view, now, code, flash = {}, propertyPhotos }: Props
               <p className="text-center text-sm text-muted">The owner can see you are on the way.</p>
             )}
           </div>
-          <p className="mt-3 text-sm text-muted">Tap &ldquo;I have arrived&rdquo; when you get there. That is the time the response promise is measured against.</p>
+          <p className="mt-3 text-sm text-muted">Tap &ldquo;I have arrived&rdquo; at the door, with your phone&rsquo;s location on. That is the time your arrival is measured against: the end of the window you chose, or the urgent deadline.</p>
         </Card>
       )}
 
@@ -249,7 +249,7 @@ export function TradieJob({ view, now, code, flash = {}, propertyPhotos }: Props
       {job.status !== "cancelled" && view.lines.length > 0 && (
         <Panel title="What you get">
           <CostLines lines={view.lines} currency={job.currency} side="tradie" totalLabel="You get" />
-          <p className="mt-3 text-sm text-muted">{payTiming(market).line} Parts are paid back in full. Urgent and after-hours amounts are your share, after the platform fee.</p>
+          <p className="mt-3 text-sm text-muted">{payTiming(market).line} Parts are paid back in full. Urgent and after-hours amounts are your share, after the platform fee. The urgent share is paid only if you tap Arrived by the urgent deadline, and the after-hours share only if you arrive outside working hours.</p>
         </Panel>
       )}
 

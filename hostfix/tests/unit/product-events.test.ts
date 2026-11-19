@@ -232,7 +232,7 @@ async function chargedJob() {
   const job = await logJob(t.db, property, { code: "PL-01" });
   const [offer] = await offersFor(t.db, job.id);
   await t.db.tx((tx) => acceptOffer(tx, offer!.id, "link"));
-  await markArrived(t.db, job.id, tradie.tradieId);
+  await markArrived(t.db, job.id, tradie.tradieId, { lat: -45.03, lng: 168.66 });
   setTestNow(addMinutes(MONDAY_10AM, 60));
   await completeJob(t.db, job.id, tradie.tradieId, { note: "Done.", uploadIds: [await photo(t.db, `tradie:${tradie.tradieId}`)] });
   await chargeJob(t.db, gatewayFor(t.db), job.id);

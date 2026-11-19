@@ -37,7 +37,7 @@ export default async function OwnerJobPage({ params, searchParams }: { params: P
         view={view}
         now={now()}
         prices={prices}
-        flash={{ sent: Boolean(query.sent), already: Boolean(query.already), cancelled: Boolean(query.cancelled), answered: Boolean(query.answered), told: Boolean(query.told) }}
+        flash={{ sent: Boolean(query.sent), already: Boolean(query.already), cancelled: Boolean(query.cancelled), answered: Boolean(query.answered), told: Boolean(query.told), waiting: Boolean(query.waiting), absent: Boolean(query.absent) }}
       />
     </div>
   );

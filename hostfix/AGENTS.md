@@ -31,6 +31,8 @@ it when you change one.
 | Charging, paying tradies, credits, disputes, refunds | `src/lib/billing/settle.ts` |
 | Memberships and referrals | `src/lib/properties/service.ts` |
 | The dispatcher's queue | `src/lib/ops/exceptions.ts` |
+| Arrival windows, surcharges settled at Arrived, the location check | `src/lib/jobs/arrival.ts` |
+| On-time record, network order, no-shows (never declines) | `src/lib/tradies/reliability.ts` |
 | Who is signed in and what they may open | `src/lib/auth/current.ts` |
 | One-tap links in texts | `src/lib/links.ts`, `src/lib/access/links.ts` |
 | Cleaners and co-hosts: the team, groups, each person's one link and their list of houses | `src/lib/team/service.ts`, `src/lib/team/device.ts`, `src/app/r/[token]/page.tsx` |
@@ -67,9 +69,26 @@ it when you change one.
   surcharges too: the tradie gets each surcharge less the fee (`surchargeShare` in `src/lib/jobs/pricing.ts`),
   on top of their menu share, and the offer text shows that share (`DECISIONS.md`, 2026-11-18). Parts are
   passed on at cost with no fee.
-- **Miss the promised time and the call-out portion of that job is on us** (the market's diagnosis fee,
-  capped at the job's price), taken off that job's charge, once per property per month. The tradie is
-  still paid in full.
+- **HostFix never loses its margin because a tradie is unreliable, and the owner pays only for what
+  happened** (`DECISIONS.md`, 2026-11-18). No missed-promise credit is ever created (`markMissedWindows`
+  in `src/lib/billing/settle.ts` only marks and flags; a credit made before 18 Nov 2026 still comes off its
+  own job's charge). The Arrived tap settles the surcharges (`markArrived`, `src/lib/jobs/arrival.ts`), so
+  the owner sees the final lines before the charge: an urgent job reached after its deadline has no urgent
+  line for anyone (owner 0, tradie 0, us 0), and the after-hours line stays only if the tap is outside
+  working hours. A normal job's tradie picks a two-hour window inside the promise when accepting, and on
+  time means by its end. A normal job nobody accepts in the market's hours (3 by default) texts the owner
+  ("you pay nothing unless a tradie does the job") and alerts the team. An Arrived tap with no location
+  or over 500 m from earlier trusted taps at the house is flagged, and the owner has "The tradie isn't
+  here" (a button). The first choice or backup may suggest a later time; the owner waits (the promise
+  moves, urgent stops being urgent) or sends it on, and no answer in the market's hours (2) sends it on.
+  Those two owner texts are never sent 9pm to 7am (held until 7am), and on a normal job both clocks count
+  only 7am to 9pm (`addTextingHours`, `src/lib/time.ts`). Urgent jobs run any time. The terms and tradie
+  agreement read these numbers from the market and the constants (`tests/unit/legal.test.ts`).
+- **Declining a job never counts against a tradie, anywhere** (contractor status). Only arrivals at jobs
+  they accepted count (`src/lib/tradies/reliability.ts`): under 90% on time over their last 20 (from 10
+  arrivals) puts them in a later wave of network offers, never out of a first-choice or backup slot. A
+  no-show (accepted, nobody there by the promised time) goes to the queue; 3 in 90 days flags them for a
+  conversation. Only a person removes a tradie. The owner is never told a tradie "passed" or "declined".
 - **No insurance, no jobs.** A tradie needs public liability insurance (insurer, policy number, expiry) on
   file and the certificate of currency uploaded (an `insurance_certificate` file, `src/lib/tradies/certificate.ts`)
   before approval, and the offer query skips anyone whose insurance has run out or has no certificate, the

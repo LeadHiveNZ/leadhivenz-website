@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { addGoodwillCredit, applyPendingCredits, chargeDuePayments, chargeJob, creditMissedWindows, flagAtRisk, MAX_CHARGE_ATTEMPTS, raiseDispute, releaseDuePayouts, resolveDispute, retryPayout } from "@/lib/billing/settle";
+import { addGoodwillCredit, applyPendingCredits, chargeDuePayments, chargeJob, flagAtRisk, markMissedWindows, MAX_CHARGE_ATTEMPTS, raiseDispute, releaseDuePayouts, resolveDispute, retryPayout } from "@/lib/billing/settle";
 import { ownerStatement } from "@/lib/billing/statements";
 import { addHours, addMinutes, setTestNow } from "@/lib/clock";
 import { getMarket } from "@/lib/markets/store";
@@ -29,7 +29,8 @@ import { addPlusTier, auditActions, gatewayFor, liveMarket, logJob, makeOwner, m
  *   Parts above 15000 need the owner's yes whatever the total
  *   Off-menu labour: the tradie gets 85%. Parts pass through at cost.
  *   Essential membership: free to join (DECISIONS.md, 2026-11-17). No monthly price.
- *   Missed promise: the call-out portion is on us, min(diagnosis fee 22500, the job's price)
+ *   Missed promise: nothing is credited any more (DECISIONS.md, 2026-11-18). A credit made before
+ *   then still comes off its own job's charge.
  *
  * A job logged without a code is PL-01.
  *
@@ -537,11 +538,11 @@ describe("when the owner says something is wrong", () => {
   });
 });
 
-describe("the response guarantee", () => {
-  // The call-out portion of the job is on us: min(the market's diagnosis fee, the job's price).
-  // Queenstown's diagnosis fee is 225 dollars in the menu file ("offMenu"), so 22500 cents.
+describe("the promised time", () => {
+  // Missing it no longer costs HostFix anything (DECISIONS.md, 2026-11-18). It is tracked, and the
+  // dispatcher is told: an accepted job with nobody there is a no-show ("call the tradie").
 
-  it("takes the call-out portion off a PL-01 when nobody is on site by the promised time, and pays the tradie in full", async () => {
+  it("credits nothing when nobody is on site by the promised time, and charges and pays the job as normal", async () => {
     const s = await setup();
     const job = await logJob(t.db, s.property, { code: "PL-01" });
     const [offer] = await offersFor(t.db, job.id);
@@ -549,65 +550,61 @@ describe("the response guarantee", () => {
 
     // One minute before the 24 hours are up: nothing.
     setTestNow(addMinutes(addHours(MONDAY_10AM, 24), -1));
-    expect(await creditMissedWindows(t.db)).toEqual({ missed: 0, credited: 0 });
+    expect(await markMissedWindows(t.db)).toEqual({ missed: 0, noShows: 0 });
 
     setTestNow(addHours(MONDAY_10AM, 24));
-    expect(await creditMissedWindows(t.db)).toEqual({ missed: 1, credited: 1 });
-    // PL-01 is 22500. The credit is min(22500, 22500) = 22500: the whole job.
-    const credit = await t.db.query<{ amount_cents: number; month: string; status: string; reason: string }>("select amount_cents, month, status, reason from public.credits where job_id = $1::uuid", [job.id]);
-    expect(credit).toEqual([{ amount_cents: 22500, month: "2026-11", status: "pending", reason: "missed_window" }]);
-    expect((await getJobForStaff(t.db, job.id))!.windowMissedAt).not.toBeNull();
-    expect(await openExceptions(t.db, job.id)).toContain("missed_window");
-    expect((await textsTo(t.db, s.owner.user.phone!, "window_missed"))[0]!.body).toContain("we missed our promised time at");
-    expect((await textsTo(t.db, s.owner.user.phone!, "window_missed"))[0]!.body).toContain("so NZ$225 of this job is on us");
-    expect(await auditActions(t.db, job.id)).toEqual(expect.arrayContaining(["job.window_missed", "credit.created"]));
+    expect(await markMissedWindows(t.db)).toEqual({ missed: 1, noShows: 1 });
+    expect(await t.db.query("select 1 from public.credits")).toHaveLength(0);
+    const marked = (await getJobForStaff(t.db, job.id))!;
+    expect(marked.windowMissedAt).not.toBeNull();
+    expect(marked.noShowAt).not.toBeNull();
+    // Accepted and nobody there: the dispatcher is asked to call the tradie.
+    expect(await openExceptions(t.db, job.id)).toContain("no_show");
+    const [raised] = await t.db.query<{ summary: string }>("select summary from public.exceptions where job_id = $1::uuid and kind = 'no_show'", [job.id]);
+    expect(raised!.summary).toContain("Wakatipu Plumbing accepted and is not on site");
+    expect(raised!.summary).toContain("Call the tradie");
+    expect(await textsTo(t.db, s.owner.user.phone!, "window_missed")).toHaveLength(0);
+    expect(await auditActions(t.db, job.id)).toEqual(expect.arrayContaining(["job.window_missed", "job.no_show"]));
+    expect(await auditActions(t.db, job.id)).not.toContain("credit.created");
+    // Running the check again changes nothing.
+    expect(await markMissedWindows(t.db)).toEqual({ missed: 0, noShows: 0 });
 
-    // It comes off this job's own charge, never a membership payment: nothing is passed to the payment company.
-    expect(await applyPendingCredits(t.db, gatewayFor(t.db))).toBe(0);
-    // Running the check again does not credit twice.
-    expect(await creditMissedWindows(t.db)).toEqual({ missed: 0, credited: 0 });
-
-    // The tradie gets there late and finishes. 22500 - 22500 = 0 to charge, so there is no charge at all.
+    // The tradie gets there late and finishes. PL-01 has no surcharge, so the owner pays 22500 and the tradie gets 19000.
     await markEnRoute(t.db, job.id, s.tradie.tradieId);
     const arrived = await markArrived(t.db, job.id, s.tradie.tradieId, { lat: -45.03, lng: 168.66 });
     if (!arrived.ok) throw new Error(arrived.message);
     const done = await finish(s, job.id);
     expect(done).toMatchObject({ ownerTotalCents: 22500, tradieTotalCents: 19000 });
-    expect(await payment(job.id)).toBeUndefined();
-    // The tradie is paid the full 19000, with nothing to wait for. The platform takes 0 and pays out 19000: it wears 19000 on this job.
-    expect(await payout(job.id)).toMatchObject({ status: "scheduled", amount_cents: 19000 });
-    expect((await t.db.query<{ status: string }>("select status from public.credits where job_id = $1::uuid", [job.id]))[0]!.status).toBe("applied");
-    expect(await moneyLog(job.id)).toEqual(expect.arrayContaining(["credit.applied:22500"]));
+    expect(await payment(job.id)).toMatchObject({ status: "pending", amount_cents: 22500 });
+    expect(await payout(job.id)).toMatchObject({ amount_cents: 19000 });
   });
 
-  it("is capped at the job's price: HM-01 is 15500, so 15500 is on us", async () => {
-    const s = await setup({ trades: ["handyman"] });
-    const job = await logJob(t.db, s.property, { code: "HM-01" });
-    // HM-01, Shelf, hook or mirror hanging: owner 155 dollars, tradie 130 dollars in the menu file.
-    expect(job).toMatchObject({ ownerTotalCents: 15500, tradieTotalCents: 13000 });
+  it("a job nobody has taken by the promised time is a miss, not a no-show", async () => {
+    const s = await setup();
+    const job = await logJob(t.db, s.property, { code: "PL-01" });
     setTestNow(addHours(MONDAY_10AM, 24));
-    expect(await creditMissedWindows(t.db)).toEqual({ missed: 1, credited: 1 });
-    // min(22500, 15500) = 15500.
-    expect((await t.db.query<{ amount_cents: number }>("select amount_cents from public.credits where job_id = $1::uuid", [job.id]))[0]!.amount_cents).toBe(15500);
-    expect((await textsTo(t.db, s.owner.user.phone!, "window_missed"))[0]!.body).toContain("so NZ$155 of this job is on us");
+    expect(await markMissedWindows(t.db)).toEqual({ missed: 1, noShows: 0 });
+    expect(await openExceptions(t.db, job.id)).toContain("missed_window");
+    expect((await getJobForStaff(t.db, job.id))!.noShowAt).toBeNull();
   });
 
-  it("on a job that grows to a 60000 quote, the credit is still the 22500 call-out, and the rest is charged", async () => {
+  it("a missed-promise credit made before the change still comes off its own job's charge", async () => {
+    // As the old timer wrote it on 17 November: the call-out, min(22500, the job's 22500) = 22500.
     const s = await setup();
     const job = await logJob(t.db, s.property, { menuItemId: null, offMenuTrade: "plumber", offMenuTitle: "Leak under the sink" });
     // Off-menu: the job starts at the diagnosis fee, owner 22500, tradie 19000.
     expect(job).toMatchObject({ ownerTotalCents: 22500, tradieTotalCents: 19000 });
+    await t.db.query(
+      `insert into public.credits (created_at, owner_id, property_id, job_id, reason, amount_cents, currency, month, status, note, created_by)
+       values ($1::timestamptz, $2::uuid, $3::uuid, $4::uuid, 'missed_window', 22500, 'NZD', '2026-11', 'pending', 'Made before the change', 'system')`,
+      [MONDAY_10AM.toISOString(), s.owner.ownerId, s.property.id, job.id],
+    );
     const [offer] = await offersFor(t.db, job.id);
     await t.db.tx((tx) => acceptOffer(tx, offer!.id, "link"));
-    setTestNow(addHours(MONDAY_10AM, 24));
-    expect(await creditMissedWindows(t.db)).toEqual({ missed: 1, credited: 1 });
-    // min(22500, 22500) = 22500.
-    expect((await t.db.query<{ amount_cents: number }>("select amount_cents from public.credits where job_id = $1::uuid", [job.id]))[0]!.amount_cents).toBe(22500);
-
-    // Late, the tradie arrives and quotes 52000 labour + 8000 parts = 60000, inside the 60000 limit, so it goes ahead.
     await markEnRoute(t.db, job.id, s.tradie.tradieId);
     const arrived = await markArrived(t.db, job.id, s.tradie.tradieId, { lat: -45.03, lng: 168.66 });
     if (!arrived.ok) throw new Error(arrived.message);
+    // The tradie quotes 52000 labour + 8000 parts = 60000, inside the 60000 limit, so it goes ahead.
     const quoted = await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Replace waste trap and isolating valve", labourCents: 52000, partsCents: 8000, uploadIds: [] });
     if (!quoted.ok) throw new Error(quoted.message);
     const done = await finish(s, job.id);
@@ -617,9 +614,10 @@ describe("the response guarantee", () => {
     expect(await payment(job.id)).toMatchObject({ status: "pending", amount_cents: 60000 });
     expect(await payout(job.id)).toMatchObject({ amount_cents: 71200 });
     expect(await chargeJob(t.db, gatewayFor(t.db), job.id)).toBe("succeeded");
-    expect(await payment(job.id)).toMatchObject({ status: "succeeded", amount_cents: 60000 });
+    expect((await t.db.query<{ status: string }>("select status from public.credits where job_id = $1::uuid", [job.id]))[0]!.status).toBe("applied");
+    // It came off this job, so nothing goes to the payment company as a separate credit.
+    expect(await applyPendingCredits(t.db, gatewayFor(t.db))).toBe(0);
 
-    // The statement shows the job at what was charged, says why, and shows no credit still to come.
     const market = (await getMarket(t.db, "queenstown"))!;
     const statement = await ownerStatement(t.db, s.owner.ownerId, market, "2026-11");
     expect(statement.lines.filter((line) => line.kind === "job").map((line) => [line.description, line.amountCents])).toEqual([
@@ -628,7 +626,7 @@ describe("the response guarantee", () => {
     expect(statement).toMatchObject({ jobsCents: 60000, creditsCents: 0, membershipCents: 0, totalCents: 60000 });
   });
 
-  it("does not credit when the tradie arrived in time, even by a minute", async () => {
+  it("does not mark a miss when the tradie arrived in time, even by a minute", async () => {
     const s = await setup();
     const job = await logJob(t.db, s.property);
     const [offer] = await offersFor(t.db, job.id);
@@ -636,7 +634,7 @@ describe("the response guarantee", () => {
     setTestNow(addMinutes(addHours(MONDAY_10AM, 24), -1));
     await markArrived(t.db, job.id, s.tradie.tradieId);
     setTestNow(addHours(MONDAY_10AM, 30));
-    expect(await creditMissedWindows(t.db)).toEqual({ missed: 0, credited: 0 });
+    expect(await markMissedWindows(t.db)).toEqual({ missed: 0, noShows: 0 });
     const arrived = await t.db.query<{ detail: { on_time: boolean } }>("select detail from public.audit_log where entity_id = $1 and action = 'job.arrived'", [job.id]);
     expect(arrived[0]!.detail.on_time).toBe(true);
   });
@@ -645,51 +643,19 @@ describe("the response guarantee", () => {
     const s = await setup();
     const job = await logJob(t.db, s.property, { urgent: true });
     setTestNow(addMinutes(addHours(MONDAY_10AM, 4), -1));
-    expect((await creditMissedWindows(t.db)).missed).toBe(0);
+    expect((await markMissedWindows(t.db)).missed).toBe(0);
     setTestNow(addHours(MONDAY_10AM, 4));
-    expect(await creditMissedWindows(t.db)).toEqual({ missed: 1, credited: 1 });
+    expect(await markMissedWindows(t.db)).toEqual({ missed: 1, noShows: 0 });
     expect(job.responseHours).toBe(4);
   });
 
-  it("is capped at one credit per property per calendar month", async () => {
-    const s = await setup();
-    const first = await logJob(t.db, s.property, { code: "PL-01" });
-    const second = await logJob(t.db, s.property, { code: "PL-03" });
-    setTestNow(addHours(MONDAY_10AM, 25));
-    expect(await creditMissedWindows(t.db)).toEqual({ missed: 2, credited: 1 });
-    expect((await t.db.query("select 1 from public.credits where property_id = $1::uuid and reason = 'missed_window'", [s.property.id])).length).toBe(1);
-    // Both misses are still logged and in front of the dispatcher.
-    expect(await openExceptions(t.db, first.id)).toContain("missed_window");
-    expect(await openExceptions(t.db, second.id)).toContain("missed_window");
-    const capped = await t.db.query<{ summary: string }>("select summary from public.exceptions where kind = 'missed_window' order by created_at, id");
-    expect(capped.some((row) => row.summary.includes("No credit this time"))).toBe(true);
-  });
-
-  it("gives a fresh credit in a new month, and a separate one for another property", async () => {
-    const s = await setup();
-    const other = await makeProperty(t.db, s.owner.ownerId);
-    await logJob(t.db, s.property, { code: "PL-01" });
-    await logJob(t.db, other, { code: "PL-01" });
-    setTestNow(addHours(MONDAY_10AM, 25));
-    expect(await creditMissedWindows(t.db)).toEqual({ missed: 2, credited: 2 });
-
-    // December (New Zealand time): the same property can be credited again.
-    setTestNow(new Date("2026-12-05T21:00:00.000Z"));
-    await t.db.query("update public.properties set status = 'active' where id = $1::uuid", [s.property.id]);
-    await logJob(t.db, s.property, { code: "PL-03" });
-    setTestNow(new Date("2026-12-06T22:00:00.000Z"));
-    expect(await creditMissedWindows(t.db)).toEqual({ missed: 1, credited: 1 });
-    const months = await t.db.query<{ month: string }>("select month from public.credits where property_id = $1::uuid order by month", [s.property.id]);
-    expect(months.map((row) => row.month)).toEqual(["2026-11", "2026-12"]);
-  });
-
-  it("never credits a cancelled job or a guest report still waiting for the owner", async () => {
+  it("never marks a cancelled job or a guest report still waiting for the owner", async () => {
     const s = await setup();
     const cancelled = await logJob(t.db, s.property, { code: "PL-01" });
     await cancelJob(t.db, cancelled.id, { actor: `owner:${s.owner.ownerId}` }, "Changed my mind");
     await logJob(t.db, s.property, { code: "PL-03", reportedBy: "guest" });
     setTestNow(addHours(MONDAY_10AM, 48));
-    expect(await creditMissedWindows(t.db)).toEqual({ missed: 0, credited: 0 });
+    expect(await markMissedWindows(t.db)).toEqual({ missed: 0, noShows: 0 });
   });
 
   it("warns the dispatcher three quarters of the way to the promised time", async () => {
@@ -704,7 +670,7 @@ describe("the response guarantee", () => {
     // Arriving clears it.
     const [offer] = await offersFor(t.db, job.id);
     await t.db.tx((tx) => acceptOffer(tx, offer!.id, "link"));
-    await markArrived(t.db, job.id, s.tradie.tradieId);
+    await markArrived(t.db, job.id, s.tradie.tradieId, { lat: -45.03, lng: 168.66 });
     expect(await openExceptions(t.db, job.id)).toEqual([]);
   });
 });

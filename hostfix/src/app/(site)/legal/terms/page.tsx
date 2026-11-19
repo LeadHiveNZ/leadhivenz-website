@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { brand } from "@config/brand";
+import { launchMarket } from "@config/markets";
 import { LegalPage, Section } from "@/components/LegalPage";
+import { PROPOSAL_DAYS, WINDOW_HOURS } from "@/lib/jobs/arrival";
+import { formatHourOfDay, TEXTING_ENDS, TEXTING_STARTS } from "@/lib/time";
 
 /**
  * THE OWNER TERMS. Plain English, written from what the software actually
@@ -13,6 +16,15 @@ export const metadata: Metadata = {
 };
 
 const UPDATED = "18 November 2026";
+
+/**
+ * The hours in section 4 come from the launch market's settings (config/markets.ts), so the page cannot say
+ * a number the app does not use. If an admin changes them for a market, change this page too
+ * (tests/unit/legal.test.ts checks the page against the market's defaults).
+ */
+const notTaken = launchMarket.unacceptedAlertHours;
+const answerHours = launchMarket.counterOfferHours;
+const quiet = `${formatHourOfDay(TEXTING_ENDS)} and ${formatHourOfDay(TEXTING_STARTS)}`;
 
 export default function Page() {
   const n = brand.name;
@@ -44,9 +56,10 @@ export default function Page() {
             log the job is the price you pay, even if we change the menu later.
           </li>
           <li>
-            <strong>Urgent</strong> (on site within 4 hours: the tradie drops what they are doing) adds a surcharge, and work before 7am, after
-            4:30pm or at the weekend adds an after-hours surcharge. The amount of each is on the price list and shown before you choose it, and
-            like the rest of the price it is fixed: nothing is added on the day.
+            <strong>Urgent</strong> (on site within 4 hours: the tradie drops what they are doing) adds a surcharge, and an urgent job asked for
+            before 7am, after 4:30pm or at the weekend adds an after-hours surcharge. The amount of each is on the price list and shown before you
+            choose it, and like the rest of the price it is fixed: nothing is added on the day. You pay each surcharge only for what actually
+            happened (section 4).
           </li>
           <li>
             <strong>Jobs not on the menu</strong> cost a fixed call-out for a tradie to come and look, then a quote. Any quote over NZ$600, or over
@@ -61,13 +74,44 @@ export default function Page() {
 
       <Section n={4} title="Our promise, and what happens if we miss it">
         <p>
-          A tradie on site within 24 hours of a job being sent out, or within 4 hours for an urgent job, counting nights and weekends. &ldquo;On
-          site&rdquo; is the tradie&rsquo;s own tap of &ldquo;I have arrived&rdquo; at your door.
+          We aim to have a tradie on site within 24 hours of a job being sent out, or within 4 hours for an urgent job, counting nights and
+          weekends. &ldquo;On site&rdquo; is the tradie&rsquo;s own tap of &ldquo;I have arrived&rdquo; at your door. You only ever pay for what was
+          actually delivered:
         </p>
+        <ul>
+          <li>
+            <strong>A normal job.</strong> When a tradie accepts, they choose a {WINDOW_HOURS}-hour window to arrive in, inside the 24 hours. We text
+            you that window, and it is on the job page.
+          </li>
+          <li>
+            <strong>Nobody has taken it after {notTaken} hours.</strong> We text you, and our team rings round for a tradie. You pay nothing unless
+            a tradie does the job. On a normal job those {notTaken} hours count only the time between {formatHourOfDay(TEXTING_STARTS)} and{" "}
+            {formatHourOfDay(TEXTING_ENDS)}, and we do not text you about it between {quiet}: the text waits until {formatHourOfDay(TEXTING_STARTS)}.
+          </li>
+          <li>
+            <strong>An urgent job reached late.</strong> If the tradie taps &ldquo;I have arrived&rdquo; after the 4-hour deadline, the urgent surcharge is
+            not charged. The rest of the job is charged as normal.
+          </li>
+          <li>
+            <strong>After hours.</strong> The after-hours surcharge is charged only if the tradie arrives before 7am, after 4:30pm or at the weekend.
+            If they come within working hours, it is not charged.
+          </li>
+          <li>
+            <strong>Your usual tradie can&rsquo;t make it in time.</strong> Our first-choice or backup tradie may suggest a later time instead, up to{" "}
+            {PROPOSAL_DAYS} days ahead. We text you, and you choose on the job page: wait for them, or have it sent to another {n} tradie now. If you
+            have not answered within {answerHours} hours we send it on. On a normal job we do not send that text between {quiet}, and the {answerHours}{" "}
+            hours count only the time between {formatHourOfDay(TEXTING_STARTS)} and {formatHourOfDay(TEXTING_ENDS)}; on an urgent job they run at any
+            time. If you wait, that later time becomes the promise, and an urgent job stops being urgent, so the urgent surcharge is not charged.
+          </li>
+          <li>
+            <strong>The tradie isn&rsquo;t there.</strong> If the app says the tradie has arrived and nobody is there, press &ldquo;The tradie isn&rsquo;t
+            here&rdquo; on the job page and our team rings them straight away.
+          </li>
+        </ul>
         <p>
-          If nobody is on site in time, <strong>the call-out portion of that job is on us</strong>: we credit you the call-out amount (up to the
-          price of the job) against your next charge, automatically, without you asking. This applies once per property per month. It does not
-          apply when the tradie could not get in, when you cancelled the job, or when a guest&rsquo;s report was still waiting for your approval.
+          You see the final price on the job page before your card is charged. We do not give a credit or a discount when a tradie is late or does
+          not turn up; we chase the tradie and get someone there. A credit for a missed time given before 18 November 2026 still comes off that
+          job&rsquo;s charge.
         </p>
       </Section>
 

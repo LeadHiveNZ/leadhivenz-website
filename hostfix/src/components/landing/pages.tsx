@@ -175,9 +175,9 @@ export function OwnerLanding({ data }: { data: PublicMarket }) {
           : "Free to join. Take the price list now, and we will let you know the day we open."
       }
       proof={[
-        { value: `${tier?.responseHours ?? 24}h`, label: "A tradie on site, or the call-out is on us" },
+        { value: `${tier?.responseHours ?? 24}h`, label: "A tradie on site, at a two-hour time they give you when they accept" },
         { value: String(data.menu.length || 25), label: "Common jobs at a fixed price, shown before you book" },
-        { value: `${tier?.urgentResponseHours ?? 4}h`, label: `When it is urgent: the tradie drops what they are doing, for ${money(market.urgentSurchargeCents)} more` },
+        { value: `${tier?.urgentResponseHours ?? 4}h`, label: `When it is urgent: the tradie drops what they are doing, for ${money(market.urgentSurchargeCents)} more, not charged if they are late` },
       ]}
       phone={<OwnerPhone example={example(data)} />}
       menu={menu}
@@ -232,7 +232,7 @@ export function TradieLanding({ data }: { data: PublicMarket }) {
         items.length > 0
           ? {
               title: "What the jobs pay",
-              note: `What you are paid for each job, shown in the text before you accept. Urgent adds ${formatMoney(surchargeShare(market.urgentSurchargeCents, market.platformFeeBps), market.currency)} to your pay and after hours adds ${formatMoney(surchargeShare(market.afterHoursSurchargeCents, market.platformFeeBps), market.currency)}: the surcharge less our ${market.platformFeeBps / 100}%, like the rest of the price.`,
+              note: `What you are paid for each job, shown in the text before you accept. Urgent adds ${formatMoney(surchargeShare(market.urgentSurchargeCents, market.platformFeeBps), market.currency)} to your pay when you're on site by the deadline, and after hours adds ${formatMoney(surchargeShare(market.afterHoursSurchargeCents, market.platformFeeBps), market.currency)} when you come outside working hours: the surcharge less our ${market.platformFeeBps / 100}%, like the rest of the price.`,
               currency: market.currency,
               showPrices: true,
               priceLabel: "What you are paid",

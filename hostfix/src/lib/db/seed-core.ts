@@ -95,7 +95,8 @@ export async function insertMarket(db: SeedTarget, market: Market): Promise<void
        parts_included_cents, parts_approval_cents,
        offer_minutes, hours_start, hours_end, work_days, payout_hold_hours,
        referral_reward_cents, referral_paid_months,
-       deposit_enabled, deposit_cents, deposit_terms, reply_by_text, deposit_spots
+       deposit_enabled, deposit_cents, deposit_terms, reply_by_text, deposit_spots,
+       unaccepted_alert_hours, counter_offer_hours
      ) values (
        $1, $2, $3, $4, $5, $6,
        $7, $8, $9, $10,
@@ -104,7 +105,8 @@ export async function insertMarket(db: SeedTarget, market: Market): Promise<void
        $17, $18,
        $19, $20, $21, $22::text[], $23,
        $24, $25,
-       $26, $27, $28::text[], $29, $30
+       $26, $27, $28::text[], $29, $30,
+       $31, $32
      )`,
     [
       market.slug, market.name, market.country, market.currency, market.timezone, market.stage,
@@ -116,6 +118,7 @@ export async function insertMarket(db: SeedTarget, market: Market): Promise<void
       market.referralRewardCents, market.referralPaidMonths,
       market.foundingDeposit.enabled, market.foundingDeposit.amountCents, market.foundingDeposit.terms, market.replyByText,
       market.foundingDeposit.spots,
+      market.unacceptedAlertHours, market.counterOfferHours,
     ],
   );
 

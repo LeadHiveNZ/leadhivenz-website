@@ -109,6 +109,17 @@ export type Market = {
   workDays: string[];
   /** Hours the tradie's money is held after a job, as the window to raise a problem. */
   payoutHoldHours: number;
+  /**
+   * A normal job nobody has accepted after this many hours: the owner is told we
+   * are ringing round, and the team is asked to (DECISIONS.md, 2026-11-18).
+   */
+  unacceptedAlertHours: number;
+  /**
+   * Hours the owner has to answer when their chosen tradie (first choice or
+   * backup) suggests a later time. No answer by then and the job goes on to the
+   * other tradies, as if the owner had said "send it now".
+   */
+  counterOfferHours: number;
 
   referralRewardCents: number;
   referralPaidMonths: number;
@@ -185,6 +196,8 @@ export function defineMarket(input: MarketInput): Market {
     hoursEnd: 16.5,
     workDays: ["mon", "tue", "wed", "thu", "fri"],
     payoutHoldHours: 24,
+    unacceptedAlertHours: 3,
+    counterOfferHours: 2,
     referralRewardCents: 10000,
     referralPaidMonths: 3,
     replyByText: false,

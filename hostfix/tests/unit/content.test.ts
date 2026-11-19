@@ -229,21 +229,24 @@ describe("the real landing page files", () => {
     const card = pricing?.blocks[0];
     expect(card?.type === "card" && plainText(card.title)).toBe("Free to join. Pay per job.");
     // Urgent NZ$50 (DECISIONS.md, 2026-11-18) and after hours NZ$140. They no longer go to the tradie in full.
-    expect(JSON.stringify(card)).toContain("Need someone within 4 hours? Add NZ$50 on the day and the tradie drops what they are doing, plus NZ$140 outside working hours.");
+    expect(JSON.stringify(card)).toContain("Need someone within 4 hours? Add NZ$50 on the day and the tradie drops what they are doing, plus NZ$140 when they come outside working hours.");
     expect(JSON.stringify(card)).not.toContain("in full");
     expect(JSON.stringify(pricing)).not.toContain("Managing 10 or more?");
   });
 
-  it("the owner page says joining is free, and the missed promise takes the call-out off", () => {
+  it("the owner page says joining is free, and that you only pay for what you got (no missed-promise credit)", () => {
     const content = loadLanding("owner", launchMarket);
     expect(content.intro.flatMap((block) => (block.type === "list" ? block.items.map(plainText) : []))).toEqual([
       "Free to join. Jobs at fixed prices, charged only when something is fixed",
-      "A tradie on site within 24 hours, or 4 when it's urgent. Miss it and the call-out is on us",
+      "A tradie on site within 24 hours, or 4 when it's urgent. Late on an urgent job? You don't pay the urgent fee",
       "Your cleaner and your guests can report a problem from their phone",
     ]);
-    const missed = content.sections.find((section) => plainText(section.title) === "If we miss, the call-out is on us");
-    // The call-out is the market's diagnosis fee, NZ$225 in Queenstown.
-    expect(JSON.stringify(missed)).toContain("Miss it and the call-out portion of that job, up to NZ$225, comes off your bill automatically.");
+    // DECISIONS.md, 2026-11-18: missing the time no longer credits the call-out. The owner pays for what actually happened.
+    const paid = content.sections.find((section) => plainText(section.title) === "You only pay for what you got");
+    expect(JSON.stringify(paid)).toContain("The urgent fee isn't charged.");
+    expect(JSON.stringify(paid)).toContain("you pay nothing unless a tradie does the job");
+    expect(JSON.stringify(content)).not.toContain("call-out is on us");
+    expect(JSON.stringify(content)).not.toContain("comes off your bill automatically");
     const questions = content.sections.find((section) => section.id === "questions")!;
     const asked = questions.blocks.map((block) => (block.type === "card" ? plainText(block.title) : ""));
     expect(asked).toContain("What does it cost to join?");
@@ -289,7 +292,13 @@ describe("the real landing page files", () => {
   it("the tradie page shows the tradie's share of each surcharge, not the owner's price", () => {
     // DECISIONS.md, 2026-11-18: urgent 5000 less 15% (750) is 4250; after hours 14000 less 15% (2100) is 11900.
     const text = JSON.stringify(loadLanding("tradie", launchMarket));
-    expect(text).toContain("Urgent adds NZ$42.50 to your pay and after hours adds NZ$119: the surcharge less our 15%, like the rest of the price");
+    expect(text).toContain("Urgent adds NZ$42.50 to your pay when you're on site by the deadline, and after hours adds NZ$119 when you come outside working hours: the surcharge less our 15%, like the rest of the price");
     expect(text).not.toContain("in full");
+  });
+
+  it("the tradie page never says passing on a job costs a tradie anything (DECISIONS.md, 2026-11-18)", () => {
+    const text = JSON.stringify(loadLanding("tradie", launchMarket));
+    expect(text).toContain("Passing on a job never leads to fewer offers or to being removed.");
+    expect(text).not.toContain("accept most jobs");
   });
 });

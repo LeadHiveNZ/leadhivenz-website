@@ -242,8 +242,10 @@ export default async function MarketPage({ params, searchParams }: { params: Pro
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Minutes each tradie has to accept" name="offerMinutes" required inputMode="numeric" maxLength={3} defaultValue={String(market.offerMinutes)} />
             <Field label="Hours a tradie's payment is held after a job" name="payoutHoldHours" required inputMode="numeric" maxLength={2} defaultValue={String(market.payoutHoldHours)} hint="The window for the owner to raise a problem. 48 at most." />
+            <Field label="Hours before we ring round for a normal job nobody has taken" name="unacceptedAlertHours" required inputMode="numeric" maxLength={2} defaultValue={String(market.unacceptedAlertHours)} hint="The owner is texted that we are ringing round, and you are alerted. 1 to 23." />
+            <Field label="Hours an owner has to answer their tradie's later time" name="counterOfferHours" required inputMode="numeric" maxLength={2} defaultValue={String(market.counterOfferHours)} hint="When the first choice or backup can't make it in time and suggests a later one. No answer and it goes to the next tradies. 1 to 12." />
             <Field label="Working day starts (for example 7 or 7:30)" name="hoursStart" required maxLength={7} defaultValue={clockText(market.hoursStart)} />
-            <Field label="Working day ends (for example 17 or 16:30)" name="hoursEnd" required maxLength={7} defaultValue={clockText(market.hoursEnd)} hint="24-hour clock. Urgent jobs outside these hours, or on a day that is not ticked, carry the after-hours surcharge." />
+            <Field label="Working day ends (for example 17 or 16:30)" name="hoursEnd" required maxLength={7} defaultValue={clockText(market.hoursEnd)} hint="24-hour clock. An urgent job logged outside these hours, or on a day that is not ticked, carries the after-hours surcharge, charged only if the tradie also arrives outside them." />
           </div>
           <Checks label="Working days" name="workDays" options={WEEKDAY_OPTIONS} defaultValues={market.workDays} />
           <Tick name="replyByText" label="Tradies can accept by replying YES to the text" hint="Only switch this on once this market's text number can receive replies and you have tested it. The link in the text always works." defaultChecked={market.replyByText} />

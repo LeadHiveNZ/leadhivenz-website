@@ -12,6 +12,7 @@ import { getDb } from "@/lib/db";
 import type { StatusTone } from "@/lib/jobs/types";
 import { listMarkets } from "@/lib/markets/store";
 import { displayPhone } from "@/lib/phone";
+import { needsReview, NO_SHOW_DAYS, noShowCounts } from "@/lib/tradies/reliability";
 import { SCORE_DAYS, scorecards, swapPrompts, TARGET } from "@/lib/tradies/scorecard";
 import { coverage, listSlots, listTradies, type TradieStatus } from "@/lib/tradies/service";
 import { dateKey } from "@/lib/time";
@@ -40,6 +41,7 @@ export default async function TradiesPage({ searchParams }: { searchParams: Sear
 
   const tradies = await listTradies(db, { market: market.slug });
   const cards = new Map((await scorecards(db, market.slug)).map((card) => [card.tradieId, card]));
+  const noShows = await noShowCounts(db, market.slug);
   const prompts = await swapPrompts(db, market.slug);
   const cover = await coverage(db, market.slug, dateKey(now(), market.timezone));
   const slots = await listSlots(db, market.slug);
@@ -149,8 +151,8 @@ export default async function TradiesPage({ searchParams }: { searchParams: Sear
                   <th className="px-4 py-3 font-bold">Tradie</th>
                   <th className="px-4 py-3 font-bold">Work</th>
                   <th className="px-4 py-3 font-bold">Status</th>
-                  <th className="px-4 py-3 text-right font-bold" title={`Last ${SCORE_DAYS} days`}>
-                    Accepted
+                  <th className="px-4 py-3 text-right font-bold" title={`Accepted jobs with nobody there by the promised time, last ${NO_SHOW_DAYS} days`}>
+                    No-shows
                   </th>
                   <th className="px-4 py-3 text-right font-bold" title={`Last ${SCORE_DAYS} days`}>
                     On time
@@ -176,9 +178,9 @@ export default async function TradiesPage({ searchParams }: { searchParams: Sear
                         <Chip tone={status.tone}>{status.label}</Chip>
                         {tradie.status !== "removed" && !tradie.payoutsEnabled && <span className="mt-1 block text-xs font-semibold text-alert">No bank details</span>}
                       </td>
-                      <td className={`tabular px-4 py-3 text-right font-semibold ${card && card.acceptanceRate !== null && card.acceptanceRate < TARGET && card.offers >= 5 ? "text-alert" : "text-ink"}`}>
-                        {pct(card?.acceptanceRate ?? null)}
-                        {card && card.offers > 0 && <span className="block text-xs font-normal text-muted">{card.accepted} of {card.offers}</span>}
+                      <td className={`tabular px-4 py-3 text-right font-semibold ${needsReview(noShows.get(tradie.id) ?? 0) ? "text-alert" : "text-ink"}`}>
+                        {noShows.get(tradie.id) ?? 0}
+                        {needsReview(noShows.get(tradie.id) ?? 0) && <span className="block text-xs font-normal text-alert">Talk to them</span>}
                       </td>
                       <td className={`tabular px-4 py-3 text-right font-semibold ${card && card.onTimeRate !== null && card.onTimeRate < TARGET && card.jobs >= 3 ? "text-alert" : "text-ink"}`}>
                         {pct(card?.onTimeRate ?? null)}
@@ -192,7 +194,8 @@ export default async function TradiesPage({ searchParams }: { searchParams: Sear
           </div>
         )}
         <p className="mt-2 text-sm text-muted">
-          Numbers are for the last {SCORE_DAYS} days. Under {Math.round(TARGET * 100)}% shows in red once there is enough history to be fair.{" "}
+          On time is for the last {SCORE_DAYS} days, on jobs they accepted. Under {Math.round(TARGET * 100)}% shows in red once there is enough history to be fair. No-shows are
+          for the last {NO_SHOW_DAYS} days. Passing on offers is never counted against anyone. Only a person pauses or removes a tradie.{" "}
           {!query.removed && (
             <Link href={`/admin/tradies?market=${market.slug}&removed=1`} className="font-semibold text-brand underline underline-offset-2">
               Show removed tradies

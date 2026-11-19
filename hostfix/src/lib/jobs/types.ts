@@ -12,6 +12,13 @@ export type JobStatus =
   | "completed"
   | "cancelled";
 
+/**
+ * ok: within 500 m of where trusted arrivals at this property were.
+ * far: more than 500 m from it. no_location: the phone gave no location.
+ * no_reference: a location, but nothing yet to compare it with.
+ */
+export type ArrivalCheck = "ok" | "far" | "no_location" | "no_reference";
+
 export type ReportedBy = "owner" | "team" | "guest" | "staff";
 export type JobOutcome = "done" | "diagnosis_only" | "no_access";
 
@@ -49,6 +56,18 @@ export type Job = {
   cancelledBy: string | null;
   cancelReason: string | null;
   windowMissedAt: Date | null;
+  /** The arrival window the tradie chose when accepting. On time means arrived by its end (DECISIONS.md, 2026-11-18). */
+  arrivalWindowStart: Date | null;
+  arrivalWindowEnd: Date | null;
+  /** Set when an accepted job reached its promised time with nobody on site. */
+  noShowAt: Date | null;
+  /** What the app made of the Arrived tap's location. */
+  arrivalCheck: ArrivalCheck | null;
+  arrivalDistanceM: number | null;
+  arrivedLat: number | null;
+  arrivedLng: number | null;
+  /** The owner pressed "The tradie isn't here". */
+  ownerSaysAbsentAt: Date | null;
   outcome: JobOutcome | null;
   completionNote: string | null;
   currency: string;

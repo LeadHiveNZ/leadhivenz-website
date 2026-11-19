@@ -27,7 +27,7 @@ import { formatDate } from "@/lib/time";
 
 export const metadata: Metadata = { title: "Owner" };
 
-const CREDIT_WORDS: Record<string, string> = { missed_window: "Response guarantee", goodwill: "Goodwill", founding_deposit: "Founding deposit" };
+const CREDIT_WORDS: Record<string, string> = { missed_window: "Missed time (given before 18 Nov 2026, when these stopped)", goodwill: "Goodwill", founding_deposit: "Founding deposit" };
 
 export default async function StaffOwnerPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;

@@ -73,7 +73,10 @@ test("a tradie takes a job from the link in a text, without signing in, and fini
   await expect(shown(page, "14B Lake Esplanade")).toHaveCount(0);
   await expect(shown(page, "code 4821")).toHaveCount(0);
 
-  await page.getByRole("button", { name: "Accept job" }).click();
+  // A normal job: the tradie accepts by choosing when they will be there (DECISIONS.md, 2026-11-18).
+  // Passing never counts against them, and the page says so.
+  await expect(shown(page, /Passing never counts against you/).first()).toBeVisible();
+  await page.getByRole("button", { name: /^Accept: / }).first().click();
   await page.waitForURL(/yours=1/);
   await ready(page);
   await expect(shown(page, "The job is yours").first()).toBeVisible();
@@ -100,8 +103,8 @@ test("a tradie takes a job from the link in a text, without signing in, and fini
 
   // The owner was texted at each step, and charged the fixed price.
   const owner = await phone(page, "sam");
-  await expect(owner.filter({ hasText: "Dave's Plumbing & Gas is booked for Lakeview Apartment" }).last()).toBeVisible();
-  await expect(owner.filter({ hasText: "has arrived at Lakeview Apartment" }).last()).toBeVisible();
+  await expect(owner.filter({ hasText: "Dave's Plumbing & Gas is booked for Lakeview Apartment, on site between" }).last()).toBeVisible();
+  await expect(owner.filter({ hasText: "has arrived at Lakeview Apartment. Not there? Tell us on the job page" }).last()).toBeVisible();
   await expect(owner.filter({ hasText: '"Dripping tap or tap washer" at Lakeview Apartment is done. NZ$235 charged to your card.' })).toHaveCount(1);
 });
 

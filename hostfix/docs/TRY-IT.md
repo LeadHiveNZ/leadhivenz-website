@@ -49,7 +49,7 @@ Do this first. It touches every side once.
 8. Back on the demo menu, **Skip 1 day**. Then be **Admin (you)** and open **Numbers**. Under **Jobs**
    press **Done** and open the tap job: the owner's card was charged and Dave's payment has been sent.
    Anything you left unanswered for a day has been dealt with too: a guest report nobody approved is
-   cancelled, and a job nobody reached in time has credited the owner's month.
+   cancelled, and a job nobody reached in time is in Maria's queue (nothing is credited: DECISIONS.md, 18 Nov 2026).
 
 ## What it looks like
 
@@ -123,7 +123,7 @@ The owner's real phone number is visible to the tradie once they accept.
 | As Maria, open **Owner raised a problem** in the queue | Sam has already said the new silicone is lifting. The tradie's payment is on hold. |
 | On that job: **Refund the owner**, half the amount, a note, **Settle it** | The owner is refunded, and the tradie's payment and your fee come down in proportion |
 | As Sam, open any other finished job: **Something not right with this job?** | How an owner raises one. It lands in Maria's queue. |
-| As Admin: **More > Owners > Sam Taylor** | A credit for a missed promise, given automatically. One of the sample jobs missed its time. |
+| As Admin: **Jobs** > the heat pump job | A no-show: Tom accepted and was not there by the promised time. Maria rang him. Nothing was credited (missed promises stopped being credited on 18 Nov 2026). |
 | Finish a job as a tradie, then **Skip 1 day** | "Was sent", and a text to the tradie |
 | **Be Tom (electrician)** > **Pay** | A month-by-month statement of what he was paid |
 | **A tradie who has not been approved yet:** sign out, open `/sign-in`, enter `021 123 4506`, use the code shown, then **Profile** > **Add bank details** | The pretend version of Stripe's page, then "Bank details set up. You can be paid." Her home still says her details are being checked. |

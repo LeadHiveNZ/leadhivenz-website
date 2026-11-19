@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { acceptJob, passJob, setPaused } from "@/app/actions/tradie";
-import { ActionForm } from "@/components/forms/ActionForm";
+import { ActionForm, Select } from "@/components/forms/ActionForm";
 import { SubmitButton } from "@/components/forms/SubmitButton";
 import { JobRow } from "@/components/jobs/JobRow";
 import { Countdown } from "@/components/jobs/TradieClient";
@@ -16,7 +16,10 @@ import { isOpen } from "@/lib/jobs/types";
 import { offerLinkCode } from "@/lib/links";
 import { getMarket } from "@/lib/markets/store";
 import { formatMoney } from "@/lib/money";
-import { SCORE_DAYS, scorecards, TARGET } from "@/lib/tradies/scorecard";
+import { MIN_ARRIVALS, NO_SHOW_DAYS, ON_TIME_TARGET, recentNoShows } from "@/lib/tradies/reliability";
+import { SCORE_DAYS, scorecards } from "@/lib/tradies/scorecard";
+import { windowsForAccepting } from "@/lib/dispatch/cascade";
+import { windowLabel } from "@/lib/jobs/arrival";
 import { getTradie, listLicences } from "@/lib/tradies/service";
 import { dateKey, formatDeadline } from "@/lib/time";
 
@@ -42,6 +45,7 @@ export default async function TradieHome({ searchParams }: { searchParams: Searc
   const today = dateKey(at, zone);
   const missing = tradie.trades.filter((key) => findTrade(key)?.licenceRequired && !licences.some((licence) => licence.trade === key && licence.expiresOn >= today));
   const secret = appSecret();
+  const noShows = await recentNoShows(db, tradie.id, at);
 
   return (
     <div className="space-y-7">
@@ -50,7 +54,8 @@ export default async function TradieHome({ searchParams }: { searchParams: Searc
         <p className="mt-1 text-muted">{market?.name ?? tradie.market}</p>
       </div>
 
-      {query.passed && <Notice tone="info" title="Passed. It has gone to the next tradie." />}
+      {query.passed && <Notice tone="info" title="Passed. It has gone to the next tradie. Passing never counts against you." />}
+      {query.asked && <Notice tone="info" title="We have asked the owner about your time. We will text you their answer." />}
 
       {/* A tradie waiting for approval never gets here: requireTradie sends them to their profile. */}
       {tradie.status === "paused" && (
@@ -109,6 +114,15 @@ export default async function TradieHome({ searchParams }: { searchParams: Searc
                 <div className="mt-3 grid grid-cols-2 gap-2">
                   <ActionForm action={acceptJob} className="col-span-2 space-y-2">
                     <input type="hidden" name="offerId" value={offer.id} />
+                    {market && windowsForAccepting(offer, market, at).length > 0 && (
+                      <Select
+                        label="When will you be there?"
+                        name="window"
+                        required
+                        placeholder="Choose a time"
+                        options={windowsForAccepting(offer, market, at).map((window) => ({ key: window.end.toISOString(), label: windowLabel(window, at, zone) }))}
+                      />
+                    )}
                     <SubmitButton pendingLabel="Accepting..." className="w-full">
                       Accept job
                     </SubmitButton>
@@ -144,23 +158,19 @@ export default async function TradieHome({ searchParams }: { searchParams: Searc
 
       {card && (
         <section>
-          <SectionTitle>Your last {SCORE_DAYS} days</SectionTitle>
+          <SectionTitle>Your record</SectionTitle>
           <div className="grid grid-cols-2 gap-3">
             <Stat
-              label="Offers accepted"
-              value={pct(card.acceptanceRate)}
-              note={card.offers > 0 ? `${card.accepted} of ${card.offers}` : "No offers yet"}
-              tone={card.acceptanceRate !== null && card.acceptanceRate < TARGET && card.offers >= 5 ? "alert" : undefined}
-            />
-            <Stat
-              label="On site in time"
+              label={`On site in time, last ${SCORE_DAYS} days`}
               value={pct(card.onTimeRate)}
-              note={card.jobs > 0 ? `${card.onTime} of ${card.jobs}` : "No jobs yet"}
-              tone={card.onTimeRate !== null && card.onTimeRate < TARGET && card.jobs >= 3 ? "alert" : undefined}
+              note={card.jobs > 0 ? `${card.onTime} of ${card.jobs} jobs you accepted` : "No jobs yet"}
+              tone={card.belowTarget ? "alert" : undefined}
             />
+            <Stat label={`No-shows, last ${NO_SHOW_DAYS} days`} value={String(noShows)} note="Accepted, and not there by the promised time" tone={noShows > 0 ? "alert" : undefined} />
           </div>
           <p className="mt-2 text-sm text-muted">
-            Tradies who stay at {Math.round(TARGET * 100)}% or better keep first pick of the jobs. Passing quickly is better than letting an offer run out, but both count as not accepted.
+            Only jobs you accept count. Passing on an offer, or letting one run out, never counts against you and never means fewer offers. Once you have arrived at {MIN_ARRIVALS} jobs, being on
+            time for at least {Math.round(ON_TIME_TARGET * 100)}% of your last 20 keeps you in the first wave of network offers. Below that you still get them, a little later.
           </p>
         </section>
       )}

@@ -2,7 +2,7 @@ import { isUuid } from "@/lib/uuid";
 import type { Db } from "@/lib/db/types";
 import type { Line, LineKind } from "./pricing";
 import { taxPortion, totals } from "./pricing";
-import type { Job, JobLine, JobOutcome, JobStatus, Offer, OfferStatus, Quote, QuoteStatus, ReportedBy } from "./types";
+import type { ArrivalCheck, Job, JobLine, JobOutcome, JobStatus, Offer, OfferStatus, Quote, QuoteStatus, ReportedBy } from "./types";
 
 /**
  * READING AND WRITING JOBS.
@@ -23,6 +23,9 @@ export type JobRow = {
   cancelled_at: Date | null; cancelled_by: string | null; cancel_reason: string | null; window_missed_at: Date | null;
   outcome: JobOutcome | null; completion_note: string | null; currency: string; owner_total_cents: number;
   tradie_total_cents: number; tax_cents: number; team_member_id?: string | null;
+  arrival_window_start?: Date | null; arrival_window_end?: Date | null; no_show_at?: Date | null;
+  arrival_check?: ArrivalCheck | null; arrival_distance_m?: number | null; arrived_lat?: number | string | null; arrived_lng?: number | string | null;
+  owner_says_absent_at?: Date | null;
 };
 
 const d = (value: Date | null) => (value ? new Date(value) : null);
@@ -39,6 +42,11 @@ export function rowToJob(row: JobRow): Job {
     windowMissedAt: d(row.window_missed_at), outcome: row.outcome, completionNote: row.completion_note, currency: row.currency,
     ownerTotalCents: row.owner_total_cents, tradieTotalCents: row.tradie_total_cents, taxCents: row.tax_cents,
     teamMemberId: row.team_member_id ?? null,
+    arrivalWindowStart: d(row.arrival_window_start ?? null), arrivalWindowEnd: d(row.arrival_window_end ?? null), noShowAt: d(row.no_show_at ?? null),
+    arrivalCheck: row.arrival_check ?? null, arrivalDistanceM: row.arrival_distance_m === null || row.arrival_distance_m === undefined ? null : Number(row.arrival_distance_m),
+    arrivedLat: row.arrived_lat === null || row.arrived_lat === undefined ? null : Number(row.arrived_lat),
+    arrivedLng: row.arrived_lng === null || row.arrived_lng === undefined ? null : Number(row.arrived_lng),
+    ownerSaysAbsentAt: d(row.owner_says_absent_at ?? null),
   };
 }
 

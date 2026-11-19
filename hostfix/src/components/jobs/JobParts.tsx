@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Card, Chip, Money, SectionTitle, Timeline } from "@/components/ui/Bits";
 import { Icon } from "@/components/ui/Icon";
 import type { Upload } from "@/lib/files/uploads";
+import { arrivedOnTime, onTimeDeadline, windowBetween } from "@/lib/jobs/arrival";
 import type { JobLine } from "@/lib/jobs/types";
 import { statusLabel, statusTone, type Job } from "@/lib/jobs/types";
 import type { Audience, JobView } from "@/lib/jobs/view";
@@ -16,21 +17,33 @@ export function JobStatus({ job, audience }: { job: Job; audience: Audience }) {
 /** The clock: how long until the promised time, or how it turned out. */
 export function Deadline({ job, now, timeZone }: { job: Job; now: Date; timeZone: string }) {
   if (!job.respondBy || job.status === "cancelled") return null;
+  // A normal job's tradie chose a window when they accepted: that is what on time means (DECISIONS.md, 2026-11-18).
+  const windowed = job.urgency !== "urgent" && job.arrivalWindowStart && job.arrivalWindowEnd;
   if (job.arrivedAt) {
-    const onTime = job.arrivedAt.getTime() <= job.respondBy.getTime();
+    const onTime = arrivedOnTime(job, job.arrivedAt);
     return (
       <p className={`flex items-center gap-1.5 text-sm font-semibold ${onTime ? "text-done" : "text-alert"}`}>
         <Icon name={onTime ? "check" : "clock"} size={16} />
         On site {formatDeadline(job.arrivedAt, now, timeZone)}
-        {onTime ? ", inside the promised time" : ", after the promised time"}
+        {onTime ? (windowed ? ", inside the time the tradie chose" : ", inside the promised time") : windowed ? ", after the time the tradie chose" : ", after the promised time"}
       </p>
     );
   }
-  const left = job.respondBy.getTime() - now.getTime();
+  const deadline = onTimeDeadline(job) ?? job.respondBy;
+  const left = deadline.getTime() - now.getTime();
+  if (windowed) {
+    const words = windowBetween({ start: job.arrivalWindowStart!, end: job.arrivalWindowEnd! }, now, timeZone);
+    return (
+      <p className={`flex items-center gap-1.5 text-sm font-semibold ${left <= 0 ? "text-alert" : left < 60 * 60_000 ? "text-wait" : "text-muted"}`}>
+        <Icon name="clock" size={16} />
+        {left > 0 ? `On site ${words}` : `Was due ${words}`}
+      </p>
+    );
+  }
   return (
     <p className={`flex items-center gap-1.5 text-sm font-semibold ${left <= 0 ? "text-alert" : left < 60 * 60_000 ? "text-wait" : "text-muted"}`}>
       <Icon name="clock" size={16} />
-      {left > 0 ? `On site by ${formatDeadline(job.respondBy, now, timeZone)} (${formatDuration(left)} to go)` : `Was promised by ${formatDeadline(job.respondBy, now, timeZone)}`}
+      {left > 0 ? `On site by ${formatDeadline(deadline, now, timeZone)} (${formatDuration(left)} to go)` : `Was promised by ${formatDeadline(deadline, now, timeZone)}`}
     </p>
   );
 }

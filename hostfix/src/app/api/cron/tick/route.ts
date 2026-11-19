@@ -5,7 +5,7 @@ import { env } from "@/lib/env";
 
 /**
  * THE TIMER. Vercel calls this address once a minute (see vercel.json). It
- * moves offers on to the next tradie, chases owners, credits missed promises,
+ * moves offers on to the next tradie, chases owners, flags missed promises,
  * retries cards, pays tradies and sends anything waiting.
  *
  * Only Vercel's own timer may call it: Vercel sends CRON_SECRET with each

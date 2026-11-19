@@ -5,6 +5,9 @@ import { listUploads, type Upload } from "@/lib/files/uploads";
 import { formatMoney } from "@/lib/money";
 import type { Property } from "@/lib/properties/service";
 import { formatDeadline } from "@/lib/time";
+import { waitingLaterTime, type LaterTime } from "@/lib/dispatch/cascade";
+import { brand } from "@config/brand";
+import { windowBetween } from "./arrival";
 import { loadContext } from "./context";
 import { listLines, listOffers, listQuotes, type OfferWithTradie } from "./store";
 import type { Job, JobLine, Quote, StatusTone } from "./types";
@@ -15,8 +18,10 @@ import type { Job, JobLine, Quote, StatusTone } from "./types";
  *
  * The history is built from the audit log, so the screen can never tell a
  * different story from the record. What each kind of person sees is decided
- * here: an owner is never shown who passed on their job, and a tradie is
- * never shown what the owner was charged.
+ * here. An owner is never told a tradie "passed" or "declined": when their
+ * chosen tradie (first choice or backup) cannot take it, they read "Name isn't
+ * available for this one, so we've sent it to another HostFix tradie"
+ * (DECISIONS.md, 2026-11-18). A tradie is never shown what the owner was charged.
  */
 
 export type Audience = "owner" | "tradie" | "staff";
@@ -43,6 +48,8 @@ export type JobView = {
   workPhotos: Upload[];
   history: HistoryEntry[];
   money: JobMoney;
+  /** The owner's chosen tradie has suggested a later time and is waiting for the owner's answer. */
+  laterTime: LaterTime | null;
 };
 
 const str = (value: unknown): string => (typeof value === "string" ? value : "");
@@ -65,17 +72,56 @@ function describe(row: AuditRow, audience: Audience, job: Job, market: Market): 
       if (audience !== "staff") return null;
       return entry(`Offered to ${(Array.isArray(d.tradies) ? d.tradies : []).join(", ") || "tradies"}`, "waiting", `Stage ${String(d.stage)} of 3${Number(d.round) > 1 ? `, round ${String(d.round)}` : ""}.`);
     case "job.passed":
-      return audience === "staff" ? entry("A tradie passed", "quiet", `By ${str(d.via) || "link"}.`) : null;
+      if (audience === "staff") return entry(`${str(d.tradie) || "A tradie"} passed`, "quiet", `By ${str(d.via) || "link"}. Passing never counts against a tradie.`);
+      // Only the owner's chosen tradies (first choice and backup) are named, and never as "passed".
+      if (audience === "owner" && Number(d.stage) <= 2) return entry(`${str(d.tradie) || "Your usual tradie"} isn't available for this one, so we've sent it to another ${brand.name} tradie.`, "waiting");
+      return null;
+    case "job.later_time_offered": {
+      if (audience === "tradie") return entry("You suggested a later time", "waiting");
+      const when = d.window_start && d.window_end ? windowBetween({ start: new Date(str(d.window_start)), end: new Date(str(d.window_end)) }, row.at, market.timezone) : "later";
+      return entry(`${str(d.tradie) || "Your tradie"} can't make it within ${String(d.hours ?? job.responseHours)} hours`, "alert", `They can come ${when}.`);
+    }
+    case "job.later_time_accepted":
+      return entry(audience === "owner" ? `You chose to wait for ${str(d.tradie) || "your tradie"}` : "The owner chose to wait", "active", d.was_urgent ? "It is no longer urgent, so the urgent fee is not charged." : null);
+    case "job.later_time_declined":
+      return entry(audience === "owner" ? `You asked us to send it to another ${brand.name} tradie` : "The owner asked for someone sooner", "waiting");
+    case "job.later_time_expired":
+      return entry(audience === "tradie" ? "The owner did not answer in time" : `No answer in time, so we've sent it to another ${brand.name} tradie`, "waiting");
+    case "job.not_taken_yet":
+      return audience === "tradie" ? null : entry(audience === "owner" ? "No tradie has taken it yet: our team is ringing round" : "Nobody has taken it yet: ring round", "alert", audience === "owner" ? "You pay nothing unless a tradie does the job." : null);
+    case "job.surcharge_dropped": {
+      const parts = [d.urgent ? "urgent" : null, d.after_hours ? "after-hours" : null].filter(Boolean).join(" and ");
+      const why = d.urgent ? "the tradie arrived after the urgent deadline" : "the tradie arrived inside working hours";
+      return entry(`No ${parts} fee`, "done", audience === "tradie" ? `Not paid, because ${why.replace("the tradie", "you")}.` : `Not charged, because ${why}.`);
+    }
+    case "job.owner_says_absent":
+      return audience === "tradie" ? null : entry(audience === "owner" ? "You told us the tradie isn't there" : "The owner says the tradie isn't there", "alert");
+    case "job.no_show":
+      return audience === "staff" ? entry("No-show: the tradie was not there by the promised time", "alert") : null;
     case "job.unfilled":
       return audience === "staff" ? entry("Nobody accepted", "alert", "Sent to the dispatcher's queue.") : audience === "owner" ? entry("Our team is arranging a tradie", "waiting") : null;
     case "job.reoffered":
       return audience === "staff" ? entry("Offers started again", "waiting") : null;
-    case "job.accepted":
-      return entry(audience === "tradie" ? "You accepted the job" : `${str(d.tradie) || "A tradie"} accepted`, "active", audience === "staff" ? `By ${str(d.via)}${d.late ? ", after their 15 minutes" : ""}.` : null);
+    case "job.accepted": {
+      const when = job.urgency !== "urgent" && d.window_start && d.window_end
+        ? `On site ${windowBetween({ start: new Date(str(d.window_start)), end: new Date(str(d.window_end)) }, row.at, market.timezone)}.`
+        : null;
+      return entry(
+        audience === "tradie" ? "You accepted the job" : `${str(d.tradie) || "A tradie"} accepted`, "active",
+        audience === "staff" ? `By ${str(d.via)}${d.late ? ", after their 15 minutes" : ""}.${when ? ` ${when}` : ""}` : when,
+      );
+    }
     case "job.en_route":
       return entry(audience === "tradie" ? "You set off" : "Tradie on the way", "active");
-    case "job.arrived":
-      return entry(audience === "tradie" ? "You arrived" : "Tradie on site", "active", d.on_time === false ? "After the promised time." : audience === "staff" ? "Inside the promised time." : null);
+    case "job.arrived": {
+      const timing = d.on_time === false ? (d.window_end ? "After the time they chose." : "After the promised time.") : audience === "staff" ? "On time." : null;
+      const place = audience !== "staff" ? null
+        : d.location === "far" ? ` ${String(d.distance_m)} m from where tradies have been here before.`
+        : d.location === "no_location" ? " The phone gave no location."
+        : d.location === "no_reference" ? " Location recorded: no reference yet for this house."
+        : d.location === "ok" ? " Location matches earlier visits." : "";
+      return entry(audience === "tradie" ? "You arrived" : "Tradie on site", "active", timing || place ? `${timing ?? ""}${place ?? ""}`.trim() : null);
+    }
     case "quote.submitted":
       return entry(`Quote: ${amount}`, d.needs_approval ? "alert" : "active", `${str(d.description)}${d.needs_approval ? ". Waiting for the owner's answer." : ". Inside the pre-approved limit, so it went ahead."}`);
     case "quote.approved":
@@ -103,7 +149,8 @@ function describe(row: AuditRow, audience: Audience, job: Job, market: Market): 
     case "refund.issued":
       return audience === "tradie" ? null : entry(`Refunded ${amount}`, "done");
     case "job.window_missed":
-      return audience === "tradie" ? null : entry("We missed the promised time", "alert", d.credited ? "The call-out portion of this job is on us." : audience === "staff" ? "No credit: already credited this month." : null);
+      // Older entries may say "credited": a credit made before 18 November 2026 still comes off the bill.
+      return audience === "tradie" ? null : entry("Nobody on site by the promised time", "alert", d.credited ? "The call-out portion of this job is on us." : audience === "staff" ? (d.no_show ? "The tradie had accepted: a no-show." : "Nobody had taken it.") : null);
     case "job.cancelled":
       return entry("Cancelled", "quiet", audience === "staff" ? str(d.reason) : null);
     case "exception.raised":
@@ -157,5 +204,6 @@ export async function loadJobView(db: Db, job: Job, audience: Audience): Promise
       dispute: dsp ? { id: dsp.id, status: dsp.status, reason: dsp.reason, createdAt: new Date(dsp.created_at), refundCents: dsp.refund_cents, resolutionNote: dsp.resolution_note } : null,
       credit: credits[0] ? { amountCents: credits[0].amount_cents, status: credits[0].status } : null,
     },
+    laterTime: audience === "tradie" ? null : await waitingLaterTime(db, job.id),
   };
 }

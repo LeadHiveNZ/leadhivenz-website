@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { brand } from "@config/brand";
 import { LegalPage, Section } from "@/components/LegalPage";
+import { PROPOSAL_DAYS, WINDOW_HOURS } from "@/lib/jobs/arrival";
+import { MIN_ARRIVALS, NO_SHOW_DAYS, NO_SHOW_REVIEW, ON_TIME_TARGET, RECENT_ARRIVALS } from "@/lib/tradies/reliability";
 
 /**
  * THE TRADIE AGREEMENT. One page, plain English, written from what the
@@ -62,9 +64,19 @@ export default function Page() {
 
       <Section n={3} title="How offers work">
         <p>
-          A job is offered by text to one tradie at a time. The first choice has <strong>15 minutes</strong> to accept, then it moves to the next,
-          then to everyone who does that trade. Open the link and press <strong>Accept job</strong>; opening the link alone does nothing. Pass
-          whenever you cannot do it, with no penalty for passing.
+          A job is offered by text to one tradie at a time. The first choice has <strong>15 minutes</strong> to accept, then it moves to the backup,
+          then to everyone who does that trade. Open the link and press a button to accept; opening the link alone does nothing. On a normal job
+          you accept by choosing the {WINDOW_HOURS}-hour window you will arrive in, inside the 24 hours; the owner is told that window. Pass whenever you
+          cannot do it.
+        </p>
+        <p>
+          <strong>Declining a job never leads to removal or to fewer offers.</strong> Passing, or letting an offer run out, is not counted against
+          you anywhere. You run your own business and choose your own work.
+        </p>
+        <p>
+          If you are the first choice or backup for your trade and cannot make the promised time, you can suggest a later time instead, up to {PROPOSAL_DAYS} days
+          ahead. The owner chooses whether to wait for you or have it sent to another tradie. If they wait, the job is yours at that time (and an
+          urgent job is no longer urgent, so there is no urgent share). If they do not, we tell you, and that is not counted against you either.
         </p>
         <p>
           Before you accept you see the job, the suburb, what it pays and the time you must be on site by. <strong>After</strong> you accept you
@@ -74,8 +86,12 @@ export default function Page() {
 
       <Section n={4} title="What accepting commits you to">
         <ul>
-          <li>Being on site by the time shown in the offer: within 24 hours for a normal job, within 4 hours for an urgent one.</li>
-          <li>Tapping <strong>I have arrived</strong> when you get there. That tap is how we measure our promise to the owner, so do it at the door, not later.</li>
+          <li>Being on site by the end of the window you chose for a normal job, or by the deadline for an urgent one (within 4 hours).</li>
+          <li>
+            Tapping <strong>I have arrived</strong> at the door, with your phone&rsquo;s location on. That tap is how we measure the time, and it decides
+            whether the urgent and after-hours shares are paid. A tap with no location, or far from the property, is checked by our team, and the owner
+            can tell us if you are not there.
+          </li>
           <li>Doing the job described, to a tradesperson&rsquo;s standard, and tidying up after yourself.</li>
           <li>Taking at least one photo of the finished work and writing what you did. The app will not let you finish a job without them.</li>
           <li>Treating the house, the access code and the owner&rsquo;s details as confidential. Never share a code, and never leave a door unsecured.</li>
@@ -103,6 +119,14 @@ export default function Page() {
         <ul>
           <li>Your share is the amount in the offer. On an urgent or after-hours job, your share of the surcharge is in that amount, like the rest of the price: the surcharge less the 15% platform fee. Approved parts are paid back to you in full, at cost.</li>
           <li>
+            <strong>The urgent share is paid only if you tap I have arrived by the urgent deadline</strong> shown in the offer. After the deadline the
+            urgent surcharge is not charged to the owner at all, so there is no share of it to pay. The rest of the job is paid as normal.
+          </li>
+          <li>
+            <strong>The after-hours share is paid only if you arrive outside working hours</strong> (before 7am, after 4:30pm, or at the weekend). If you
+            come within working hours, the after-hours surcharge is not charged, and the rest of the job is paid as normal.
+          </li>
+          <li>
             Once the owner&rsquo;s card has been charged, your payment is sent 24 hours after the job finishes and reaches your bank about 5 to 6 working
             days after the job. We will never promise you faster than Stripe actually pays.
           </li>
@@ -124,13 +148,28 @@ export default function Page() {
         </p>
       </Section>
 
-      <Section n={8} title="Your record, and first choice">
+      <Section n={8} title="Your record, and who is offered jobs first">
         <p>
-          The app keeps a simple scorecard: how often you accept offers and how often you arrive on time, over the last 30 days. Tradies at 80%
-          or better on both are made first choice for their trade, which means they see every job first. First choice can be swapped, paused or
-          removed on that record. You can pause offers yourself at any time with the Pause switch in your profile, for a holiday or a busy
-          week, with no penalty.
+          The app keeps one record that matters: <strong>whether you arrive on time to the jobs you accept</strong>. On time means by the end of the
+          window you chose, or by the urgent deadline. Passing on offers is never part of it.
         </p>
+        <ul>
+          <li>
+            <strong>Your on-time record on jobs you accept decides who is offered network jobs first.</strong> Once you have arrived at {MIN_ARRIVALS} jobs, if
+            fewer than {Math.round(ON_TIME_TARGET * 100)}% of your last {RECENT_ARRIVALS} were on time, you are offered jobs that go to everyone in your trade after the others have had their
+            turn. You still get the offers, a little later. Get back to {Math.round(ON_TIME_TARGET * 100)}% and you are back in the first group.
+          </li>
+          <li>
+            Our team chooses the first choice and backup for each trade, looking at the same on-time record over the last 30 days (80% or better).
+            They can be swapped, paused or removed on that record.
+          </li>
+          <li>
+            <strong>A no-show</strong> is a job you accepted where you are not on site by the promised time. We will ring you. Repeated no-shows on
+            accepted jobs ({NO_SHOW_REVIEW} in {NO_SHOW_DAYS} days) can lead to removal from the network, but only after a conversation with you. Nobody is ever removed
+            automatically.
+          </li>
+        </ul>
+        <p>You can pause offers yourself at any time with the Pause switch in your profile, for a holiday or a busy week, with no penalty.</p>
       </Section>
 
       <Section n={9} title="Working alone in holiday homes">
@@ -150,8 +189,9 @@ export default function Page() {
 
       <Section n={11} title="Ending this">
         <p>
-          You can stop at any time: pause offers, or email us to close your account. We can remove you from the network at any time, and will
-          tell you why. Jobs you have accepted are finished and paid under this agreement either way.
+          You can stop at any time: pause offers, or email us to close your account. A person on our team can remove you from the network, and
+          will tell you why; the app never does it by itself, and declining jobs is never a reason. Jobs you have accepted are finished and paid
+          under this agreement either way.
         </p>
       </Section>
 

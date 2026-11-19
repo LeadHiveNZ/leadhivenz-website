@@ -125,6 +125,8 @@ export async function saveMarketSettings(_previous: FormState, formData: FormDat
     hoursStart: hourOfDay(formData, "hoursStart", errors),
     hoursEnd: hourOfDay(formData, "hoursEnd", errors),
     payoutHoldHours: whole(formData, "payoutHoldHours", errors),
+    unacceptedAlertHours: whole(formData, "unacceptedAlertHours", errors),
+    counterOfferHours: whole(formData, "counterOfferHours", errors),
     referralPaidMonths: whole(formData, "referralPaidMonths", errors),
     workDays: list(formData, "workDays"),
     replyByText: ticked(formData, "replyByText"),

@@ -67,7 +67,7 @@ async function LinkedJob({ params, searchParams }: { params: Params; searchParam
         now={now()}
         code={code}
         prices={prices}
-        flash={{ sent: Boolean(query.sent), cancelled: Boolean(query.cancelled), answered: Boolean(query.answered), told: Boolean(query.told) }}
+        flash={{ sent: Boolean(query.sent), cancelled: Boolean(query.cancelled), answered: Boolean(query.answered), told: Boolean(query.told), waiting: Boolean(query.waiting), absent: Boolean(query.absent) }}
       />
       <p className="mt-6 text-center text-sm text-muted">
         <Link href="/sign-in?next=/app" className="font-semibold text-brand underline underline-offset-2">

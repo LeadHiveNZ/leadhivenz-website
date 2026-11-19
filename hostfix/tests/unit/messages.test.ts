@@ -9,7 +9,7 @@ const longProperty = "The Lakeview Penthouse Apartment 14B";
 
 const samples: Record<string, string> = {
   signInCode: texts.signInCode("123456"),
-  offer: texts.offer({ title: longTitle, suburb: "Frankton", payoutCents: 17800, currency: "NZD", deadline: "4:15pm today", minutes: 15, urgent: true, link }),
+  offer: texts.offer({ title: longTitle, suburb: "Frankton", payoutCents: 17800, currency: "NZD", deadline: "4:15pm today", minutes: 15, urgent: true, urgentShareCents: 4250, link }),
   offerOpen: texts.offerOpen({ title: longTitle, suburb: "Frankton", payoutCents: 17800, currency: "NZD", deadline: "4:15pm today", minutes: 15, urgent: false, link }),
   jobYours: texts.jobYours({ number: 1042, address: "14B Lake Esplanade, Queenstown 9300", link }),
   jobCancelledTradie: texts.jobCancelledTradie({ number: 1042, suburb: "Frankton" }),
@@ -26,18 +26,21 @@ const samples: Record<string, string> = {
   teamReport: texts.teamReport({ reporter: "Mele Fifita-Longname", property: longProperty, title: longTitle, link }),
   teamInvite: texts.teamInvite({ name: "Mele Fifita", owner: "Samantha", link: "https://hostfix.co.nz/r/Ab3xK9mQ2LpRAb3xK9mQ2LpR" }),
   jobLogged: texts.jobLogged({ reporter: "Sam the cleaner", property: longProperty, title: longTitle, totalCents: 38000, currency: "NZD", link }),
-  jobBooked: texts.jobBooked({ tradie: "Mike at Wakatipu Plumbing", property: longProperty, deadline: "4:15pm today", link }),
-  tradieArrived: texts.tradieArrived({ tradie: "Mike at Wakatipu Plumbing", property: longProperty }),
+  jobBooked: texts.jobBooked({ tradie: "Mike at Wakatipu Plumbing", property: longProperty, when: "between 1pm and 3pm Wed 18 Nov", link }),
+  tradieArrived: texts.tradieArrived({ tradie: "Mike at Wakatipu Plumbing", property: longProperty, link }),
+  notTakenYet: texts.notTakenYet({ property: longProperty, link }),
+  laterTimeOffered: texts.laterTimeOffered({ tradie: "Mike at Wakatipu Plumbing", hours: 24, when: "between 1pm and 3pm Wed 18 Nov", link }),
+  laterTimeAccepted: texts.laterTimeAccepted({ number: 1042, when: "between 1pm and 3pm Wed 18 Nov", link }),
+  laterTimeSentOn: texts.laterTimeSentOn({ number: 1042 }),
   stillArranging: texts.stillArranging({ property: longProperty }),
   quoteNeedsApproval: texts.quoteNeedsApproval({ tradie: "Mike at Wakatipu Plumbing", amountCents: 52000, currency: "NZD", property: longProperty, link }),
   quoteGoingAhead: texts.quoteGoingAhead({ tradie: "Mike at Wakatipu Plumbing", amountCents: 32000, currency: "NZD", property: longProperty, link }),
   jobDone: texts.jobDone({ title: longTitle, property: longProperty, totalCents: 38000, currency: "NZD", link }),
   jobCancelledOwner: texts.jobCancelledOwner({ title: longTitle, property: longProperty }),
   paymentFailed: texts.paymentFailed({ amountCents: 38000, currency: "NZD", number: 1042, link }),
-  windowMissed: texts.windowMissed({ property: longProperty, amountCents: 22500, currency: "NZD" }),
   membershipFailed: texts.membershipFailed({ property: longProperty, link }),
   disputeReceived: texts.disputeReceived({ number: 1042 }),
-  reporterBooked: texts.reporterBooked({ property: longProperty, deadline: "4:15pm today" }),
+  reporterBooked: texts.reporterBooked({ property: longProperty, when: "between 1pm and 3pm Wed 18 Nov" }),
   reporterDone: texts.reporterDone({ property: longProperty }),
   referralThanks: texts.referralThanks({ name: "Sam Cleaner", link }),
 };
@@ -65,6 +68,12 @@ describe("every text the product sends", () => {
     expect(text).toContain("Pays NZ$187");
     expect(text).toContain("4:15pm today");
     expect(text).toContain(link);
+  });
+
+  it("tells the tradie, on an urgent offer, that the urgent share is paid only if they are on site by the deadline", () => {
+    // PL-01 urgent: 19000 menu share + 4250 urgent share (5000 less 15%, 750) = 23250.
+    const text = texts.offer({ title: "Toilet seat or cistern parts", suburb: "Frankton", payoutCents: 23250, currency: "NZD", deadline: "2pm today", minutes: 15, urgent: true, urgentShareCents: 4250, link });
+    expect(text).toContain("Pays NZ$232.50. NZ$42.50 of it only if on site by 2pm today.");
   });
 
   it("never tells a tradie the street address before they accept", () => {

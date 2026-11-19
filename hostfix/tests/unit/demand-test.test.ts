@@ -310,8 +310,9 @@ describe("sending the price list", () => {
     expect(body.to).toEqual(["olive@example.com"]);
     expect(body.subject).toBe("Your HostFix price list for Queenstown");
     expect(body.text).not.toContain("/owners/founding/");
-    // The call-out is the market's diagnosis fee, NZ$225 in Queenstown.
-    expect(body.text).toContain("It is free to join: you only pay the fixed price when a job is done. A tradie on site within 24 hours, or 4 when it's urgent. Miss it and the call-out portion of that job, up to NZ$225, is on us.");
+    // DECISIONS.md, 2026-11-18: no missed-promise credit. The urgent fee is not charged when the tradie is late.
+    expect(body.text).toContain("It is free to join: you only pay the fixed price when a job is done. A tradie on site within 24 hours, or 4 when it's urgent. If an urgent job is reached late, the urgent fee is not charged, and the after-hours fee is charged only if the tradie comes outside working hours.");
+    expect(body.text).not.toContain("is on us");
     expect(web.requests[0]!.headers["idempotency-key"]).toBe(`hostfix-price-list-${lead.id}`);
     expect(await recorded(lead.id)).toMatchObject([{ status: "sent", providerMessageId: "em_123" }]);
   });

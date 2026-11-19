@@ -4,20 +4,23 @@ import type { Db } from "@/lib/db/types";
 import { listSlots } from "./service";
 
 /**
- * TRADIE SCORECARDS. Two numbers per tradie over the last 30 days:
+ * TRADIE SCORECARDS, over the last 30 days:
  *
- *   acceptance  of the offers they had a fair chance at, how many they took
- *   on time     of the jobs they took, how many they reached by the promised time
+ *   on time     of the jobs they accepted, how many they reached by the end of
+ *               the window they chose (or the promised time, with no window)
+ *   offers      how many they were sent and took, shown for interest only
  *
- * An offer withdrawn because someone else got in first does not count against
- * anyone. Below 80% on either, the admin is prompted to swap first choice and
- * backup. A tradie needs a handful of offers before the numbers mean anything,
- * so nobody is flagged on one bad afternoon.
+ * Passing on an offer, or letting one run out, NEVER counts against a tradie
+ * (DECISIONS.md, 2026-11-18): it protects their standing as a contractor who
+ * chooses their own work. Only the on-time number can put a tradie below the
+ * target. Below 80% on it, the admin is prompted to swap first choice and
+ * backup. A tradie needs a few jobs before it means anything, so nobody is
+ * flagged on one bad afternoon. The network order (90% of the last 20
+ * arrivals) is worked out separately, in reliability.ts.
  */
 
 export const SCORE_DAYS = 30;
 export const TARGET = 0.8;
-export const MIN_OFFERS = 5;
 export const MIN_JOBS = 3;
 
 export type Scorecard = {
@@ -25,12 +28,10 @@ export type Scorecard = {
   businessName: string;
   offers: number;
   accepted: number;
-  /** 0 to 1, or null when there is nothing to measure yet. */
-  acceptanceRate: number | null;
   jobs: number;
   onTime: number;
   onTimeRate: number | null;
-  /** True when there is enough history and a number is under the target. */
+  /** True when there is enough history and the on-time number is under the target. Offers never count. */
   belowTarget: boolean;
   /** Average minutes from offer to accept. */
   avgMinutesToAccept: number | null;
@@ -55,7 +56,7 @@ export async function scorecards(db: Db, market: string): Promise<Scorecard[]> {
        ) o on true
        left join lateral (
          select count(*) filter (where arrived_at is not null or (respond_by <= $3::timestamptz and status <> 'cancelled')) as jobs,
-                count(*) filter (where arrived_at is not null and arrived_at <= respond_by) as on_time
+                count(*) filter (where arrived_at is not null and arrived_at <= coalesce(arrival_window_end, respond_by)) as on_time
            from public.jobs
           where tradie_id = t.id and accepted_at >= $2::timestamptz
        ) j on true
@@ -68,11 +69,10 @@ export async function scorecards(db: Db, market: string): Promise<Scorecard[]> {
     const accepted = Number(row.accepted);
     const jobs = Number(row.jobs);
     const onTime = Number(row.on_time);
-    const acceptanceRate = offers > 0 ? accepted / offers : null;
     const onTimeRate = jobs > 0 ? onTime / jobs : null;
     return {
-      tradieId: row.id, businessName: row.business_name, offers, accepted, acceptanceRate, jobs, onTime, onTimeRate,
-      belowTarget: (offers >= MIN_OFFERS && acceptanceRate !== null && acceptanceRate < TARGET) || (jobs >= MIN_JOBS && onTimeRate !== null && onTimeRate < TARGET),
+      tradieId: row.id, businessName: row.business_name, offers, accepted, jobs, onTime, onTimeRate,
+      belowTarget: jobs >= MIN_JOBS && onTimeRate !== null && onTimeRate < TARGET,
       avgMinutesToAccept: row.avg_minutes === null ? null : Math.round(Number(row.avg_minutes)),
     };
   });
@@ -103,7 +103,7 @@ export async function swapPrompts(db: Db, market: string): Promise<SwapPrompt[]>
       tradeLabel: findTrade(first.trade)?.label ?? first.trade,
       firstChoice: card,
       backup,
-      reason: `${card.businessName} accepted ${pct(card.acceptanceRate)} of offers and was on time for ${pct(card.onTimeRate)} of jobs in the last ${SCORE_DAYS} days. The target is ${Math.round(TARGET * 100)}%.${backup ? ` ${backup.businessName} (backup): ${pct(backup.acceptanceRate)} accepted, ${pct(backup.onTimeRate)} on time.` : " There is no backup to swap with yet."}`,
+      reason: `${card.businessName} was on time for ${pct(card.onTimeRate)} of the jobs they accepted in the last ${SCORE_DAYS} days. The target is ${Math.round(TARGET * 100)}%. Passing on offers is never counted.${backup ? ` ${backup.businessName} (backup): ${pct(backup.onTimeRate)} on time.` : " There is no backup to swap with yet."}`,
     });
   }
   return prompts;

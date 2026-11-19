@@ -1,6 +1,6 @@
 import { purgeOldCodes } from "@/lib/auth/codes";
 import { purgeExpiredSessions } from "@/lib/auth/sessions";
-import { applyPendingCredits, chargeDuePayments, creditMissedWindows, flagAtRisk, releaseDuePayouts, type GatewayFor } from "@/lib/billing/settle";
+import { applyPendingCredits, chargeDuePayments, flagAtRisk, markMissedWindows, releaseDuePayouts, type GatewayFor } from "@/lib/billing/settle";
 import { addHours, now } from "@/lib/clock";
 import type { Db } from "@/lib/db/types";
 import { purgeUnattached } from "@/lib/files/uploads";
@@ -15,7 +15,7 @@ import { savePayoutAccount } from "@/lib/tradies/service";
 import { baseUrl } from "@/lib/env";
 import { randomToken } from "@/lib/ids";
 import { dateKey, formatDate } from "@/lib/time";
-import { expireDueOffers } from "./cascade";
+import { alertNotTakenYet, expireDueOffers, expireLaterTimes } from "./cascade";
 
 /**
  * THE TIMER. Runs every minute (Vercel calls /api/cron/tick). It moves along
@@ -23,9 +23,14 @@ import { expireDueOffers } from "./cascade";
  * button:
  *
  *   offers that have run out          on to the next tradie
+ *   a later time the owner has not    on to the next tradie
+ *     answered in time
+ *   a normal job nobody has taken     the owner told, the team asked to ring round
+ *     in 3 hours
  *   guest reports nobody answered     a reminder, then cancelled after a day
  *   jobs close to their promised time into the dispatcher's queue
- *   promises missed                   the call-out portion of the job credited
+ *   promises missed                   marked, and the dispatcher told; an
+ *                                     accepted job with nobody there is a no-show
  *   cards to try again, payouts due   charged and paid
  *   quotes nobody answered            a reminder, then the dispatcher
  *   licences running out              the tradie and the admin told
@@ -291,9 +296,11 @@ export async function runTick(db: Db, deps: TickDeps): Promise<TickReport> {
   };
 
   await step("offers_moved_on", () => expireDueOffers(db));
+  await step("later_times_sent_on", () => expireLaterTimes(db));
+  await step("not_taken_yet", () => alertNotTakenYet(db));
   await step("guest_reports", () => chaseGuestReports(db));
   await step("at_risk", () => flagAtRisk(db));
-  await step("windows", () => creditMissedWindows(db));
+  await step("windows", () => markMissedWindows(db));
   await step("credits_applied", () => applyPendingCredits(db, deps.gatewayFor));
   await step("cards_charged", () => chargeDuePayments(db, deps.gatewayFor));
   await step("payouts_sent", () => releaseDuePayouts(db, deps.gatewayFor));

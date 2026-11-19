@@ -14,6 +14,7 @@ import { requireStaff } from "@/lib/auth/current";
 import { now } from "@/lib/clock";
 import { getDb } from "@/lib/db";
 import { centsToDollars } from "@/lib/forms";
+import { windowBetween } from "@/lib/jobs/arrival";
 import { getJobForStaff } from "@/lib/jobs/store";
 import { isOpen, type StatusTone } from "@/lib/jobs/types";
 import { loadJobView } from "@/lib/jobs/view";
@@ -126,7 +127,41 @@ export default async function StaffJobPage({ params, searchParams }: { params: P
         </p>
         {job.windowMissedAt && (
           <p className="mt-3 rounded-xl bg-alert-soft px-4 py-3 text-sm font-semibold text-alert">
-            The promised time was missed. {money.credit ? `${fmt(money.credit.amountCents)} was credited to the owner automatically.` : "No credit was given: this property was already credited this month."}
+            The promised time was missed{job.noShowAt ? ": the tradie had accepted and was not there (a no-show)" : ""}.{" "}
+            {money.credit ? `${fmt(money.credit.amountCents)} was credited to the owner (a credit made before missed promises stopped being credited).` : "Nothing is credited for a missed promise."}
+          </p>
+        )}
+        {job.arrivedAt && (
+          <p className={`mt-3 rounded-xl px-4 py-3 text-sm font-semibold ${job.arrivalCheck === "far" || job.arrivalCheck === "no_location" ? "bg-alert-soft text-alert" : "bg-tint text-ink"}`}>
+            Arrived tap:{" "}
+            {job.arrivalCheck === "ok"
+              ? `${job.arrivalDistanceM ?? 0} m from where tradies have been at this house before.`
+              : job.arrivalCheck === "far"
+                ? `${job.arrivalDistanceM} m from where tradies have been at this house before. Check they were really there.`
+                : job.arrivalCheck === "no_location"
+                  ? "the phone gave no location."
+                  : job.arrivalCheck === "no_reference"
+                    ? "location recorded, no reference yet (the first trusted visit to this house)."
+                    : "recorded before location checks."}
+            {job.arrivedLat !== null && job.arrivedLng !== null && (
+              <>
+                {" "}
+                <a href={`https://www.google.com/maps/search/?api=1&query=${job.arrivedLat},${job.arrivedLng}`} target="_blank" rel="noreferrer" className="underline underline-offset-2">
+                  See on a map
+                </a>
+              </>
+            )}
+          </p>
+        )}
+        {job.ownerSaysAbsentAt && (
+          <p className="mt-3 rounded-xl bg-alert-soft px-4 py-3 text-sm font-semibold text-alert">
+            The owner said the tradie was not there, {formatDateTime(job.ownerSaysAbsentAt, market.timezone)}.
+          </p>
+        )}
+        {view.laterTime && (
+          <p className="mt-3 rounded-xl bg-wait-soft px-4 py-3 text-sm font-semibold text-wait">
+            {view.laterTime.tradieName} can&apos;t make the promised time and suggested {windowBetween({ start: view.laterTime.start, end: view.laterTime.end }, at, market.timezone)}. Waiting for the owner until{" "}
+            {formatDateTime(view.laterTime.answerBy, market.timezone)}, then it goes to the next tradies.
           </p>
         )}
       </Card>

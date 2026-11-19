@@ -1,5 +1,5 @@
 import { addStaff } from "@/lib/auth/staff";
-import { chargeJob, creditMissedWindows, applyPendingCredits, raiseDispute, releaseDuePayouts, type GatewayFor } from "@/lib/billing/settle";
+import { chargeJob, markMissedWindows, raiseDispute, releaseDuePayouts, type GatewayFor } from "@/lib/billing/settle";
 import { DAY, HOUR, MINUTE, setTestNow } from "@/lib/clock";
 import type { Db } from "@/lib/db/types";
 import { acceptOffer, expireDueOffers, passOffer } from "@/lib/dispatch/cascade";
@@ -284,17 +284,18 @@ export async function buildSampleData(db: Db, files: FileStore | null, real: Dat
   ago(ctx, 6 * DAY - 28 * HOUR);
   await releaseDuePayouts(db, gatewayFor);
 
-  // ---- 2. The promise was missed, the owner was credited, then it was done -
+  // ---- 2. The tradie was not there by the promised time (a no-show), the
+  // dispatcher rang him, then it was done. Nothing is credited: the owner pays
+  // the menu price for the job that was done (DECISIONS.md, 2026-11-18).
   ago(ctx, 3 * DAY);
   const two = await log(ctx, cabin, { code: "HP-03", description: "Heat pump in the lounge runs but only blows cold. Guests arrive Friday." });
   ago(ctx, 3 * DAY - 9 * MINUTE);
   await accept(ctx, two.id, tom.tradieId);
   ago(ctx, 3 * DAY - 24 * HOUR - 5 * MINUTE);
-  await creditMissedWindows(db);
-  await applyPendingCredits(db, gatewayFor);
-  const missed = await db.query<{ id: string }>("select id from public.exceptions where job_id = $1::uuid and kind = 'missed_window'", [two.id]);
+  await markMissedWindows(db);
+  const missed = await db.query<{ id: string }>("select id from public.exceptions where job_id = $1::uuid and kind in ('missed_window', 'no_show')", [two.id]);
   ago(ctx, 3 * DAY - 24.5 * HOUR);
-  if (missed[0]) await resolveException(db, missed[0].id, `staff:${mariaId}`, "Rang Sam to say sorry. Tom was held up on an emergency and is on his way.");
+  if (missed[0]) await resolveException(db, missed[0].id, `staff:${mariaId}`, "Rang Tom: held up on an emergency and on his way. Rang Sam to say sorry.");
   ago(ctx, 3 * DAY - 26 * HOUR);
   await markArrived(db, two.id, tom.tradieId, QUEENSTOWN);
   ago(ctx, 3 * DAY - 27 * HOUR);

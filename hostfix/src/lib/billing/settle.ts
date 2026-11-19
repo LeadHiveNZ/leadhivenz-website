@@ -8,13 +8,13 @@ import { refundSplit, taxPortion } from "@/lib/jobs/pricing";
 import { getJobForStaff, lockJob } from "@/lib/jobs/store";
 import type { Job } from "@/lib/jobs/types";
 import { getMarket } from "@/lib/markets/store";
-import { formatMoney } from "@/lib/money";
 import { texts } from "@/lib/notify/messages";
 import { enqueue } from "@/lib/notify/outbox";
 import { raiseException, resolveExceptionsFor } from "@/lib/ops/exceptions";
 import { getBilling } from "@/lib/owners/service";
 import type { PaymentsGateway, Provider } from "@/lib/payments/gateway";
 import { formatDeadline, monthKey, monthLabel } from "@/lib/time";
+import { NO_SHOW_DAYS, needsReview, recentNoShows } from "@/lib/tradies/reliability";
 
 /**
  * EVERY MONEY MOVEMENT ON A JOB.
@@ -23,9 +23,9 @@ import { formatDeadline, monthKey, monthLabel } from "@/lib/time";
  *   24 hours on   the tradie's share is sent, unless the owner has raised a problem
  *   a problem     pauses the tradie's money and puts the job in front of the dispatcher
  *   a refund      comes off the platform's share and the tradie's share in proportion
- *   missed promise  the call-out portion of that job is on us (the market's
- *                   diagnosis fee, capped at the job's price), once per
- *                   property per month. It comes off that job's charge.
+ *   missed promise  nothing is credited any more (DECISIONS.md, 2026-11-18).
+ *                   A missed-promise credit created before then still comes
+ *                   off its own job's charge.
  *
  * Each function follows the same three beats so that a crash or a repeat can
  * never charge or pay twice:
@@ -58,8 +58,9 @@ export async function openSettlement(db: Db, job: Job, market: Market): Promise<
   const at = job.completedAt ?? now();
   const billing = await getBilling(db, job.ownerId, market.country);
 
-  // A missed promise on this job: its call-out portion comes off this charge
-  // (DECISIONS.md, 2026-11-17). The tradie is still paid in full below.
+  // A missed-promise credit created before 18 November 2026, when such credits
+  // stopped (DECISIONS.md, 2026-11-18), still comes off this charge: it was
+  // promised. No new ones are made. The tradie is still paid in full below.
   let chargeCents = job.ownerTotalCents;
   const credit = (await db.query<{ id: string; amount_cents: number }>(
     "select id, amount_cents from public.credits where job_id = $1::uuid and reason = 'missed_window' and status = 'pending' for update",
@@ -482,16 +483,25 @@ export async function resolveDispute(db: Db, gatewayFor: GatewayFor, disputeId: 
 }
 
 // ---------------------------------------------------------------------------
-// THE RESPONSE GUARANTEE
+// THE PROMISED TIME
 // ---------------------------------------------------------------------------
 
 /**
  * Run by the timer. For every job whose promised time has passed with no
- * tradie on site: mark the miss, credit the owner the call-out portion of that
- * job (once per property per calendar month), tell them, and tell the
- * dispatcher. The credit comes off that job's charge (openSettlement).
+ * tradie on site: mark the miss and put it in front of the dispatcher.
+ *
+ * Nothing is credited any more (DECISIONS.md, 2026-11-18): HostFix does not
+ * lose its margin because a tradie is unreliable. What the owner pays follows
+ * what happened instead: an urgent job reached late has no urgent line, and
+ * nobody accepting means nothing is charged at all. Missed-promise credits
+ * created before that decision still come off their job's charge
+ * (openSettlement), because they were promised.
+ *
+ * An accepted job with nobody there is a no-show: the dispatcher is asked to
+ * call the tradie, and a tradie with 3 no-shows in 90 days is put in front of
+ * the team to talk to. Nobody is ever removed automatically.
  */
-export async function creditMissedWindows(db: Db): Promise<{ missed: number; credited: number }> {
+export async function markMissedWindows(db: Db): Promise<{ missed: number; noShows: number }> {
   const at = now();
   const due = await db.query<{ id: string }>(
     `select id from public.jobs
@@ -500,59 +510,47 @@ export async function creditMissedWindows(db: Db): Promise<{ missed: number; cre
       order by respond_by limit 100`,
     [at.toISOString()],
   );
-  const result = { missed: 0, credited: 0 };
+  const result = { missed: 0, noShows: 0 };
   for (const row of due) {
     await db.tx(async (tx) => {
       const job = await lockJob(tx, row.id);
       if (!job || job.arrivedAt || job.windowMissedAt || !job.respondBy || job.respondBy.getTime() > at.getTime()) return;
       if (!["offering", "unfilled", "accepted"].includes(job.status)) return;
       const context = await loadContext(tx, job);
-      const { market, property, tier, owner } = context;
-      await tx.query("update public.jobs set window_missed_at = $2::timestamptz where id = $1::uuid", [job.id, at.toISOString()]);
+      const { market, property, tradie } = context;
+      const noShow = job.status === "accepted" && Boolean(job.tradieId);
+      await tx.query("update public.jobs set window_missed_at = $2::timestamptz, no_show_at = case when $3::boolean then $2::timestamptz else no_show_at end where id = $1::uuid", [
+        job.id, at.toISOString(), noShow,
+      ]);
       result.missed += 1;
-
-      const month = monthKey(job.respondBy, market.timezone);
-      let credited = false;
-      // The call-out portion of this job is on us: the market's diagnosis fee,
-      // never more than the job's own price (DECISIONS.md, 2026-11-17). It
-      // comes off this job's charge when the job is done; the tradie is paid
-      // in full and the platform wears it.
-      // A Portfolio property: what to credit is an owner decision still
-      // outstanding (DECISIONS.md). Nothing is credited automatically, and a
-      // person decides from the queue.
-      const portfolio = Boolean(property.portfolioId);
-      const amount = Math.min(market.diagnosisFeeCents, job.ownerTotalCents);
-      if (!portfolio && tier && amount > 0) {
-        const inserted = await tx.query(
-          `insert into public.credits (created_at, owner_id, property_id, job_id, reason, amount_cents, currency, month, status, note, created_by)
-           values ($1::timestamptz, $2::uuid, $3::uuid, $4::uuid, 'missed_window', $5, $6, $7, 'pending', $8, 'system')
-           on conflict do nothing returning id`,
-          [at.toISOString(), job.ownerId, property.id, job.id, amount, market.currency, month, `Job ${job.number}: nobody on site by the promised time`],
-        );
-        credited = inserted.length > 0;
-      }
+      const promised = formatDeadline(job.respondBy, at, market.timezone);
       await audit(tx, {
         actor: "system", action: "job.window_missed", entity: "job", entityId: job.id,
-        detail: { promised: job.respondBy.toISOString(), credited, capped: !credited && !portfolio && Boolean(tier), portfolio, status: job.status },
+        detail: { promised: job.respondBy.toISOString(), status: job.status, no_show: noShow, tradie: tradie?.businessName ?? null },
       });
-      if (credited) {
-        result.credited += 1;
-        await audit(tx, { actor: "system", action: "credit.created", entity: "job", entityId: job.id, amount, currency: market.currency, detail: { reason: "missed_window", month } });
-        if (owner.phone) {
-          await enqueue(tx, {
-            channel: "sms", to: owner.phone, template: "window_missed", audience: "owner", jobId: job.id, userId: owner.userId,
-            body: texts.windowMissed({ property: property.name, amountCents: amount, currency: market.currency }),
-            dedupeKey: `window_missed:${job.id}`,
-          });
-        }
+      if (!noShow) {
+        await raiseException(tx, {
+          kind: "missed_window", market: job.market, jobId: job.id,
+          summary: `Job ${job.number}: no tradie on site at ${property.name} by ${promised}, and nobody has taken it. Nothing is charged unless a tradie does the job.`,
+          dedupeKey: `missed_window:${job.id}`,
+        });
+        return;
       }
+      result.noShows += 1;
+      await audit(tx, { actor: "system", action: "job.no_show", entity: "job", entityId: job.id, detail: { tradie: tradie?.businessName ?? null, promised: job.respondBy.toISOString() } });
       await raiseException(tx, {
-        kind: "missed_window", market: job.market, jobId: job.id,
-        summary: portfolio
-          ? `Missed window on a Portfolio property. Job ${job.number}: no tradie on site at ${property.name} by ${formatDeadline(job.respondBy, at, market.timezone)}. Nothing was credited automatically: decide what to credit and add it on the owner's page under Owners.`
-          : `Job ${job.number}: no tradie on site at ${property.name} by ${formatDeadline(job.respondBy, at, market.timezone)}. ${credited ? `The call-out portion (${formatMoney(amount, market.currency)}) comes off this job's charge.` : "No credit this time (one per property per month)."}`,
-        dedupeKey: `missed_window:${job.id}`,
+        kind: "no_show", market: job.market, jobId: job.id, tradieId: job.tradieId,
+        summary: `Job ${job.number}: ${tradie?.businessName ?? "the tradie"} accepted and is not on site at ${property.name} by ${promised}. Call the tradie${tradie?.phone ? ` on ${tradie.phone}` : ""}.`,
+        dedupeKey: `no_show:${job.id}`,
       });
+      const count = await recentNoShows(tx, job.tradieId!, at);
+      if (needsReview(count)) {
+        await raiseException(tx, {
+          kind: "tradie_review", market: job.market, tradieId: job.tradieId,
+          summary: `${tradie?.businessName ?? "A tradie"} has not turned up for ${count} accepted jobs in the last ${NO_SHOW_DAYS} days. Talk to them. Nothing has been changed on their account.`,
+          dedupeKey: `tradie_review:${job.tradieId}`,
+        });
+      }
     });
   }
   return result;
@@ -566,7 +564,8 @@ export async function flagAtRisk(db: Db): Promise<number> {
        from public.jobs j join public.properties p on p.id = j.property_id join public.markets m on m.slug = j.market
       where j.status in ('offering', 'unfilled', 'accepted') and j.arrived_at is null and j.window_missed_at is null
         and j.at_risk_flagged_at is null and j.dispatched_at is not null and j.respond_by is not null
-        and $1::timestamptz >= j.dispatched_at + (j.respond_by - j.dispatched_at) * 0.75
+        -- Measured from the start of the tradie's window when they chose one, so a job the owner agreed to wait days for is not flagged early.
+        and $1::timestamptz >= coalesce(j.arrival_window_start, j.dispatched_at) + (j.respond_by - coalesce(j.arrival_window_start, j.dispatched_at)) * 0.75
         and $1::timestamptz < j.respond_by
       limit 100`,
     [at.toISOString()],
