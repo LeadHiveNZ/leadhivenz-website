@@ -169,6 +169,11 @@ About 4 to 6 weeks from go to settled in.
 
 ## Investment
 
+<!-- JOE ONLY, 19 Nov 2026: SUPERSEDED. Agreed price is A$2,000 (no GST, matching LeadHive AU's other invoices),
+billed by J Ingram T/A LeadHive AU, ABN 78 612 053 288, 50% upfront, A$350 setup kept separate. Dan hosts on his own
+Supabase + Netlify and maintains it with his own Claude after 30 days of fixes. Sent as PDFs (proposal, agreement,
+deposit invoice LH-Wellco-01 for A$1,000). See agreement-draft.md. The options below are the original pricing, kept for reference only. -->
+
 (AUD)
 
 **Option A: I build it, you own it** (recommended)
