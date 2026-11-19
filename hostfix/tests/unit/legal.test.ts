@@ -4,6 +4,9 @@ import { describe, expect, it } from "vitest";
 import { launchMarket } from "@config/markets";
 import TermsPage from "@/app/(site)/legal/terms/page";
 import TradieAgreementPage from "@/app/(site)/legal/tradie-agreement/page";
+import PrivacyPage from "@/app/(site)/legal/privacy/page";
+import { FEE_NOTICE_DAYS } from "@/lib/markets/admin";
+import { TRADIE_AGREEMENT_VERSION } from "@/lib/tradies/service";
 import { FAR_METRES } from "@/lib/jobs/arrival";
 import { FLAG_DAYS, FLAG_REVIEW, TRUSTED_FINISHED_JOBS } from "@/lib/tradies/reliability";
 import { OLD_RECEIPT_DAYS, RECEIPT_TO_FOLLOW_DAYS } from "@/lib/jobs/parts";
@@ -112,7 +115,47 @@ describe("the tradie agreement", () => {
     expect(agreement).toContain("3 flagged jobs in 90 days put you in front of our team for a conversation. Nobody is removed automatically");
     expect(agreement).toContain("declining a job can never flag anything");
     expect(agreement).toContain("A job reported as done that was not done, including a faked location or faked photos, means removal from HostFix, and any money paid to you for it must be repaid.");
-    // Money is never promised to come off future payouts automatically: the code has no such step (src/lib/billing/settle.ts).
+    // Only a lost chargeback found to be the tradie's fault is taken from later payouts (DECISIONS.md, 2026-11-20, second entry).
+    expect(agreement.match(/from your later payments/g)).toHaveLength(1);
     expect(agreement).not.toMatch(/from your (next|future) payments/);
+  });
+
+  it("says a finished job is paid whatever the card does, the chargeback rule word for word, the knock, safety, and the 30 days (DECISIONS.md, 2026-11-20, second entry)", () => {
+    expect(FEE_NOTICE_DAYS).toBe(30);
+    const agreement = text(TradieAgreementPage);
+    expect(agreement).toContain("Once you finish a job the owner approved, you're paid even if their card fails. Chasing is our job.");
+    expect(agreement).not.toMatch(/once the owner's card has been charged|when the charge succeeds/i);
+    expect(agreement).toContain(
+      "If we lose, our team decides whether it was your fault (bad work or a no-show). If it was, a payment not yet sent for that job is cancelled, and a payment already sent becomes a balance you owe us, taken back from your later payments, never more than 50% of any one payment; we text you when this happens, and your Pay page shows what is left. If it was not your fault, HostFix carries the loss and you are paid as normal. Any balance left when you leave HostFix must be repaid.",
+    );
+    expect(agreement).toContain("Guest staying: knock and wait. Don't let yourself in unless nobody answers after 5 minutes and the owner said that's OK.");
+    expect(agreement).toContain("Entering an occupied property without knocking is a serious breach of this agreement.");
+    expect(agreement).toContain("You manage the safety of your own work");
+    expect(agreement).toContain("report it from the job screen");
+    expect(agreement).toContain("the claim goes to your public liability insurer. HostFix supplies the job's photos and times.");
+    expect(agreement).toContain("We give you 30 days' notice by text before a change to the platform fee applies to you.");
+    expect(agreement).toContain("you are asked to agree to the new version in the app (on your home page) before your next offer");
+    // The date on the page is the version a tradie agrees to.
+    expect(agreement).toContain(TRADIE_AGREEMENT_VERSION);
+  });
+});
+
+describe("the owner terms and privacy page (DECISIONS.md, 2026-11-20, second entry)", () => {
+  it("say what the code does about cards, disputes, access, codes, hazards, damage and guests", () => {
+    const terms = text(TermsPage);
+    expect(terms).toContain("we check you have a usable saved card: one on file, not expired, and no earlier charge unpaid");
+    expect(terms).toContain("The tradie is paid at the usual time either way, so a charge that still fails is an amount you owe us. You cannot send new jobs until it is paid.");
+    expect(terms).toContain("We decide from the photos, times and locations the app recorded");
+    expect(terms).toContain("Owners who misuse “Something's wrong” (for example on work that was plainly done) can lose access to HostFix.");
+    expect(terms).toContain("If the tradie can't get in, the call-out is charged");
+    expect(terms).toContain("Changing a door or lockbox code after a job is your responsibility");
+    expect(terms).toContain("Under the Health and Safety at Work Act you and the tradie share a duty to keep the work safe.");
+    expect(terms).toContain("the claim goes to the tradie's public liability insurer");
+    expect(terms).toContain("we supply the job's photos and times");
+    expect(terms).toContain("yes unless a guest is staying or you are not sure");
+    expect(terms).not.toContain("Jobs cannot be logged at a property while a charge is outstanding");
+    const privacy = text(PrivacyPage);
+    expect(privacy).toContain("We use that number only for that job's texts");
+    expect(privacy).toContain("the tradie sees only your first name");
   });
 });

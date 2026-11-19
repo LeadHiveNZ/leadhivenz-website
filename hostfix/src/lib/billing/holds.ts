@@ -15,7 +15,7 @@ import type { Db } from "@/lib/db/types";
  *
  * When the last one closes, the payout is due at its usual time (the
  * market's hold after the job) or now if that has passed, and only once the
- * owner's card has been charged. A dispute pauses a payout separately
+ * owner's card has been charged or not (the tradie never waits for it). A dispute pauses a payout separately
  * (`paused`), in billing/settle.ts.
  */
 
@@ -48,12 +48,11 @@ export async function holdPayout(db: Db, jobId: string): Promise<boolean> {
  */
 export async function releaseIfClear(db: Db, jobId: string): Promise<number> {
   if ((await holdReasons(db, jobId)).length > 0) return 0;
-  const paid = await db.query<{ status: string }>("select status from public.payments where job_id = $1::uuid", [jobId]);
-  const ready = !paid[0] || ["succeeded", "part_refunded"].includes(paid[0].status);
+  // Scheduled whatever the owner's card has done: the tradie never waits for it (DECISIONS.md, 2026-11-20, second entry).
   const rows = await db.query<{ amount_cents: number }>(
-    `update public.payouts set status = $2, release_at = greatest(release_at, $3::timestamptz)
+    `update public.payouts set status = 'scheduled', release_at = greatest(release_at, $2::timestamptz)
       where job_id = $1::uuid and status = 'held' returning amount_cents`,
-    [jobId, ready ? "scheduled" : "waiting", now().toISOString()],
+    [jobId, now().toISOString()],
   );
   return rows[0] ? Number(rows[0].amount_cents) : 0;
 }

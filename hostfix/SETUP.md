@@ -190,6 +190,7 @@ Do all of this in Stripe's **sandbox** first (its test area, where no real money
       - `customer.updated`
       - `charge.refunded`
       - `charge.dispute.created`
+      - `charge.dispute.closed` (so a lost chargeback comes to the queue for "whose fault?")
    5. Choose **Webhook endpoint** and enter the address `https://YOUR-SITE-ADDRESS/api/stripe/webhook`.
    6. On the next screen press **Reveal secret** and copy the signing secret. It starts with `whsec_`.
 4. Switch on **Connect**, which is how tradies are paid into their own bank accounts. In the Stripe

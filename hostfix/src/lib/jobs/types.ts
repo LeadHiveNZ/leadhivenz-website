@@ -88,6 +88,14 @@ export type Job = {
   confirmBy: Date | null;
   confirmDecidedAt: Date | null;
   confirmDecidedBy: string | null;
+  /** Held before going out because the owner's card could not be charged: no_card, expired, unpaid (DECISIONS.md, 2026-11-20). */
+  cardHold: "no_card" | "expired" | "unpaid" | null;
+  /** Is a guest staying, and who: their first name and mobile, for this job's texts only. */
+  guestStaying: "yes" | "no" | "not_sure" | null;
+  guestName: string | null;
+  guestPhone: string | null;
+  /** The owner said: if nobody answers, the tradie may let themselves in. */
+  mayLetIn: boolean;
   outcome: JobOutcome | null;
   completionNote: string | null;
   currency: string;

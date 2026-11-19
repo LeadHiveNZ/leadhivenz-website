@@ -3,7 +3,8 @@ import { setTestNow } from "@/lib/clock";
 import { acceptOffer, suggestLaterTime } from "@/lib/dispatch/cascade";
 import { attachUploads, canView, checkFile, getUpload, recordUpload } from "@/lib/files/uploads";
 import { getJobForOwner, getJobForStaff, getJobForTradie, listJobsForOwner, listJobsForTradie, listLiveOffersForTradie } from "@/lib/jobs/store";
-import { completeJob, markArrived, markEnRoute, reportNoAccess, reportTradieAbsent, submitQuote } from "@/lib/jobs/work";
+import { completeJob, markArrived, markEnRoute, reportHazard, reportNoAccess, reportTradieAbsent, submitQuote } from "@/lib/jobs/work";
+import { balanceOwed } from "@/lib/billing/chargebacks";
 import { confirmFixed } from "@/lib/jobs/confirm";
 import { addParts } from "@/lib/jobs/parts";
 import { confirmPin, propertiesNeedingPin } from "@/lib/properties/pin";
@@ -297,6 +298,43 @@ describe("parts receipts (DECISIONS.md, 2026-11-20)", () => {
     const view = await loadJobView(t.db, (await getJobForOwner(t.db, alice.ownerId, aliceJob.id))!, "owner");
     expect(view.receipts).toEqual([]);
     expect(view.parts.every((part) => part.receiptUploadId === null)).toBe(true);
+  });
+});
+
+describe("guests, hazards and chargebacks (DECISIONS.md, 2026-11-20, second entry)", () => {
+  it("a staying guest's number is seen by the owner who gave it and staff, never a tradie or another owner", async () => {
+    const { alice, bob, mike, dave, aliceHome } = await twoOfEverything();
+    const job = await logJob(t.db, aliceHome, { code: "PL-03", guestStaying: "yes", guestName: "Sam", guestPhone: "+64215550009" });
+    const [offer] = await offersFor(t.db, job.id);
+    await t.db.tx((tx) => acceptOffer(tx, offer!.id, "link"));
+    expect((await getJobForOwner(t.db, alice.ownerId, job.id))?.guestPhone).toBe("+64215550009");
+    expect(await getJobForOwner(t.db, bob.ownerId, job.id)).toBeNull();
+    const taker = (await getJobForStaff(t.db, job.id))!.tradieId!;
+    expect(await getJobForTradie(t.db, taker, job.id)).toMatchObject({ guestName: "Sam", guestPhone: null });
+    expect(await getJobForTradie(t.db, taker === mike.tradieId ? dave.tradieId : mike.tradieId, job.id)).toBeNull();
+    expect((await loadJobView(t.db, (await getJobForStaff(t.db, job.id))!, "tradie")).job.guestPhone).toBeNull();
+  });
+
+  it("only the tradie on the job can add a hazard to its property", async () => {
+    const { mike, dave, aliceJob } = await twoOfEverything();
+    expect(await reportHazard(t.db, aliceJob.id, dave.tradieId, "Steep icy drive")).toEqual({ ok: false, message: "That job is not one of yours." });
+    expect(await reportHazard(t.db, aliceJob.id, mike.tradieId, "Steep icy drive")).toMatchObject({ ok: true });
+  });
+
+  it("a balance owed from a lost chargeback is read for its own tradie only, and the tables are closed to the public", async () => {
+    const { mike, dave, aliceJob } = await twoOfEverything();
+    await t.db.query(
+      "insert into public.tradie_balances (created_at, tradie_id, job_id, reason, amount_cents, currency) values (now(), $1::uuid, $2::uuid, 'test', 5000, 'NZD')",
+      [mike.tradieId, aliceJob.id],
+    );
+    expect(await balanceOwed(t.db, mike.tradieId)).toBe(5000);
+    expect(await balanceOwed(t.db, dave.tradieId)).toBe(0);
+    const rls = await t.db.query<{ relname: string; relrowsecurity: boolean }>(
+      "select relname, relrowsecurity from pg_class where relname in ('chargebacks', 'tradie_balances', 'balance_recoveries') order by relname",
+    );
+    expect(rls).toEqual([
+      { relname: "balance_recoveries", relrowsecurity: true }, { relname: "chargebacks", relrowsecurity: true }, { relname: "tradie_balances", relrowsecurity: true },
+    ]);
   });
 });
 

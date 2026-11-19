@@ -5,6 +5,8 @@ import { launchMarket } from "@config/markets";
 import { OLD_RECEIPT_DAYS, RECEIPT_TO_FOLLOW_DAYS } from "@/lib/jobs/parts";
 import { LIST_PART_FEE_BPS } from "@/lib/jobs/pricing";
 import { formatMoney } from "@/lib/money";
+import { FEE_NOTICE_DAYS } from "@/lib/markets/admin";
+import { TRADIE_AGREEMENT_VERSION } from "@/lib/tradies/service";
 import { FAR_METRES, PROPOSAL_DAYS, WINDOW_HOURS } from "@/lib/jobs/arrival";
 import {
   FLAG_DAYS, FLAG_REVIEW, MIN_ARRIVALS, NO_SHOW_DAYS, NO_SHOW_REVIEW, ON_TIME_TARGET, RECENT_ARRIVALS, TRUSTED_FINISHED_JOBS,
@@ -20,7 +22,8 @@ export const metadata: Metadata = {
   description: `How working with ${brand.name} works: the offers, the prices, the pay, and what we expect from each other.`,
 };
 
-const UPDATED = "20 November 2026";
+// The version a tradie agrees to in the app. Changing it asks every tradie to agree again before their next offer.
+const UPDATED = TRADIE_AGREEMENT_VERSION;
 
 export default function Page() {
   const n = brand.name;
@@ -86,8 +89,9 @@ export default function Page() {
           urgent job is no longer urgent, so there is no urgent share). If they do not, we tell you, and that is not counted against you either.
         </p>
         <p>
-          Before you accept you see the job, the suburb, what it pays and the time you must be on site by. <strong>After</strong> you accept you
-          see the address, the access notes and the owner&rsquo;s number.
+          Before you accept you see the job, the suburb, what it pays, the time you must be on site by, whether a guest is staying, and any
+          hazards the owner or an earlier tradie has noted for the property. <strong>After</strong> you accept you see the address, the access
+          notes and the owner&rsquo;s number.
         </p>
       </Section>
 
@@ -156,13 +160,13 @@ export default function Page() {
             come within working hours, the after-hours surcharge is not charged, and the rest of the job is paid as normal.
           </li>
           <li>
-            Once the owner&rsquo;s card has been charged, your payment is sent 24 hours after the job finishes and reaches your bank about 5 to 6 working
-            days after the job. We will never promise you faster than Stripe actually pays.
+            Your payment is sent 24 hours after the job finishes and reaches your bank about 5 to 6 working days after the job. We will never
+            promise you faster than Stripe actually pays.
           </li>
           <li>Your Pay page in the app lists every job and every payment. Statements are there for your accountant.</li>
           <li>
-            If the owner&rsquo;s card fails, we keep trying it for four days and then chase them. Your payment goes out when the charge succeeds. If it
-            never does, we will talk to you about it; we do not simply leave you unpaid without a conversation.
+            <strong>Once you finish a job the owner approved, you&rsquo;re paid even if their card fails. Chasing is our job.</strong> Your payment goes
+            out at the usual time whatever the card does; the owner owes the money to {n}, not to you.
           </li>
           <li>If you could not get in through no fault of yours, tap <strong>Could not get in</strong> with a photo, and you are paid the call-out.</li>
           <li>
@@ -174,12 +178,20 @@ export default function Page() {
         </ul>
       </Section>
 
-      <Section n={7} title="If the owner raises a problem">
+      <Section n={7} title="If the owner raises a problem, or their bank disputes the charge">
         <p>
           An owner can raise a problem from their job page. If they do within a day of the job, your payment is held until it is sorted. Our
           team looks at the photos, the notes and both sides, then decides: the work stands and you are paid in full, or part or all of the job is
           refunded and your payment is reduced in proportion. If you have already been paid, we take your share of the refund back from that
           payment through Stripe; if that cannot be done, you agree to repay it. We will always tell you why.
+        </p>
+        <p>
+          <strong>Chargebacks and direct-debit disputes.</strong> If the owner&rsquo;s bank disputes the charge for a job, your payment for it is held if it
+          has not been sent yet, and we contest the dispute with the job&rsquo;s photos, times, locations, receipts and messages. If we win, you are paid as
+          normal. If we lose, our team decides whether it was your fault (bad work or a no-show). If it was, a payment not yet sent for that job is
+          cancelled, and a payment already sent becomes a balance you owe us, taken back from your later payments, never more than 50% of any one
+          payment; we text you when this happens, and your Pay page shows what is left. If it was not your fault, {n} carries the loss and you are
+          paid as normal. Any balance left when you leave {n} must be repaid.
         </p>
       </Section>
 
@@ -211,11 +223,21 @@ export default function Page() {
         <p>You can pause offers yourself at any time with the Pause switch in your profile, for a holiday or a busy week, with no penalty.</p>
       </Section>
 
-      <Section n={9} title="Working alone in holiday homes">
+      <Section n={9} title="Working alone in holiday homes, safety and damage">
         <p>
-          Many of these houses are empty when you arrive, and some have guests in them. Follow your own health and safety practices, do not
-          enter if something feels wrong, and if there is a guest in the house, introduce yourself and say who sent you. If you find anything
-          unsafe at a property (gas, exposed wiring, water near power), make it safe or stop, and tell us straight away.
+          Many of these houses are empty when you arrive, and some have guests in them. The job screen tells you when a guest is staying (or the
+          owner is not sure), and whether the owner said you may let yourself in if nobody answers. <strong>Guest staying: knock and wait. Don&rsquo;t
+          let yourself in unless nobody answers after 5 minutes and the owner said that&rsquo;s OK.</strong> Entering an occupied property without
+          knocking is a serious breach of this agreement. If there is a guest in the house, introduce yourself and say who sent you.
+        </p>
+        <p>
+          You manage the safety of your own work: follow your own health and safety practices, and do not enter or carry on if something feels
+          wrong. Owners tell us the hazards they know of, and we show them to you before you accept. If you find a hazard at a property (gas,
+          exposed wiring, water near power, a rotten deck, a dog), make it safe or stop, and report it from the job screen with
+          <strong> Found a hazard at this property?</strong>: it is saved to the property for the next tradie and the owner is texted.
+        </p>
+        <p>
+          If an owner says you damaged something, the claim goes to your public liability insurer. {n} supplies the job&rsquo;s photos and times.
         </p>
       </Section>
 
@@ -240,8 +262,9 @@ export default function Page() {
 
       <Section n={12} title="Changes">
         <p>
-          If we change this agreement, you will be asked to agree to the new version in the app before your next offer, and the date at the top
-          will move. New Zealand law applies.
+          If we change this agreement, the date at the top moves and you are asked to agree to the new version in the app (on your home page)
+          before your next offer. We give you {FEE_NOTICE_DAYS} days&rsquo; notice by text before a change to the platform fee applies to you. New Zealand
+          law applies.
         </p>
       </Section>
     </LegalPage>

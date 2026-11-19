@@ -15,13 +15,13 @@ import { dollarsToCents, list, problem, text, ticked, type FormState } from "@/l
 import { isUuid } from "@/lib/ids";
 import { getJobForStaff, getJobForTradie, getOffer } from "@/lib/jobs/store";
 import type { Job, Offer } from "@/lib/jobs/types";
-import { completeJob, markArrived, markEnRoute, reportNoAccess, submitQuote } from "@/lib/jobs/work";
+import { completeJob, markArrived, markEnRoute, reportHazard, reportNoAccess, submitQuote } from "@/lib/jobs/work";
 import { addParts, attachReceipt } from "@/lib/jobs/parts";
 import { getMarket } from "@/lib/markets/store";
 import { now } from "@/lib/clock";
 import { paymentsFor } from "@/lib/payments";
 import { fileFromForm, saveInsuranceCertificate } from "@/lib/tradies/certificate";
-import { getTradie, saveLicence, savePayoutAccount, setTradiePaused, TradieError, updateTradie } from "@/lib/tradies/service";
+import { agreeToAgreement, getTradie, saveLicence, savePayoutAccount, setTradiePaused, TradieError, updateTradie } from "@/lib/tradies/service";
 
 /**
  * EVERYTHING A TRADIE CAN DO. A tradie is known either by the link in the
@@ -289,6 +289,26 @@ export async function saveTradieLicence(_previous: FormState, formData: FormData
   }
   revalidatePath("/tradie/profile");
   return { done: "Saved. A person on our team will check it against the public register." };
+}
+
+/** "I have read it and I agree" to the tradie agreement in force (DECISIONS.md, 2026-11-20). */
+export async function agreeAction(_previous: FormState, _formData: FormData): Promise<FormState> {
+  const viewer = await requireTradie("/tradie/profile", { whileWaiting: true });
+  await agreeToAgreement(await getDb(), viewer.tradieId);
+  revalidatePath("/tradie", "layout");
+  return { done: "Thank you. Your agreement is recorded." };
+}
+
+/** A hazard the tradie found at the property: saved to the property for the next tradie, and the owner told. */
+export async function reportHazardAction(_previous: FormState, formData: FormData): Promise<FormState> {
+  const db = await getDb();
+  const who = await whoAndJob(db, formData);
+  if (!who) return problem(formData, NO_JOB);
+  const result = await reportHazard(db, who.job.id, who.tradieId, text(formData, "hazard"));
+  await sendQueued(db);
+  if (!result.ok) return problem(formData, result.message);
+  revalidatePath(who.back);
+  return { done: "Thanks. It is on the property for the next tradie, and the owner has been told." };
 }
 
 export async function setPaused(_previous: FormState, formData: FormData): Promise<FormState> {

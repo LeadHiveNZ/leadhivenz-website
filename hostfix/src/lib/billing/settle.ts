@@ -15,6 +15,7 @@ import { getBilling } from "@/lib/owners/service";
 import { holdReasons } from "./holds";
 import type { PaymentsGateway, Provider } from "@/lib/payments/gateway";
 import { formatDeadline, monthKey, monthLabel } from "@/lib/time";
+import { formatMoney } from "@/lib/money";
 import { NO_SHOW_DAYS, needsReview, recentNoShows } from "@/lib/tradies/reliability";
 
 /**
@@ -50,7 +51,7 @@ type PaymentRow = {
 
 type PayoutRow = {
   id: string; job_id: string; tradie_id: string; amount_cents: number; currency: string; status: string; release_at: Date;
-  transfer_id: string | null; attempts: number; provider: Provider | null;
+  transfer_id: string | null; attempts: number; provider: Provider | null; deducted_cents?: number;
 };
 
 /**
@@ -101,7 +102,8 @@ export async function openSettlement(db: Db, job: Job, market: Market): Promise<
         at.toISOString(), job.id, job.tradieId, job.tradieTotalCents, job.currency,
         // Held while the owner is asked to confirm a flagged job (DECISIONS.md, 2026-11-19), or a receipt is to
         // follow or being checked (2026-11-20). Otherwise: with nothing to charge the owner there is nothing to wait for.
-        held ? "held" : chargeCents > 0 ? "waiting" : "scheduled", addHours(at, market.payoutHoldHours).toISOString(),
+        // The tradie no longer waits for the owner's card (DECISIONS.md, 2026-11-20, second entry): paid at the usual time whatever it does.
+        held ? "held" : "scheduled", addHours(at, market.payoutHoldHours).toISOString(),
       ],
     );
   }
@@ -124,7 +126,7 @@ export async function chargeJob(db: Db, gatewayFor: GatewayFor, jobId: string, o
     if (!job) return null;
     const context = await loadContext(tx, job);
     const billing = await getBilling(tx, job.ownerId, context.market.country);
-    await tx.query("update public.payments set claimed_until = $2::timestamptz, next_retry_at = null where id = $1::uuid", [payment.id, addMinutes(at, 2).toISOString()]);
+    await tx.query("update public.payments set claimed_until = $2::timestamptz, next_retry_at = null, last_attempt_at = $3::timestamptz where id = $1::uuid", [payment.id, addMinutes(at, 2).toISOString(), at.toISOString()]);
     // The try number only goes up when a try ends in a definite "no". If this
     // server dies half-way, the next try uses the same number and so the same
     // key, and the payment company treats it as the same charge.
@@ -162,7 +164,7 @@ export async function chargeJob(db: Db, gatewayFor: GatewayFor, jobId: string, o
       );
       const dispute = await tx.query("select 1 from public.disputes where job_id = $1::uuid and status = 'open'", [jobId]);
       await tx.query("update public.payouts set status = $2 where job_id = $1::uuid and status = 'waiting'", [jobId, dispute.length > 0 ? "paused" : "scheduled"]);
-      await resolveExceptionsFor(tx, jobId, ["payment_failed"], "Card charged");
+      await resolveExceptionsFor(tx, jobId, ["payment_failed", "owner_owes"], "Card charged");
       await audit(tx, {
         actor: gateway!.provider, action: "payment.succeeded", entity: "job", entityId: jobId, amount: payment.amount_cents, currency: payment.currency,
         detail: { payment_intent: result.paymentIntentId, attempt: payment.attempts, tax: payment.tax_cents }, dedupeKey: `payment.succeeded:${jobId}`,
@@ -204,9 +206,18 @@ export async function chargeJob(db: Db, gatewayFor: GatewayFor, jobId: string, o
     });
     await raiseException(tx, {
       kind: "payment_failed", market: job.market, jobId,
-      summary: `Job ${job.number}: the owner's card was not charged (${result.reason}). ${retry ? "It will be tried again tomorrow." : "It has been tried four times. The tradie has not been paid."}`,
+      summary: `Job ${job.number}: the owner's card was not charged (${result.reason}). ${retry ? "It will be tried again tomorrow." : "It has been tried four times."} The tradie is paid at the usual time anyway: chasing the owner is ours.`,
       dedupeKey: `payment_failed:${jobId}`,
     });
+    if (!retry) {
+      // All the tries have failed (DECISIONS.md, 2026-11-20, second entry): HostFix carries the debt, the owner owes it,
+      // and no new jobs go out for them until it is paid (cardProblem, src/lib/owners/service.ts).
+      await raiseException(tx, {
+        kind: "owner_owes", market: job.market, jobId,
+        summary: `${context.owner.name} owes ${formatMoney(payment.amount_cents, payment.currency)} for job ${job.number} at ${context.property.name}: the card was tried four times. The tradie is paid by us anyway. Ring the owner${context.owner.phone ? ` on ${context.owner.phone}` : ""}.`,
+        dedupeKey: `owner_owes:${jobId}`,
+      });
+    }
     if (context.owner.phone) {
       await enqueue(tx, {
         channel: "sms", to: context.owner.phone, template: "payment_failed", audience: "owner", jobId, userId: context.owner.userId,
@@ -232,6 +243,18 @@ export async function chargeDuePayments(db: Db, gatewayFor: GatewayFor): Promise
   for (const row of due) {
     if ((await chargeJob(db, gatewayFor, row.job_id)) !== "skipped") done += 1;
   }
+  // An owner who saved a new card since the last try is tried again at once, even after the four automatic tries.
+  const newCard = await db.query<{ job_id: string }>(
+    `select p.job_id from public.payments p
+       join public.jobs j on j.id = p.job_id
+       join public.markets m on m.slug = j.market
+       join public.owner_billing b on b.owner_id = p.owner_id and b.country = m.country
+      where p.status = 'failed' and b.updated_at > coalesce(p.last_attempt_at, p.created_at)
+      order by p.created_at limit 50`,
+  );
+  for (const row of newCard) {
+    if ((await chargeJob(db, gatewayFor, row.job_id, { force: true })) !== "skipped") done += 1;
+  }
   return done;
 }
 
@@ -249,8 +272,23 @@ export async function releasePayout(db: Db, gatewayFor: GatewayFor, payoutId: st
       await tx.query("update public.payouts set status = 'paused' where id = $1::uuid", [payoutId]);
       return null;
     }
+    // The tradie is paid at the usual time whatever the owner's card has done (DECISIONS.md, 2026-11-20, second entry).
+    // Without a charge to pay from, the transfer comes out of HostFix's own balance.
     const paid = await tx.query<{ charge_id: string | null; status: string }>("select charge_id, status from public.payments where job_id = $1::uuid", [payout.job_id]);
-    if (paid[0] && !["succeeded", "part_refunded"].includes(paid[0].status)) return null;
+    const charged = !paid[0] || ["succeeded", "part_refunded"].includes(paid[0].status);
+    // A balance the tradie owes (a lost chargeback that was their fault) comes off, never more than half of this payout.
+    // Worked out once and kept, so a retried transfer always asks for the same amount.
+    let deducted = Number(payout.deducted_cents ?? 0);
+    if (deducted === 0 && payout.attempts === 0) {
+      const owing = await tx.query<{ owed: number }>(
+        `select coalesce(sum(amount_cents - recovered_cents), 0)
+                - coalesce((select sum(o.deducted_cents) from public.payouts o where o.tradie_id = $1::uuid and o.status in ('scheduled', 'failed') and o.id <> $2::uuid), 0) as owed
+           from public.tradie_balances where tradie_id = $1::uuid and status = 'open'`,
+        [payout.tradie_id, payoutId],
+      );
+      deducted = Math.max(0, Math.min(Number(owing[0]?.owed ?? 0), Math.floor(payout.amount_cents / 2)));
+      if (deducted > 0) await tx.query("update public.payouts set deducted_cents = $2 where id = $1::uuid", [payoutId, deducted]);
+    }
     const job = await getJobForStaff(tx, payout.job_id);
     const tradie = await tx.query<{ payout_account_id: string | null; payouts_enabled: boolean; business_name: string; phone: string | null; user_id: string }>(
       `select t.payout_account_id, t.payouts_enabled, t.business_name, u.phone, t.user_id
@@ -261,10 +299,10 @@ export async function releasePayout(db: Db, gatewayFor: GatewayFor, payoutId: st
     if (!job || !market || !tradie[0]) return null;
     // Push the release time out so another server does not pick it up while we talk to the payment company.
     await tx.query("update public.payouts set attempts = attempts + 1, release_at = $2::timestamptz where id = $1::uuid", [payoutId, addMinutes(at, 10).toISOString()]);
-    return { payout: { ...payout, attempts: payout.attempts + 1 }, job, market, tradie: tradie[0], chargeId: paid[0]?.charge_id ?? null };
+    return { payout: { ...payout, attempts: payout.attempts + 1 }, job, market, tradie: tradie[0], chargeId: charged ? (paid[0]?.charge_id ?? null) : null, charged, deducted };
   });
   if (!claim) return "skipped";
-  const { payout, job, market, tradie, chargeId } = claim;
+  const { payout, job, market, tradie, chargeId, charged, deducted } = claim;
 
   const gateway = gatewayFor(market.country);
   let transferId: string | null = null;
@@ -274,7 +312,7 @@ export async function releasePayout(db: Db, gatewayFor: GatewayFor, payoutId: st
   else {
     try {
       const sent = await gateway.transfer({
-        accountId: tradie.payout_account_id, amountCents: payout.amount_cents, currency: payout.currency, chargeId, jobNumber: job.number,
+        accountId: tradie.payout_account_id, amountCents: payout.amount_cents - deducted, currency: payout.currency, chargeId, jobNumber: job.number,
         idempotencyKey: `hostfix-job-${job.id}-payout`,
       });
       transferId = sent.transferId;
@@ -290,15 +328,33 @@ export async function releasePayout(db: Db, gatewayFor: GatewayFor, payoutId: st
         payoutId, transferId, at.toISOString(), gateway!.provider,
       ]);
       await resolveExceptionsFor(tx, job.id, ["payout_failed"], "Tradie paid");
+      // What came off goes against the oldest balances first.
+      let left = deducted;
+      const balances = await tx.query<{ id: string; amount_cents: number; recovered_cents: number }>(
+        "select id, amount_cents, recovered_cents from public.tradie_balances where tradie_id = $1::uuid and status = 'open' order by created_at for update",
+        [payout.tradie_id],
+      );
+      for (const balance of balances) {
+        if (left <= 0) break;
+        const take = Math.min(left, balance.amount_cents - balance.recovered_cents);
+        if (take <= 0) continue;
+        left -= take;
+        await tx.query("insert into public.balance_recoveries (created_at, balance_id, payout_id, amount_cents) values ($1::timestamptz, $2::uuid, $3::uuid, $4) on conflict do nothing", [at.toISOString(), balance.id, payoutId, take]);
+        await tx.query("update public.tradie_balances set recovered_cents = recovered_cents + $2, status = case when recovered_cents + $2 >= amount_cents then 'recovered' else 'open' end where id = $1::uuid", [balance.id, take]);
+      }
+      if (!charged) await tx.query("update public.payments set tradie_paid_ahead_at = $2::timestamptz where job_id = $1::uuid and tradie_paid_ahead_at is null", [job.id, at.toISOString()]);
       await audit(tx, {
-        actor: gateway!.provider, action: "payout.sent", entity: "job", entityId: job.id, amount: payout.amount_cents, currency: payout.currency,
-        detail: { transfer: transferId, tradie: tradie.business_name, hours_after_completion: job.completedAt ? Math.round((at.getTime() - job.completedAt.getTime()) / 3_600_000) : null },
+        actor: gateway!.provider, action: "payout.sent", entity: "job", entityId: job.id, amount: payout.amount_cents - deducted, currency: payout.currency,
+        detail: {
+          transfer: transferId, tradie: tradie.business_name, hours_after_completion: job.completedAt ? Math.round((at.getTime() - job.completedAt.getTime()) / 3_600_000) : null,
+          deducted, owner_charged: charged,
+        },
         dedupeKey: `payout.sent:${job.id}`,
       });
       if (tradie.phone) {
         await enqueue(tx, {
           channel: "sms", to: tradie.phone, template: "payout_sent", audience: "tradie", jobId: job.id, userId: tradie.user_id,
-          body: texts.payoutSent({ number: job.number, amountCents: payout.amount_cents, currency: payout.currency }), dedupeKey: `payout_sent:${job.id}`,
+          body: texts.payoutSent({ number: job.number, amountCents: payout.amount_cents, currency: payout.currency, deductedCents: deducted }), dedupeKey: `payout_sent:${job.id}`,
         });
       }
       return "sent";
@@ -415,10 +471,9 @@ export async function resolveDispute(db: Db, gatewayFor: GatewayFor, disputeId: 
         disputeId, note.trim() || null, at.toISOString(), actor,
       ]);
       if (updated.length === 0) return;
-      const paid = await tx.query<{ status: string }>("select status from public.payments where job_id = $1::uuid", [job.id]);
-      const ready = !paid[0] || ["succeeded", "part_refunded"].includes(paid[0].status);
+      // Paid whatever the owner's card has done (DECISIONS.md, 2026-11-20, second entry).
       await tx.query("update public.payouts set status = $2, release_at = $3::timestamptz where job_id = $1::uuid and status = 'paused'", [
-        job.id, ready ? "scheduled" : "waiting", at.toISOString(),
+        job.id, "scheduled", at.toISOString(),
       ]);
       await resolveExceptionsFor(tx, job.id, ["dispute"], "Resolved: tradie paid in full");
       await audit(tx, { actor, action: "dispute.resolved", entity: "job", entityId: job.id, detail: { outcome: "pay_tradie", note } });

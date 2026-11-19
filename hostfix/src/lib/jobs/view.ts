@@ -230,7 +230,8 @@ export async function loadJobView(db: Db, job: Job, audience: Audience): Promise
   const dsp = disputes[0];
 
   return {
-    job,
+    // A staying guest's number is for that job's texts only; a tradie sees the first name (privacy page).
+    job: audience === "tradie" ? { ...job, guestPhone: null } : job,
     market: context.market,
     property: context.property,
     owner: { name: context.owner.name, phone: context.owner.phone },

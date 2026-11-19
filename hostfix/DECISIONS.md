@@ -9,6 +9,99 @@ price, a fee or a promise, add a line here saying what and why.
 
 ---
 
+## 2026-11-20 — Tradies paid whatever the card does, chargebacks by fault, guests in the house, hazards, the agreement in the app
+
+(The second entry for 20 November. Migration `supabase/migrations/20261127000000_safety_and_money.sql`.)
+
+**1. A tradie is paid for a finished job even if the owner's card fails.** HostFix carries the bad debt.
+
+- Payouts never wait for the card any more: the old `waiting` status is gone (the migration moves any to
+  `scheduled`). A payout is sent at the usual time (completion + `payoutHoldHours`) unless a check, a
+  receipt or the owner's "Something's wrong" holds it, as before (`releasePayout`, `src/lib/billing/settle.ts`).
+  Paid before the charge went through: the Stripe transfer has no `source_transaction` (it comes from the
+  platform balance) and `payments.tradie_paid_ahead_at` is set.
+- The failed charge stays `failed` and is what the owner owes. After the fourth try (a day apart, as before)
+  an "Owner owes us for a job" item goes into the queue (`owner_owes`). The job and the owner stay there for
+  chasing. A new card saved on Billing is tried at the next timer run (`chargeDuePayments` retries a failed
+  payment whose owner's card changed after the last try).
+- **Before a job is sent out** the owner's saved card is checked (`cardProblem`, `src/lib/owners/service.ts`):
+  one on file, not expired (month and year in the market's timezone), and no failed charge unpaid. Nothing is
+  charged to check it. An owner logging a job is refused with a link to Billing and the team is told
+  (`card_needed`). A job from their team, our team, a guest report that would go straight out, or an old team
+  link is held (`jobs.card_hold`, status `awaiting_owner`), the owner is texted a Billing link, staff see
+  "Owner's card needs updating", and the timer sends it out within a minute of the card being sorted
+  (`releaseCardHolds`). A guest report waiting for the owner's yes is checked when they say yes.
+- Words: tradie agreement section 6 and the tradie landing page and Pay page: "Once you finish a job the
+  owner approved, you're paid even if their card fails. Chasing is our job." Owner terms section 7.
+
+**2. Chargebacks and direct-debit disputes** (`src/lib/billing/chargebacks.ts`; Stripe's dispute statuses and
+`charge.dispute.closed` read from Stripe's API reference, November 2026; the webhook needs
+`charge.dispute.closed` added, see SETUP.md).
+
+- `charge.dispute.created` records a chargeback, pauses an unsent payout (as before), and the job page links an
+  **evidence pack** (`/admin/jobs/[id]/evidence`, staff only, printable): the job, every tap's time and
+  location against the pin, before/after and report photos, the charge line by line, parts with their
+  receipts and check status, the owner's confirmation, every text and email, and the history.
+- Won (Stripe's `won`, `warning_closed`, `prevented`): the payment goes on. Lost: "Chargeback lost: whose
+  fault?" in the queue, and one tap on the job page. **Tradie's fault** (bad work, a no-show): an unsent payout
+  is cancelled; a sent one becomes a `tradie_balances` row for what they received (never more than the bank
+  took), the tradie is texted, and it is taken from their later payouts, **never more than 50% of any one**
+  (floor of half, worked out once on the payout's first try and stored in `payouts.deducted_cents`; oldest
+  balance first, `balance_recoveries`). **Not their fault:** HostFix carries it, the payout goes on.
+- Tradie agreement section 7 says exactly this, and keeps "must be repaid" for a balance left when a tradie
+  leaves. The tradie's Pay page and the admin tradie page show what is owed.
+
+**3. Guests in the house.** When the owner, a manager or a team member logs a job: "Is a guest staying at the
+time?" (yes / no / not sure). Yes or not sure: an optional guest first name and mobile. That guest is texted
+on accept ("A HostFix tradie, Dave, is coming to fix ... between 9 and 11am. They'll knock first.") and on
+"On my way". A guest's own QR report means a guest is there: the reporter's booked text adds "They'll knock
+first." and they get the on-the-way text too. "If nobody answers, the tradie may let themselves in" is chosen
+at logging: yes by default when no guest, no when a guest is staying or not sure (`defaultMayLetIn`). The
+offer and the job screen say: "Guest staying: knock and wait. Don't let yourself in unless nobody answers after
+5 minutes and the owner said that's OK." The tradie sees the guest's first name, never the number. Agreement
+section 9: entering an occupied property without knocking is a serious breach. Privacy: guest numbers are used
+only for that job's texts.
+
+**4. Property hazards.** "Anything a tradie should know to stay safe?" on the property (`properties.hazards`),
+shown in the offer before accepting and on the job screen. A tradie adds one from the job ("Found a hazard at
+this property?"): a dated line on the property, the owner texted. Owner terms: owners tell us the hazards they
+know of (the Health and Safety at Work Act shared duty). Agreement: tradies manage their own work safety and
+report hazards they find.
+
+**5. Words, and the agreement in the app.**
+
+- Owner terms: HostFix decides problems from the photos, times and locations; owners who misuse "Something's
+  wrong" can lose access (built: More > Owners > owner > "Remove this owner's access", which stops their
+  sign-in and refuses any new job at their cost); "If the tradie can't get in, the call-out is charged" (also
+  under the access notes); changing codes is the owner's job, with a reminder on the property page for 14 days
+  after a job; damage claims go to the tradie's public liability insurer, HostFix supplies photos and times.
+- **Agreeing in the app was promised but not built. It is now.** `tradies.agreement_version` and `agreed_at`;
+  the version is `TRADIE_AGREEMENT_VERSION` in `src/lib/tradies/service.ts`, which is also the date at the top
+  of the agreement. A tradie who has not agreed to the current version gets no offers (both eligibility
+  queries) and sees "Read and agree to the tradie agreement" on their home page and profile. **Every tradie
+  already on the network has to agree once after this is deployed**, so text them first. To change the
+  agreement: edit the page and bump the version; everyone agrees again before their next offer.
+- **A platform fee change waits 30 days** (`FEE_NOTICE_DAYS`) once a market has tradies: saving a new fee
+  writes it down to start 30 days later and texts every tradie; the timer starts it (`applyScheduledFees`).
+  Putting the old figure back calls it off. A market with no tradies yet changes at once.
+
+**6. Open: an owner can still cancel free after "On my way".** Cancelling is free until the tradie taps
+Arrived, even once they have tapped On my way and are driving there. Joe has not decided whether to charge a
+fee for that. Nothing is built.
+
+**7. The 12-month rule (decided 2026-11-19), recorded here.**
+
+- Owners HostFix introduces stay at the 15% fee for every job through the app, permanently.
+- The no-direct-dealing rule lasts 12 months from the first job; before then a tradie can buy an owner out at
+  $250 per property; after 12 months they may go direct. **Not built, and the tradie agreement section 10
+  still says "12 months after your last job for them", with no buyout.** That wording needs changing to the
+  decided rule (with the buyout) before it is relied on.
+- 1% applies only to a tradie's pre-existing clients (their own customers they bring onto the app). Not built:
+  record only.
+- Hourly jobs (later): a parts run counts as time on the job for up to 30 minutes. Record only.
+
+---
+
 ## 2026-11-20 — Parts: a fixed price list, the receipt plus 20%, and asking first
 
 What the founder decided after a dispute stress-test (summarised): parts at cost with no fee left HostFix

@@ -61,6 +61,8 @@ export type Property = {
   pinConfirmedAt: Date | null;
   /** When the address was last looked up. */
   pinLookupAt: Date | null;
+  /** "Anything a tradie should know to stay safe?" From the owner, and hazards tradies have found (DECISIONS.md, 2026-11-20). */
+  hazards: string;
 };
 
 export type PinSource = "looked_up" | "owner_moved" | "none";
@@ -73,7 +75,7 @@ type PropertyRow = {
   team_token: string; guest_token: string; guest_auto_dispatch: boolean; spend_limit_cents: number | null; referrer_id: string | null;
   portfolio_id: string | null;
   pin_lat?: number | string | null; pin_lng?: number | string | null; pin_source?: PinSource | null;
-  pin_confirmed_at?: Date | null; pin_lookup_at?: Date | null;
+  pin_confirmed_at?: Date | null; pin_lookup_at?: Date | null; hazards?: string | null;
 };
 
 const date = (value: Date | null) => (value ? new Date(value) : null);
@@ -91,6 +93,7 @@ export function rowToProperty(row: PropertyRow): Property {
     pinSource: row.pin_source ?? "none",
     pinConfirmedAt: date(row.pin_confirmed_at ?? null),
     pinLookupAt: date(row.pin_lookup_at ?? null),
+    hazards: row.hazards ?? "",
   };
 }
 
@@ -110,6 +113,8 @@ export type PropertyInput = {
   suburb: string;
   postcode: string;
   accessNotes: string;
+  /** Anything a tradie should know to stay safe. */
+  hazards?: string;
   tierId: string;
   /** A cleaner's or co-host's referral code, if the owner was sent by one. */
   referralCode?: string | null;
@@ -153,13 +158,13 @@ export async function createProperty(db: Db, ownerId: string, input: PropertyInp
     const rows = await tx.query<PropertyRow>(
       `insert into public.properties
          (created_at, owner_id, market, name, address_line1, address_line2, suburb, postcode, access_notes, tier_id, team_token, guest_token, referrer_id,
-          portfolio_id, status, member_since)
-       values ($1::timestamptz, $2::uuid, $3, $4, $5, $6, $7, $8, $9, $10::uuid, $11, $12, $13::uuid, $14::uuid, $15, $16::timestamptz)
+          portfolio_id, status, member_since, hazards)
+       values ($1::timestamptz, $2::uuid, $3, $4, $5, $6, $7, $8, $9, $10::uuid, $11, $12, $13::uuid, $14::uuid, $15, $16::timestamptz, $17)
        returning *`,
       [
         at, ownerId, market.slug, input.name.trim(), input.addressLine1.trim(), input.addressLine2?.trim() || null,
         input.suburb.trim(), input.postcode.trim(), input.accessNotes.trim(), portfolio?.tierId ?? input.tierId, randomToken(20), randomToken(20), referrerId,
-        portfolio?.id ?? null, covered ?? "setup", covered ? at : null,
+        portfolio?.id ?? null, covered ?? "setup", covered ? at : null, (input.hazards ?? "").trim().slice(0, 3000),
       ],
     );
     const property = rowToProperty(rows[0]!);
@@ -173,7 +178,7 @@ export async function createProperty(db: Db, ownerId: string, input: PropertyInp
   return created.property;
 }
 
-export type PropertyPatch = Partial<Pick<PropertyInput, "name" | "addressLine1" | "addressLine2" | "suburb" | "postcode" | "accessNotes">> & {
+export type PropertyPatch = Partial<Pick<PropertyInput, "name" | "addressLine1" | "addressLine2" | "suburb" | "postcode" | "accessNotes" | "hazards">> & {
   guestAutoDispatch?: boolean;
   spendLimitCents?: number | null;
 };
@@ -188,7 +193,7 @@ export async function updateProperty(db: Db, ownerId: string, propertyId: string
   const rows = await db.query<PropertyRow>(
     `update public.properties set
         name = $3, address_line1 = $4, address_line2 = $5, suburb = $6, postcode = $7, access_notes = $8,
-        guest_auto_dispatch = $9, spend_limit_cents = $10,
+        guest_auto_dispatch = $9, spend_limit_cents = $10, hazards = $12,
         pin_lat = case when $11::boolean then null else pin_lat end,
         pin_lng = case when $11::boolean then null else pin_lng end,
         pin_source = case when $11::boolean then 'none' else pin_source end,
@@ -207,6 +212,7 @@ export async function updateProperty(db: Db, ownerId: string, propertyId: string
       patch.guestAutoDispatch ?? current.guestAutoDispatch,
       patch.spendLimitCents === undefined ? current.spendLimitCents : patch.spendLimitCents,
       moved,
+      patch.hazards === undefined ? current.hazards : patch.hazards.trim().slice(0, 3000),
     ],
   );
   await audit(db, { actor: `owner:${ownerId}`, action: "property.updated", entity: "property", entityId: propertyId, detail: { fields: Object.keys(patch), pin_cleared: moved && current.pin !== null } });

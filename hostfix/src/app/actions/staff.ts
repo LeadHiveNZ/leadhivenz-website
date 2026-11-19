@@ -7,6 +7,7 @@ import { audit } from "@/lib/audit";
 import { requireStaff } from "@/lib/auth/current";
 import { AccountExistsError } from "@/lib/auth/users";
 import { addGoodwillCredit, chargeJob, resolveDispute, retryPayout } from "@/lib/billing/settle";
+import { decideChargebackFault } from "@/lib/billing/chargebacks";
 import { getDb } from "@/lib/db";
 import { assignTradie, reoffer } from "@/lib/dispatch/cascade";
 import { baseUrl } from "@/lib/env";
@@ -15,8 +16,10 @@ import { approveGuestReport, cancelJob, createJob } from "@/lib/jobs/create";
 import { getQuote } from "@/lib/jobs/store";
 import { decideQuote } from "@/lib/jobs/work";
 import { staffDecideCheck } from "@/lib/jobs/confirm";
+import { guestFromForm } from "@/lib/jobs/guest-form";
 import { chargeBoughtParts, staffDecideReceipts } from "@/lib/jobs/parts";
 import { getMarket } from "@/lib/markets/store";
+import { setOwnerAccess } from "@/lib/owners/service";
 import { texts } from "@/lib/notify/messages";
 import { enqueue } from "@/lib/notify/outbox";
 import { resolveException } from "@/lib/ops/exceptions";
@@ -130,7 +133,7 @@ export async function staffGoAhead(_previous: FormState, formData: FormData): Pr
   const db = await getDb();
   const approved = await approveGuestReport(db, jobId, { urgent: text(formData, "how") === "urgent" }, `${staff.actor} for the owner`);
   await sendQueued(db);
-  if (!approved) return { message: "This job is not waiting for the owner any more." };
+  if (!approved.ok) return { message: approved.message };
   redirect(`${jobPath(jobId)}?did=sent_out`);
 }
 
@@ -215,6 +218,30 @@ export async function staffRetryCharge(_previous: FormState, formData: FormData)
   return { message: "The card was declined again. Ask the owner to update their card (Billing in their app), then try again." };
 }
 
+/** One tap on a lost chargeback: the tradie's fault (bad work, a no-show) or not (DECISIONS.md, 2026-11-20). */
+export async function staffChargebackFault(_previous: FormState, formData: FormData): Promise<FormState> {
+  const staff = await requireStaff();
+  const jobId = text(formData, "jobId");
+  const fault = text(formData, "fault");
+  if (fault !== "tradie" && fault !== "not_tradie") return { message: "Choose whose fault it was." };
+  const db = await getDb();
+  const result = await decideChargebackFault(db, text(formData, "chargebackId"), fault, staff.actor);
+  await sendQueued(db);
+  if (!result.ok) return { message: result.message };
+  redirect(`${jobPath(jobId)}?did=${fault === "tradie" ? "chargeback_tradie" : "chargeback_us"}`);
+}
+
+/** Remove an owner's access, or give it back (owner terms, section 8). */
+export async function staffOwnerAccess(_previous: FormState, formData: FormData): Promise<FormState> {
+  const staff = await requireStaff();
+  const ownerId = text(formData, "ownerId");
+  const allowed = text(formData, "allowed") === "yes";
+  const result = await setOwnerAccess(await getDb(), ownerId, allowed, text(formData, "reason") || "Given back by the team", staff.actor);
+  if (!result.ok) return problem(formData, result.message);
+  revalidatePath(`/admin/owners/${ownerId}`);
+  return { done: allowed ? "Access given back." : "Access removed." };
+}
+
 export async function staffGoodwill(_previous: FormState, formData: FormData): Promise<FormState> {
   const staff = await requireStaff();
   const cents = dollarsToCents(text(formData, "creditAmount"));
@@ -237,7 +264,10 @@ export async function staffLogJob(_previous: FormState, formData: FormData): Pro
   if (!property) return problem(formData, "We could not find that property.");
   const choice = text(formData, "menuItemId");
   if (!choice) return problem(formData, "Choose what needs fixing.");
+  const guest = guestFromForm(formData, "NZ");
+  if (!guest.ok) return problem(formData, guest.message, { guestPhone: guest.message });
   const result = await createJob(db, {
+    ...guest.guest,
     property, reportedBy: "staff", reporterName: staff.name, reporterPhone: null,
     menuItemId: choice === "off-menu" ? null : choice, offMenuTrade: text(formData, "offMenuTrade"), offMenuTitle: text(formData, "offMenuTitle"),
     description: text(formData, "description"), urgent: ticked(formData, "urgent"), uploadIds: list(formData, "uploadIds"),

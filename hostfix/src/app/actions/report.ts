@@ -8,6 +8,7 @@ import { checkCode, issueCode } from "@/lib/auth/codes";
 import { getDb } from "@/lib/db";
 import { appSecret, baseUrl, demoModeAllowed } from "@/lib/env";
 import { list, problem, text, ticked, type FormState } from "@/lib/forms";
+import { guestFromForm } from "@/lib/jobs/guest-form";
 import { createJob } from "@/lib/jobs/create";
 import { getMarket } from "@/lib/markets/store";
 import { texts } from "@/lib/notify/messages";
@@ -75,7 +76,11 @@ export async function sendReport(_previous: FormState, formData: FormData): Prom
   if (Object.keys(errors).length > 0) return problem(formData, "Please check the highlighted fields.", errors);
   if (!choice) return problem(formData, "Choose what needs fixing.");
 
+  // A guest's own report means a guest is staying; the owner's older team link asks, like the team.
+  const guest = via === "guest" ? { ok: true as const, guest: {} } : guestFromForm(formData, market?.country ?? "NZ");
+  if (!guest.ok) return problem(formData, guest.message, { guestPhone: guest.message });
   const result = await createJob(db, {
+    ...guest.guest,
     property,
     reportedBy: via,
     reporterName: name,
@@ -113,7 +118,10 @@ async function sendTeamReport(formData: FormData, token: string): Promise<FormSt
   const choice = text(formData, "menuItemId");
   if (!choice) return problem(formData, "Choose what needs fixing.");
 
+  const guest = guestFromForm(formData, "NZ");
+  if (!guest.ok) return problem(formData, guest.message, { guestPhone: guest.message });
   const result = await createJob(db, {
+    ...guest.guest,
     property: house.property,
     reportedBy: "team",
     reporterName: house.memberName,

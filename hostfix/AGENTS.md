@@ -26,7 +26,10 @@ it when you change one.
 | Prices, surcharges, tax, what each side pays and gets (parts sums too) | `src/lib/jobs/pricing.ts` |
 | Parts on a job: the price list, receipts, asking first, receipts to follow, receipt checks | `src/lib/jobs/parts.ts`, `seed/parts-queenstown.json` |
 | Why a payout is held (a flagged job, a receipt) and letting it go | `src/lib/billing/holds.ts` |
-| Logging a job, guest reports, cancelling | `src/lib/jobs/create.ts` |
+| Logging a job, guest reports, the card check before sending out, cancelling | `src/lib/jobs/create.ts`, `cardProblem` in `src/lib/owners/service.ts` |
+| "Is a guest staying?", the guest's texts, letting yourself in | `src/lib/jobs/guest-form.ts`, `src/components/jobs/SafetyNotes.tsx` |
+| Chargebacks: the evidence pack, whose fault, balances taken from later payouts | `src/lib/billing/chargebacks.ts`, `releasePayout` in `settle.ts`, `/admin/jobs/[id]/evidence` |
+| The tradie agreement agreed in the app, and a fee change's 30 days | `TRADIE_AGREEMENT_VERSION` in `src/lib/tradies/service.ts`, `applyScheduledFees` in `src/lib/markets/admin.ts` |
 | Arriving, quotes, finishing, "could not get in" | `src/lib/jobs/work.ts` |
 | The offer cascade: first choice, backup, everyone, dispatcher | `src/lib/dispatch/cascade.ts` |
 | Everything the clock drives | `src/lib/dispatch/tick.ts`, called by `/api/cron/tick` |
@@ -125,6 +128,16 @@ it when you change one.
   the same receipt over-used across jobs) go straight to the queue and hold the payout until Approve or
   Hold (`src/lib/billing/holds.ts`). Owner words come from `partsWords` (`src/lib/markets/display.ts`); never
   say "retail" or "at cost" to an owner. Parts added before 20 Nov 2026 stay at cost.
+- **A finished job is paid whatever the owner's card does** (DECISIONS.md, 2026-11-20, second entry). A
+  payout never waits for the charge; a charge that fails four times is what the owner owes, and blocks their
+  new jobs (`cardProblem`: no card, expired, or a failed charge). No job is sent to tradies without a usable
+  saved card: an owner is refused, anyone else's report is held (`card_hold`) until the card is sorted.
+  A lost chargeback the team marks as the tradie's fault becomes a balance taken from later payouts, never
+  more than half of any one (`deducted_cents`); otherwise HostFix carries it.
+- **No offers without the current tradie agreement.** Both offer queries require
+  `agreement_version = TRADIE_AGREEMENT_VERSION`, which is also the date on the agreement page. Change the
+  agreement, bump the version, and every tradie agrees again in the app. A platform fee change waits 30
+  days once a market has tradies, and they are texted.
 - **No insurance, no jobs.** A tradie needs public liability insurance (insurer, policy number, expiry) on
   file and the certificate of currency uploaded (an `insurance_certificate` file, `src/lib/tradies/certificate.ts`)
   before approval, and the offer query skips anyone whose insurance has run out or has no certificate, the

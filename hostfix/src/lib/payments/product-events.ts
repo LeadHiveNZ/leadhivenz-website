@@ -4,6 +4,7 @@ import { audit } from "@/lib/audit";
 import type { Db } from "@/lib/db/types";
 import { baseUrl } from "@/lib/env";
 import { formatMoney } from "@/lib/money";
+import { closeChargeback, recordChargeback } from "@/lib/billing/chargebacks";
 import { raiseException } from "@/lib/ops/exceptions";
 import { findOwnerByCustomer, saveBilling } from "@/lib/owners/service";
 import { activatePortfolio } from "@/lib/properties/portfolio";
@@ -75,6 +76,7 @@ async function unpack(message: StripeMessage, get: Fetchers): Promise<{ type: st
     case "customer.subscription.updated":
       return { type, id: message.id, object: await get.subscription(related) };
     case "charge.dispute.created":
+    case "charge.dispute.closed":
       return { type, id: message.id, object: await get.dispute(related) };
     case "charge.refunded":
       return { type, id: message.id, object: await get.charge(related) };
@@ -192,6 +194,8 @@ export async function handleProductMessage(db: Db, message: StripeMessage, accou
           )
         : [];
       const job = found[0];
+      // Every chargeback is written down, so the team can mark its outcome and whose fault it was (DECISIONS.md, 2026-11-20).
+      await recordChargeback(db, { disputeId: dispute.id, jobId: job?.job_id ?? null, amountCents: dispute.amount, currency: dispute.currency, reason: dispute.reason });
       if (job) {
         const paused = await db.query("update public.payouts set status = 'paused' where job_id = $1::uuid and status in ('waiting', 'scheduled', 'held') returning id", [job.job_id]);
         await audit(db, {
@@ -200,7 +204,7 @@ export async function handleProductMessage(db: Db, message: StripeMessage, accou
         });
         await raiseException(db, {
           kind: "chargeback", market: job.market, jobId: job.job_id,
-          summary: `Job ${Number(job.number)}: the owner's bank has reversed the ${amount} payment (${dispute.reason.replace(/_/g, " ")}). ${paused.length > 0 ? "The tradie's payment is on hold." : "The tradie has already been paid."} Answer it in Stripe before the deadline shown there.`,
+          summary: `Job ${Number(job.number)}: the owner's bank has reversed the ${amount} payment (${dispute.reason.replace(/_/g, " ")}). ${paused.length > 0 ? "The tradie's payment is on hold." : "The tradie has already been paid."} Open the job's evidence pack and answer it in Stripe before the deadline shown there.`,
           dedupeKey: `chargeback:${dispute.id}`,
         });
         return { handled: true, outcome: "chargeback_on_job" };
@@ -215,6 +219,13 @@ export async function handleProductMessage(db: Db, message: StripeMessage, accou
         dedupeKey: `chargeback:${dispute.id}`,
       });
       return { handled: true, outcome: "chargeback_other" };
+    }
+
+    // The bank has decided. Won (or an inquiry closed, or prevented): the tradie's payment goes on. Lost: the team decides whose fault.
+    case "charge.dispute.closed": {
+      const dispute = event.object as Stripe.Dispute;
+      const outcome = await closeChargeback(db, dispute.id, dispute.status);
+      return { handled: true, outcome: outcome === "lost" ? "chargeback_lost" : outcome === "won" ? "chargeback_won" : "nothing_to_change" };
     }
 
     // The owner changed their card on Stripe's page.

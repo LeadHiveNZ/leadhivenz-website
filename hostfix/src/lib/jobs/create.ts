@@ -7,7 +7,9 @@ import { attachUploads } from "@/lib/files/uploads";
 import { getMarket, getMenuItem, getTier, type Tier } from "@/lib/markets/store";
 import { texts } from "@/lib/notify/messages";
 import { enqueue } from "@/lib/notify/outbox";
-import { resolveExceptionsFor } from "@/lib/ops/exceptions";
+import { raiseException, resolveExceptionsFor } from "@/lib/ops/exceptions";
+import { cardProblem, cardProblemWords } from "@/lib/owners/service";
+import { baseUrl } from "@/lib/env";
 import type { Property } from "@/lib/properties/service";
 import { isAfterHours, monthBounds, monthKey } from "@/lib/time";
 import { loadContext, ownerJobUrl } from "./context";
@@ -41,11 +43,28 @@ export type NewJob = {
   teamMemberId?: string | null;
   /** That owner's setting for them: ask the owner before anyone is sent. */
   askOwnerFirst?: boolean;
+  /**
+   * Is a guest staying at the time (DECISIONS.md, 2026-11-20, second entry)? Asked when the
+   * owner, a manager or a team member logs a job. A guest's own report always means yes.
+   */
+  guestStaying?: GuestStaying | null;
+  /** The staying guest, for this job's texts only: their first name and mobile. */
+  guestName?: string | null;
+  guestPhone?: string | null;
+  /** "If nobody answers, the tradie may let themselves in." Defaults to yes with no guest, no with one. */
+  mayLetIn?: boolean | null;
 };
+
+export type GuestStaying = "yes" | "no" | "not_sure";
+
+/** The default answer to "may the tradie let themselves in?": yes with nobody staying, no when a guest is or might be. */
+export function defaultMayLetIn(guest: GuestStaying | null | undefined): boolean {
+  return guest !== "yes" && guest !== "not_sure";
+}
 
 export type NewJobResult =
   | { ok: true; job: Job; needsOwner: boolean }
-  | { ok: false; reason: "not_member" | "market_closed" | "unknown_item" | "duplicate" | "invalid"; message: string; existingJobId?: string };
+  | { ok: false; reason: "not_member" | "market_closed" | "unknown_item" | "duplicate" | "invalid" | "card"; message: string; existingJobId?: string };
 
 /** How many included urgent call-outs this property has already used this calendar month. */
 async function includedUrgentUsed(db: Db, propertyId: string, month: string, timeZone: string): Promise<number> {
@@ -107,6 +126,9 @@ export async function createJob(db: Db, input: NewJob): Promise<NewJobResult> {
     if (market.stage !== "live" && input.reportedBy !== "staff") {
       return { ok: false, reason: "market_closed", message: `We are not taking jobs in ${market.name} right now.` };
     }
+    // An owner whose access our team removed (owner terms, section 8) cannot have jobs sent at their cost.
+    const closed = await tx.query("select 1 from public.owners o join public.users u on u.id = o.user_id where o.id = $1::uuid and u.disabled_at is not null", [property.ownerId]);
+    if (closed.length > 0) return { ok: false, reason: "not_member", message: "This account is closed. Contact us if you think this is a mistake." };
     if (property.status !== "active") {
       return {
         ok: false, reason: "not_member",
@@ -158,7 +180,25 @@ export async function createJob(db: Db, input: NewJob): Promise<NewJobResult> {
 
     // A team member whose owner asked to say yes first waits for the owner, like a guest (DECISIONS.md, 2026-11-18).
     const teamAsks = input.reportedBy === "team" && Boolean(input.askOwnerFirst);
-    const needsOwner = (input.reportedBy === "guest" && !property.guestAutoDispatch) || teamAsks;
+    const asksOwner = (input.reportedBy === "guest" && !property.guestAutoDispatch) || teamAsks;
+    // Nothing goes out to tradies until the owner can be charged (DECISIONS.md, 2026-11-20, second entry): a saved
+    // card that has not expired, and no failed charge still unpaid. An owner logging the job is told what to do;
+    // anyone else's report waits for the owner, who is asked to update the card, and the team sees it.
+    const problem = asksOwner ? null : await cardProblem(tx, property.ownerId, market.country, at, market.timezone);
+    if (problem && input.reportedBy === "owner") {
+      await raiseException(tx, {
+        kind: "card_needed", market: market.slug, propertyId: property.id,
+        summary: `The owner of ${property.name} tried to log a job but ${problem === "unpaid" ? "an earlier charge is unpaid" : problem === "expired" ? "their card has expired" : "has no card saved"}. They have been asked to update it on the Billing page.`,
+        dedupeKey: `card_needed:owner:${property.ownerId}:${problem}`,
+      });
+      return { ok: false, reason: "card", message: cardProblemWords(problem) };
+    }
+    const needsOwner = asksOwner || problem !== null;
+    // Guests in the house (DECISIONS.md, 2026-11-20, second entry). A guest's own report means one is staying.
+    const guestStaying: GuestStaying | null = input.reportedBy === "guest" ? "yes" : (input.guestStaying ?? null);
+    const guestPhone = guestStaying === "yes" || guestStaying === "not_sure" ? (input.guestPhone?.trim() || null) : null;
+    const guestName = guestPhone || input.guestName ? (guestStaying === "yes" || guestStaying === "not_sure" ? (input.guestName?.trim().split(/\s+/)[0]?.slice(0, 40) || null) : null) : null;
+    const mayLetIn = input.mayLetIn ?? defaultMayLetIn(guestStaying);
     // A guest, or a team member waiting on the owner, cannot commit the owner to a surcharge.
     // Their job starts as standard and the owner chooses when they give the go-ahead.
     const urgent = input.reportedBy === "guest" || teamAsks ? false : input.urgent;
@@ -172,14 +212,17 @@ export async function createJob(db: Db, input: NewJob): Promise<NewJobResult> {
     const rows = await tx.query<JobRow>(
       `insert into public.jobs
          (created_at, property_id, owner_id, market, menu_item_id, off_menu, trade, licence_required, title, description,
-          urgency, after_hours, reported_by, reporter_name, reporter_phone, status, tier_key, response_hours, currency, team_member_id)
-       values ($1::timestamptz, $2::uuid, $3::uuid, $4, $5::uuid, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20::uuid)
+          urgency, after_hours, reported_by, reporter_name, reporter_phone, status, tier_key, response_hours, currency, team_member_id,
+          card_hold, guest_staying, guest_name, guest_phone, may_let_in)
+       values ($1::timestamptz, $2::uuid, $3::uuid, $4, $5::uuid, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20::uuid,
+               $21, $22, $23, $24, $25)
        returning *`,
       [
         at.toISOString(), property.id, property.ownerId, market.slug, input.menuItemId, !input.menuItemId, trade, licenceRequired, title,
         description, urgent ? "urgent" : "standard", afterHours, input.reportedBy, input.reporterName?.trim().slice(0, 80) || null,
         input.reporterPhone, needsOwner ? "awaiting_owner" : "offering", tier?.key ?? null, responseHours, market.currency,
         input.reportedBy === "team" ? (input.teamMemberId ?? null) : null,
+        problem, guestStaying, guestName, guestPhone, mayLetIn,
       ],
     );
     const job = rowToJob(rows[0]!);
@@ -196,7 +239,20 @@ export async function createJob(db: Db, input: NewJob): Promise<NewJobResult> {
 
     const context = await loadContext(tx, { ...job, ownerTotalCents: sum.ownerCents, tradieTotalCents: sum.tradieCents });
     const who = input.reporterName?.trim() || (input.reportedBy === "guest" ? "A guest" : "Your team");
-    if (context.owner.phone) {
+    if (problem) {
+      // Held for the card. The owner is asked to update it; the team sees it; the timer sends it out once it is sorted.
+      await raiseException(tx, {
+        kind: "card_needed", market: market.slug, jobId: job.id,
+        summary: `Job ${job.number} at ${property.name} is waiting before it goes to tradies: ${problem === "unpaid" ? "an earlier charge is unpaid" : problem === "expired" ? "the owner's card has expired" : "the owner has no card saved"}. The owner has been texted to update it.`,
+        dedupeKey: `card_needed:${job.id}`,
+      });
+      if (context.owner.phone) {
+        await enqueue(tx, {
+          channel: "sms", to: context.owner.phone, template: "card_needed", audience: "owner", jobId: job.id, userId: context.owner.userId,
+          body: texts.cardNeeded({ property: property.name, title, problem, link: `${baseUrl()}/app/billing` }), dedupeKey: `card_needed:${job.id}`,
+        });
+      }
+    } else if (context.owner.phone) {
       if (needsOwner && teamAsks) {
         await enqueue(tx, {
           channel: "sms", to: context.owner.phone, template: "team_report", audience: "owner", jobId: job.id, userId: context.owner.userId,
@@ -223,13 +279,16 @@ export async function createJob(db: Db, input: NewJob): Promise<NewJobResult> {
 }
 
 /** The owner says yes to a guest's report, choosing standard or urgent. The job then goes to tradies. */
-export async function approveGuestReport(db: Db, jobId: string, choice: { urgent: boolean }, actor: string): Promise<Job | null> {
+export async function approveGuestReport(db: Db, jobId: string, choice: { urgent: boolean }, actor: string): Promise<{ ok: true; job: Job } | { ok: false; message: string }> {
   return db.tx(async (tx) => {
     const job = await lockJob(tx, jobId);
-    if (!job || job.status !== "awaiting_owner") return null;
+    if (!job || job.status !== "awaiting_owner") return { ok: false, message: "This job has already been dealt with." };
     const context = await loadContext(tx, job);
     const { market, property, tier } = context;
     const at = now();
+    // The owner's card must be usable before anything is sent (DECISIONS.md, 2026-11-20, second entry).
+    const problem = await cardProblem(tx, job.ownerId, market.country, at, market.timezone);
+    if (problem) return { ok: false, message: cardProblemWords(problem) };
     const item = job.menuItemId ? await getMenuItem(tx, job.menuItemId) : null;
     const afterHours = choice.urgent && isAfterHours(at, market);
     const urgentIncluded = choice.urgent && (await urgentIsIncluded(tx, property, tier, market.timezone, at));
@@ -244,9 +303,35 @@ export async function approveGuestReport(db: Db, jobId: string, choice: { urgent
     ]);
     const sum = await recalcTotals(tx, jobId, market.taxRate, market.taxRegistered);
     await audit(tx, { actor, action: "job.approved_by_owner", entity: "job", entityId: jobId, amount: sum.ownerCents, currency: market.currency, detail: { urgent: choice.urgent, after_hours: afterHours } });
+    await tx.query("update public.jobs set card_hold = null where id = $1::uuid", [jobId]);
+    await resolveExceptionsFor(tx, jobId, ["card_needed"], "Sent out");
     await startDispatch(tx, jobId, actor);
-    return lockJob(tx, jobId);
+    return { ok: true, job: (await lockJob(tx, jobId))! };
   });
+}
+
+/**
+ * Run by the timer: jobs held because the owner's card could not be charged,
+ * sent out once it can (a new card saved, or the unpaid charge paid).
+ */
+export async function releaseCardHolds(db: Db): Promise<number> {
+  const held = await db.query<{ id: string }>("select id from public.jobs where status = 'awaiting_owner' and card_hold is not null order by created_at limit 50");
+  let sent = 0;
+  for (const row of held) {
+    const done = await db.tx(async (tx) => {
+      const job = await lockJob(tx, row.id);
+      if (!job || job.status !== "awaiting_owner" || !job.cardHold) return false;
+      const market = await getMarket(tx, job.market);
+      if (!market || (await cardProblem(tx, job.ownerId, market.country, now(), market.timezone))) return false;
+      await tx.query("update public.jobs set card_hold = null, status = 'offering' where id = $1::uuid", [job.id]);
+      await audit(tx, { actor: "system", action: "job.card_cleared", entity: "job", entityId: job.id, detail: { was: job.cardHold } });
+      await resolveExceptionsFor(tx, job.id, ["card_needed"], "The owner's card is sorted: sent out");
+      await startDispatch(tx, job.id, "system");
+      return true;
+    });
+    if (done) sent += 1;
+  }
+  return sent;
 }
 
 export type CancelResult = { ok: true; job: Job } | { ok: false; message: string };

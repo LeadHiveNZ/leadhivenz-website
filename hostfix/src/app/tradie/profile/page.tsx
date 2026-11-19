@@ -21,6 +21,7 @@ import { payTiming } from "@/lib/markets/display";
 import { workingHours } from "@/lib/leads/price-list";
 import { formatMoney } from "@/lib/money";
 import { surchargeShare } from "@/lib/jobs/pricing";
+import { AgreementCard } from "@/components/jobs/AgreementCard";
 
 export const metadata: Metadata = { title: "Profile" };
 
@@ -49,6 +50,8 @@ export default async function TradieProfilePage({ searchParams }: { searchParams
           your certificate, and add your licences and bank details, so we can approve you sooner.
         </Notice>
       )}
+
+      <AgreementCard tradie={tradie} />
 
       {query.payouts === "done" && <Notice tone="good" title="Bank details set up. You can be paid." />}
       {query.payouts === "checking" && (

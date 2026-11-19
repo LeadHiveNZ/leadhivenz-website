@@ -76,6 +76,10 @@ export function ReportForm(props: Props) {
   /** Which kind of problem is opened up: a trade's label, or "off-menu". */
   const [open, setOpen] = useState<string>("");
   const [urgent, setUrgent] = useState(false);
+  // Guests in the house (DECISIONS.md, 2026-11-20, second entry). The let-in answer follows the guest answer until it is changed by hand.
+  const [guest, setGuest] = useState<"" | "yes" | "no" | "not_sure">("");
+  const [letIn, setLetIn] = useState<boolean | null>(null);
+  const mayLetIn = letIn ?? !(guest === "yes" || guest === "not_sure");
   const [offTrade, setOffTrade] = useState<string>(props.offMenuTrades[0]?.key ?? "handyman");
   const showPrices = audience !== "guest";
   const selected = items.find((item) => item.id === choice) ?? null;
@@ -221,6 +225,33 @@ export function ReportForm(props: Props) {
       <Area label="Anything the tradie should know?" name="description" rows={3} maxLength={1500} placeholder="Which room, what you have tried, when it started." />
 
       <PhotoUploader kind="report" label="Photos (they help the tradie bring the right parts)" token={props.uploadToken} max={6} />
+
+      {audience !== "guest" && (
+        <fieldset className="space-y-2.5">
+          <legend className={labelClass}>Is a guest staying at the time?</legend>
+          <input type="hidden" name="guestStaying" value={guest} />
+          <input type="hidden" name="mayLetIn" value={mayLetIn ? "yes" : "no"} />
+          <div className="grid gap-2 sm:grid-cols-3">
+            {([["yes", "Yes"], ["no", "No"], ["not_sure", "Not sure"]] as const).map(([value, label]) => (
+              <Choice key={value} on={guest === value} onPick={() => setGuest(value)}>
+                <span className="font-semibold text-ink">{label}</span>
+              </Choice>
+            ))}
+          </div>
+          {(guest === "yes" || guest === "not_sure") && (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Guest's first name (optional)" name="guestName" maxLength={40} autoComplete="off" />
+              <Field label="Guest's mobile (optional)" name="guestPhone" type="tel" inputMode="tel" maxLength={30} autoComplete="off" hint="We text them when the tradie is booked and on the way, and use the number for nothing else." />
+            </div>
+          )}
+          <Choice kind="checkbox" on={mayLetIn} onPick={() => setLetIn(!mayLetIn)}>
+            <span>
+              <span className="block font-semibold text-ink">If nobody answers, the tradie may let themselves in</span>
+              <span className="block text-sm text-muted">With a guest staying, the tradie always knocks and waits first.</span>
+            </span>
+          </Choice>
+        </fieldset>
+      )}
 
       {props.signedAs && (
         <p className="rounded-xl bg-tint px-4 py-3 text-ink">

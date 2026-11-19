@@ -6,7 +6,7 @@ import { texts } from "@/lib/notify/messages";
 import { enqueue } from "@/lib/notify/outbox";
 import { raiseException, resolveExceptionsFor } from "@/lib/ops/exceptions";
 import { FLAG_DAYS, flagsNeedReview, recentFlags } from "@/lib/tradies/reliability";
-import { formatClock } from "@/lib/time";
+import { formatClock, formatDate } from "@/lib/time";
 import { openSettlement } from "@/lib/billing/settle";
 import { loadContext, offerUrl, ownerJobUrl } from "./context";
 import { arrivedOnTime, linesToDrop, surchargeVerdict } from "./arrival";
@@ -33,6 +33,46 @@ async function theirs(db: Db, jobId: string, tradieId: string): Promise<Job | nu
 
 const NOT_YOURS = "That job is not one of yours.";
 
+/** Who to text about the tradie coming, when a guest is staying: the guest the owner named, or the guest who reported it. */
+export function guestPhoneFor(job: Pick<Job, "guestPhone" | "reportedBy" | "reporterPhone">): string | null {
+  return job.guestPhone ?? (job.reportedBy === "guest" ? job.reporterPhone : null);
+}
+
+export function firstName(name: string): string {
+  return name.trim().split(/\s+/)[0] ?? name;
+}
+
+/**
+ * The tradie finds a hazard at the property (DECISIONS.md, 2026-11-20, second
+ * entry): it is added to the property's safety notes for the next tradie, and
+ * the owner is told.
+ */
+export async function reportHazard(db: Db, jobId: string, tradieId: string, words: string): Promise<StepResult> {
+  return db.tx(async (tx) => {
+    const job = await theirs(tx, jobId, tradieId);
+    if (!job) return { ok: false, message: NOT_YOURS };
+    if (!["accepted", "on_site", "awaiting_approval", "completed"].includes(job.status)) return { ok: false, message: "This job is closed." };
+    const hazard = words.replace(/\s+/g, " ").trim().slice(0, 400);
+    if (hazard.length < 5) return { ok: false, message: "Say in a few words what the hazard is, for example: rotten deck boards by the back door." };
+    const context = await loadContext(tx, job);
+    const { market, property, owner, tradie } = context;
+    const line = `${formatDate(now(), market.timezone)}, noted by ${tradie?.businessName ?? "a tradie"}: ${hazard}`;
+    await tx.query(
+      "update public.properties set hazards = left(case when hazards = '' then $2 else hazards || E'\\n' || $2 end, 3000) where id = $1::uuid",
+      [property.id, line],
+    );
+    await audit(tx, { actor: `tradie:${tradieId}`, action: "property.hazard_added", entity: "property", entityId: property.id, detail: { job: jobId, hazard } });
+    await audit(tx, { actor: `tradie:${tradieId}`, action: "job.hazard_reported", entity: "job", entityId: jobId, detail: { hazard } });
+    if (owner.phone && tradie) {
+      await enqueue(tx, {
+        channel: "sms", to: owner.phone, template: "hazard_added", audience: "owner", jobId, userId: owner.userId,
+        body: texts.hazardAdded({ tradie: tradie.businessName, property: property.name, hazard, link: ownerJobUrl(job) }), dedupeKey: `hazard_added:${jobId}:${hazard.slice(0, 40)}`,
+      });
+    }
+    return { ok: true, job: (await lockJob(tx, jobId))! };
+  });
+}
+
 async function acceptedOfferFor(db: Db, job: Job): Promise<{ id: string; number: number } | null> {
   const rows = await db.query<{ id: string; number: number }>(
     "select id, number from public.offers where job_id = $1::uuid and tradie_id = $2::uuid and status = 'accepted' order by responded_at desc limit 1",
@@ -49,6 +89,15 @@ export async function markEnRoute(db: Db, jobId: string, tradieId: string): Prom
     if (!job.enRouteAt) {
       await tx.query("update public.jobs set en_route_at = $2::timestamptz where id = $1::uuid", [jobId, now().toISOString()]);
       await audit(tx, { actor: `tradie:${tradieId}`, action: "job.en_route", entity: "job", entityId: jobId });
+      // A guest staying in the house is told again when the tradie sets off (DECISIONS.md, 2026-11-20, second entry).
+      const guest = guestPhoneFor(job);
+      if (guest) {
+        const context = await loadContext(tx, job);
+        await enqueue(tx, {
+          channel: "sms", to: guest, template: "guest_on_the_way", audience: "reporter", jobId,
+          body: texts.guestOnTheWay({ tradie: firstName(context.tradie?.name ?? "Your tradie"), title: job.title }), dedupeKey: `guest_on_the_way:${jobId}`,
+        });
+      }
     }
     return { ok: true, job: (await lockJob(tx, jobId))! };
   });

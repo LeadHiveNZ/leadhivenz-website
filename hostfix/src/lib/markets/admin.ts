@@ -3,7 +3,9 @@ import { findTrade } from "@config/trades";
 import { audit } from "@/lib/audit";
 import { now } from "@/lib/clock";
 import type { Db } from "@/lib/db/types";
-import { isValidTimeZone, WEEKDAYS } from "@/lib/time";
+import { formatDate, isValidTimeZone, WEEKDAYS } from "@/lib/time";
+import { texts } from "@/lib/notify/messages";
+import { enqueue } from "@/lib/notify/outbox";
 import { isUuid } from "@/lib/uuid";
 import { bandProblem, lowestBand } from "./bands";
 import { getMarket, listMenu, listTiers } from "./store";
@@ -137,12 +139,91 @@ export async function updateMarket(db: Db, slug: string, patch: MarketPatch, act
   const current = await getMarket(db, slug);
   if (!current) throw new AdminInputError("That market does not exist.");
   checkMarket(patch, current);
-  const entries = (Object.entries(patch) as [keyof MarketPatch, unknown][]).filter(([, value]) => value !== undefined);
-  if (entries.length === 0) return;
-  const sets = entries.map(([key], index) => `${COLUMNS[key]} = $${index + 2}${key === "workDays" || key === "depositTerms" ? "::text[]" : ""}`);
-  const values = entries.map(([key, value]) => (key === "name" && typeof value === "string" ? value.trim() : value));
-  await db.query(`update public.markets set ${sets.join(", ")}, updated_at = $${entries.length + 2}::timestamptz where slug = $1`, [slug, ...values, now().toISOString()]);
-  await audit(db, { actor, action: "market.updated", entity: "market", entityId: slug, detail: { changed: Object.fromEntries(entries) } });
+  await db.tx(async (tx) => {
+    let rest: MarketPatch = patch;
+    // A new platform fee waits 30 days once the market has tradies (tradie agreement, section 8).
+    if (patch.platformFeeBps !== undefined) {
+      const tradies = await tx.query("select 1 from public.tradies where market = $1 and status in ('applied', 'approved', 'paused') limit 1", [slug]);
+      if (tradies.length > 0) {
+        rest = { ...patch, platformFeeBps: undefined };
+        await scheduleFee(tx, current, patch.platformFeeBps, actor);
+      }
+    }
+    const entries = (Object.entries(rest) as [keyof MarketPatch, unknown][]).filter(([, value]) => value !== undefined);
+    if (entries.length === 0) return;
+    const sets = entries.map(([key], index) => `${COLUMNS[key]} = $${index + 2}${key === "workDays" || key === "depositTerms" ? "::text[]" : ""}`);
+    const values = entries.map(([key, value]) => (key === "name" && typeof value === "string" ? value.trim() : value));
+    await tx.query(`update public.markets set ${sets.join(", ")}, updated_at = $${entries.length + 2}::timestamptz where slug = $1`, [slug, ...values, now().toISOString()]);
+    await audit(tx, { actor, action: "market.updated", entity: "market", entityId: slug, detail: { changed: Object.fromEntries(entries) } });
+  });
+}
+
+/** Days' notice before a new platform fee applies to tradies (DECISIONS.md, 2026-11-20). */
+export const FEE_NOTICE_DAYS = 30;
+
+const percent = (bps: number) => `${bps / 100}%`;
+
+/**
+ * Writes down a new platform fee to start FEE_NOTICE_DAYS from now and texts
+ * every tradie in the market. Setting the fee back to what it is now calls off
+ * a change still waiting.
+ */
+async function scheduleFee(
+  db: Db,
+  market: { slug: string; name: string; timezone: string; platformFeeBps: number; platformFeeNext?: { bps: number; from: Date } | null },
+  bps: number,
+  actor: string,
+): Promise<void> {
+  if (bps === market.platformFeeBps) {
+    if (market.platformFeeNext) {
+      await db.query("update public.markets set platform_fee_bps_next = null, platform_fee_from = null where slug = $1", [market.slug]);
+      await audit(db, { actor, action: "market.fee_change_cancelled", entity: "market", entityId: market.slug, detail: { was: market.platformFeeNext.bps } });
+    }
+    return;
+  }
+  if (market.platformFeeNext?.bps === bps) return;
+  const from = new Date(now().getTime() + FEE_NOTICE_DAYS * 86_400_000);
+  await db.query("update public.markets set platform_fee_bps_next = $2, platform_fee_from = $3::timestamptz where slug = $1", [market.slug, bps, from.toISOString()]);
+  await audit(db, {
+    actor, action: "market.fee_change_scheduled", entity: "market", entityId: market.slug,
+    detail: { from_bps: market.platformFeeBps, to_bps: bps, applies_from: from.toISOString() },
+  });
+  const tradies = await db.query<{ phone: string | null; user_id: string }>(
+    "select u.phone, u.id as user_id from public.tradies t join public.users u on u.id = t.user_id where t.market = $1 and t.status in ('applied', 'approved', 'paused')",
+    [market.slug],
+  );
+  const date = formatDate(from, market.timezone);
+  for (const tradie of tradies) {
+    if (!tradie.phone) continue;
+    await enqueue(db, {
+      channel: "sms", to: tradie.phone, template: "fee_change", audience: "tradie", userId: tradie.user_id,
+      body: texts.feeChange({ market: market.name, fromPct: percent(market.platformFeeBps), toPct: percent(bps), date }),
+      dedupeKey: `fee_change:${market.slug}:${from.toISOString()}:${tradie.user_id}`,
+    });
+  }
+}
+
+/** For the timer: a new platform fee whose 30 days are up starts. */
+export async function applyScheduledFees(db: Db): Promise<number> {
+  const due = await db.query<{ slug: string; platform_fee_bps: number; platform_fee_bps_next: number }>(
+    "select slug, platform_fee_bps, platform_fee_bps_next from public.markets where platform_fee_from is not null and platform_fee_from <= $1::timestamptz",
+    [now().toISOString()],
+  );
+  let applied = 0;
+  for (const row of due) {
+    const done = await db.tx(async (tx) => {
+      const rows = await tx.query(
+        `update public.markets set platform_fee_bps = platform_fee_bps_next, platform_fee_bps_next = null, platform_fee_from = null, updated_at = $2::timestamptz
+          where slug = $1 and platform_fee_from is not null and platform_fee_from <= $2::timestamptz returning slug`,
+        [row.slug, now().toISOString()],
+      );
+      if (rows.length === 0) return false;
+      await audit(tx, { actor: "system", action: "market.fee_changed", entity: "market", entityId: row.slug, detail: { from_bps: row.platform_fee_bps, to_bps: row.platform_fee_bps_next } });
+      return true;
+    });
+    if (done) applied += 1;
+  }
+  return applied;
 }
 
 export type TierInput = {

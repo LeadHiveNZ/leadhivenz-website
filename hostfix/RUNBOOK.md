@@ -144,10 +144,33 @@ tradie's payment is on hold until you settle it.
 
 ### Card payment failed
 **Means.** The job is done but the owner's card was declined. They have been texted. It is tried again
-once a day, four times in all. **The tradie is not paid until the card goes through.**
+once a day, four times in all. **The tradie is paid at the usual time anyway**: HostFix carries it. The
+owner cannot send new jobs until it is paid.
 
-**Do.** Ring the owner and ask them to update their card (in their app: **Billing**). Then open the job
-and press **Try the card again now**. If the fourth try fails, tell the admin.
+**Do.** Ring the owner and ask them to update their card (in their app: **Billing**): a new card is tried
+at once. Or open the job and press **Try the card again now**.
+
+### Owner owes us for a job
+**Means.** All four tries failed. The tradie has been (or will be) paid; the owner owes the amount. Their
+new jobs are refused until it is paid.
+
+**Do.** Ring the owner. Once they update their card it is charged by itself and the item closes. If they
+will not pay, tell the admin.
+
+### Owner's card needs updating
+**Means.** A job could not be sent out because the owner has no card saved, their card has expired, or an
+earlier charge is unpaid. The owner has been texted a link to **Billing**. If the owner logged it
+themselves they were stopped and told; if their team or a guest did, the job is waiting.
+
+**Do.** Ring the owner if it is urgent. The job goes out by itself within a minute of the card being sorted.
+
+### Chargeback lost: whose fault?
+**Means.** The owner's bank kept the money. Someone has to decide whether the tradie was at fault.
+
+**Do.** Open the job, read the evidence pack, and tap **Tradie's fault** (bad work, a no-show) or **Not the
+tradie's fault**. Tradie's fault: a payment not sent yet is cancelled, or one already sent becomes a balance
+taken from their later payments, never more than half of any one, and they are texted. Not their fault:
+HostFix carries it. Not sure? Ask the admin first; it cannot be undone.
 
 ### Could not pay the tradie
 **Means.** The payment to the tradie's bank did not go through, usually because their bank details
@@ -199,7 +222,9 @@ emails** shows everything that was sent.
 **Means.** An owner went to their bank instead of to us, and the bank has taken the money back. The
 bank sets a short deadline to answer.
 
-**Do.** **Tell the admin the same day.** They answer it in Stripe using the photos and the job history.
+**Do.** **Tell the admin the same day.** Open the job and press **Evidence pack** (top right): it has the
+photos, the times and places of every tap, the receipts, the messages and the history. Print it or save it as
+a PDF, and the admin uploads it with the answer in Stripe. The tradie's payment is held if it has not gone.
 
 ### Portfolio price needs a person
 **Means.** A property manager's Portfolio retainer needs a decision the app will not make: they have

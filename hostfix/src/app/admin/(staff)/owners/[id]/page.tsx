@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { staffGoodwill } from "@/app/actions/staff";
+import { staffGoodwill, staffOwnerAccess } from "@/app/actions/staff";
 import { setPortfolioRetainer } from "@/app/actions/staff-admin";
 import { ActionForm, Field } from "@/components/forms/ActionForm";
 import { SubmitButton } from "@/components/forms/SubmitButton";
@@ -16,7 +16,7 @@ import { listJobsForOwner } from "@/lib/jobs/store";
 import { listMarkets, listTiers } from "@/lib/markets/store";
 import { tierPriceLabel } from "@/lib/markets/display";
 import { formatMoney } from "@/lib/money";
-import { getOwner, listCredits } from "@/lib/owners/service";
+import { getOwner, listCredits, ownerAccessRemoved } from "@/lib/owners/service";
 import { displayPhone } from "@/lib/phone";
 import { membershipLabel } from "@/lib/properties/display";
 import { centsToDollars } from "@/lib/forms";
@@ -38,6 +38,7 @@ export default async function StaffOwnerPage({ params }: { params: Promise<{ id:
   const properties = await listProperties(db, owner.id);
   const jobs = await listJobsForOwner(db, owner.id, { limit: 30 });
   const credits = await listCredits(db, owner.id);
+  const closed = await ownerAccessRemoved(db, owner.id);
   const markets = new Map((await listMarkets(db)).map((market) => [market.slug, market]));
   const tiers = new Map((await listTiers(db)).map((tier) => [tier.id, tier]));
   const zone = (slug: string) => markets.get(slug)?.timezone ?? "Pacific/Auckland";
@@ -183,6 +184,34 @@ export default async function StaffOwnerPage({ params }: { params: Promise<{ id:
             ))}
           </div>
         </section>
+      )}
+
+      {closed ? (
+        <Card className="border-alert/40">
+          <SectionTitle>Access removed</SectionTitle>
+          <p className="text-muted">They cannot sign in, and nobody can send a tradie at their cost. The reason is in the record.</p>
+          <ActionForm action={staffOwnerAccess} className="mt-3">
+            <input type="hidden" name="ownerId" value={owner.id} />
+            <input type="hidden" name="allowed" value="yes" />
+            <SubmitButton variant="secondary" pendingLabel="Saving...">
+              Give their access back
+            </SubmitButton>
+          </ActionForm>
+        </Card>
+      ) : (
+        <Reveal label="Remove this owner's access" tone="alert">
+          <ActionForm action={staffOwnerAccess} className="space-y-3">
+            <input type="hidden" name="ownerId" value={owner.id} />
+            <input type="hidden" name="allowed" value="no" />
+            <p className="text-sm text-muted">
+              For misuse, for example of &ldquo;Something&rsquo;s wrong&rdquo; on jobs that were done (owner terms, section 8). Their sign-in stops at once, and their team and guest links stop sending tradies. Jobs already under way are finished and charged.
+            </p>
+            <Field label="Why" name="reason" required maxLength={300} />
+            <SubmitButton variant="danger" pendingLabel="Saving...">
+              Remove their access
+            </SubmitButton>
+          </ActionForm>
+        </Reveal>
       )}
 
       {credits.length > 0 && (

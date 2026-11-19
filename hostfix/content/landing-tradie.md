@@ -39,7 +39,7 @@ No. Passing on a job never leads to fewer offers or to being removed. What count
 
 ### How do I get paid?
 
-By bank transfer, automatically. You set up your bank details once. Your payment is sent within two days of each job and takes a few working days to reach your bank. A job the app couldn't confirm waits for the owner to check the before and after photos, or for our team if the owner doesn't answer. If an owner's card is declined, we chase it, not you, and you are paid as soon as it goes through.
+By bank transfer, automatically. You set up your bank details once. Your payment is sent within two days of each job and takes a few working days to reach your bank. A job the app couldn't confirm waits for the owner to check the before and after photos, or for our team if the owner doesn't answer. Once you finish a job the owner approved, you're paid even if their card fails. Chasing is our job.
 
 ### What about parts?
 

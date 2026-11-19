@@ -9,6 +9,9 @@ import { requireOwner } from "@/lib/auth/current";
 import { getDb } from "@/lib/db";
 import { reportFormData } from "@/lib/jobs/report-data";
 import { addressLine, listProperties } from "@/lib/properties/service";
+import { getMarket } from "@/lib/markets/store";
+import { cardProblem, cardProblemWords } from "@/lib/owners/service";
+import { now } from "@/lib/clock";
 
 export const metadata: Metadata = { title: "Report a problem" };
 
@@ -66,6 +69,9 @@ export default async function NewJobPage({ searchParams }: { searchParams: Searc
   }
 
   const data = await reportFormData(db, property, "owner");
+  const market = await getMarket(db, property.market);
+  // Nothing is sent until the card can be charged (DECISIONS.md, 2026-11-20, second entry): say so before they fill the form in.
+  const card = market ? await cardProblem(db, viewer.ownerId, market.country, now(), market.timezone) : null;
   return (
     <div className="mx-auto max-w-xl">
       <PageTitle
@@ -73,6 +79,16 @@ export default async function NewJobPage({ searchParams }: { searchParams: Searc
         back={covered.length > 1 ? { href: "/app/jobs/new", label: "Choose another property" } : { href: "/app", label: "Home" }}
         intro={`At ${property.name}, ${addressLine(property)}`}
       />
+      {card && (
+        <div className="mb-5">
+          <Notice tone="error" title={card === "unpaid" ? "An earlier payment needs sorting first" : "Your card needs updating first"}>
+            {cardProblemWords(card)}{" "}
+            <Link href="/app/billing" className="font-semibold underline underline-offset-2">
+              Update my card
+            </Link>
+          </Notice>
+        </div>
+      )}
       {!data || data.items.length === 0 ? (
         <Notice tone="warn" title="Jobs cannot be logged for this property right now">
           Please contact us and we will sort it out.

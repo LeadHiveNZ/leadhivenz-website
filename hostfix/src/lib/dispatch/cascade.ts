@@ -250,9 +250,17 @@ export async function acceptOffer(db: Db, offerId: string, via: "link" | "text" 
     });
   }
   if (job.reporterPhone && job.reportedBy !== "owner" && job.reporterPhone !== owner.phone) {
+    // A guest who reported it is in the house: the tradie will knock first (DECISIONS.md, 2026-11-20, second entry).
     await enqueue(db, {
       channel: "sms", to: job.reporterPhone, template: "reporter_booked", audience: "reporter", jobId: job.id,
-      body: texts.reporterBooked({ property: property.name, when }), dedupeKey: `reporter_booked:${job.id}:${offerId}`,
+      body: texts.reporterBooked({ property: property.name, when, knock: job.reportedBy === "guest" }), dedupeKey: `reporter_booked:${job.id}:${offerId}`,
+    });
+  }
+  // A guest the owner told us is staying gets the tradie's first name and the time.
+  if (job.guestPhone && job.guestPhone !== owner.phone && job.guestPhone !== job.reporterPhone) {
+    await enqueue(db, {
+      channel: "sms", to: job.guestPhone, template: "guest_booked", audience: "reporter", jobId: job.id,
+      body: texts.guestBooked({ tradie: tradie.name.trim().split(/\s+/)[0] ?? "Your tradie", title: job.title, when }), dedupeKey: `guest_booked:${job.id}:${offerId}`,
     });
   }
 

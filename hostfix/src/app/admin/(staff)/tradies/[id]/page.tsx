@@ -22,7 +22,9 @@ import {
   FLAG_DAYS, flagsNeedReview, laterWave, MIN_ARRIVALS, needsReview, NO_SHOW_DAYS, ON_TIME_TARGET, onTimeRecords, recentFlags, recentNoShows, tradieTrust, TRUSTED_FINISHED_JOBS,
 } from "@/lib/tradies/reliability";
 import { SCORE_DAYS, scorecards } from "@/lib/tradies/scorecard";
-import { getTradie, listLicences, listSlots, insuranceProblem } from "@/lib/tradies/service";
+import { getTradie, listLicences, listSlots, insuranceProblem, TRADIE_AGREEMENT_VERSION } from "@/lib/tradies/service";
+import { formatMoney } from "@/lib/money";
+import { balanceOwed } from "@/lib/billing/chargebacks";
 import { dateKey, formatDate } from "@/lib/time";
 import { WEEKDAY_OPTIONS } from "@/lib/weekdays";
 
@@ -60,6 +62,7 @@ export default async function StaffTradiePage({ params, searchParams }: { params
   const noShows = await recentNoShows(db, tradie.id, at);
   // Jobs the app could not confirm (DECISIONS.md, 2026-11-19), and whether an unanswered one is paid without the team.
   const flagged = await recentFlags(db, tradie.id, at);
+  const owed = await balanceOwed(db, tradie.id);
   const trust = await tradieTrust(db, tradie.id, null, at);
   const record = (await onTimeRecords(db, [tradie.id])).get(tradie.id);
   const today = dateKey(at, market.timezone);
@@ -77,13 +80,20 @@ export default async function StaffTradiePage({ params, searchParams }: { params
         insuranceProblem(tradie, today) ??
         "Insurer, policy number, expiry date and the certificate, under Insurance below or by them on their profile. No jobs are offered without it.",
     },
+    {
+      ok: tradie.agreementVersion === TRADIE_AGREEMENT_VERSION,
+      label: `Agreed to the tradie agreement (${TRADIE_AGREEMENT_VERSION})`,
+      fix: tradie.agreementVersion
+        ? `They agreed to the ${tradie.agreementVersion} version. They agree to the new one in the app, on their home page. No offers until they do.`
+        : "They agree in the app, on their home page or profile. No offers until they do.",
+    },
     ...licensed.map((key) => ({
       ok: licenceOk(key),
       label: `${findTrade(key)?.label ?? key} licence, in date`,
       fix: `Without it they are not offered ${findTrade(key)?.label.toLowerCase() ?? key} jobs. Other work is not affected.`,
     })),
   ];
-  const blocking = checks.slice(0, 4).filter((check) => !check.ok);
+  const blocking = checks.slice(0, 5).filter((check) => !check.ok);
 
   return (
     <div className="mx-auto max-w-3xl space-y-5">
@@ -95,6 +105,11 @@ export default async function StaffTradiePage({ params, searchParams }: { params
       />
 
       {typeof query.did === "string" && DID[query.did] && <Notice tone="good" title={DID[query.did]} />}
+      {owed > 0 && (
+        <Notice tone="warn" title={`Owes ${formatMoney(owed, market.currency)} from a lost chargeback`}>
+          Taken from their later payments, never more than half of any one. Anything left when they leave must be repaid.
+        </Notice>
+      )}
       {needsReview(noShows) && (
         <Notice tone="warn" title={`For review: ${noShows} no-shows in the last ${NO_SHOW_DAYS} days`}>
           They accepted {noShows} jobs and were not there by the promised time. Talk to them before deciding anything. Nothing on their account has been changed, and only a person can pause or

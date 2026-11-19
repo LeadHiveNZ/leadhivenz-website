@@ -100,9 +100,10 @@ describe("a finished menu job", () => {
     const done = await finish(s, job.id);
     expect(done).toMatchObject({ status: "completed", outcome: "done", ownerTotalCents: 22500, tradieTotalCents: 19000 });
 
-    // Recorded as owed in the same step as the job being marked done.
+    // Recorded as owed in the same step as the job being marked done. The tradie's payment is scheduled at
+    // once for 24 hours after Job done: it no longer waits for the card (DECISIONS.md, 2026-11-20, second entry).
     expect(await payment(job.id)).toMatchObject({ status: "pending", amount_cents: 22500 });
-    expect(await payout(job.id)).toMatchObject({ status: "waiting", amount_cents: 19000 });
+    expect(await payout(job.id)).toMatchObject({ status: "scheduled", amount_cents: 19000 });
 
     expect(await chargeJob(t.db, gatewayFor(t.db), job.id)).toBe("succeeded");
     expect(await payment(job.id)).toMatchObject({ status: "succeeded", amount_cents: 22500, attempts: 1 });
@@ -351,7 +352,7 @@ describe("tax", () => {
 });
 
 describe("when the card is declined", () => {
-  it("does not pay the tradie, tells the owner, flags the dispatcher, and tries again the next day", async () => {
+  it("still schedules the tradie's payment, tells the owner, flags the dispatcher, and tries again the next day", async () => {
     const s = await setup({ card: "declines" });
     const job = await onSite(s);
     await finish(s, job.id);
@@ -360,12 +361,13 @@ describe("when the card is declined", () => {
     const failed = await payment(job.id);
     expect(failed).toMatchObject({ status: "failed", attempts: 1, last_error: "The card was declined." });
     expect(new Date(failed!.next_retry_at!).getTime()).toBe(addHours(MONDAY_10AM, 24).getTime());
-    expect(await payout(job.id)).toMatchObject({ status: "waiting" });
+    expect(await payout(job.id)).toMatchObject({ status: "scheduled" });
     expect(await openExceptions(t.db, job.id)).toEqual(["payment_failed"]);
     expect((await textsTo(t.db, s.owner.user.phone!, "payment_failed"))[0]!.body).toContain("could not charge your card NZ$225");
     expect(await textsTo(t.db, s.owner.user.phone!, "job_done")).toHaveLength(0);
 
-    // Nothing is released to the tradie however long we wait.
+    // 23 hours on: inside the usual 24-hour hold, so nothing is sent yet (tests/unit/safety-and-money.test.ts
+    // follows a declined card to the tradie being paid at 24 hours).
     setTestNow(addHours(MONDAY_10AM, 23));
     expect(await releaseDuePayouts(t.db, gatewayFor(t.db))).toBe(0);
     expect(await chargeDuePayments(t.db, gatewayFor(t.db))).toBe(0);
@@ -392,7 +394,9 @@ describe("when the card is declined", () => {
     expect(await payment(job.id)).toMatchObject({ status: "failed", attempts: 4, next_retry_at: null });
     setTestNow(addHours(MONDAY_10AM, 24 * 6));
     expect(await chargeJob(t.db, gatewayFor(t.db), job.id)).toBe("skipped");
-    expect(await payout(job.id)).toMatchObject({ status: "waiting" });
+    // The tradie's payment is not held back by the card: it stays scheduled for the timer.
+    expect(await payout(job.id)).toMatchObject({ status: "scheduled" });
+    expect(await openExceptions(t.db, job.id)).toEqual(["payment_failed", "owner_owes"]);
   });
 
   it("lets a person on the team try the card again after the automatic tries have stopped, and pays the tradie once it goes through", async () => {

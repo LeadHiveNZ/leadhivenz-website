@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   description: `What ${brand.name} holds about you, why, who sees it, and how to ask for it or have it removed.`,
 };
 
-const UPDATED = "19 November 2026";
+const UPDATED = "20 November 2026";
 
 export default function Page() {
   const n = brand.name;
@@ -43,6 +43,15 @@ export default function Page() {
           need to. If an owner adds you to their team, we hold the name they gave you, your mobile number, which of their properties you may
           report on, and when a phone of yours typed the code we texted you. Each owner who adds you sees only their own properties and the name
           they gave you, never another owner&rsquo;s.
+        </p>
+        <p>
+          <strong>If you are a guest staying when a tradie comes:</strong> the owner or their team may give us your first name and mobile number
+          when they log the job. We use that number only for that job&rsquo;s texts: when the tradie is coming, and when they are on the way. The
+          owner who gave it and our team can see it; the tradie sees only your first name.
+        </p>
+        <p>
+          <strong>Hazards at a property</strong> (&ldquo;anything a tradie should know to stay safe&rdquo;), written by the owner or added by a tradie
+          from a job, are kept with the property and shown to tradies offered a job there, before they accept.
         </p>
         <p>
           <strong>If you are a tradie:</strong> your name, business name, mobile number, email address, the work you do, your licence numbers and

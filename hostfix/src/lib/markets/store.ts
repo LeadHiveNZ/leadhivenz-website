@@ -27,7 +27,7 @@ export type MenuItem = {
 type MarketRow = {
   slug: string; name: string; country: CountryCode; currency: CurrencyCode; timezone: string; stage: MarketStage;
   tax_rate: number; tax_name: string; tax_registered: boolean; tax_number: string | null;
-  platform_fee_bps: number; urgent_surcharge_cents: number; after_hours_surcharge_cents: number;
+  platform_fee_bps: number; platform_fee_bps_next?: number | null; platform_fee_from?: Date | string | null; urgent_surcharge_cents: number; after_hours_surcharge_cents: number;
   diagnosis_fee_cents: number; diagnosis_payout_cents: number; approval_threshold_cents: number;
   parts_included_cents: number; parts_approval_cents: number;
   offer_minutes: number; hours_start: number; hours_end: number; work_days: string[]; payout_hold_hours: number;
@@ -97,6 +97,10 @@ function rowToMarket(row: MarketRow, tiers: Tier[]): Market {
     taxRegistered: row.tax_registered,
     taxNumber: row.tax_number,
     platformFeeBps: row.platform_fee_bps,
+    platformFeeNext:
+      row.platform_fee_bps_next === null || row.platform_fee_bps_next === undefined || !row.platform_fee_from
+        ? null
+        : { bps: Number(row.platform_fee_bps_next), from: new Date(row.platform_fee_from) },
     urgentSurchargeCents: row.urgent_surcharge_cents,
     afterHoursSurchargeCents: row.after_hours_surcharge_cents,
     diagnosisFeeCents: row.diagnosis_fee_cents,

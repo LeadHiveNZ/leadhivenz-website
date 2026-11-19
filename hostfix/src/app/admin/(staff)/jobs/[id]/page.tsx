@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  staffAssign, staffCancel, staffChargeBoughtParts, staffCheckJob, staffCheckReceipt, staffGoAhead, staffGoodwill, staffQuote, staffReoffer, staffResolveDispute, staffRetryCharge, staffRetryPayout,
+  staffAssign, staffCancel, staffChargebackFault, staffChargeBoughtParts, staffCheckJob, staffCheckReceipt, staffGoAhead, staffGoodwill, staffQuote, staffReoffer, staffResolveDispute, staffRetryCharge, staffRetryPayout,
 } from "@/app/actions/staff";
 import { ActionForm, Area, Field, RadioCards, Select } from "@/components/forms/ActionForm";
 import { SubmitButton } from "@/components/forms/SubmitButton";
@@ -21,6 +21,9 @@ import { getJobForStaff } from "@/lib/jobs/store";
 import { isOpen, type StatusTone } from "@/lib/jobs/types";
 import { loadJobView } from "@/lib/jobs/view";
 import { formatMoney } from "@/lib/money";
+import { chargebacksForJob } from "@/lib/billing/chargebacks";
+import { cardProblemWords } from "@/lib/owners/service";
+import { GuestNote, HazardNote } from "@/components/jobs/SafetyNotes";
 import { listMessages } from "@/lib/notify/outbox";
 import { displayPhone } from "@/lib/phone";
 import { addressLine } from "@/lib/properties/service";
@@ -39,7 +42,7 @@ const OFFER_LOOK: Record<string, { label: string; tone: StatusTone }> = {
 const STAGES = ["", "First choice", "Backup", "Everyone else", "Given by the team"];
 
 const PAYOUT_WORDS: Record<string, string> = {
-  waiting: "Waiting for the owner's card to be charged",
+  waiting: "Will be sent at the usual time",
   scheduled: "Will be sent on",
   paused: "On hold (owner raised a problem)",
   held: "Held until the flagged job is confirmed",
@@ -110,6 +113,8 @@ const DID: Record<string, string> = {
   tradie_paid: "Paid. The tradie has been texted.",
   charged: "The card was charged. The tradie's payment is now on its way.",
   parts_charged: "Charged at the receipt's cost. The owner has been texted.",
+  chargeback_tradie: "Recorded as the tradie's fault. What they were paid is now a balance taken from their later payments (never more than half of any one), and they have been texted.",
+  chargeback_us: "Recorded as not the tradie's fault. HostFix carries the loss and the tradie is paid as normal.",
 };
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -127,6 +132,7 @@ export default async function StaffJobPage({ params, searchParams }: { params: P
   const at = now();
   const fmt = (cents: number) => formatMoney(cents, job.currency);
   const messages = await listMessages(db, { jobId: job.id, limit: 60 });
+  const chargebacks = await chargebacksForJob(db, job.id);
   const pendingQuote = view.quotes.find((quote) => quote.status === "pending") ?? null;
   const needsTradie = job.status === "offering" || job.status === "unfilled";
 
@@ -149,7 +155,15 @@ export default async function StaffJobPage({ params, searchParams }: { params: P
 
   return (
     <div className="mx-auto max-w-3xl space-y-5">
-      <PageTitle title={job.title} back={{ href: "/admin/jobs", label: "Jobs" }} />
+      <PageTitle
+        title={job.title}
+        back={{ href: "/admin/jobs", label: "Jobs" }}
+        action={
+          <Link href={`/admin/jobs/${job.id}/evidence`} className="text-sm font-semibold text-brand underline underline-offset-2">
+            Evidence pack
+          </Link>
+        }
+      />
       {confirmation && <Notice tone="good" title={confirmation} />}
 
       <Card className="sm:p-6">
@@ -238,7 +252,16 @@ export default async function StaffJobPage({ params, searchParams }: { params: P
       </Card>
 
       {/* WHAT NEEDS DOING */}
-      {job.status === "awaiting_owner" && (
+      {job.status === "awaiting_owner" && job.cardHold && (
+        <Card className="border-alert/40 sm:p-6">
+          <SectionTitle>Held: the owner&apos;s card needs updating</SectionTitle>
+          <p className="text-muted">
+            {cardProblemWords(job.cardHold)} The owner has been texted a link. It goes out to tradies by itself within a minute of the card being sorted. Ring them on <Tel phone={view.owner.phone} /> if it is urgent.
+          </p>
+        </Card>
+      )}
+
+      {job.status === "awaiting_owner" && !job.cardHold && (
         <Card className="border-brand/30 sm:p-6">
           <SectionTitle>Waiting for the owner&apos;s go-ahead</SectionTitle>
           <p className="text-muted">{job.reportedBy === "team" ? `${job.reporterName ?? "The owner's team"} reported this, and the owner asked to say yes first.` : "A guest reported this."} The owner has been texted. If they tell you yes by phone, send it out for them here.</p>
@@ -339,8 +362,8 @@ export default async function StaffJobPage({ params, searchParams }: { params: P
         <Card className="border-alert/40 sm:p-6">
           <SectionTitle>The owner&apos;s card was not charged</SectionTitle>
           <p className="text-muted">
-            {money.payment.lastError ?? "The card was declined."} Tried {money.payment.attempts} {money.payment.attempts === 1 ? "time" : "times"}. The tradie is paid only once the card goes through. Ask the owner to update their card
-            (Billing in their app), then try again.
+            {money.payment.lastError ?? "The card was declined."} Tried {money.payment.attempts} {money.payment.attempts === 1 ? "time" : "times"}. The tradie is paid at the usual time anyway: HostFix carries it, and the owner owes it. The owner cannot send new jobs until it is paid. Ask them
+            to update their card (Billing in their app): a new card is tried straight away. Or try again here.
           </p>
           <ActionForm action={staffRetryCharge} className="mt-4">
             <input type="hidden" name="jobId" value={job.id} />
@@ -348,6 +371,50 @@ export default async function StaffJobPage({ params, searchParams }: { params: P
           </ActionForm>
         </Card>
       )}
+
+      {chargebacks.map((chargeback) => (
+        <Card key={chargeback.id} className={`${chargeback.status === "won" || chargeback.fault ? "" : "border-alert/40"} sm:p-6`}>
+          <SectionTitle action={<Chip tone={chargeback.status === "open" ? "alert" : chargeback.status === "won" ? "done" : chargeback.fault ? "quiet" : "alert"}>{chargeback.status === "open" ? "Open" : chargeback.status === "won" ? "Won" : "Lost"}</Chip>}>
+            The owner&apos;s bank disputed the charge
+          </SectionTitle>
+          <p className="text-ink">
+            {fmt(chargeback.amountCents)}, reason &ldquo;{chargeback.reason.replace(/_/g, " ") || "not given"}&rdquo;, opened {formatDateTime(chargeback.createdAt, market.timezone)}
+            {chargeback.closedAt ? `, closed ${formatDateTime(chargeback.closedAt, market.timezone)}` : ""}.
+          </p>
+          {chargeback.status === "open" && (
+            <p className="mt-1 text-muted">
+              Answer it in Stripe with the{" "}
+              <Link href={`/admin/jobs/${job.id}/evidence`} className="font-semibold text-brand underline underline-offset-2">
+                evidence pack
+              </Link>{" "}
+              (photos, times, locations, receipts, messages). Print it or save it as a PDF and upload it there. The tradie&apos;s payment is on hold if it has not gone.
+            </p>
+          )}
+          {chargeback.status === "lost" && !chargeback.fault && (
+            <ActionForm action={staffChargebackFault} className="mt-4 space-y-3">
+              <input type="hidden" name="jobId" value={job.id} />
+              <input type="hidden" name="chargebackId" value={chargeback.id} />
+              <p className="text-muted">The bank kept the money. Was it the tradie&apos;s fault?</p>
+              <div className="flex flex-wrap gap-2">
+                <SubmitButton name="fault" value="tradie" variant="danger" pendingLabel="Saving...">
+                  Tradie&apos;s fault (bad work, no-show)
+                </SubmitButton>
+                <SubmitButton name="fault" value="not_tradie" variant="secondary" pendingLabel="Saving...">
+                  Not the tradie&apos;s fault
+                </SubmitButton>
+              </div>
+              <p className="text-sm text-muted">
+                Tradie&apos;s fault: a payment not sent yet is cancelled; one already sent becomes a balance they owe, taken from their later payments, never more than half of any one, and they are texted. Not their fault: HostFix carries it.
+              </p>
+            </ActionForm>
+          )}
+          {chargeback.fault && (
+            <p className="mt-1 text-muted">
+              Decided {chargeback.decidedAt ? formatDateTime(chargeback.decidedAt, market.timezone) : ""}: {chargeback.fault === "tradie" ? "the tradie's fault" : "not the tradie's fault, HostFix carries it"}.
+            </p>
+          )}
+        </Card>
+      ))}
 
       {money.payout?.status === "failed" && (
         <Card className="border-alert/40 sm:p-6">
@@ -417,6 +484,15 @@ export default async function StaffJobPage({ params, searchParams }: { params: P
               <p className="mt-1 whitespace-pre-line text-ink">{property.accessNotes}</p>
             </div>
           )}
+          <div className="mt-3 space-y-3">
+            <GuestNote job={job} />
+            {job.guestPhone && (
+              <p className="text-sm text-muted">
+                Guest{job.guestName ? `: ${job.guestName}` : ""}, <Tel phone={job.guestPhone} />. Texted the arrival time and when the tradie is on the way. Used for this job only.
+              </p>
+            )}
+            <HazardNote hazards={property.hazards} />
+          </div>
         </Panel>
       </div>
 

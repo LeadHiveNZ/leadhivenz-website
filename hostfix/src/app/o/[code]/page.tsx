@@ -5,6 +5,7 @@ import { Suspense } from "react";
 import { acceptJob, passJob, suggestLater } from "@/app/actions/tradie";
 import { ActionForm, Select } from "@/components/forms/ActionForm";
 import { Reveal } from "@/components/ui/Reveal";
+import { GuestNote, HazardNote } from "@/components/jobs/SafetyNotes";
 import { canSuggestLater, laterTimeForOffer, windowsForAccepting } from "@/lib/dispatch/cascade";
 import { laterWindows, windowBetween, windowLabel } from "@/lib/jobs/arrival";
 import { SubmitButton } from "@/components/forms/SubmitButton";
@@ -244,6 +245,10 @@ async function Opened({ params, searchParams }: { params: Params; searchParams: 
             </li>
           )}
         </ul>
+        <div className="mt-4 space-y-3">
+          <GuestNote job={job} />
+          {property && <HazardNote hazards={property.hazards} />}
+        </div>
       </Card>
 
       <Card>

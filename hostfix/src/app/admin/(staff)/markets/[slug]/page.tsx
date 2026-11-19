@@ -19,7 +19,7 @@ import { formatMoney } from "@/lib/money";
 import { smsSettings } from "@/lib/notify/sms";
 import { paymentsProblem } from "@/lib/payments";
 import { coverage } from "@/lib/tradies/service";
-import { dateKey } from "@/lib/time";
+import { dateKey, formatDate } from "@/lib/time";
 import { WEEKDAY_OPTIONS } from "@/lib/weekdays";
 
 export const metadata: Metadata = { title: "Market" };
@@ -251,7 +251,7 @@ export default async function MarketPage({ params, searchParams }: { params: Pro
 
           <p className="border-t border-line pt-4 text-sm font-bold tracking-wide text-muted uppercase">Fees and surcharges ({market.currency})</p>
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Our share of off-menu work (%)" name="platformFee" required inputMode="decimal" maxLength={5} defaultValue={String(market.platformFeeBps / 100)} hint="Also taken from the urgent and after-hours surcharges. Menu jobs use the two prices on each job instead." />
+            <Field label="Our share of off-menu work (%)" name="platformFee" required inputMode="decimal" maxLength={5} defaultValue={String((market.platformFeeNext?.bps ?? market.platformFeeBps) / 100)} hint={`Also taken from the urgent and after-hours surcharges. Menu jobs use the two prices on each job instead. Once the market has tradies, a change starts 30 days after you save it, and every tradie here is texted.${market.platformFeeNext ? ` Now ${market.platformFeeBps / 100}%; ${market.platformFeeNext.bps / 100}% from ${formatDate(market.platformFeeNext.from, market.timezone)}. Put ${market.platformFeeBps / 100} back to call it off.` : ""}`} />
             <Field label="Urgent surcharge" name="urgentSurcharge" required inputMode="decimal" maxLength={8} defaultValue={centsToDollars(market.urgentSurchargeCents)} hint="The tradie drops what they are doing. They get it less our share, like the rest of the price." />
             <Field label="After-hours surcharge" name="afterHoursSurcharge" required inputMode="decimal" maxLength={8} defaultValue={centsToDollars(market.afterHoursSurchargeCents)} hint="The tradie gets it less our share, like the rest of the price." />
             <Field label="Call-out fee for off-menu work" name="diagnosisFee" required inputMode="decimal" maxLength={8} defaultValue={centsToDollars(market.diagnosisFeeCents)} hint="What the owner pays for a tradie to come and look." />

@@ -113,7 +113,8 @@ export async function ownerStatement(db: Db, ownerId: string, market: { slug: st
   };
 }
 
-export type TradieStatementLine = { date: Date; number: number; title: string; suburb: string; amountCents: number; status: string };
+/** amountCents is what the job earned; deductedCents what came off it towards a balance owed (DECISIONS.md, 2026-11-20). */
+export type TradieStatementLine = { date: Date; number: number; title: string; suburb: string; amountCents: number; deductedCents: number; status: string };
 
 export type TradieStatement = {
   month: string;
@@ -131,8 +132,8 @@ export async function tradieStatement(
   db: Db, tradie: { id: string; gstRegistered: boolean }, market: { currency: string; timezone: string; taxRate: number }, month: string,
 ): Promise<TradieStatement> {
   const { start, end } = monthBounds(month, market.timezone);
-  const rows = await db.query<{ status: string; sent_at: Date | null; created_at: Date; amount_cents: number; number: number; title: string; suburb: string }>(
-    `select po.status, po.sent_at, po.created_at, po.amount_cents, j.number, j.title, p.suburb
+  const rows = await db.query<{ status: string; sent_at: Date | null; created_at: Date; amount_cents: number; deducted_cents: number | null; number: number; title: string; suburb: string }>(
+    `select po.status, po.sent_at, po.created_at, po.amount_cents, po.deducted_cents, j.number, j.title, p.suburb
        from public.payouts po join public.jobs j on j.id = po.job_id join public.properties p on p.id = j.property_id
       where po.tradie_id = $1::uuid
         and ((po.status = 'sent' and po.sent_at >= $2::timestamptz and po.sent_at < $3::timestamptz)
@@ -141,7 +142,8 @@ export async function tradieStatement(
     [tradie.id, start.toISOString(), end.toISOString()],
   );
   const lines = rows.map((row) => ({
-    date: new Date(row.sent_at ?? row.created_at), number: Number(row.number), title: row.title, suburb: row.suburb, amountCents: row.amount_cents, status: row.status,
+    date: new Date(row.sent_at ?? row.created_at), number: Number(row.number), title: row.title, suburb: row.suburb, amountCents: row.amount_cents,
+    deductedCents: row.status === "sent" ? Number(row.deducted_cents ?? 0) : 0, status: row.status,
   }));
   const paidCents = lines.filter((line) => line.status === "sent").reduce((total, line) => total + line.amountCents, 0);
   return {

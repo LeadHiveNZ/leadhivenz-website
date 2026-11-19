@@ -144,6 +144,13 @@ export default function Page() {
           </li>
           <li>Our team, if you phone us and ask.</li>
         </ul>
+        <p>
+          When you, a manager or someone on your team logs a job, we ask whether a guest is staying at the time. If yes, or not sure, you can give
+          the guest&rsquo;s first name and mobile: we text them when the tradie is coming (&ldquo;They&rsquo;ll knock first&rdquo;) and again when the
+          tradie is on the way, and use that number for nothing else. A guest who reports a problem from the QR card gets the same texts. You also
+          choose whether the tradie may let themselves in if nobody answers: yes unless a guest is staying or you are not sure. With a guest there,
+          the tradie knocks and waits, and only lets themselves in if nobody answers after 5 minutes and you said that&rsquo;s OK.
+        </p>
       </Section>
 
       <Section n={6} title="Access to your property">
@@ -153,16 +160,29 @@ export default function Page() {
         </p>
         <p>
           You give us the access notes a tradie needs. They are shown only to the tradie who accepted the job, and only after accepting. We
-          recommend a lockbox or smart lock with a code you can change. You are responsible for the notes being right; a tradie who cannot get in
-          because of them is paid the call-out, and that is charged to you.
+          recommend a lockbox or smart lock with a code you can change. You are responsible for the notes being right.{" "}
+          <strong>If the tradie can&rsquo;t get in, the call-out is charged</strong>: the tradie is paid it, and that is charged to you. Changing a door
+          or lockbox code after a job is your responsibility; the property page reminds you after a job.
+        </p>
+        <p>
+          Tell us the hazards you know of at each property in &ldquo;Anything a tradie should know to stay safe?&rdquo; on the property page: roof
+          access, asbestos in an older home, a steep drive, a dog, a fragile deck. Under the Health and Safety at Work Act you and the tradie share
+          a duty to keep the work safe. We show what you write to a tradie before they accept and on their job screen. A tradie who finds a hazard
+          adds it to the property, and we text you.
         </p>
       </Section>
 
       <Section n={7} title="Charging your card">
         <p>
+          Before a job is sent to tradies, we check you have a usable saved card: one on file, not expired, and no earlier charge unpaid. If not,
+          we ask you to update it on the Billing page before you log a job, and a job your team or our team logs waits until you do, with our
+          team told (a guest&rsquo;s report waits for your yes, as always).
+        </p>
+        <p>
           When the tradie finishes, with a photo and a note, your card is charged the job&rsquo;s price. There is no approval step at that point,
           because you approved the price when the job was logged. If the charge fails we try again, a day apart, four times, and then a person
-          contacts you. Jobs cannot be logged at a property while a charge is outstanding.
+          contacts you. The tradie is paid at the usual time either way, so a charge that still fails is an amount you owe us. You cannot send new
+          jobs until it is paid. A new card on the Billing page is tried straight away.
         </p>
         <p>One statement a month in the app shows every job, charge and credit, with the GST inside the total.</p>
       </Section>
@@ -178,8 +198,9 @@ export default function Page() {
           job in the last {FLAG_DAYS} days is paid; for anyone else, our team looks at the photos and decides.
         </p>
         <p>
-          Raise it from the job page. If you do so within a day of the job, the tradie&rsquo;s payment is held. We look at the photos, the notes and
-          both sides and decide within 5 working days: the work stands, a part refund, or a full refund to your card. If work fails within 30 days
+          Raise it from the job page. If you do so within a day of the job, the tradie&rsquo;s payment is held. We decide from the photos, times and
+          locations the app recorded, the notes and both sides, within 5 working days: the work stands, a part refund, or a full refund to your card.
+          Owners who misuse &ldquo;Something&rsquo;s wrong&rdquo; (for example on work that was plainly done) can lose access to {brand.name}. If work fails within 30 days
           because of the tradie&rsquo;s workmanship, the tradie comes back at no charge. Your rights under the Consumer Guarantees Act are not affected
           by any of this.
         </p>
@@ -194,7 +215,9 @@ export default function Page() {
 
       <Section n={10} title="What we are not">
         <p>
-          We are not an insurer and not an emergency service. If there is danger (fire, gas, sparks, anyone hurt), call 111 first. We arrange
+          We are not an insurer and not an emergency service. If there is danger (fire, gas, sparks, anyone hurt), call 111 first. If a tradie
+          damages something, the claim goes to the tradie&rsquo;s public liability insurer (every tradie has it before we approve them); we supply the
+          job&rsquo;s photos and times. We arrange
           repairs; we do not guarantee that a problem can be fixed on the first visit, or that parts are available the same day. We are not
           responsible for loss of bookings or reviews caused by a fault at your property.
         </p>

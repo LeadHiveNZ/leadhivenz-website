@@ -15,7 +15,7 @@ import { createDemoGateway, DEMO_CARD_DECLINES, DEMO_CARD_OK } from "@/lib/payme
 import { addMonths, type PaymentsGateway } from "@/lib/payments/gateway";
 import { openPortfolio, startPortfolio, type Portfolio } from "@/lib/properties/portfolio";
 import { activateFreeMembership, activateMembership, createProperty, getProperty, type Property } from "@/lib/properties/service";
-import { createTradie, saveLicence, savePayoutAccount, setSlot, setTradieStatus, updateTradie } from "@/lib/tradies/service";
+import { agreeToAgreement, createTradie, saveLicence, savePayoutAccount, setSlot, setTradieStatus, updateTradie } from "@/lib/tradies/service";
 import { recordInsuranceCertificate } from "@/lib/tradies/certificate";
 
 /**
@@ -117,6 +117,8 @@ export async function makeProperty(
 
 export type TradieOptions = {
   trades?: string[];
+  /** Agreed to the tradie agreement in force (default yes). */
+  agreed?: boolean;
   /** A licence for the first trade: "valid" (default for licensed trades), "expired" or "none". */
   licence?: "valid" | "expired" | "none";
   slot?: 1 | 2 | null;
@@ -149,6 +151,7 @@ export async function makeTradie(db: Db, options: TradieOptions = {}) {
   await certificate(db, tradieId);
   if (options.payouts !== false) await savePayoutAccount(db, tradieId, { provider: "demo", accountId: `demo_acct_${n}`, payoutsEnabled: true });
   if (options.approved !== false) await setTradieStatus(db, tradieId, "approved", "test");
+  if (options.agreed !== false) await agreeToAgreement(db, tradieId);
   if (insurance === "expired") await updateTradie(db, tradieId, { insuranceExpiresOn: "2020-01-31" }, "test");
   if (insurance === "none") await updateTradie(db, tradieId, { insurer: null, insurancePolicyNumber: null, insuranceExpiresOn: null }, "test");
   if (options.certificate === false) await db.query("delete from public.uploads where tradie_id = $1::uuid and kind = 'insurance_certificate'", [tradieId]);

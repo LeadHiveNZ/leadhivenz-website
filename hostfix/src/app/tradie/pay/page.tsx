@@ -9,6 +9,7 @@ import { PrintButton } from "@/components/ui/Buttons";
 import { Icon } from "@/components/ui/Icon";
 import { requireTradie } from "@/lib/auth/current";
 import { tradieStatement } from "@/lib/billing/statements";
+import { balanceOwed } from "@/lib/billing/chargebacks";
 import { now } from "@/lib/clock";
 import { getDb } from "@/lib/db";
 import type { StatusTone } from "@/lib/jobs/types";
@@ -26,7 +27,7 @@ type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 const STATUS: Record<string, { label: string; tone: StatusTone }> = {
   sent: { label: "Paid", tone: "done" },
   scheduled: { label: "On its way", tone: "active" },
-  waiting: { label: "Waiting on the owner's card", tone: "waiting" },
+  waiting: { label: "On its way", tone: "active" },
   paused: { label: "On hold", tone: "alert" },
   held: { label: "Waiting for the owner to confirm", tone: "waiting" },
   failed: { label: "Could not be sent", tone: "alert" },
@@ -44,11 +45,12 @@ export default async function TradiePayPage({ searchParams }: { searchParams: Se
   const month = isMonthKey(query.month) && query.month <= thisMonth ? query.month : thisMonth;
   const statement = await tradieStatement(db, tradie, market, month);
   const money = (cents: number) => formatMoney(cents, statement.currency);
+  const owed = await balanceOwed(db, tradie.id);
 
   return (
     <div className="space-y-6">
       <div className="no-print">
-        <PageTitle title="Pay" intro={payTiming(market).line} />
+        <PageTitle title="Pay" intro={`${payTiming(market).line} Once you finish a job the owner approved, you're paid even if their card fails. Chasing is our job.`} />
       </div>
 
       {!tradie.payoutsEnabled ? (
@@ -70,6 +72,14 @@ export default async function TradiePayPage({ searchParams }: { searchParams: Se
             </ActionForm>
           </div>
         )
+      )}
+
+      {owed > 0 && (
+        <div className="no-print">
+          <Notice tone="warn" title={`You owe ${money(owed)}`}>
+            From a chargeback our team found was your fault (bad work or a no-show). It comes off your next payments, never more than half of any one payment. Questions? Reply to our text.
+          </Notice>
+        </div>
       )}
 
       <div className="grid grid-cols-2 gap-3">
@@ -111,7 +121,10 @@ export default async function TradiePayPage({ searchParams }: { searchParams: Se
                       {formatDate(line.date, market.timezone)} · {line.suburb} <Chip tone={status.tone}>{status.label}</Chip>
                     </span>
                   </span>
-                  <span className="tabular shrink-0 font-semibold text-ink">{money(line.amountCents)}</span>
+                  <span className="tabular shrink-0 text-right font-semibold text-ink">
+                    {money(line.amountCents)}
+                    {line.deductedCents > 0 && <span className="block text-sm font-normal text-muted">less {money(line.deductedCents)} towards your balance</span>}
+                  </span>
                 </li>
               );
             })}

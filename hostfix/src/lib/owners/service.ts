@@ -225,3 +225,64 @@ export async function unpaidJobs(db: Db, ownerId: string): Promise<{ jobId: stri
   );
   return rows.map((row) => ({ jobId: row.job_id, number: Number(row.number), title: row.title, amountCents: Number(row.amount_cents), currency: row.currency }));
 }
+
+/**
+ * WHETHER THE OWNER CAN BE CHARGED (DECISIONS.md, 2026-11-20, second entry).
+ * Checked before a job goes out to tradies, from what we already hold: a saved
+ * card that has not expired, and no earlier charge that failed and is still
+ * unpaid. No live test charge is made. Null when all is well.
+ */
+export type CardProblem = "no_card" | "expired" | "unpaid";
+
+export async function cardProblem(db: Db, ownerId: string, country: CountryCode, at: Date, timeZone: string): Promise<CardProblem | null> {
+  const unpaid = await db.query("select 1 from public.payments where owner_id = $1::uuid and status = 'failed' limit 1", [ownerId]);
+  if (unpaid.length > 0) return "unpaid";
+  const billing = await getBilling(db, ownerId, country);
+  if (!billing?.paymentMethodId) return "no_card";
+  if (billing.cardExpYear && billing.cardExpMonth) {
+    // A card is good to the end of its expiry month.
+    const [year, month] = new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit" }).format(at).split("-").map(Number);
+    if (billing.cardExpYear < year! || (billing.cardExpYear === year && billing.cardExpMonth < month!)) return "expired";
+  }
+  return null;
+}
+
+/** What the owner is told about a card problem, with what to do next. */
+export function cardProblemWords(problem: CardProblem): string {
+  switch (problem) {
+    case "unpaid":
+      return "An earlier job's card payment has not gone through, so no new jobs can be sent until it is paid. Update your card on the Billing page and we try it again straight away.";
+    case "expired":
+      return "Your saved card has expired. Update it on the Billing page and we send a tradie straight away.";
+    case "no_card":
+      return "There is no card saved yet. Add one on the Billing page and we send a tradie straight away.";
+  }
+}
+
+/**
+ * Our team removes (or gives back) an owner's access, for example after misuse
+ * of "Something's wrong" (owner terms, section 8). Their sign-in stops working
+ * at once, and nobody can send a tradie at their cost until access is back.
+ */
+export async function setOwnerAccess(db: Db, ownerId: string, allowed: boolean, reason: string, actor: string): Promise<{ ok: true } | { ok: false; message: string }> {
+  if (!allowed && reason.trim().length < 3) return { ok: false, message: "Say why, for the record." };
+  return db.tx(async (tx) => {
+    const owner = await getOwner(tx, ownerId);
+    if (!owner) return { ok: false, message: "We could not find that owner." };
+    const rows = await tx.query(
+      allowed
+        ? "update public.users set disabled_at = null where id = $1::uuid and disabled_at is not null returning id"
+        : "update public.users set disabled_at = $2::timestamptz where id = $1::uuid and disabled_at is null returning id",
+      allowed ? [owner.userId] : [owner.userId, now().toISOString()],
+    );
+    if (rows.length > 0) {
+      await audit(tx, { actor, action: allowed ? "owner.access_restored" : "owner.access_removed", entity: "owner", entityId: owner.id, detail: { reason: reason.trim() } });
+    }
+    return { ok: true };
+  });
+}
+
+export async function ownerAccessRemoved(db: Db, ownerId: string): Promise<boolean> {
+  const rows = await db.query("select 1 from public.owners o join public.users u on u.id = o.user_id where o.id = $1::uuid and u.disabled_at is not null", [ownerId]);
+  return rows.length > 0;
+}

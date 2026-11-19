@@ -90,6 +90,11 @@ export default async function PropertyPage({ params, searchParams }: { params: P
               : "Start the membership below and this property is covered."}
         </Notice>
       )}
+      {jobs.some((job) => job.status === "completed" && job.completedAt && now().getTime() - job.completedAt.getTime() < 14 * 24 * 3_600_000) && property.accessNotes.trim() !== "" && (
+        <Notice tone="info" title="A tradie has been in recently">
+          If you gave them a door or lockbox code, you may want to change it now. Changing codes is up to you; update the access notes below when you do.
+        </Notice>
+      )}
       {query.pinned && property.pinConfirmedAt && (
         <Notice tone="good" title="Pin saved">
           Tradies&rsquo; Arrived and Job done taps are checked against it. You can move it any time under &ldquo;The map pin for this house&rdquo;.
@@ -421,7 +426,8 @@ export default async function PropertyPage({ params, searchParams }: { params: P
             <Field label="Suburb or town" name="suburb" required maxLength={60} defaultValue={property.suburb} />
             <Field label="Postcode" name="postcode" maxLength={10} defaultValue={property.postcode} />
           </div>
-          <Area label="How does a tradie get in?" name="accessNotes" rows={4} maxLength={1500} defaultValue={property.accessNotes} hint="Only shown to the tradie who takes a job, never before." />
+          <Area label="How does a tradie get in?" name="accessNotes" rows={4} maxLength={1500} defaultValue={property.accessNotes} hint="Only shown to the tradie who takes a job, never before. If the tradie can't get in, the call-out is charged, so keep it right. Changing a code after a job is up to you." />
+          <Area label="Anything a tradie should know to stay safe?" name="hazards" rows={3} maxLength={3000} defaultValue={property.hazards} placeholder="Steep drive, roof access, asbestos in an older home, a dog, a fragile deck..." hint="Shown to tradies before they accept, so they can come prepared. Under health and safety law we share the duty to warn them of hazards you know of. Hazards tradies find are added here too." />
           <Tick
             name="guestAutoDispatch"
             label="Send a tradie for guest reports without asking me first"

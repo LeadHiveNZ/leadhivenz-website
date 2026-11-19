@@ -29,6 +29,7 @@ export type JobRow = {
   check_reference?: Job["checkReference"]; finished_lat?: number | string | null; finished_lng?: number | string | null;
   finish_check?: ArrivalCheck | null; finish_distance_m?: number | null; minutes_on_site?: number | null; check_flags?: string[] | null;
   confirm_status?: ConfirmStatus | null; confirm_by?: Date | null; confirm_decided_at?: Date | null; confirm_decided_by?: string | null;
+  card_hold?: Job["cardHold"]; guest_staying?: Job["guestStaying"]; guest_name?: string | null; guest_phone?: string | null; may_let_in?: boolean | null;
 };
 
 const num = (value: number | string | null | undefined) => (value === null || value === undefined ? null : Number(value));
@@ -58,6 +59,8 @@ export function rowToJob(row: JobRow): Job {
     checkFlags: row.check_flags ?? [],
     confirmStatus: row.confirm_status ?? null, confirmBy: d(row.confirm_by ?? null),
     confirmDecidedAt: d(row.confirm_decided_at ?? null), confirmDecidedBy: row.confirm_decided_by ?? null,
+    cardHold: row.card_hold ?? null, guestStaying: row.guest_staying ?? null, guestName: row.guest_name ?? null, guestPhone: row.guest_phone ?? null,
+    mayLetIn: row.may_let_in ?? true,
   };
 }
 
@@ -90,7 +93,8 @@ export async function getJobForOwner(db: Db, ownerId: string, jobId: string): Pr
 export async function getJobForTradie(db: Db, tradieId: string, jobId: string): Promise<Job | null> {
   if (!isUuid(jobId)) return null;
   const rows = await db.query<JobRow>("select * from public.jobs where id = $1::uuid and tradie_id = $2::uuid", [jobId, tradieId]);
-  return rows[0] ? rowToJob(rows[0]) : null;
+  // A staying guest's number is for that job's texts only: the tradie sees their first name, never the number (privacy page).
+  return rows[0] ? { ...rowToJob(rows[0]), guestPhone: null } : null;
 }
 
 export type JobListItem = Job & { propertyName: string; suburb: string; tradieName: string | null; photoCount: number };

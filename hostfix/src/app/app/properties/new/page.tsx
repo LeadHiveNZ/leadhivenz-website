@@ -88,7 +88,15 @@ export default async function NewPropertyPage({ searchParams }: { searchParams: 
             rows={4}
             maxLength={1500}
             placeholder="Lockbox by the front door, code 4821. Park on the street. Water shut-off is under the kitchen sink."
-            hint="Only shown to the tradie who takes a job, never before."
+            hint="Only shown to the tradie who takes a job, never before. If the tradie can't get in, the call-out is charged, so keep it right. Changing a code after a job is up to you."
+          />
+          <Area
+            label="Anything a tradie should know to stay safe?"
+            name="hazards"
+            rows={3}
+            maxLength={1500}
+            placeholder="Steep drive, park at the top. Roof access only from the back deck. Older home: possible asbestos in the ceiling. Friendly dog next door."
+            hint="Shown to tradies before they accept, so they can come prepared. Under health and safety law we share the duty to warn them of hazards you know of."
           />
           {portfolio ? (
             <>

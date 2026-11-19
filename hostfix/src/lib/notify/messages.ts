@@ -71,8 +71,10 @@ export const texts = {
   quoteDeclined: (o: { number: number; link: string }) =>
     `${B} job ${o.number}: the owner said no to the quote. Finish what you came for and tap Done. ${o.link}`,
 
-  payoutSent: (o: { number: number; amountCents: number; currency: string }) =>
-    `${B}: ${money(o.amountCents, o.currency)} for job ${o.number} is on its way to your bank account.`,
+  payoutSent: (o: { number: number; amountCents: number; currency: string; deductedCents?: number }) =>
+    o.deductedCents
+      ? `${B}: ${money(o.amountCents - o.deductedCents, o.currency)} for job ${o.number} is on its way to your bank account. ${money(o.deductedCents, o.currency)} came off it towards what you owe us.`
+      : `${B}: ${money(o.amountCents, o.currency)} for job ${o.number} is on its way to your bank account.`,
 
   payoutOnHold: (o: { number: number }) =>
     `${B} job ${o.number}: the owner has raised a problem, so your payment is on hold while we sort it out. We will be in touch today.`,
@@ -80,6 +82,14 @@ export const texts = {
   /** The team chose to hold a flagged job's payment (DECISIONS.md, 2026-11-19). Neutral: it never says the tradie did anything wrong. */
   payoutCheckHeld: (o: { number: number }) =>
     `${B} job ${o.number}: we are checking this job before paying it, so your payment is on hold for now. One of our team will be in touch.`,
+
+  /** A lost chargeback decided as the tradie's fault: what they owe, and how it is taken back. */
+  balanceOwed: (o: { number: number; amountCents: number; currency: string }) =>
+    `${B} job ${o.number}: the owner's bank took back their payment, and our team found it was down to the work or a no-show. ${money(o.amountCents, o.currency)} will come off your next payments, never more than half of any one. Questions? Reply or call us.`,
+
+  /** A change to the platform fee, at least 30 days ahead. */
+  feeChange: (o: { market: string; fromPct: string; toPct: string; date: string }) =>
+    `${B}: from ${o.date} the platform fee in ${clip(o.market, 20)} changes from ${o.fromPct} to ${o.toPct}. Anything already on a job keeps the fee it was added at.`,
 
   /** The team is checking a receipt (DECISIONS.md, 2026-11-20). Neutral, like every hold. */
   receiptCheckHeld: (o: { number: number }) =>
@@ -150,6 +160,14 @@ export const texts = {
   jobCheck: (o: { title: string; property: string; totalCents?: number | null; currency?: string; flags: string[]; link: string }) =>
     `${B}: "${clip(o.title, 30)}" at ${clip(o.property, 22)} is done${o.totalCents && o.currency ? `, ${money(o.totalCents, o.currency)} charged` : ""}. We couldn't confirm ${checkSubject(o.flags)} for this job. Can you check the photos and confirm it's fixed? ${o.link}`,
 
+  /** A job waiting before it goes to tradies, because the owner's card cannot be charged. */
+  cardNeeded: (o: { property: string; title: string; problem: "no_card" | "expired" | "unpaid"; link: string }) =>
+    `${B}: "${clip(o.title, 36)}" at ${clip(o.property, 24)} is ready to go to a tradie, but ${o.problem === "unpaid" ? "an earlier card payment has not gone through" : o.problem === "expired" ? "your card has expired" : "there is no card saved"}. Update it and we send it straight away: ${o.link}`,
+
+  /** A tradie found a hazard at the property and added it to the property's safety notes. */
+  hazardAdded: (o: { tradie: string; property: string; hazard: string; link: string }) =>
+    `${B}: ${clip(o.tradie, 26)} has noted a safety hazard at ${clip(o.property, 24)}: "${clip(o.hazard, 70)}". It is on the property page for the next tradie: ${o.link}`,
+
   /** Parts added inside the owner's no-ask limit (DECISIONS.md, 2026-11-20). */
   partsAdded: (o: { tradie: string; what: string; amountCents: number; currency: string; limitCents: number; link: string }) =>
     `${B}: ${clip(o.tradie, 26)} needs ${clip(o.what, 72)}, ${money(o.amountCents, o.currency)}, within your ${money(o.limitCents, o.currency)} no-ask limit. Details: ${o.link}`,
@@ -179,8 +197,15 @@ export const texts = {
     `${B}: thanks for telling us about job ${o.number}. The tradie's payment is on hold and one of our team will be in touch.`,
 
   // ---- to cleaners and guests who reported -------------------------------
-  reporterBooked: (o: { property: string; when: string }) =>
-    `${B}: thanks for reporting the problem at ${clip(o.property, 28)}. A tradie is booked and will be there ${o.when}.`,
+  reporterBooked: (o: { property: string; when: string; knock?: boolean }) =>
+    `${B}: thanks for reporting the problem at ${clip(o.property, 28)}. A tradie is booked and will be there ${o.when}.${o.knock ? " They'll knock first." : ""}`,
+
+  /** To a guest staying in the house (DECISIONS.md, 2026-11-20, second entry): the tradie's first name, the job and the window. */
+  guestBooked: (o: { tradie: string; title: string; when: string }) =>
+    `${B}: a ${B} tradie, ${clip(o.tradie, 20)}, is coming to fix "${clip(o.title, 40)}" ${o.when}. They'll knock first.`,
+
+  guestOnTheWay: (o: { tradie: string; title: string }) =>
+    `${B}: ${clip(o.tradie, 20)}, the ${B} tradie, is on the way to fix "${clip(o.title, 40)}". They'll knock first.`,
 
   reporterDone: (o: { property: string }) => `${B}: the problem you reported at ${clip(o.property, 28)} has been fixed. Thank you.`,
 

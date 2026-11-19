@@ -49,7 +49,13 @@ export type ExceptionKind =
   /** A tradie has had 3 flagged jobs in 90 days: look at them and talk to the tradie. Never removed automatically. */
   | "tradie_flags"
   /** A parts receipt the checks flagged: old, for more than its total, or used twice. Holds the payment until Approve or Hold. */
-  | "receipt_check";
+  | "receipt_check"
+  /** A job waiting before it goes out because the owner's card cannot be charged, or an owner refused for the same reason. */
+  | "card_needed"
+  /** All the card tries failed: HostFix paid the tradie, and the owner owes it. Chase the owner. */
+  | "owner_owes"
+  /** A chargeback was lost: decide whether it was the tradie's fault. */
+  | "chargeback_lost";
 
 /** The ones worth a text to the founder as well as an email. */
 const URGENT: ExceptionKind[] = ["nobody_accepted", "missed_window", "dispute", "chargeback", "not_taken_yet", "owner_says_absent", "no_show"];
@@ -230,6 +236,9 @@ export const EXCEPTION_LABELS: Record<ExceptionKind, string> = {
   job_check: "Check a job, then pay or hold",
   tradie_flags: "Tradie's jobs keep being flagged",
   receipt_check: "Check a parts receipt",
+  card_needed: "Owner's card needs updating",
+  owner_owes: "Owner owes us for a job",
+  chargeback_lost: "Chargeback lost: whose fault?",
 };
 
 /** One line on what to do about each kind. The runbook (RUNBOOK.md) has the longer version. */
@@ -257,4 +266,7 @@ export const EXCEPTION_ACTIONS: Record<ExceptionKind, string> = {
   job_check: "The app could not confirm this job (location, photos or time on site) and the owner did not answer. Look at the before and after photos. If it looks done, press Approve. If not, press Hold and ring the owner and the tradie.",
   tradie_flags: "This tradie has had 3 or more jobs in 90 days the app could not confirm. Look at those jobs, then talk to them. Only a person can pause or remove a tradie.",
   receipt_check: "Open the job and the receipt. If the part and amount are right, press Approve. If not, press Hold and ring the tradie. The owner never sees the receipt.",
+  card_needed: "Nothing goes to tradies until the owner's card can be charged. They have been texted. Ring them if it is urgent: the job goes out by itself a minute after the card is updated.",
+  owner_owes: "The card was tried four times. The tradie has been paid by us anyway. Ring the owner, ask them to update their card on the Billing page (it is tried again straight away), and no new jobs go out for them until it is paid.",
+  chargeback_lost: "The owner's bank sided with the owner. Open the job and decide: the tradie's fault (bad work, or not there) takes it back from their next payments, never more than half of one; not their fault, and HostFix carries it.",
 };

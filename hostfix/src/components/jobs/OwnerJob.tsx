@@ -10,6 +10,7 @@ import type { PricePreview } from "@/lib/jobs/create";
 import type { JobView } from "@/lib/jobs/view";
 import type { JobPart } from "@/lib/jobs/parts";
 import { partsWords } from "@/lib/markets/display";
+import { cardProblemWords } from "@/lib/owners/service";
 import { formatMoney } from "@/lib/money";
 import { displayPhone } from "@/lib/phone";
 import { addressLine } from "@/lib/properties/service";
@@ -35,6 +36,7 @@ function explain(view: JobView): string {
   const { job, tradie } = view;
   switch (job.status) {
     case "awaiting_owner":
+      if (job.cardHold) return "This is ready to go to a tradie as soon as your card can be charged.";
       return job.reportedBy === "team" ? `${job.reporterName ?? "Your team"} reported this. Nobody has been sent yet.` : "A guest reported this. Nobody has been sent yet.";
     case "offering":
       return view.laterTime
@@ -174,7 +176,18 @@ export function OwnerJob({ view, now, code, flash = {}, prices }: Props) {
         </Card>
       )}
 
-      {job.status === "awaiting_owner" && (
+      {job.status === "awaiting_owner" && job.cardHold && (
+        <Card className="border-alert/40 sm:p-6">
+          <SectionTitle>Update your card and we send a tradie</SectionTitle>
+          <p className="text-muted">{cardProblemWords(job.cardHold)}</p>
+          <Link href={billingHref} className={`${secondaryButtonClass} mt-4`}>
+            Update my card
+          </Link>
+          <p className="mt-2 text-sm text-muted">Once it is sorted the job goes out by itself within a minute. Nothing is charged until the job is done.</p>
+        </Card>
+      )}
+
+      {job.status === "awaiting_owner" && !job.cardHold && (
         <Card className="border-brand/30 sm:p-6">
           <SectionTitle>Send a tradie?</SectionTitle>
           <p className="text-muted">
@@ -299,6 +312,13 @@ export function OwnerJob({ view, now, code, flash = {}, prices }: Props) {
           <div className="mt-3">
             <PhotoGrid photos={view.reportPhotos} query={photoQuery} />
           </div>
+        )}
+        {job.reportedBy !== "guest" && job.guestStaying && (
+          <p className="mt-2 text-sm text-muted">
+            {job.guestStaying === "no" ? "No guest staying." : job.guestStaying === "yes" ? `A guest is staying${job.guestName ? `: ${job.guestName}` : ""}.` : "You were not sure whether a guest is staying."}
+            {job.guestPhone ? " We text them the arrival time and when the tradie is on the way. The tradie knocks first." : job.guestStaying === "no" ? "" : " The tradie knocks first."}
+            {job.mayLetIn ? " If nobody answers, the tradie may let themselves in." : " The tradie won't let themselves in."}
+          </p>
         )}
         <p className="mt-3 border-t border-line pt-3 text-sm text-muted">
           At{" "}

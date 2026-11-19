@@ -45,6 +45,9 @@ export type Tradie = {
   insurer: string | null;
   insurancePolicyNumber: string | null;
   insuranceExpiresOn: string | null;
+  /** The version of the tradie agreement they agreed to in the app, and when (DECISIONS.md, 2026-11-20). */
+  agreementVersion: string | null;
+  agreedAt: Date | null;
   /** The newest public liability certificate uploaded (the current one), or null if none is on file. */
   insuranceCertificateId: string | null;
   /** Licensed Building Practitioner number. Optional, shown to staff, nothing depends on it. */
@@ -72,11 +75,13 @@ type TradieRow = {
   after_hours: boolean; gst_registered: boolean; gst_number: string | null; insurance_expires_on: string | null;
   insurer: string | null; insurance_policy_number: string | null; insurance_certificate_id: string | null; lbp_number: string | null;
   payout_provider: Provider | null; payout_account_id: string | null; payouts_enabled: boolean; notes: string;
+  agreement_version?: string | null; agreed_at?: Date | null;
 };
 
 const TRADIE_SELECT = `select t.id, t.created_at, t.user_id, u.name, u.phone, u.email, t.market, t.business_name, t.trades, t.status,
                               t.approved_at, t.days_available, t.after_hours, t.gst_registered, t.gst_number, t.insurance_expires_on,
                               t.insurer, t.insurance_policy_number, t.lbp_number, t.payout_provider, t.payout_account_id, t.payouts_enabled, t.notes,
+                              t.agreement_version, t.agreed_at,
                               (select x.id from public.uploads x
                                 where x.tradie_id = t.id and x.kind = 'insurance_certificate' and x.attached
                                 order by x.created_at desc, x.id desc limit 1) as insurance_certificate_id
@@ -92,6 +97,7 @@ function rowToTradie(row: TradieRow): Tradie {
     insuranceExpiresOn: row.insurance_expires_on ? String(row.insurance_expires_on).slice(0, 10) : null,
     insuranceCertificateId: row.insurance_certificate_id ?? null, lbpNumber: row.lbp_number ?? null,
     payoutProvider: row.payout_provider, payoutAccountId: row.payout_account_id, payoutsEnabled: row.payouts_enabled, notes: row.notes,
+    agreementVersion: row.agreement_version ?? null, agreedAt: row.agreed_at ? new Date(row.agreed_at) : null,
   };
 }
 
@@ -401,6 +407,7 @@ export async function eligibleTradies(db: Db, criteria: OfferCriteria): Promise<
         and u.disabled_at is null
         and u.phone is not null
         and t.payouts_enabled
+        and t.agreement_version = $8
         and char_length(coalesce(t.insurer, '')) >= 1
         and char_length(coalesce(t.insurance_policy_number, '')) >= 1
         and t.insurance_expires_on >= $6::date
@@ -413,7 +420,7 @@ export async function eligibleTradies(db: Db, criteria: OfferCriteria): Promise<
         and (not $4::boolean or t.after_hours)
         and (not $5::boolean or $7 = any(t.days_available))
       order by slot_rank nulls last, t.created_at`,
-    [criteria.market, criteria.trade, criteria.licenceRequired, criteria.afterHours, criteria.urgent, criteria.today, criteria.weekday],
+    [criteria.market, criteria.trade, criteria.licenceRequired, criteria.afterHours, criteria.urgent, criteria.today, criteria.weekday, TRADIE_AGREEMENT_VERSION],
   );
   return rows.map((row) => ({
     tradieId: row.id, userId: row.user_id, name: row.name, businessName: row.business_name, phone: row.phone,
@@ -426,13 +433,14 @@ export async function canStillTake(db: Db, tradieId: string, job: { market: stri
   const rows = await db.query(
     `select 1 from public.tradies t join public.users u on u.id = t.user_id
       where t.id = $1::uuid and t.market = $2 and t.status = 'approved' and $3 = any(t.trades) and u.disabled_at is null
+        and t.agreement_version = $6
         and char_length(coalesce(t.insurer, '')) >= 1 and char_length(coalesce(t.insurance_policy_number, '')) >= 1
         and t.insurance_expires_on >= $5::date
         and exists (select 1 from public.uploads c where c.tradie_id = t.id and c.kind = 'insurance_certificate' and c.attached)
         and (not $4::boolean or exists (
               select 1 from public.tradie_licences l
                where l.tradie_id = t.id and l.trade = $3 and char_length(l.licence_number) >= 2 and l.expires_on >= $5::date))`,
-    [tradieId, job.market, job.trade, job.licenceRequired, job.today],
+    [tradieId, job.market, job.trade, job.licenceRequired, job.today, TRADIE_AGREEMENT_VERSION],
   );
   return rows.length > 0;
 }
@@ -534,4 +542,28 @@ export async function coverage(db: Db, market: string, today: string): Promise<C
       backup: slots.find((slot) => slot.trade === trade.key && slot.rank === 2)?.businessName ?? null,
       ready: ready.get(trade.key) ?? 0,
     }));
+}
+
+// ---------------------------------------------------------------------------
+// THE TRADIE AGREEMENT, AGREED IN THE APP (DECISIONS.md, 2026-11-20)
+// ---------------------------------------------------------------------------
+
+/**
+ * The version of the tradie agreement in force: its "last updated" date. A
+ * tradie agrees to it in the app; when it changes, they are asked again, and
+ * no offer goes to them until they have (the offer queries above check it).
+ * Change this when the agreement changes, and the page's date with it
+ * (tests/unit/legal.test.ts).
+ */
+export const TRADIE_AGREEMENT_VERSION = "20 November 2026";
+
+/** The tradie presses "I agree". Recorded with the time, and in the audit log. Safe to press twice. */
+export async function agreeToAgreement(db: Db, tradieId: string): Promise<void> {
+  await db.tx(async (tx) => {
+    const rows = await tx.query(
+      "update public.tradies set agreement_version = $2, agreed_at = $3::timestamptz where id = $1::uuid and agreement_version is distinct from $2 returning id",
+      [tradieId, TRADIE_AGREEMENT_VERSION, now().toISOString()],
+    );
+    if (rows.length > 0) await audit(tx, { actor: `tradie:${tradieId}`, action: "tradie.agreed", entity: "tradie", entityId: tradieId, detail: { version: TRADIE_AGREEMENT_VERSION } });
+  });
 }

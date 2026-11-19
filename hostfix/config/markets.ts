@@ -88,6 +88,8 @@ export type Market = {
 
   /** The platform's share of a job, in hundredths of a percent. 1500 means 15%. */
   platformFeeBps: number;
+  /** A new platform fee waiting out its 30 days' notice to tradies (DECISIONS.md, 2026-11-20). Only read from the database. */
+  platformFeeNext?: { bps: number; from: Date } | null;
   /** Both carry the platform fee: the tradie gets the surcharge less the fee (DECISIONS.md, 2026-11-18). */
   urgentSurchargeCents: number;
   afterHoursSurchargeCents: number;

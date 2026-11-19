@@ -1,4 +1,5 @@
-import { arrived, finishJob, noAccess, onMyWay, sendQuote } from "@/app/actions/tradie";
+import { arrived, finishJob, noAccess, onMyWay, reportHazardAction, sendQuote } from "@/app/actions/tradie";
+import { GuestNote, HazardNote } from "./SafetyNotes";
 import { ActionForm, Area, Field, Tick } from "@/components/forms/ActionForm";
 import { RECEIPT_TO_FOLLOW_DAYS, type PriceListItem } from "@/lib/jobs/parts";
 import { AddPartsForm, TradieParts } from "./PartsForms";
@@ -45,7 +46,7 @@ function payoutLine(view: JobView): { text: string; tone: "good" | "info" | "war
     case "scheduled":
       return { text: `${amount} will be sent on ${formatDateTime(payout.releaseAt, zone)}. It reaches your bank ${payTiming(view.market).arrives}.`, tone: "good" };
     case "waiting":
-      return { text: `${amount} will be sent once the owner's card has been charged. If the card fails we chase it, not you.`, tone: "info" };
+      return { text: `${amount} will be sent at the usual time. If the owner's card fails you are still paid. Chasing is our job.`, tone: "info" };
     case "held":
       if (!view.job.confirmStatus || !["waiting", "staff_queue", "staff_held"].includes(view.job.confirmStatus)) {
         return view.parts.some((part) => part.status === "active" && (part.receiptStatus === "to_follow" || part.receiptStatus === "needed"))
@@ -233,6 +234,12 @@ export function TradieJob({ view, now, code, flash = {}, propertyPhotos, priceLi
             <Icon name="market" size={16} /> Open in maps
           </a>
         )}
+        {open && (
+          <div className="mt-4 space-y-3">
+            <GuestNote job={job} />
+            <HazardNote hazards={property.hazards} />
+          </div>
+        )}
         {property.accessNotes && open && (
           <div className="mt-4 rounded-xl bg-tint px-4 py-3">
             <p className="text-sm font-bold tracking-wide text-brand uppercase">How to get in</p>
@@ -246,6 +253,26 @@ export function TradieJob({ view, now, code, flash = {}, propertyPhotos, priceLi
           </div>
         )}
       </Panel>
+
+      {(open || job.status === "completed") && (
+        <Reveal label="Found a hazard at this property?">
+          <ActionForm action={reportHazardAction} className="space-y-3">
+            {which}
+            <Area
+              label="What should the next tradie know to stay safe?"
+              name="hazard"
+              rows={3}
+              required
+              maxLength={500}
+              placeholder="Rotten boards on the back deck by the steps. Roof is steep: harness needed."
+              hint="It is saved to the property, shown to every tradie before they accept a job there, and the owner is texted."
+            />
+            <SubmitButton variant="secondary" pendingLabel="Saving...">
+              Save the hazard
+            </SubmitButton>
+          </ActionForm>
+        </Reveal>
+      )}
 
       <Panel title="The problem">
         {job.description ? <p className="whitespace-pre-line text-ink">{job.description}</p> : <p className="text-muted">No extra details were given.</p>}

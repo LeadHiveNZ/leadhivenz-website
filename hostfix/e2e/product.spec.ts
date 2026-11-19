@@ -353,6 +353,9 @@ test("people only see their own data", async ({ page, request }) => {
   await expect(page).toHaveURL(`${BASE}/admin`);
   await page.goto(`${BASE}/admin/jobs/${jobId}`);
   await expect(page).toHaveURL(`${BASE}/admin`);
+  // The chargeback evidence pack (DECISIONS.md, 2026-11-20) is for the team only.
+  await page.goto(`${BASE}/admin/jobs/${jobId}/evidence`);
+  await expect(page).toHaveURL(`${BASE}/admin`);
 
   // The dispatcher sees jobs but not prices, markets, staff or the numbers.
   await be(page, "Maria (dispatcher)");
@@ -369,6 +372,9 @@ test("people only see their own data", async ({ page, request }) => {
   await expect(shown(page, "Receipt checked by HostFix").first()).toBeVisible();
   await expect(page.locator(`a[href="${receiptPath}"]`)).toHaveCount(0);
   await be(page, "Maria (dispatcher)");
+  await open(page, `/admin/jobs/${jobId}/evidence`);
+  await expect(page.getByRole("heading", { name: /Evidence pack: job/ })).toBeVisible();
+  await expect(shown(page, "Times and places").first()).toBeVisible();
   for (const path of ["/admin/markets", "/admin/markets/queenstown", "/admin/staff", "/admin/audit", "/admin/leads"]) {
     await page.goto(`${BASE}${path}`);
     await expect(page).toHaveURL(`${BASE}/admin/queue`);
@@ -385,7 +391,7 @@ test("people only see their own data", async ({ page, request }) => {
     await page.goto(`${BASE}${path}`);
     await expect(page).toHaveURL(new RegExp(`^${BASE}/sign-in\\?next=`));
   }
-  for (const path of ["/admin/queue", `/admin/jobs/${jobId}`, "/admin/owners"]) {
+  for (const path of ["/admin/queue", `/admin/jobs/${jobId}`, `/admin/jobs/${jobId}/evidence`, "/admin/owners"]) {
     await page.goto(`${BASE}${path}`);
     await expect(page).toHaveURL(`${BASE}/admin`);
   }

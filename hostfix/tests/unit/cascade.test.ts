@@ -659,7 +659,8 @@ describe("reports from guests and cleaners", () => {
 
     // The owner says yes, as urgent, an hour later. The promise runs from now.
     setTestNow(addMinutes(MONDAY_10AM, 60));
-    const approved = await approveGuestReport(t.db, result.job.id, { urgent: true }, `owner:${owner.ownerId}`);
+    const answered = await approveGuestReport(t.db, result.job.id, { urgent: true }, `owner:${owner.ownerId}`);
+    const approved = answered.ok ? answered.job : null;
     // Owner 22500 + 5000 = 27500. Tradie 19000 + (5000 - 750) = 23250.
     expect(approved).toMatchObject({ status: "offering", urgency: "urgent", ownerTotalCents: 27500, tradieTotalCents: 23250 });
     expect(approved!.respondBy?.getTime()).toBe(addMinutes(MONDAY_10AM, 60 + 4 * 60).getTime());

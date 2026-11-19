@@ -17,6 +17,7 @@ import type { Job } from "@/lib/jobs/types";
 import { answerLaterTime } from "@/lib/dispatch/cascade";
 import { decideQuote, reportTradieAbsent } from "@/lib/jobs/work";
 import { confirmFixed } from "@/lib/jobs/confirm";
+import { guestFromForm } from "@/lib/jobs/guest-form";
 import { getMarket } from "@/lib/markets/store";
 import { getBilling, updateOwnerContact } from "@/lib/owners/service";
 import { paymentsFor } from "@/lib/payments";
@@ -44,6 +45,7 @@ function propertyFields(formData: FormData) {
     suburb: text(formData, "suburb"),
     postcode: text(formData, "postcode"),
     accessNotes: text(formData, "accessNotes"),
+    hazards: text(formData, "hazards"),
   };
   const errors: Record<string, string> = {};
   if (fields.name.length < 1) errors.name = "Give the property a name you will recognise, like Lakeview Apartment.";
@@ -258,7 +260,10 @@ export async function logOwnerJob(_previous: FormState, formData: FormData): Pro
   const choice = text(formData, "menuItemId");
   if (!choice) return problem(formData, "Choose what needs fixing.");
 
+  const guest = guestFromForm(formData, "NZ");
+  if (!guest.ok) return problem(formData, guest.message, { guestPhone: guest.message });
   const result = await createJob(db, {
+    ...guest.guest,
     property, reportedBy: "owner", reporterName: null, reporterPhone: null,
     menuItemId: choice === OFF_MENU ? null : choice, offMenuTrade: text(formData, "offMenuTrade"), offMenuTitle: text(formData, "offMenuTitle"),
     description: text(formData, "description"), urgent: ticked(formData, "urgent"), uploadIds: list(formData, "uploadIds"),
@@ -297,7 +302,7 @@ export async function goAhead(_previous: FormState, formData: FormData): Promise
   if (!found) return { message: NOT_FOUND };
   const approved = await approveGuestReport(db, found.job.id, { urgent: text(formData, "how") === "urgent" }, found.actor);
   await sendQueued(db);
-  if (!approved) return { message: "This job has already been dealt with." };
+  if (!approved.ok) return { message: approved.message };
   redirect(`${found.back}?sent=1`);
 }
 
