@@ -413,7 +413,7 @@ function Unlocked({ videoRef }: { videoRef: React.RefObject<HTMLElement | null> 
             </div>
             <p className="hf-note">
               53 jobs on the full menu. The prices shown are Queenstown's; each town gets its own, set from what local tradies charge.
-              Need someone there within 4 hours? Add $50. Outside 7am to 4:30pm weekdays, add $140. Not on the menu? $225 for a
+              Need someone there within 4 hours? Add $50. Outside 7am to 4:30pm weekdays, add $140. Small parts up to $30 are in the price; common parts have a fixed price on the list; anything else is the merchant's price plus 20% for sourcing it. Not on the menu? $225 for a
               tradie to come and look, then a quote. Nothing over $600 starts without your yes.
             </p>
           </div>
