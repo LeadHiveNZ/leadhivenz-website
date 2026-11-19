@@ -11,6 +11,7 @@ import { SubmitButton } from "@/components/forms/SubmitButton";
 import { CostLines } from "@/components/jobs/JobParts";
 import { Countdown } from "@/components/jobs/TradieClient";
 import { TradieJob } from "@/components/jobs/TradieJob";
+import { listPriceList } from "@/lib/jobs/parts";
 import { Card, Chip, Notice } from "@/components/ui/Bits";
 import { Icon } from "@/components/ui/Icon";
 import { Loading } from "@/components/ui/Loading";
@@ -81,7 +82,7 @@ async function Opened({ params, searchParams }: { params: Params; searchParams: 
     const propertyPhotos = await listUploads(db, { propertyId: job.propertyId, kinds: ["property"] });
     const quoted = query.quoted === "wait" || query.quoted === "go" ? query.quoted : null;
     return (
-      <TradieJob view={view} now={at} code={code} propertyPhotos={propertyPhotos} flash={{ yours: Boolean(query.yours), here: Boolean(query.here), quoted, done: Boolean(query.done) }} />
+      <TradieJob view={view} now={at} code={code} propertyPhotos={propertyPhotos} priceList={await listPriceList(db, view.market.slug)} flash={{ yours: Boolean(query.yours), here: Boolean(query.here), quoted, done: Boolean(query.done), parts: query.parts === "wait" || query.parts === "go" ? query.parts : null }} />
     );
   }
 

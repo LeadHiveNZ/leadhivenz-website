@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { gatewayFor, sendQueued } from "@/lib/after";
+import { gatewayFor, sendQueued, settleNow } from "@/lib/after";
 import { audit } from "@/lib/audit";
 import { requireStaff } from "@/lib/auth/current";
 import { AccountExistsError } from "@/lib/auth/users";
@@ -15,6 +15,7 @@ import { approveGuestReport, cancelJob, createJob } from "@/lib/jobs/create";
 import { getQuote } from "@/lib/jobs/store";
 import { decideQuote } from "@/lib/jobs/work";
 import { staffDecideCheck } from "@/lib/jobs/confirm";
+import { chargeBoughtParts, staffDecideReceipts } from "@/lib/jobs/parts";
 import { getMarket } from "@/lib/markets/store";
 import { texts } from "@/lib/notify/messages";
 import { enqueue } from "@/lib/notify/outbox";
@@ -63,6 +64,37 @@ export async function staffCheckJob(_previous: FormState, formData: FormData): P
   revalidatePath("/admin/queue");
   revalidatePath(jobPath(jobId));
   return { done: approve ? "Approved. The tradie's payment is on its way." : "Held. The tradie has been told their payment is on hold while we check." };
+}
+
+/** A flagged parts receipt (DECISIONS.md, 2026-11-20): one tap to pay the tradie, or to keep holding the payment. */
+export async function staffCheckReceipt(_previous: FormState, formData: FormData): Promise<FormState> {
+  const staff = await requireStaff();
+  const jobId = text(formData, "jobId");
+  const approve = text(formData, "decision") === "approve";
+  const db = await getDb();
+  const result = await staffDecideReceipts(db, jobId, approve, staff.actor, text(formData, "note"));
+  await sendQueued(db);
+  if (!result.ok) return { message: result.message };
+  revalidatePath("/admin/queue");
+  revalidatePath(jobPath(jobId));
+  return { done: approve ? "Receipt approved. The tradie's payment goes as soon as nothing else holds it." : "Held. The tradie has been told their payment is on hold while we check." };
+}
+
+/**
+ * A job cancelled after the owner approved work: parts already bought that
+ * cannot go back are charged at the receipt's cost, nothing added, all to the
+ * tradie (DECISIONS.md, 2026-11-20).
+ */
+export async function staffChargeBoughtParts(_previous: FormState, formData: FormData): Promise<FormState> {
+  const staff = await requireStaff();
+  const jobId = text(formData, "jobId");
+  const amountCents = dollarsToCents(text(formData, "boughtAmount"));
+  if (amountCents === null || amountCents <= 0) return problem(formData, "Enter the receipt cost.", { boughtAmount: "Enter the receipt cost, for example 86.50." });
+  const db = await getDb();
+  const result = await chargeBoughtParts(db, jobId, { description: text(formData, "boughtDescription"), amountCents }, staff.actor);
+  if (!result.ok) return problem(formData, result.message);
+  await settleNow(db, jobId);
+  redirect(`${jobPath(jobId)}?did=parts_charged`);
 }
 
 // ---------------------------------------------------------------------------

@@ -12,6 +12,7 @@ import { texts } from "@/lib/notify/messages";
 import { enqueue } from "@/lib/notify/outbox";
 import { raiseException, resolveExceptionsFor } from "@/lib/ops/exceptions";
 import { getBilling } from "@/lib/owners/service";
+import { holdReasons } from "./holds";
 import type { PaymentsGateway, Provider } from "@/lib/payments/gateway";
 import { formatDeadline, monthKey, monthLabel } from "@/lib/time";
 import { NO_SHOW_DAYS, needsReview, recentNoShows } from "@/lib/tradies/reliability";
@@ -91,15 +92,16 @@ export async function openSettlement(db: Db, job: Job, market: Market): Promise<
     );
   }
   if (job.tradieTotalCents > 0 && job.tradieId) {
+    const held = (await holdReasons(db, job.id)).length > 0;
     await db.query(
       `insert into public.payouts (created_at, job_id, tradie_id, amount_cents, currency, status, release_at)
        values ($1::timestamptz, $2::uuid, $3::uuid, $4, $5, $6, $7::timestamptz)
        on conflict (job_id) do nothing`,
       [
         at.toISOString(), job.id, job.tradieId, job.tradieTotalCents, job.currency,
-        // A flagged job's payment is held for the owner to confirm (DECISIONS.md, 2026-11-19).
-        // Otherwise: with nothing to charge the owner there is nothing to wait for.
-        job.confirmStatus === "waiting" ? "held" : chargeCents > 0 ? "waiting" : "scheduled", addHours(at, market.payoutHoldHours).toISOString(),
+        // Held while the owner is asked to confirm a flagged job (DECISIONS.md, 2026-11-19), or a receipt is to
+        // follow or being checked (2026-11-20). Otherwise: with nothing to charge the owner there is nothing to wait for.
+        held ? "held" : chargeCents > 0 ? "waiting" : "scheduled", addHours(at, market.payoutHoldHours).toISOString(),
       ],
     );
   }
@@ -168,15 +170,19 @@ export async function chargeJob(db: Db, gatewayFor: GatewayFor, jobId: string, o
       if (context.owner.phone) {
         // A flagged job: the same text asks the owner to look at the photos and confirm, on the job page (DECISIONS.md, 2026-11-19).
         const check = job.confirmStatus === "waiting";
+        // A cancelled job is only ever charged for parts bought for it that could not go back (DECISIONS.md, 2026-11-20).
+        const cancelled = job.status === "cancelled";
         await enqueue(tx, {
-          channel: "sms", to: context.owner.phone, template: check ? "job_check" : "job_done", audience: "owner", jobId, userId: context.owner.userId,
-          body: check
-            ? texts.jobCheck({ title: job.title, property: context.property.name, totalCents: payment.amount_cents, currency: payment.currency, flags: job.checkFlags, link: ownerJobUrl(job) })
-            : texts.jobDone({ title: job.title, property: context.property.name, totalCents: payment.amount_cents, currency: payment.currency, link: ownerJobUrl(job) }),
+          channel: "sms", to: context.owner.phone, template: cancelled ? "bought_parts_charged" : check ? "job_check" : "job_done", audience: "owner", jobId, userId: context.owner.userId,
+          body: cancelled
+            ? texts.boughtPartsCharged({ number: job.number, property: context.property.name, totalCents: payment.amount_cents, currency: payment.currency, link: ownerJobUrl(job) })
+            : check
+              ? texts.jobCheck({ title: job.title, property: context.property.name, totalCents: payment.amount_cents, currency: payment.currency, flags: job.checkFlags, link: ownerJobUrl(job) })
+              : texts.jobDone({ title: job.title, property: context.property.name, totalCents: payment.amount_cents, currency: payment.currency, link: ownerJobUrl(job) }),
           dedupeKey: `job_done:${jobId}`,
         });
       }
-      if (job.reporterPhone && job.reportedBy !== "owner" && job.reporterPhone !== context.owner.phone && job.outcome !== "no_access") {
+      if (job.status === "completed" && job.reporterPhone && job.reportedBy !== "owner" && job.reporterPhone !== context.owner.phone && job.outcome !== "no_access") {
         await enqueue(tx, {
           channel: "sms", to: job.reporterPhone, template: "reporter_done", audience: "reporter", jobId,
           body: texts.reporterDone({ property: context.property.name }), dedupeKey: `reporter_done:${jobId}`,

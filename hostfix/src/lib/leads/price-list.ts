@@ -3,6 +3,8 @@ import type { Market } from "@config/markets";
 import type { Db } from "@/lib/db/types";
 import { groupMenu } from "@/lib/markets/menu-groups";
 import { listMenu } from "@/lib/markets/store";
+import { partsWords } from "@/lib/markets/display";
+import { listPriceList } from "@/lib/jobs/parts";
 import { formatMoney } from "@/lib/money";
 import type { EmailMessage } from "@/lib/notify/email";
 import type { Lead } from "@/lib/store/types";
@@ -20,7 +22,11 @@ export type PriceList = { groups: { group: string; items: PriceListItem[] }[]; c
 
 export async function priceListFor(db: Db, market: string): Promise<PriceList> {
   const items = (await listMenu(db, market)).map((item) => ({ code: item.code, trade: item.trade, name: item.name, ownerPriceCents: item.ownerPriceCents }));
-  return { groups: groupMenu(items), count: items.length };
+  // The common parts, at their fixed price each (DECISIONS.md, 2026-11-20). "count" stays the number of jobs.
+  const parts = (await listPriceList(db, market)).map((item) => ({ code: item.code, trade: "parts", name: `${item.name}, each`, ownerPriceCents: item.priceCents }));
+  const groups = groupMenu(items);
+  if (parts.length > 0) groups.push({ group: "Common parts, fitted on any job", items: parts });
+  return { groups, count: items.length };
 }
 
 const DAY_NAMES: Record<string, string> = { mon: "Monday", tue: "Tuesday", wed: "Wednesday", thu: "Thursday", fri: "Friday", sat: "Saturday", sun: "Sunday" };
@@ -48,7 +54,7 @@ export function priceListNotes(market: Market): string[] {
     `This is what your card is charged when the job is done, ${market.taxName} included. No call-out fee on top.`,
     `Need someone within ${urgentHours} hours? Add ${money(market.urgentSurchargeCents)} and the tradie drops what they are doing, plus ${money(market.afterHoursSurchargeCents)} outside working hours (${workingHours(market)}).`,
     `Not on the list? ${money(market.diagnosisFeeCents)} for a tradie to come and look, then a quote. Nothing over ${money(market.approvalThresholdCents)} starts without your yes.`,
-    `Small parts are in the price. Bigger parts are charged at cost: we add nothing on parts.`,
+    partsWords(market),
   ];
 }
 

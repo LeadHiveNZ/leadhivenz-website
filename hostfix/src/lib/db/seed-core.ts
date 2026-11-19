@@ -164,6 +164,44 @@ export async function insertMenu(db: SeedTarget, slug: string, items: MenuSeedIt
   return items.length;
 }
 
+// ---------------------------------------------------------------------------
+// THE PARTS PRICE LIST (DECISIONS.md, 2026-11-20)
+// ---------------------------------------------------------------------------
+
+export type PartsSeedItem = { code: string; name: string; priceDollars: number; source: string };
+
+export function readPartsSeed(seedDir: string, slug: string): PartsSeedItem[] | null {
+  const file = path.join(seedDir, `parts-${slug}.json`);
+  if (!fs.existsSync(file)) return null;
+  const parsed = JSON.parse(fs.readFileSync(file, "utf8")) as { items?: PartsSeedItem[] };
+  if (!Array.isArray(parsed.items)) throw new Error(`${file} has no "items" list.`);
+  return parsed.items;
+}
+
+/**
+ * Loads a market's parts price list from /seed, once: only while the market
+ * has no list yet and it has never been loaded before, so an admin who
+ * removes every item does not get them back on the next deploy.
+ */
+export async function seedPriceList(db: SeedTarget, seedDir: string, slug: string): Promise<number> {
+  const items = readPartsSeed(seedDir, slug);
+  if (!items) return 0;
+  const key = `price_list_seeded:${slug}`;
+  if ((await db.query("select 1 from public.app_state where key = $1", [key])).length > 0) return 0;
+  if ((await db.query("select 1 from public.price_list_items where market = $1 limit 1", [slug])).length > 0) return 0;
+  let sort = 0;
+  for (const item of items) {
+    await db.query(
+      `insert into public.price_list_items (market, code, name, price_cents, source, sort) values ($1, $2, $3, $4, $5, $6)
+       on conflict (market, code) do nothing`,
+      [slug, item.code, item.name, cents(item.priceDollars, `${item.code} priceDollars`), item.source, sort],
+    );
+    sort += 10;
+  }
+  await db.query("insert into public.app_state (key, value) values ($1, $2::jsonb) on conflict (key) do nothing", [key, JSON.stringify({ items: items.length })]);
+  return items.length;
+}
+
 /** Adds any configured market that the database does not have yet. Returns their slugs. */
 export async function seedMarkets(
   db: SeedTarget,
@@ -179,6 +217,11 @@ export async function seedMarkets(
     const count = menu ? await insertMenu(db, configured.slug, menu.items) : 0;
     log(`Added market ${configured.name} with ${configured.tiers.length} tiers and ${count} menu items.`);
     added.push(configured.slug);
+  }
+  // Every market in the database whose parts list has never been loaded gets it now, new or not.
+  for (const row of await db.query("select slug from public.markets")) {
+    const loaded = await seedPriceList(db, seedDir, String(row.slug));
+    if (loaded > 0) log(`Loaded ${loaded} parts on the price list for ${String(row.slug)}.`);
   }
   return added;
 }

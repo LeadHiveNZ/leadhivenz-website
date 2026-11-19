@@ -1,4 +1,5 @@
 import { audit } from "@/lib/audit";
+import { releaseIfClear } from "@/lib/billing/holds";
 import { now } from "@/lib/clock";
 import type { Db } from "@/lib/db/types";
 import { texts } from "@/lib/notify/messages";
@@ -27,7 +28,8 @@ import type { ConfirmStatus, Job } from "./types";
  *
  * Released means the payment is due at its usual time (the market's hold
  * after the job) or now, whichever is later, and only once the owner's card
- * has been charged. Each step changes the job and the payment and writes the
+ * has been charged, and only if no receipt is still holding it
+ * (src/lib/billing/holds.ts). Each step changes the job and the payment and writes the
  * audit entry in one database step, and doing it twice changes nothing.
  */
 
@@ -35,19 +37,6 @@ import type { ConfirmStatus, Job } from "./types";
 export const PENDING: ConfirmStatus[] = ["waiting", "staff_queue", "staff_held"];
 
 export type ConfirmResult = { ok: true; job: Job } | { ok: false; message: string };
-
-/** Moves a held payment on: due at its usual time or now, once the card has been charged. Returns the amount released. */
-async function releaseHeldPayout(db: Db, jobId: string): Promise<number> {
-  const at = now();
-  const paid = await db.query<{ status: string }>("select status from public.payments where job_id = $1::uuid", [jobId]);
-  const ready = !paid[0] || ["succeeded", "part_refunded"].includes(paid[0].status);
-  const rows = await db.query<{ amount_cents: number }>(
-    `update public.payouts set status = $2, release_at = greatest(release_at, $3::timestamptz)
-      where job_id = $1::uuid and status = 'held' returning amount_cents`,
-    [jobId, ready ? "scheduled" : "waiting", at.toISOString()],
-  );
-  return rows[0] ? Number(rows[0].amount_cents) : 0;
-}
 
 async function decide(db: Db, job: Job, status: ConfirmStatus, actor: string): Promise<void> {
   await db.query(
@@ -68,7 +57,7 @@ export async function confirmFixed(db: Db, jobId: string, ownerId: string, actor
     if (job.confirmStatus === "owner_problem") return { ok: false, message: "You have told us something is wrong with this job, and our team is looking into it." };
     if (!PENDING.includes(job.confirmStatus)) return { ok: true, job };
     await decide(tx, job, "owner_confirmed", actor);
-    const released = await releaseHeldPayout(tx, job.id);
+    const released = await releaseIfClear(tx, job.id);
     await resolveExceptionsFor(tx, job.id, ["job_check"], "The owner confirmed it is fixed");
     await audit(tx, {
       actor, action: "job.owner_confirmed", entity: "job", entityId: job.id, amount: released || null, currency: released ? job.currency : null,
@@ -91,7 +80,7 @@ export async function staffDecideCheck(db: Db, jobId: string, approve: boolean, 
     if (!approve && job.confirmStatus === "staff_held") return { ok: true, job };
     const context = await loadContext(tx, job);
     await decide(tx, job, approve ? "staff_approved" : "staff_held", actor);
-    const released = approve ? await releaseHeldPayout(tx, job.id) : 0;
+    const released = approve ? await releaseIfClear(tx, job.id) : 0;
     await resolveExceptionsFor(tx, job.id, ["job_check"], approve ? "Approved: tradie paid" : `Held: ${note.trim() || "the payment stays on hold"}`);
     await audit(tx, {
       actor, action: approve ? "job.check_approved" : "job.check_held", entity: "job", entityId: job.id,
@@ -128,7 +117,7 @@ export async function settleUnansweredChecks(db: Db): Promise<{ released: number
       const context = await loadContext(tx, job);
       if (trust.trusted) {
         await decide(tx, job, "released_trusted", "system");
-        const released = await releaseHeldPayout(tx, job.id);
+        const released = await releaseIfClear(tx, job.id);
         await audit(tx, {
           actor: "system", action: "job.check_released", entity: "job", entityId: job.id, amount: released || null, currency: released ? job.currency : null,
           detail: { flags: job.checkFlags, finished_jobs: trust.finishedJobs, other_flags: trust.otherFlags, payout_released: released },

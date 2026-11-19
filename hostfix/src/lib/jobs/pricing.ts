@@ -15,8 +15,16 @@ import type { Market } from "@config/markets";
  *  - A tier that includes urgent response means the owner is not charged the
  *    urgent surcharge. The tradie still gets their share, so the platform pays it.
  *  - Off-menu: a fixed diagnosis fee, then a quote. The platform keeps its fee
- *    percentage of the quoted work. Parts are passed on at cost.
+ *    percentage of the quoted work.
  *  - A quote above the limit needs the owner's approval before work starts.
+ *  - Parts (DECISIONS.md, 2026-11-20), on any job: small parts up to the
+ *    market's included amount (NZ$30) are in the price. A part on the price
+ *    list is charged at its fixed price; the tradie gets it less 3%, and the
+ *    3% covers the card fee. Anything else is charged at the merchant's price
+ *    on the receipt plus 20% for sourcing it; the platform fee (15%) is taken
+ *    from the 20% only, so the tradie gets the receipt amount plus 17%. Above
+ *    the no-ask limit the owner says yes first. (Until 20 November 2026 parts
+ *    were passed on at cost with no fee; parts added before then keep that.)
  */
 
 export type LineKind = "menu" | "diagnosis" | "urgent" | "after_hours" | "quote" | "parts" | "no_access" | "adjustment";
@@ -164,28 +172,25 @@ export type QuoteAmounts = {
 
 /**
  * Works out a quote for extra or off-menu work. `labourCents` is the tradie's
- * price for the work as the owner will see it. `partsCents` is parts at cost.
- * `alreadyApprovedCents` is what has been quoted and approved on this job so
- * far, so several small quotes cannot add up past the limit unnoticed.
+ * price for the work as the owner will see it. Parts are not part of a quote
+ * any more: they are added on their own (partLines, partsApproval below).
+ * `alreadyApprovedCents` is what has been quoted, approved or added in parts
+ * on this job so far, so several small amounts cannot add up past the limit
+ * unnoticed.
  */
 export function quoteAmounts(
   market: PricingMarket,
-  input: { description: string; labourCents: number; partsCents: number; limitCents?: number | null; alreadyApprovedCents?: number },
+  input: { description: string; labourCents: number; limitCents?: number | null; alreadyApprovedCents?: number },
 ): QuoteAmounts {
   const labour = whole(input.labourCents, "Labour");
-  const parts = whole(input.partsCents, "Parts");
-  if (labour + parts <= 0) throw new Error("A quote needs a price for the work, for parts, or both.");
+  if (labour <= 0) throw new Error("A quote needs a price for the work.");
 
   const fee = platformFee(labour, market.platformFeeBps);
-  const lines: Line[] = [];
-  if (labour > 0) lines.push({ kind: "quote", label: input.description, ownerCents: labour, tradieCents: labour - fee });
-  if (parts > 0) lines.push({ kind: "parts", label: `Parts: ${input.description}`, ownerCents: parts, tradieCents: parts });
+  const lines: Line[] = [{ kind: "quote", label: input.description, ownerCents: labour, tradieCents: labour - fee }];
 
   const limit = input.limitCents ?? market.approvalThresholdCents;
-  const running = (input.alreadyApprovedCents ?? 0) + labour + parts;
-  let approvalReason: string | null = null;
-  if (running > limit) approvalReason = "The quote is over the pre-approved limit.";
-  else if (parts > market.partsApprovalCents) approvalReason = "The parts cost more than the amount that can be bought without asking.";
+  const running = (input.alreadyApprovedCents ?? 0) + labour;
+  const approvalReason = running > limit ? "The quote is over the pre-approved limit." : null;
 
   const sum = totals(lines);
   return {
@@ -196,6 +201,61 @@ export function quoteAmounts(
     approvalReason,
     lines,
   };
+}
+
+// ---------------------------------------------------------------------------
+// PARTS (DECISIONS.md, 2026-11-20)
+// ---------------------------------------------------------------------------
+
+/** What HostFix keeps of a price-list part: 3%, which covers the card fee. */
+export const LIST_PART_FEE_BPS = 300;
+/** What an off-list part costs the owner on top of the receipt: 20%, for sourcing it. */
+export const RECEIPT_MARKUP_BPS = 2000;
+
+/**
+ * A part on the price list, at its fixed price. Two GU10 bulbs at NZ$13.00:
+ * the owner pays 2600, the tradie gets 2600 less 3% (78) = 2522, we keep 78.
+ */
+export function listPartLine(name: string, unitCents: number, quantity: number): Line {
+  whole(unitCents, "Price");
+  if (!Number.isInteger(quantity) || quantity < 1 || quantity > 50) throw new Error("The quantity must be a whole number from 1 to 50.");
+  const ownerCents = unitCents * quantity;
+  const fee = platformFee(ownerCents, LIST_PART_FEE_BPS);
+  return { kind: "parts", label: quantity > 1 ? `${name} x ${quantity}` : name, ownerCents, tradieCents: ownerCents - fee };
+}
+
+/**
+ * A part off the list, from a receipt. `amountCents` is the part of the
+ * receipt (including GST) used on this job. The owner pays it plus 20%; the
+ * platform fee is taken from the 20% only. NZ$300: owner 36000, tradie
+ * 30000 + 6000 - 900 = 35100 (the receipt plus 17%), we keep 900 (3%).
+ */
+export function receiptPartLine(market: Pick<PricingMarket, "platformFeeBps">, description: string, amountCents: number): Line {
+  const amount = whole(amountCents, "Parts amount");
+  if (amount <= 0) throw new Error("The parts amount must be more than zero.");
+  const markup = Math.round((amount * RECEIPT_MARKUP_BPS) / 10_000);
+  const fee = platformFee(markup, market.platformFeeBps);
+  return { kind: "parts", label: description, ownerCents: amount + markup, tradieCents: amount + markup - fee };
+}
+
+export type PartsApproval = { needsApproval: boolean; reason: string | null };
+
+/**
+ * Whether new parts need the owner's yes first. Without asking, the job's
+ * parts may come to the market's parts limit (NZ$150), and everything extra on
+ * the job (approved quotes and parts) to the property's overall limit.
+ * Amounts are what the owner pays.
+ */
+export function partsApproval(
+  market: Pick<PricingMarket, "partsApprovalCents" | "approvalThresholdCents">,
+  input: { newPartsCents: number; partsSoFarCents: number; extrasSoFarCents: number; limitCents?: number | null },
+): PartsApproval {
+  const parts = input.partsSoFarCents + input.newPartsCents;
+  const extras = input.extrasSoFarCents + input.newPartsCents;
+  const limit = input.limitCents ?? market.approvalThresholdCents;
+  if (parts > market.partsApprovalCents) return { needsApproval: true, reason: "The parts on this job would come to more than can be bought without asking." };
+  if (extras > limit) return { needsApproval: true, reason: "The extra work and parts on this job would be over the pre-approved limit." };
+  return { needsApproval: false, reason: null };
 }
 
 /**

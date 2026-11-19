@@ -269,6 +269,7 @@ export async function cancelJob(db: Db, jobId: string, by: { actor: string; staf
     const at = now();
     await tx.query("update public.offers set status = 'superseded' where job_id = $1::uuid and status = 'pending'", [jobId]);
     await tx.query("update public.quotes set status = 'withdrawn' where job_id = $1::uuid and status = 'pending'", [jobId]);
+    await tx.query("update public.job_parts set status = 'void' where job_id = $1::uuid and status = 'pending'", [jobId]);
     await tx.query(
       "update public.jobs set status = 'cancelled', cancelled_at = $2::timestamptz, cancelled_by = $3, cancel_reason = $4 where id = $1::uuid",
       [jobId, at.toISOString(), by.actor, reason.slice(0, 300)],

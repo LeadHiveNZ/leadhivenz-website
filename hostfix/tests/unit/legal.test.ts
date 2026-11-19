@@ -6,6 +6,8 @@ import TermsPage from "@/app/(site)/legal/terms/page";
 import TradieAgreementPage from "@/app/(site)/legal/tradie-agreement/page";
 import { FAR_METRES } from "@/lib/jobs/arrival";
 import { FLAG_DAYS, FLAG_REVIEW, TRUSTED_FINISHED_JOBS } from "@/lib/tradies/reliability";
+import { OLD_RECEIPT_DAYS, RECEIPT_TO_FOLLOW_DAYS } from "@/lib/jobs/parts";
+import { LIST_PART_FEE_BPS } from "@/lib/jobs/pricing";
 import { testDb } from "./db";
 
 /**
@@ -62,6 +64,31 @@ describe("the owner terms", () => {
       unaccepted_alert_hours: launchMarket.unacceptedAlertHours, counter_offer_hours: launchMarket.counterOfferHours,
       min_minutes_on_site: launchMarket.minMinutesOnSite, owner_confirm_hours: launchMarket.ownerConfirmHours,
     });
+  });
+});
+
+describe("parts (DECISIONS.md, 2026-11-20)", () => {
+  it("the owner terms say the parts rule in the agreed words, with the market's NZ$30 and NZ$150, and never 'at cost' or 'retail'", () => {
+    expect(launchMarket.partsIncludedCents).toBe(3000);
+    expect(launchMarket.partsApprovalCents).toBe(15000);
+    const terms = text(TermsPage);
+    expect(terms).toContain("Small parts up to NZ$30 are in the price. Common parts are on the price list at a fixed price. Anything else is charged at the merchant's price plus 20% for sourcing it. Prices include GST.");
+    expect(terms).toContain("Up to NZ$150 of parts on a job");
+    expect(terms).toContain("If you supply a part yourself there is no parts charge, but a fault in a part you supplied is not covered by the tradie's 30-day callback.");
+    expect(terms).toContain("parts already bought for it that cannot be returned are charged at what they cost, with nothing added");
+    expect(terms).not.toMatch(/retail|charged at cost/i);
+  });
+
+  it("the tradie agreement says what the tradie gets: the list price less 3%, or what they paid plus 17%, and the 7 days for a receipt", () => {
+    expect(LIST_PART_FEE_BPS).toBe(300);
+    expect(RECEIPT_TO_FOLLOW_DAYS).toBe(7);
+    expect(OLD_RECEIPT_DAYS).toBe(90);
+    const agreement = text(TradieAgreementPage);
+    expect(agreement).toContain("you get it less 3% (which covers the card fee); no receipt is needed");
+    expect(agreement).toContain("you get what you paid plus 17% (the 15% platform fee comes off the 20% only)");
+    expect(agreement).toContain("if it has not come within 7 days the part is refunded to the owner out of your payment");
+    expect(agreement).toContain("Only our team sees the receipt.");
+    expect(agreement).not.toMatch(/at cost|paid back to you in full/i);
   });
 });
 

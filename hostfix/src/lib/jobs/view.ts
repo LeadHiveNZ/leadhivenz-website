@@ -11,6 +11,7 @@ import { windowBetween } from "./arrival";
 import { flagWords, ownerCheckWords, type CheckFlag } from "./checks";
 import { loadContext } from "./context";
 import { listLines, listOffers, listQuotes, type OfferWithTradie } from "./store";
+import { listParts, type JobPart } from "./parts";
 import type { Job, JobLine, Quote, StatusTone } from "./types";
 
 /**
@@ -55,6 +56,10 @@ export type JobView = {
   money: JobMoney;
   /** The owner's chosen tradie has suggested a later time and is waiting for the owner's answer. */
   laterTime: LaterTime | null;
+  /** Parts on the job (DECISIONS.md, 2026-11-20). For an owner, without the receipt itself. */
+  parts: JobPart[];
+  /** The parts receipts. Staff only: an owner never sees a receipt, and a tradie sees their own on the part. */
+  receipts: Upload[];
 };
 
 const str = (value: unknown): string => (typeof value === "string" ? value : "");
@@ -144,6 +149,22 @@ function describe(row: AuditRow, audience: Audience, job: Job, market: Market): 
       return audience === "owner" ? null : entry(audience === "tradie" ? "Checked: your payment is on its way" : "Approved by the team", "done");
     case "job.check_held":
       return audience === "owner" ? null : entry(audience === "tradie" ? "Your payment is on hold while we check this job" : "Payment held by the team", "alert", audience === "staff" ? str(d.note) || null : null);
+    case "parts.added": {
+      const parts = (Array.isArray(d.parts) ? d.parts : []) as { label?: string; owner?: number; tradie?: number }[];
+      const words = parts.map((part) => `${part.label ?? "Part"} ${formatMoney(audience === "tradie" ? Number(part.tradie ?? 0) : Number(part.owner ?? 0), job.currency)}`).join(", ");
+      return entry(d.needs_approval ? "Parts: waiting for the owner's yes" : "Parts added", d.needs_approval ? "alert" : "active", words || null);
+    }
+    case "parts.receipt_added":
+      if (audience === "owner") return entry(Array.isArray(d.flags) && d.flags.length > 0 ? "Receipt received: HostFix is checking it" : "Receipt checked by HostFix", "done", str(d.description) || null);
+      return entry("Receipt added", (Array.isArray(d.flags) && d.flags.length > 0) ? "alert" : "done", audience === "staff" && Array.isArray(d.flags) && d.flags.length > 0 ? `Flagged: ${(d.flags as string[]).join(", ")}.` : str(d.description) || null);
+    case "parts.receipt_approved":
+      return audience === "owner" ? null : entry("Receipt approved by the team", "done");
+    case "parts.receipt_held":
+      return audience === "owner" ? null : entry(audience === "tradie" ? "Your payment is on hold while we check a receipt" : "Receipt held by the team", "alert", audience === "staff" ? str(d.note) || null : null);
+    case "parts.refunded_no_receipt":
+      return entry(audience === "owner" ? `Refunded ${amount} for parts` : `No receipt: ${amount} refunded to the owner`, "quiet", `${str(d.description)}: the receipt did not come within 7 days.`);
+    case "parts.cancelled_charged":
+      return audience === "tradie" ? entry("Parts you bought before the cancellation are paid", "done", amount) : entry(`Parts bought before the cancellation: ${amount}`, "quiet", "At their cost, with nothing added.");
     case "quote.submitted":
       return entry(`Quote: ${amount}`, d.needs_approval ? "alert" : "active", `${str(d.description)}${d.needs_approval ? ". Waiting for the owner's answer." : ". Inside the pre-approved limit, so it went ahead."}`);
     case "quote.approved":
@@ -218,7 +239,8 @@ export async function loadJobView(db: Db, job: Job, audience: Audience): Promise
     quotes,
     offers,
     reportPhotos: uploads.filter((upload) => upload.kind === "report"),
-    workPhotos: uploads.filter((upload) => upload.kind === "completion" || upload.kind === "quote" || upload.kind === "receipt"),
+    // Receipts are never shown with the work photos: only staff see them (DECISIONS.md, 2026-11-20).
+    workPhotos: uploads.filter((upload) => upload.kind === "completion" || upload.kind === "quote"),
     beforePhotos: uploads.filter((upload) => upload.kind === "before"),
     afterPhotos: uploads.filter((upload) => upload.kind === "completion"),
     history,
@@ -229,5 +251,7 @@ export async function loadJobView(db: Db, job: Job, audience: Audience): Promise
       credit: credits[0] ? { amountCents: credits[0].amount_cents, status: credits[0].status } : null,
     },
     laterTime: audience === "tradie" ? null : await waitingLaterTime(db, job.id),
+    parts: (await listParts(db, job.id)).map((part) => (audience === "owner" ? { ...part, receiptUploadId: null, receiptTotalCents: null, amountCents: 0, tradieCents: 0 } : part)),
+    receipts: audience === "staff" ? uploads.filter((upload) => upload.kind === "receipt") : [],
   };
 }

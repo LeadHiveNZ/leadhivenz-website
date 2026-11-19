@@ -5,6 +5,7 @@ import { attachUploads, canView, checkFile, getUpload, recordUpload } from "@/li
 import { getJobForOwner, getJobForStaff, getJobForTradie, listJobsForOwner, listJobsForTradie, listLiveOffersForTradie } from "@/lib/jobs/store";
 import { completeJob, markArrived, markEnRoute, reportNoAccess, reportTradieAbsent, submitQuote } from "@/lib/jobs/work";
 import { confirmFixed } from "@/lib/jobs/confirm";
+import { addParts } from "@/lib/jobs/parts";
 import { confirmPin, propertiesNeedingPin } from "@/lib/properties/pin";
 import { laterWindows } from "@/lib/jobs/arrival";
 import { loadJobView } from "@/lib/jobs/view";
@@ -213,7 +214,7 @@ describe("tradies", () => {
     expect(await markEnRoute(t.db, aliceJob.id, dave.tradieId)).toMatchObject({ ok: false });
     expect(await arrive(t.db, aliceJob.id, dave.tradieId, HOUSE)).toMatchObject({ ok: false });
     await arrive(t.db, aliceJob.id, mike.tradieId, HOUSE);
-    expect(await submitQuote(t.db, aliceJob.id, dave.tradieId, { description: "Extra", labourCents: 5000, partsCents: 0, uploadIds: [] })).toMatchObject({ ok: false });
+    expect(await submitQuote(t.db, aliceJob.id, dave.tradieId, { description: "Extra", labourCents: 5000, uploadIds: [] })).toMatchObject({ ok: false });
     expect(await completeJob(t.db, aliceJob.id, dave.tradieId, { note: "", uploadIds: [mine], ...HOUSE })).toMatchObject({ ok: false });
     expect(await reportNoAccess(t.db, aliceJob.id, dave.tradieId, { note: "Could not get in at all", uploadIds: [mine], ...HOUSE })).toMatchObject({ ok: false });
     expect((await getJobForTradie(t.db, mike.tradieId, aliceJob.id))!.status).toBe("on_site");
@@ -274,6 +275,28 @@ describe("checking a finished job (DECISIONS.md, 2026-11-19)", () => {
     expect(await canView(t.db, upload, { ownerId: bob.ownerId })).toBe(false);
     expect(await canView(t.db, upload, { tradieId: dave.tradieId })).toBe(false);
     expect(await canView(t.db, upload, {})).toBe(false);
+  });
+});
+
+describe("parts receipts (DECISIONS.md, 2026-11-20)", () => {
+  it("are seen by staff and the tradie who sent them. Never the owner, another owner or another tradie", async () => {
+    const { alice, bob, mike, dave, aliceJob } = await twoOfEverything();
+    await arrive(t.db, aliceJob.id, mike.tradieId, HOUSE);
+    const id = await photo(t.db, `tradie:${mike.tradieId}`, "receipt");
+    // Dave cannot put parts on Mike's job, nor attach Mike's receipt.
+    expect(await addParts(t.db, aliceJob.id, dave.tradieId, { list: [], offList: { description: "Pipe", receiptTotalCents: 5000, amountCents: 5000, uploadId: id } })).toMatchObject({ ok: false });
+    expect(await addParts(t.db, aliceJob.id, mike.tradieId, { list: [], offList: { description: "Pipe", receiptTotalCents: 5000, amountCents: 5000, uploadId: id } })).toMatchObject({ ok: true });
+    const upload = (await getUpload(t.db, id))!;
+    expect(upload).toMatchObject({ kind: "receipt", attached: true, jobId: aliceJob.id });
+    expect(await canView(t.db, upload, { staff: true })).toBe(true);
+    expect(await canView(t.db, upload, { tradieId: mike.tradieId })).toBe(true);
+    expect(await canView(t.db, upload, { ownerId: alice.ownerId })).toBe(false);
+    expect(await canView(t.db, upload, { ownerId: bob.ownerId })).toBe(false);
+    expect(await canView(t.db, upload, { tradieId: dave.tradieId })).toBe(false);
+    expect(await canView(t.db, upload, {})).toBe(false);
+    const view = await loadJobView(t.db, (await getJobForOwner(t.db, alice.ownerId, aliceJob.id))!, "owner");
+    expect(view.receipts).toEqual([]);
+    expect(view.parts.every((part) => part.receiptUploadId === null)).toBe(true);
   });
 });
 

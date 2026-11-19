@@ -29,7 +29,7 @@
     {"code": "HM-01", "trade": "handyman", "name": "Shelf, hook or mirror hanging", "ownerPriceDollars": 155, "tradiePayoutDollars": 130, "licenceRequired": false, "guestVisible": false},
     {"code": "HM-02", "trade": "handyman", "name": "Wi-Fi router reset and smart TV setup", "ownerPriceDollars": 155, "tradiePayoutDollars": 130, "licenceRequired": false, "tags": ["top-complaint"]},
     {"code": "HM-03", "trade": "handyman", "name": "Light bulbs, up to 5", "ownerPriceDollars": 165, "tradiePayoutDollars": 140, "licenceRequired": false, "notes": "Bulbs only. Replacing a light fitting is prescribed electrical work in NZ: that is EL-06, electricians only."},
-    {"code": "HM-04", "trade": "handyman", "name": "Smoke alarm replace or battery, up to 3", "ownerPriceDollars": 165, "tradiePayoutDollars": 140, "licenceRequired": false, "notes": "NZ requires photoelectric alarms with 8-year battery, within 3m of each bedroom door, one per storey. Parts at cost."},
+    {"code": "HM-04", "trade": "handyman", "name": "Smoke alarm replace or battery, up to 3", "ownerPriceDollars": 165, "tradiePayoutDollars": 140, "licenceRequired": false, "notes": "NZ requires photoelectric alarms with 8-year battery, within 3m of each bedroom door, one per storey. Parts: the price list, or the receipt plus 20%."},
     {"code": "HM-05", "trade": "handyman", "name": "Door handle, latch or lock adjust", "ownerPriceDollars": 165, "tradiePayoutDollars": 140, "licenceRequired": false},
     {"code": "HM-06", "trade": "handyman", "name": "Blind or curtain rail repair", "ownerPriceDollars": 165, "tradiePayoutDollars": 140, "licenceRequired": false},
     {"code": "HM-07", "trade": "handyman", "name": "Rubbish or broken item removal", "ownerPriceDollars": 165, "tradiePayoutDollars": 140, "licenceRequired": false},
@@ -54,7 +54,7 @@
     {"code": "EL-03", "trade": "electrician", "name": "Oven or cooktop fault, first-hour diagnosis", "ownerPriceDollars": 225, "tradiePayoutDollars": 190, "licenceRequired": true, "isDiagnosis": true},
     {"code": "EL-04", "trade": "electrician", "name": "Extractor fan replace", "ownerPriceDollars": 260, "tradiePayoutDollars": 220, "licenceRequired": true},
     {"code": "EL-05", "trade": "electrician", "name": "Heated towel rail replace", "ownerPriceDollars": 270, "tradiePayoutDollars": 230, "licenceRequired": true},
-    {"code": "EL-06", "trade": "electrician", "name": "Light fitting replace, up to 2", "ownerPriceDollars": 225, "tradiePayoutDollars": 190, "licenceRequired": true, "notes": "Swapping a light fitting is prescribed electrical work (Electricity (Safety) Regulations 2010), so it is never offered to a handyman. The fitting itself is a part at cost."},
+    {"code": "EL-06", "trade": "electrician", "name": "Light fitting replace, up to 2", "ownerPriceDollars": 225, "tradiePayoutDollars": 190, "licenceRequired": true, "notes": "Swapping a light fitting is prescribed electrical work (Electricity (Safety) Regulations 2010), so it is never offered to a handyman. The fitting itself is a part: the price list, or the receipt plus 20%."},
     {"code": "HP-01", "trade": "heat_pump_tech", "name": "Each extra unit, same visit", "ownerPriceDollars": 105, "tradiePayoutDollars": 90, "licenceRequired": true, "guestVisible": false, "isAddOn": true},
     {"code": "HP-02", "trade": "heat_pump_tech", "name": "Heat pump service and clean", "ownerPriceDollars": 210, "tradiePayoutDollars": 180, "licenceRequired": true, "guestVisible": false},
     {"code": "HP-03", "trade": "heat_pump_tech", "name": "Heat pump fault diagnosis", "ownerPriceDollars": 245, "tradiePayoutDollars": 210, "licenceRequired": true, "isDiagnosis": true},
@@ -70,7 +70,7 @@
     {"code": "CP-02", "trade": "handyman", "name": "Fire extinguisher and blanket check or replace", "ownerPriceDollars": 165, "tradiePayoutDollars": 140, "licenceRequired": false, "guestVisible": false, "tags": ["compliance", "recurring"]},
     {"code": "CP-03", "trade": "electrician", "name": "Switchboard and RCD safety test", "ownerPriceDollars": 225, "tradiePayoutDollars": 190, "licenceRequired": true, "guestVisible": false, "tags": ["compliance", "recurring"]},
     {"code": "GD-01", "trade": "handyman", "name": "Broken window or shower glass, make safe and measure", "ownerPriceDollars": 280, "tradiePayoutDollars": 240, "licenceRequired": false, "needsLocalQuote": true},
-    {"code": "GD-02", "trade": "handyman", "name": "Crockery, glassware and linen replacement run", "ownerPriceDollars": 155, "tradiePayoutDollars": 130, "licenceRequired": false, "guestVisible": false, "notes": "Items at cost on top."},
+    {"code": "GD-02", "trade": "handyman", "name": "Crockery, glassware and linen replacement run", "ownerPriceDollars": 155, "tradiePayoutDollars": 130, "licenceRequired": false, "guestVisible": false, "notes": "Items on top: the receipt plus 20%."},
     {"code": "GD-03", "trade": "handyman", "name": "Carpet or upholstery stain treatment", "ownerPriceDollars": 210, "tradiePayoutDollars": 180, "licenceRequired": false, "guestVisible": false},
     {"code": "GD-04", "trade": "locksmith", "name": "Lost key or remote replacement", "ownerPriceDollars": 165, "tradiePayoutDollars": 140, "licenceRequired": false},
     {"code": "GD-05", "trade": "handyman", "name": "Bed base or slat repair", "ownerPriceDollars": 165, "tradiePayoutDollars": 140, "licenceRequired": false},
@@ -85,6 +85,6 @@
     {"code": "OD-03", "trade": "handyman", "name": "Path and deck water blast", "ownerPriceDollars": 305, "tradiePayoutDollars": 260, "licenceRequired": false, "guestVisible": false, "needsLocalQuote": true},
     {"code": "OD-04", "trade": "handyman", "name": "Snow clearing, paths and driveway", "ownerPriceDollars": 210, "tradiePayoutDollars": 180, "licenceRequired": false, "seasonal": {"months": [6, 7, 8]}, "tags": ["queenstown-only"]},
     {"code": "OD-05", "trade": "handyman", "name": "Window clean, inside and out", "ownerPriceDollars": 190, "tradiePayoutDollars": 160, "licenceRequired": false, "guestVisible": false, "tags": ["recurring"]},
-    {"code": "OD-06", "trade": "handyman", "name": "Firewood delivery and stack", "ownerPriceDollars": 155, "tradiePayoutDollars": 130, "licenceRequired": false, "guestVisible": false, "seasonal": {"months": [4, 5, 6, 7]}, "notes": "Wood at cost on top."}
+    {"code": "OD-06", "trade": "handyman", "name": "Firewood delivery and stack", "ownerPriceDollars": 155, "tradiePayoutDollars": 130, "licenceRequired": false, "guestVisible": false, "seasonal": {"months": [4, 5, 6, 7]}, "notes": "Wood on top: the receipt plus 20%."}
   ]
 }

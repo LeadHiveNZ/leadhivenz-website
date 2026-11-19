@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { exifTakenAt, exifToDate } from "@/lib/files/exif";
 import { Icon } from "../ui/Icon";
 
-type Photo = { id: string; url: string };
+type Photo = { id: string; url: string; pdf: boolean };
 
 type Props = {
   kind: "property" | "report" | "before" | "completion" | "quote" | "receipt" | "licence" | "dispute";
@@ -24,6 +24,12 @@ type Props = {
   camera?: boolean;
   /** Sends where the phone is, and when the photo says it was taken, with each photo. */
   stamp?: boolean;
+  /**
+   * A document, not only a photo: a receipt may be a photo, a screenshot or a
+   * PDF from the phone's files, since trade invoices are often emailed
+   * (DECISIONS.md, 2026-11-20). Never camera-only.
+   */
+  documents?: boolean;
 };
 
 /** The time inside the photo file, read before it is shrunk (which drops it). */
@@ -75,7 +81,7 @@ async function shrink(file: File): Promise<Blob> {
 }
 
 /** Add photos to a form. Each one is sent as soon as it is chosen, so the form itself stays quick to send. */
-export function PhotoUploader({ kind, name = "uploadIds", label, hint, max = 6, token, offer, camera = false, stamp = false }: Props) {
+export function PhotoUploader({ kind, name = "uploadIds", label, hint, max = 6, token, offer, camera = false, stamp = false, documents = false }: Props) {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [busy, setBusy] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -105,9 +111,9 @@ export function PhotoUploader({ kind, name = "uploadIds", label, hint, max = 6, 
         if (token) body.set("token", token);
         if (offer) body.set("offer", offer);
         const response = await fetch("/api/uploads", { method: "POST", body });
-        const result = (await response.json().catch(() => ({}))) as { id?: string; url?: string; error?: string };
+        const result = (await response.json().catch(() => ({}))) as { id?: string; url?: string; type?: string; error?: string };
         if (!response.ok || !result.id || !result.url) throw new Error(result.error ?? "That photo could not be added. Please try again.");
-        setPhotos((current) => [...current, { id: result.id!, url: result.url! }]);
+        setPhotos((current) => [...current, { id: result.id!, url: result.url!, pdf: result.type === "application/pdf" }]);
       } catch (problem) {
         setError(problem instanceof Error ? problem.message : "That photo could not be added. Please try again.");
       } finally {
@@ -123,8 +129,12 @@ export function PhotoUploader({ kind, name = "uploadIds", label, hint, max = 6, 
       <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
         {photos.map((photo) => (
           <div key={photo.id} className="relative aspect-square overflow-hidden rounded-xl border border-line bg-tint">
-            {/* eslint-disable-next-line @next/next/no-img-element -- a private photo served by this site, not a public image to optimise */}
-            <img src={`${photo.url}${suffix}`} alt="Photo added" className="h-full w-full object-cover" />
+            {photo.pdf ? (
+              <span className="flex h-full w-full items-center justify-center text-sm font-bold text-ink">PDF added</span>
+            ) : (
+              // eslint-disable-next-line @next/next/no-img-element -- a private photo served by this site, not a public image to optimise
+              <img src={`${photo.url}${suffix}`} alt="Photo added" className="h-full w-full object-cover" />
+            )}
             <input type="hidden" name={name} value={photo.id} />
             <button
               type="button"
@@ -140,8 +150,10 @@ export function PhotoUploader({ kind, name = "uploadIds", label, hint, max = 6, 
         {photos.length + busy < max && (
           <label className="flex aspect-square cursor-pointer flex-col items-center justify-center gap-1 rounded-xl border-2 border-dashed border-line bg-white text-sm font-semibold text-brand hover:border-brand hover:bg-tint">
             <Icon name="camera" size={24} />
-            {camera ? "Take photo" : "Add photo"}
-            {camera ? (
+            {camera ? "Take photo" : documents ? "Add photo or PDF" : "Add photo"}
+            {documents ? (
+              <input ref={input} type="file" accept="image/*,application/pdf" className="sr-only" onChange={(event) => void add(event.target.files)} />
+            ) : camera ? (
               <input ref={input} type="file" accept="image/*" capture="environment" className="sr-only" onChange={(event) => void add(event.target.files)} />
             ) : (
               <input ref={input} type="file" accept="image/*" multiple className="sr-only" onChange={(event) => void add(event.target.files)} />

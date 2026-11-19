@@ -8,6 +8,8 @@ import { Icon } from "@/components/ui/Icon";
 import { Reveal } from "@/components/ui/Reveal";
 import type { PricePreview } from "@/lib/jobs/create";
 import type { JobView } from "@/lib/jobs/view";
+import type { JobPart } from "@/lib/jobs/parts";
+import { partsWords } from "@/lib/markets/display";
 import { formatMoney } from "@/lib/money";
 import { displayPhone } from "@/lib/phone";
 import { addressLine } from "@/lib/properties/service";
@@ -55,6 +57,16 @@ function explain(view: JobView): string {
   }
 }
 
+/** What the owner is told about one part: never the receipt itself. */
+function ownerPartWords(part: JobPart): string {
+  if (part.receiptStatus === "refunded") return "Refunded: we did not get the receipt";
+  if (part.status === "pending") return "Waiting for your yes";
+  if (part.kind === "list") return "Price list";
+  if (part.receiptStatus === "attached") return part.checkStatus === "flagged" || part.checkStatus === "held" ? "Receipt received: HostFix is checking it" : "Receipt checked by HostFix";
+  if (part.receiptStatus === "to_follow") return "Receipt to follow";
+  return "Merchant's price plus 20%";
+}
+
 /** One job, as its owner sees it. Used inside the app and on the one-tap page opened from a text. */
 export function OwnerJob({ view, now, code, flash = {}, prices }: Props) {
   const { job, market, property, tradie, money } = view;
@@ -69,6 +81,7 @@ export function OwnerJob({ view, now, code, flash = {}, prices }: Props) {
   // A flagged job waiting for the owner's answer (DECISIONS.md, 2026-11-19). Never worded as the tradie's fault.
   const askToCheck = job.status === "completed" && !money.dispute && (job.confirmStatus === "waiting" || job.confirmStatus === "staff_queue" || job.confirmStatus === "staff_held");
   const otherWork = view.workPhotos.filter((photo) => photo.kind !== "completion");
+  const visibleParts = view.parts.filter((part) => part.status !== "void" || part.receiptStatus === "refunded");
 
   return (
     <div className="space-y-5">
@@ -210,16 +223,18 @@ export function OwnerJob({ view, now, code, flash = {}, prices }: Props) {
       {pendingQuote && job.status === "awaiting_approval" && (
         <Card className="border-brand/30 sm:p-6">
           <SectionTitle>A quote needs your answer</SectionTitle>
-          <p className="text-lg text-ink">{pendingQuote.description}</p>
+          <p className="text-lg text-ink">{pendingQuote.labourCents > 0 ? pendingQuote.description : "Parts the tradie needs to buy"}</p>
           <div className="mt-2">
             <Facts
               rows={[
-                ...(pendingQuote.labourCents > 0 ? [{ label: "Work", value: fmt(pendingQuote.labourCents) }] : []),
-                ...(pendingQuote.partsCents > 0 ? [{ label: "Parts", value: fmt(pendingQuote.partsCents) }] : []),
-                { label: "This quote", value: <span className="text-xl">{fmt(pendingQuote.ownerTotalCents)}</span> },
+                ...view.lines
+                  .filter((line) => line.quoteId === pendingQuote.id && line.status === "pending")
+                  .map((line) => ({ label: line.kind === "parts" ? `Part: ${line.label}` : "Work", value: fmt(line.ownerCents) })),
+                { label: pendingQuote.labourCents > 0 ? "This quote" : "These parts", value: <span className="text-xl">{fmt(pendingQuote.ownerTotalCents)}</span> },
               ]}
             />
           </div>
+          {pendingQuote.labourCents === 0 && <p className="mt-2 text-sm text-muted">{partsWords(market)} Nothing is bought until you say yes.</p>}
           {quotePhotos.length > 0 && (
             <div className="mt-3">
               <p className="mb-2 text-sm font-semibold text-muted">What the tradie found</p>
@@ -337,6 +352,26 @@ export function OwnerJob({ view, now, code, flash = {}, prices }: Props) {
               </Notice>
             </div>
           )}
+        </Panel>
+      )}
+
+      {visibleParts.length > 0 && (
+        <Panel title="Parts">
+          <ul className="divide-y divide-line">
+            {visibleParts.map((part) => (
+              <li key={part.id} className="flex items-baseline justify-between gap-4 py-2.5">
+                <span className="min-w-0">
+                  <span className={part.status === "void" ? "text-muted line-through" : "text-ink"}>
+                    {part.description}
+                    {part.quantity > 1 ? ` × ${part.quantity}` : ""}
+                  </span>
+                  <span className="block text-sm text-muted">{ownerPartWords(part)}</span>
+                </span>
+                <span className={`tabular shrink-0 font-semibold ${part.status === "void" ? "text-muted line-through" : "text-ink"}`}>{fmt(part.ownerCents)}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-sm text-muted">{partsWords(market)}</p>
         </Panel>
       )}
 

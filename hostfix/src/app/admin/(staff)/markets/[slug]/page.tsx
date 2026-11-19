@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { saveMarketSettings, saveMenuItemAction, saveTierAction } from "@/app/actions/staff-admin";
+import { saveMarketSettings, saveMenuItemAction, savePriceListAction, saveTierAction } from "@/app/actions/staff-admin";
+import { listPriceList, type PriceListItem } from "@/lib/jobs/parts";
+import { LIST_PART_FEE_BPS, listPartLine } from "@/lib/jobs/pricing";
 import { ActionForm, Area, Checks, Field, Select, Tick } from "@/components/forms/ActionForm";
 import { SubmitButton } from "@/components/forms/SubmitButton";
 import { Card, Chip, Notice, PageTitle, SectionTitle } from "@/components/ui/Bits";
@@ -145,6 +147,26 @@ function MenuForm({ slug, currency, item }: { slug: string; currency: string; it
   );
 }
 
+function PartForm({ slug, currency, item }: { slug: string; currency: string; item: PriceListItem | null }) {
+  const key = item?.id ?? "new";
+  return (
+    <ActionForm action={savePriceListAction} className="space-y-4">
+      <input type="hidden" name="slug" value={slug} />
+      <input type="hidden" name="partItemId" value={item?.id ?? ""} />
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field label="Name the owner sees" name={`partName-${key}`} required maxLength={80} defaultValue={item?.name ?? ""} placeholder="Mixer tap cartridge (40 mm)" />
+        <Field label="Code" name={`partCode-${key}`} required maxLength={8} defaultValue={item?.code ?? ""} placeholder="PTP-02" hint="Two to four letters, a dash, a number." />
+        <Field label={`Owner pays for one, including GST (${currency})`} name={`partPrice-${key}`} required inputMode="decimal" maxLength={8} defaultValue={item ? centsToDollars(item.priceCents) : ""} hint={`The tradie gets it less ${LIST_PART_FEE_BPS / 100}%, which covers the card fee.`} />
+      </div>
+      <Area label="Where the price came from" name={`partSource-${key}`} rows={2} maxLength={400} defaultValue={item?.source ?? ""} hint="The shop, the product, the web address and the date, for whoever checks it next." />
+      <Tick name="partActive" label="On the price list" defaultChecked={item?.active ?? true} />
+      <SubmitButton variant="secondary" pendingLabel="Saving...">
+        {item ? "Save part" : "Add part"}
+      </SubmitButton>
+    </ActionForm>
+  );
+}
+
 export default async function MarketPage({ params, searchParams }: { params: Promise<{ slug: string }>; searchParams: SearchParams }) {
   const { slug } = await params;
   await requireAdminRole();
@@ -154,6 +176,7 @@ export default async function MarketPage({ params, searchParams }: { params: Pro
   if (!market) notFound();
   const tiers = await listTiers(db, market.slug);
   const menu = await listMenu(db, market.slug, { includeInactive: true });
+  const priceList = await listPriceList(db, market.slug, { includeInactive: true });
   const cover = await coverage(db, market.slug, dateKey(now(), market.timezone));
   const money = (cents: number) => formatMoney(cents, market.currency);
   const usedTrades = new Set(menu.filter((item) => item.active).map((item) => item.trade));
@@ -234,8 +257,8 @@ export default async function MarketPage({ params, searchParams }: { params: Pro
             <Field label="Call-out fee for off-menu work" name="diagnosisFee" required inputMode="decimal" maxLength={8} defaultValue={centsToDollars(market.diagnosisFeeCents)} hint="What the owner pays for a tradie to come and look." />
             <Field label="What the tradie gets of that call-out" name="diagnosisPayout" required inputMode="decimal" maxLength={8} defaultValue={centsToDollars(market.diagnosisPayoutCents)} />
             <Field label="Quotes above this need the owner's yes" name="approvalThreshold" required inputMode="decimal" maxLength={8} defaultValue={centsToDollars(market.approvalThresholdCents)} />
-            <Field label="Small parts included in a menu price, up to" name="partsIncluded" required inputMode="decimal" maxLength={8} defaultValue={centsToDollars(market.partsIncludedCents)} />
-            <Field label="Parts above this need the owner's yes" name="partsApproval" required inputMode="decimal" maxLength={8} defaultValue={centsToDollars(market.partsApprovalCents)} />
+            <Field label="Small parts included in every job's price, up to" hint="Shown to owners. A part off the price list costing this or less is never added to a job." name="partsIncluded" required inputMode="decimal" maxLength={8} defaultValue={centsToDollars(market.partsIncludedCents)} />
+            <Field label="Parts on one job above this need the owner's yes" hint="Below it, parts are added and the owner is texted at once. The property's overall limit applies too." name="partsApproval" required inputMode="decimal" maxLength={8} defaultValue={centsToDollars(market.partsApprovalCents)} />
           </div>
 
           <p className="border-t border-line pt-4 text-sm font-bold tracking-wide text-muted uppercase">Offers, hours and paying tradies</p>
@@ -311,6 +334,31 @@ export default async function MarketPage({ params, searchParams }: { params: Pro
           Once properties have joined a membership, its price is fixed. To change a price, add a new membership at the new price and untick &ldquo;Offered to new members&rdquo; on the old one. Members on the old one keep it, at
           the old price, until they switch. The promise hours and what is included can be changed at any time, and apply to members straight away.
         </p>
+      </section>
+
+      <section>
+        <SectionTitle>Parts price list ({priceList.filter((item) => item.active).length} parts)</SectionTitle>
+        <p className="mb-3 text-sm text-muted">
+          A part on this list is charged at its fixed price, as many as are fitted, with no receipt. Anything else is the receipt plus 20%. Small parts up to {money(market.partsIncludedCents)} are in the job&apos;s price.
+          Check new prices with the first tradies.
+        </p>
+        <div className="space-y-2">
+          {priceList.map((item) => (
+            <Reveal
+              key={item.id}
+              label={
+                <span className={item.active ? "" : "text-muted line-through"}>
+                  {item.name} <span className="font-normal text-muted">· owner {money(item.priceCents)} · tradie {money(listPartLine(item.name, item.priceCents, 1).tradieCents)}</span>
+                </span>
+              }
+            >
+              <PartForm slug={market.slug} currency={market.currency} item={item} />
+            </Reveal>
+          ))}
+          <Reveal label="Add a part to the price list">
+            <PartForm slug={market.slug} currency={market.currency} item={null} />
+          </Reveal>
+        </div>
       </section>
 
       <section>

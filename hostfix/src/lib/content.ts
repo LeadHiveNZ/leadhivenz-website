@@ -37,6 +37,8 @@ import { formatMoney } from "@/lib/money";
  *   {{callout}}                         the fee for a tradie to come and look at
  *                                        something that is not on the menu
  *   {{approval_limit}}                  quotes above this need the owner's yes
+ *   {{parts_included}}                  small parts up to this are in the price
+ *   {{parts_limit}}                     parts on a job above this need the owner's yes
  *   {{payout_days}}                     how long a tradie's money takes to
  *                                        reach their bank, for example
  *                                        "5 to 6 working days"
@@ -106,6 +108,8 @@ export function contentTokens(market: Market): Record<string, string> {
     after_hours_share: money(surchargeShare(market.afterHoursSurchargeCents, market.platformFeeBps)),
     callout: money(market.diagnosisFeeCents),
     approval_limit: money(market.approvalThresholdCents),
+    parts_included: money(market.partsIncludedCents),
+    parts_limit: money(market.partsApprovalCents),
     payout_days: payoutArrival(market.country),
   };
 }

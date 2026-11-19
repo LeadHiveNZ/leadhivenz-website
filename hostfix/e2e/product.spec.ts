@@ -98,6 +98,15 @@ test("a tradie takes a job from the link in a text, without signing in, and fini
   await page.waitForURL(/here=1/);
   await ready(page);
 
+  // Parts on a menu job (DECISIONS.md, 2026-11-20): a new tap cartridge from the price list, NZ$31.41, inside the no-ask limit.
+  await page.getByText("Add parts", { exact: true }).filter({ visible: true }).first().click();
+  const parts = page.locator("form", { has: page.getByRole("button", { name: "Add parts" }) });
+  await parts.getByLabel(/Mixer tap cartridge \(40 mm\)/).fill("1");
+  await parts.getByRole("button", { name: "Add parts" }).click();
+  await page.waitForURL(/parts=go/);
+  await ready(page);
+  await expect(shown(page, "Parts added").first()).toBeVisible();
+
   // A job cannot be finished without an after photo.
   const finish = page.locator("form", { has: page.getByRole("button", { name: "Job done" }) });
   await finish.getByRole("button", { name: "Job done" }).click();
@@ -111,13 +120,16 @@ test("a tradie takes a job from the link in a text, without signing in, and fini
   await ready(page);
   await expect(shown(page, "Job finished. Thank you.").first()).toBeVisible();
   // Finished a few seconds after arriving: under the 10 minutes expected, so the payment waits for the owner to confirm.
-  await expect(shown(page, /NZ\$200 is waiting for the owner to confirm the job, because job done came 0 minutes after arrived/).first()).toBeVisible();
+  // NZ$200 for the job and the cartridge's NZ$31.41 less 3% (NZ$0.94): NZ$230.47.
+  await expect(shown(page, /NZ\$230\.47 is waiting for the owner to confirm the job, because job done came 0 minutes after arrived/).first()).toBeVisible();
 
   // The owner was texted at each step, charged the fixed price, and asked to check the job, neutrally.
   const owner = await phone(page, "sam");
   await expect(owner.filter({ hasText: "Dave's Plumbing & Gas is booked for Lakeview Apartment, on site between" }).last()).toBeVisible();
   await expect(owner.filter({ hasText: "has arrived at Lakeview Apartment. Not there? Tell us on the job page" }).last()).toBeVisible();
-  const check = owner.filter({ hasText: '"Dripping tap or tap washer" at Lakeview Apartment is done, NZ$235 charged. We couldn\'t confirm how long the job took for this job. Can you check the photos and confirm it\'s fixed?' });
+  await expect(owner.filter({ hasText: "Dave's Plumbing & Gas needs Mixer tap cartridge (40 mm), NZ$31.41, within your NZ$150 no-ask limit." })).toHaveCount(1);
+  // NZ$235 for the job and NZ$31.41 for the part: NZ$266.41.
+  const check = owner.filter({ hasText: '"Dripping tap or tap washer" at Lakeview Apartment is done, NZ$266.41 charged. We couldn\'t confirm how long the job took for this job. Can you check the photos and confirm it\'s fixed?' });
   await expect(check).toHaveCount(1);
 
   // Opening the link changes nothing. The owner sees the before and after photos side by side, and presses the button.
@@ -346,6 +358,17 @@ test("people only see their own data", async ({ page, request }) => {
   await be(page, "Maria (dispatcher)");
   await open(page, `/admin/jobs/${jobId}`);
   await expect(shown(page, "Lakeview Apartment").first().first()).toBeVisible();
+  // A parts receipt opens for the team (DECISIONS.md, 2026-11-20), and never for the owner, who sees "Receipt checked by HostFix".
+  const receiptPath = await page.getByRole("link", { name: /Open the receipt/ }).filter({ visible: true }).first().getAttribute("href");
+  expect(receiptPath).toMatch(/^\/files\/[0-9a-f-]{36}$/);
+  expect((await page.request.get(`${BASE}${receiptPath}`)).status()).toBe(200);
+  await be(page, "Sam Taylor");
+  expect((await page.request.get(`${BASE}${receiptPath}`)).status()).toBe(404);
+  await open(page, jobPath);
+  await expect(shown(page, "Kitchen waste trap, 40 mm").first()).toBeVisible();
+  await expect(shown(page, "Receipt checked by HostFix").first()).toBeVisible();
+  await expect(page.locator(`a[href="${receiptPath}"]`)).toHaveCount(0);
+  await be(page, "Maria (dispatcher)");
   for (const path of ["/admin/markets", "/admin/markets/queenstown", "/admin/staff", "/admin/audit", "/admin/leads"]) {
     await page.goto(`${BASE}${path}`);
     await expect(page).toHaveURL(`${BASE}/admin/queue`);

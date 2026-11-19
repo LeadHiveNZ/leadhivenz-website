@@ -2,6 +2,9 @@ import type { Metadata } from "next";
 import { brand } from "@config/brand";
 import { LegalPage, Section } from "@/components/LegalPage";
 import { launchMarket } from "@config/markets";
+import { OLD_RECEIPT_DAYS, RECEIPT_TO_FOLLOW_DAYS } from "@/lib/jobs/parts";
+import { LIST_PART_FEE_BPS } from "@/lib/jobs/pricing";
+import { formatMoney } from "@/lib/money";
 import { FAR_METRES, PROPOSAL_DAYS, WINDOW_HOURS } from "@/lib/jobs/arrival";
 import {
   FLAG_DAYS, FLAG_REVIEW, MIN_ARRIVALS, NO_SHOW_DAYS, NO_SHOW_REVIEW, ON_TIME_TARGET, RECENT_ARRIVALS, TRUSTED_FINISHED_JOBS,
@@ -17,10 +20,11 @@ export const metadata: Metadata = {
   description: `How working with ${brand.name} works: the offers, the prices, the pay, and what we expect from each other.`,
 };
 
-const UPDATED = "19 November 2026";
+const UPDATED = "20 November 2026";
 
 export default function Page() {
   const n = brand.name;
+  const money = (cents: number) => formatMoney(cents, launchMarket.currency);
   return (
     <LegalPage
       title="Tradie agreement"
@@ -122,14 +126,27 @@ export default function Page() {
           not approved is at your own cost.
         </p>
         <p>
-          Small parts are included in the menu price. Bigger parts are charged to the owner at cost when you add them to the job with the receipt;
-          above a set amount the app asks the owner first.
+          <strong>Parts</strong> can be added on any job, with <strong>Add parts</strong>. Small parts up to {money(launchMarket.partsIncludedCents)} are in the job&rsquo;s price.
+          A part on the price list is charged to the owner at its list price, and you get it less {LIST_PART_FEE_BPS / 100}% (which covers the card fee); no receipt is needed. Anything
+          else is charged at what you paid plus 20% for sourcing it, and you get what you paid plus 17% (the 15% platform fee comes off the 20% only): you enter the receipt&rsquo;s
+          total including GST, the amount of it used on this job, and upload the receipt (a photo, a screenshot or the PDF). Only our team sees the receipt.
+        </p>
+        <p>
+          Up to {money(launchMarket.partsApprovalCents)} of parts on a job (and within the property&rsquo;s overall limit) are added straight away and the owner is told. Above
+          that the owner is asked in the app: do not buy them until they say yes. If you do not have the receipt yet at Job done, tick that it will follow: your payment for the
+          job waits for it, and if it has not come within {RECEIPT_TO_FOLLOW_DAYS} days the part is refunded to the owner out of your payment and we text you. A receipt dated more
+          than {OLD_RECEIPT_DAYS} days before the job, an amount bigger than the receipt, or the same receipt used for more than its total on several jobs, holds your payment until our
+          team has looked at it.
+        </p>
+        <p>
+          If a part you fitted is faulty, you deal with the supplier&rsquo;s warranty; your labour is covered by the 30-day callback as usual. A part the owner supplied is not yours
+          to put right if it fails. If a job is cancelled after the owner approved work, parts you had already bought for it and cannot return are paid at the receipt&rsquo;s cost.
         </p>
       </Section>
 
       <Section n={6} title="Pay">
         <ul>
-          <li>Your share is the amount in the offer. On an urgent or after-hours job, your share of the surcharge is in that amount, like the rest of the price: the surcharge less the 15% platform fee. Approved parts are paid back to you in full, at cost.</li>
+          <li>Your share is the amount in the offer. On an urgent or after-hours job, your share of the surcharge is in that amount, like the rest of the price: the surcharge less the 15% platform fee. Parts are paid as in section 5: the list price less 3%, or what you paid plus 17%.</li>
           <li>
             <strong>The urgent share is paid only if you tap I have arrived by the urgent deadline</strong> shown in the offer. After the deadline the
             urgent surcharge is not charged to the owner at all, so there is no share of it to pay. The rest of the job is paid as normal.

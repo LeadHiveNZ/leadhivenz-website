@@ -143,49 +143,41 @@ describe("tax inside a price", () => {
 });
 
 describe("a quote", () => {
-  it("keeps the platform fee on the work and passes parts on at cost", () => {
-    const quote = quoteAmounts(market, { description: "Replace cistern", labourCents: 20000, partsCents: 6000 });
-    expect(quote.ownerTotalCents).toBe(26000);
-    expect(quote.tradieTotalCents).toBe(17000 + 6000);
+  it("keeps the platform fee on the work: NZ$200 of work pays the tradie NZ$170", () => {
+    const quote = quoteAmounts(market, { description: "Replace cistern", labourCents: 20000 });
+    expect(quote.ownerTotalCents).toBe(20000);
+    expect(quote.tradieTotalCents).toBe(17000);
     expect(quote.platformCents).toBe(3000);
-    expect(quote.lines.map((l) => l.kind)).toEqual(["quote", "parts"]);
+    expect(quote.lines.map((l) => l.kind)).toEqual(["quote"]);
   });
 
   it("goes ahead without asking at or under NZ$600", () => {
-    expect(quoteAmounts(market, { description: "x", labourCents: 60000, partsCents: 0 }).needsApproval).toBe(false);
-    expect(quoteAmounts(market, { description: "x", labourCents: 50000, partsCents: 10000 }).needsApproval).toBe(false);
+    expect(quoteAmounts(market, { description: "x", labourCents: 60000 }).needsApproval).toBe(false);
   });
 
   it("needs the owner's approval over NZ$600", () => {
-    const quote = quoteAmounts(market, { description: "x", labourCents: 60001, partsCents: 0 });
+    const quote = quoteAmounts(market, { description: "x", labourCents: 60001 });
     expect(quote.needsApproval).toBe(true);
     expect(quote.approvalReason).toContain("limit");
   });
 
-  it("counts earlier approved quotes on the same job towards the limit", () => {
+  it("counts earlier approved quotes and parts on the same job towards the limit", () => {
     // NZ$400 already approved. Another NZ$200 lands exactly on the limit and goes ahead. NZ$250 goes over it.
-    expect(quoteAmounts(market, { description: "x", labourCents: 20000, partsCents: 0, alreadyApprovedCents: 40000 }).needsApproval).toBe(false);
-    const quote = quoteAmounts(market, { description: "x", labourCents: 25000, partsCents: 0, alreadyApprovedCents: 40000 });
+    expect(quoteAmounts(market, { description: "x", labourCents: 20000, alreadyApprovedCents: 40000 }).needsApproval).toBe(false);
+    const quote = quoteAmounts(market, { description: "x", labourCents: 25000, alreadyApprovedCents: 40000 });
     expect(quote.needsApproval).toBe(true);
   });
 
   it("uses the owner's own limit when they have set one", () => {
-    expect(quoteAmounts(market, { description: "x", labourCents: 20000, partsCents: 0, limitCents: 15000 }).needsApproval).toBe(true);
+    expect(quoteAmounts(market, { description: "x", labourCents: 20000, limitCents: 15000 }).needsApproval).toBe(true);
     // An owner who has set NZ$1,000 lets through a quote the market's own NZ$600 would have stopped.
-    expect(quoteAmounts(market, { description: "x", labourCents: 70000, partsCents: 0, limitCents: 100000 }).needsApproval).toBe(false);
-  });
-
-  it("needs approval for expensive parts even when the total is under the limit", () => {
-    const quote = quoteAmounts(market, { description: "x", labourCents: 0, partsCents: 15001 });
-    expect(quote.needsApproval).toBe(true);
-    expect(quote.approvalReason).toContain("parts");
-    expect(quoteAmounts(market, { description: "x", labourCents: 0, partsCents: 15000 }).needsApproval).toBe(false);
+    expect(quoteAmounts(market, { description: "x", labourCents: 70000, limitCents: 100000 }).needsApproval).toBe(false);
   });
 
   it("refuses an empty quote and anything that is not whole cents", () => {
-    expect(() => quoteAmounts(market, { description: "x", labourCents: 0, partsCents: 0 })).toThrow();
-    expect(() => quoteAmounts(market, { description: "x", labourCents: 10.5, partsCents: 0 })).toThrow();
-    expect(() => quoteAmounts(market, { description: "x", labourCents: -1, partsCents: 0 })).toThrow();
+    expect(() => quoteAmounts(market, { description: "x", labourCents: 0 })).toThrow();
+    expect(() => quoteAmounts(market, { description: "x", labourCents: 10.5 })).toThrow();
+    expect(() => quoteAmounts(market, { description: "x", labourCents: -1 })).toThrow();
   });
 });
 

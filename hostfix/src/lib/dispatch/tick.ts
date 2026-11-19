@@ -17,6 +17,7 @@ import { randomToken } from "@/lib/ids";
 import { dateKey, formatDate } from "@/lib/time";
 import { alertNotTakenYet, expireDueOffers, expireLaterTimes } from "./cascade";
 import { settleUnansweredChecks } from "@/lib/jobs/confirm";
+import { refundMissingReceipts } from "@/lib/jobs/parts";
 import type { Geocoder } from "@/lib/maps/geocode";
 import { fillMissingPins } from "@/lib/properties/pin";
 
@@ -37,6 +38,8 @@ import { fillMissingPins } from "@/lib/properties/pin";
  *   cards to try again, payouts due   charged and paid
  *   a flagged job the owner has not   paid if the tradie is trusted, otherwise
  *     confirmed in 48 hours           to the dispatcher to approve or hold
+ *   a parts receipt promised at Job   the part refunded to the owner out of the
+ *     done, 7 days on and not come    held payment, and the tradie told
  *   quotes nobody answered            a reminder, then the dispatcher
  *   properties with no map pin        looked up from their address, a few at a time
  *   licences running out              the tradie and the admin told
@@ -310,6 +313,7 @@ export async function runTick(db: Db, deps: TickDeps): Promise<TickReport> {
   await step("at_risk", () => flagAtRisk(db));
   await step("windows", () => markMissedWindows(db));
   await step("checks", () => settleUnansweredChecks(db));
+  await step("receipts_refunded", () => refundMissingReceipts(db, deps.gatewayFor));
   await step("credits_applied", () => applyPendingCredits(db, deps.gatewayFor));
   await step("cards_charged", () => chargeDuePayments(db, deps.gatewayFor));
   await step("payouts_sent", () => releaseDuePayouts(db, deps.gatewayFor));

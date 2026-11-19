@@ -41,6 +41,10 @@ No. Passing on a job never leads to fewer offers or to being removed. What count
 
 By bank transfer, automatically. You set up your bank details once. Your payment is sent within two days of each job and takes a few working days to reach your bank. A job the app couldn't confirm waits for the owner to check the before and after photos, or for our team if the owner doesn't answer. If an owner's card is declined, we chase it, not you, and you are paid as soon as it goes through.
 
+### What about parts?
+
+Small parts up to {{parts_included}} are in the job's price. Common parts are on the price list at a fixed price: you get the list price less 3%, no receipt needed. Anything else is charged at the merchant's price plus 20% for sourcing it, and you get what you paid plus 17%: upload the receipt as a photo, a screenshot or the PDF. Above {{parts_limit}} of parts on a job, the owner says yes in the app before you buy.
+
 ### When do you start?
 
 We're signing up one tradie per trade first. Put your name down and we'll give you a call.

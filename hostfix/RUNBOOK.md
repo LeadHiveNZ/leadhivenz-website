@@ -114,6 +114,16 @@ tradie is not yet trusted (10 finished jobs and no other flags in 90 days). The 
    becomes a problem you settle, with a refund if needed. Never tell either side the tradie cheated: say we
    could not confirm the job.
 
+### Check a parts receipt
+**Means.** A tradie added a part that is not on the price list, and its receipt needs a person: it is dated
+more than 90 days before the job, the amount for the job is more than the receipt's total, or the same
+receipt has been used on other jobs for more than its total. The tradie's payment is held. The owner never
+sees receipts: an owner cannot judge one.
+
+**Do.** Open the job and the receipt (under Parts). If the part and the amount are right (a trade account
+invoice can cover several jobs), press **Approve the receipt**. If not, press **Hold the payment** and ring
+the tradie. Never tell the owner the tradie did anything wrong.
+
 ### Tradie's jobs keep being flagged
 **Means.** 3 or more of a tradie's jobs in 90 days could not be confirmed. Their page shows it too.
 
@@ -205,6 +215,22 @@ company, or someone made a refund in Stripe instead of on the job page.
 **Do.** Read the note and tell the admin.
 
 ---
+
+### Parts, in one minute (DECISIONS.md, 2026-11-20)
+- Small parts up to NZ$30 are in the price. Common parts are on the price list (More > Markets) at a fixed
+  price. Anything else is the merchant's price plus 20%. Prices include GST. Never say "retail" to an owner.
+- Up to NZ$150 of parts on a job are added without asking and the owner is texted; above that the owner says
+  yes in the app before the tradie buys.
+- A receipt "to follow" holds the tradie's payment. After 7 days without it, the part is refunded to the owner
+  automatically and the tradie is texted.
+- **Fitted parts are not refunded unless they are removed.** If an owner wants a part refunded, the tradie
+  takes it out first; then settle it as a problem with a part refund.
+- An owner who supplies a part pays no parts charge, and a fault in that part is not covered by the tradie's
+  30-day callback. A faulty part the tradie supplied: the tradie deals with the supplier's warranty; the labour
+  is covered by the 30-day callback as usual.
+- A job cancelled after the owner approved work, with parts already bought that cannot go back: on the job
+  page, **Charge parts bought before it was cancelled**, at the receipt's cost with nothing added. Check the
+  receipt first.
 
 ## Other things you will be asked to do
 

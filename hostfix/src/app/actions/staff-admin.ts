@@ -9,7 +9,7 @@ import { addStaff, removeStaff, StaffError } from "@/lib/auth/staff";
 import { getDb } from "@/lib/db";
 import { baseUrl } from "@/lib/env";
 import { dollarsToCents, list, problem, text, ticked, type FormState } from "@/lib/forms";
-import { AdminInputError, createMarket, saveMenuItem, saveTier, updateMarket, type MarketPatch } from "@/lib/markets/admin";
+import { AdminInputError, createMarket, saveMenuItem, savePriceListItem, saveTier, updateMarket, type MarketPatch } from "@/lib/markets/admin";
 import { MARKETS_TAG } from "@/lib/markets/public";
 import { emails } from "@/lib/notify/messages";
 import { enqueue } from "@/lib/notify/outbox";
@@ -237,6 +237,28 @@ export async function saveMenuItemAction(_previous: FormState, formData: FormDat
   }
   refreshMarkets(slug);
   return { done: id ? "Saved. The new price applies to jobs logged from now on." : "Job added to the menu." };
+}
+
+/** A part on the market's price list (DECISIONS.md, 2026-11-20). Admins only. */
+export async function savePriceListAction(_previous: FormState, formData: FormData): Promise<FormState> {
+  const staff = await requireAdminRole();
+  const slug = text(formData, "slug");
+  const id = text(formData, "partItemId");
+  const suffix = id || "new";
+  const errors: Record<string, string> = {};
+  const price = amount(formData, `partPrice-${suffix}`, errors);
+  if (Object.keys(errors).length > 0) return problem(formData, "Please check the price. Nothing was saved.", errors);
+  try {
+    await savePriceListItem(await getDb(), slug, {
+      id: id || null, code: text(formData, `partCode-${suffix}`), name: text(formData, `partName-${suffix}`), priceCents: price!,
+      active: ticked(formData, "partActive"), source: text(formData, `partSource-${suffix}`),
+    }, staff.actor);
+  } catch (error) {
+    if (error instanceof AdminInputError) return problem(formData, `${error.message} Nothing was saved.`);
+    throw error;
+  }
+  refreshMarkets(slug);
+  return { done: id ? "Saved. The new price applies to parts added from now on." : "Part added to the price list." };
 }
 
 export async function addMarket(_previous: FormState, formData: FormData): Promise<FormState> {

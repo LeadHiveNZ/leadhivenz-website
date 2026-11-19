@@ -81,6 +81,14 @@ export const texts = {
   payoutCheckHeld: (o: { number: number }) =>
     `${B} job ${o.number}: we are checking this job before paying it, so your payment is on hold for now. One of our team will be in touch.`,
 
+  /** The team is checking a receipt (DECISIONS.md, 2026-11-20). Neutral, like every hold. */
+  receiptCheckHeld: (o: { number: number }) =>
+    `${B} job ${o.number}: we are checking a receipt on this job, so your payment is on hold for now. One of our team will be in touch.`,
+
+  /** No receipt 7 days after Job done: the part came off the job. */
+  receiptMissingTradie: (o: { number: number; what: string; amountCents: number; currency: string; link: string | null }) =>
+    `${B} job ${o.number}: no receipt came for "${clip(o.what, 40)}" within 7 days, so it has been refunded to the owner and ${money(o.amountCents, o.currency)} comes off your payment. The rest is on its way.${o.link ? ` ${o.link}` : ""}`,
+
   tradieApproved: (o: { market: string; link: string }) =>
     `${B}: you are approved for jobs in ${o.market}. Add your bank details so we can pay you: ${o.link}`,
 
@@ -141,6 +149,22 @@ export const texts = {
    */
   jobCheck: (o: { title: string; property: string; totalCents?: number | null; currency?: string; flags: string[]; link: string }) =>
     `${B}: "${clip(o.title, 30)}" at ${clip(o.property, 22)} is done${o.totalCents && o.currency ? `, ${money(o.totalCents, o.currency)} charged` : ""}. We couldn't confirm ${checkSubject(o.flags)} for this job. Can you check the photos and confirm it's fixed? ${o.link}`,
+
+  /** Parts added inside the owner's no-ask limit (DECISIONS.md, 2026-11-20). */
+  partsAdded: (o: { tradie: string; what: string; amountCents: number; currency: string; limitCents: number; link: string }) =>
+    `${B}: ${clip(o.tradie, 26)} needs ${clip(o.what, 72)}, ${money(o.amountCents, o.currency)}, within your ${money(o.limitCents, o.currency)} no-ask limit. Details: ${o.link}`,
+
+  /** Parts above the no-ask limit: the owner says yes on the job page (a button, never the link). */
+  partsNeedApproval: (o: { tradie: string; what: string; amountCents: number; currency: string; link: string }) =>
+    `${B}: ${clip(o.tradie, 26)} needs ${clip(o.what, 72)}, ${money(o.amountCents, o.currency)}. They will not buy it until you say yes: ${o.link}`,
+
+  /** The part whose receipt never came, refunded. */
+  receiptMissingOwner: (o: { number: number; what: string; amountCents: number; currency: string; charged: boolean }) =>
+    `${B}: on job ${o.number}, "${clip(o.what, 40)}" (${money(o.amountCents, o.currency)}) has been ${o.charged ? "refunded to your card" : "taken off your bill"}, because we did not get its receipt.`,
+
+  /** A cancelled job charged only for parts already bought for it that could not go back. */
+  boughtPartsCharged: (o: { number: number; property: string; totalCents: number; currency: string; link: string }) =>
+    `${B}: job ${o.number} at ${clip(o.property, 24)} was cancelled after parts were bought for it that cannot go back. ${money(o.totalCents, o.currency)}, their cost with nothing added, is charged to your card: ${o.link}`,
 
   jobCancelledOwner: (o: { title: string; property: string }) =>
     `${B}: "${clip(o.title, 40)}" at ${clip(o.property, 28)} has been cancelled. You have not been charged.`,

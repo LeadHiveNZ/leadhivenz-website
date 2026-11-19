@@ -47,7 +47,9 @@ export type ExceptionKind =
   /** A flagged job whose owner did not answer in 48 hours, by a tradie who is not yet trusted: Approve or Hold the payment. */
   | "job_check"
   /** A tradie has had 3 flagged jobs in 90 days: look at them and talk to the tradie. Never removed automatically. */
-  | "tradie_flags";
+  | "tradie_flags"
+  /** A parts receipt the checks flagged: old, for more than its total, or used twice. Holds the payment until Approve or Hold. */
+  | "receipt_check";
 
 /** The ones worth a text to the founder as well as an email. */
 const URGENT: ExceptionKind[] = ["nobody_accepted", "missed_window", "dispute", "chargeback", "not_taken_yet", "owner_says_absent", "no_show"];
@@ -227,6 +229,7 @@ export const EXCEPTION_LABELS: Record<ExceptionKind, string> = {
   tradie_review: "Tradie to talk to",
   job_check: "Check a job, then pay or hold",
   tradie_flags: "Tradie's jobs keep being flagged",
+  receipt_check: "Check a parts receipt",
 };
 
 /** One line on what to do about each kind. The runbook (RUNBOOK.md) has the longer version. */
@@ -253,4 +256,5 @@ export const EXCEPTION_ACTIONS: Record<ExceptionKind, string> = {
   tradie_review: "This tradie has not turned up for 3 accepted jobs in 90 days. Talk to them before deciding anything. Only a person can pause or remove a tradie.",
   job_check: "The app could not confirm this job (location, photos or time on site) and the owner did not answer. Look at the before and after photos. If it looks done, press Approve. If not, press Hold and ring the owner and the tradie.",
   tradie_flags: "This tradie has had 3 or more jobs in 90 days the app could not confirm. Look at those jobs, then talk to them. Only a person can pause or remove a tradie.",
+  receipt_check: "Open the job and the receipt. If the part and amount are right, press Approve. If not, press Hold and ring the tradie. The owner never sees the receipt.",
 };

@@ -382,3 +382,49 @@ export async function createMarket(db: Db, input: NewMarket, actor: string): Pro
     await audit(tx, { actor, action: "market.created", entity: "market", entityId: slug, detail: { name: input.name, country: input.country, copied_from: input.copyFrom, tiers: copiedTiers, menu_items: copiedMenu } });
   });
 }
+
+// ---------------------------------------------------------------------------
+// THE PARTS PRICE LIST (DECISIONS.md, 2026-11-20)
+// ---------------------------------------------------------------------------
+
+export type PriceListInput = { id: string | null; code: string; name: string; priceCents: number; active: boolean; source: string };
+
+/**
+ * Adds or changes one part on a market's price list. A new price applies to
+ * parts added from now on: parts already on a job keep the price they were
+ * added at.
+ */
+export async function savePriceListItem(db: Db, market: string, input: PriceListInput, actor: string): Promise<string> {
+  const code = input.code.trim().toUpperCase();
+  if (!/^[A-Z]{2,4}-[0-9]{2,3}$/.test(code)) throw new AdminInputError("The code must look like PTP-01: two to four letters, a dash, then a number.");
+  const name = input.name.replace(/\s+/g, " ").trim();
+  if (name.length < 2 || name.length > 80) throw new AdminInputError("The part needs a name of up to 80 characters.");
+  if (!Number.isInteger(input.priceCents) || input.priceCents <= 0 || input.priceCents > 1_000_000) throw new AdminInputError("The price must be more than zero.");
+  const source = input.source.trim().slice(0, 400);
+  let id = input.id;
+  try {
+    if (id) {
+      if (!isUuid(id)) throw new AdminInputError("That part is not on the list.");
+      const rows = await db.query(
+        `update public.price_list_items set code = $3, name = $4, price_cents = $5, active = $6, source = $7, updated_at = $8::timestamptz
+          where market = $1 and id = $2::uuid returning id`,
+        [market, id, code, name, input.priceCents, input.active, source, now().toISOString()],
+      );
+      if (rows.length === 0) throw new AdminInputError("That part is not on the list.");
+    } else {
+      const rows = await db.query<{ id: string }>(
+        `insert into public.price_list_items (market, code, name, price_cents, active, source, updated_at, sort)
+         values ($1, $2, $3, $4, $5, $6, $7::timestamptz, (select coalesce(max(sort), 0) + 10 from public.price_list_items where market = $1))
+         returning id`,
+        [market, code, name, input.priceCents, input.active, source, now().toISOString()],
+      );
+      id = rows[0]!.id;
+    }
+  } catch (error) {
+    if (error instanceof AdminInputError) throw error;
+    if (typeof error === "object" && error !== null && (error as { code?: string }).code === "23505") throw new AdminInputError(`There is already a part with the code ${code}.`);
+    throw error;
+  }
+  await audit(db, { actor, action: "price_list.saved", entity: "market", entityId: market, amount: input.priceCents, detail: { code, name, price: input.priceCents, active: input.active } });
+  return id!;
+}

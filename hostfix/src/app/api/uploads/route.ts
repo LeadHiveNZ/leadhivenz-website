@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { NextResponse, type NextRequest } from "next/server";
 import { offerFromLink } from "@/lib/access/links";
 import { currentStaff, currentViewer } from "@/lib/auth/current";
@@ -112,6 +113,8 @@ export async function POST(request: NextRequest) {
   const upload = await recordUpload(db, {
     kind: wanted, storageKey: key, contentType: file.type, bytes: bytes.byteLength, uploadedBy,
     lat: stamped ? numberField(form, "lat") : null, lng: stamped ? numberField(form, "lng") : null, takenAt: stamped ? takenAtField(form) : null,
+    // The same receipt sent for two jobs is noticed by its fingerprint (DECISIONS.md, 2026-11-20).
+    sha256: createHash("sha256").update(bytes).digest("hex"),
   });
-  return NextResponse.json({ id: upload.id, url: `/files/${upload.id}` });
+  return NextResponse.json({ id: upload.id, url: `/files/${upload.id}`, type: file.type });
 }

@@ -10,6 +10,7 @@ import { formatClock } from "@/lib/time";
 import { openSettlement } from "@/lib/billing/settle";
 import { loadContext, offerUrl, ownerJobUrl } from "./context";
 import { arrivedOnTime, linesToDrop, surchargeVerdict } from "./arrival";
+import { receiptsAtJobDone } from "./parts";
 import { checkTap, chooseReference, jobFlags, minutesOnSite, photoIsStale, pointFrom, tooQuick } from "./checks";
 import { noAccessLines, quoteAmounts } from "./pricing";
 import { getQuote, insertLines, listLines, lockJob, recalcTotals, rowToQuote } from "./store";
@@ -182,12 +183,14 @@ export async function reportTradieAbsent(db: Db, jobId: string, actor: string): 
   });
 }
 
-export type QuoteInput = { description: string; labourCents: number; partsCents: number; uploadIds: string[] };
+/** Extra work, priced by the tradie. Parts are added on their own (src/lib/jobs/parts.ts). */
+export type QuoteInput = { description: string; labourCents: number; uploadIds: string[] };
 export type QuoteResult = { ok: true; job: Job; quote: Quote } | { ok: false; message: string };
 
 /**
  * The tradie prices extra or off-menu work. Under the limit it goes ahead and
- * the owner is told. Over it, nothing starts until the owner says yes.
+ * the owner is told. Over it, nothing starts until the owner says yes. Parts
+ * are added separately, on any job (addParts, src/lib/jobs/parts.ts).
  */
 export async function submitQuote(db: Db, jobId: string, tradieId: string, input: QuoteInput): Promise<QuoteResult> {
   return db.tx(async (tx) => {
@@ -197,10 +200,10 @@ export async function submitQuote(db: Db, jobId: string, tradieId: string, input
     if (job.status !== "on_site") return { ok: false, message: "Tap Arrived first, then add the quote." };
     const description = input.description.replace(/\s+/g, " ").trim();
     if (description.length < 3) return { ok: false, message: "Say in a few words what the extra work is." };
-    if (!Number.isInteger(input.labourCents) || !Number.isInteger(input.partsCents) || input.labourCents < 0 || input.partsCents < 0 || input.labourCents + input.partsCents <= 0) {
-      return { ok: false, message: "Enter a price for the work, for parts, or both." };
+    if (!Number.isInteger(input.labourCents) || input.labourCents <= 0) {
+      return { ok: false, message: "Enter your price for the work. Parts are added with \"Add parts\"." };
     }
-    if (input.labourCents + input.partsCents > 2_000_000) return { ok: false, message: "That is more than can be quoted here. Contact us about this job." };
+    if (input.labourCents > 2_000_000) return { ok: false, message: "That is more than can be quoted here. Contact us about this job." };
 
     const context = await loadContext(tx, job);
     const { market, property, owner, tradie } = context;
@@ -209,7 +212,7 @@ export async function submitQuote(db: Db, jobId: string, tradieId: string, input
       [jobId],
     );
     const amounts = quoteAmounts(market, {
-      description, labourCents: input.labourCents, partsCents: input.partsCents,
+      description, labourCents: input.labourCents,
       limitCents: property.spendLimitCents, alreadyApprovedCents: Number(approved[0]?.total ?? 0),
     });
     const at = now();
@@ -219,7 +222,7 @@ export async function submitQuote(db: Db, jobId: string, tradieId: string, input
        values ($1::timestamptz, $2::uuid, $3::uuid, $4, $5, $6, $7, $8, $9, $10, $11::timestamptz, $12)
        returning *`,
       [
-        at.toISOString(), jobId, tradieId, description, input.labourCents, input.partsCents, amounts.ownerTotalCents, amounts.tradieTotalCents,
+        at.toISOString(), jobId, tradieId, description, input.labourCents, 0, amounts.ownerTotalCents, amounts.tradieTotalCents,
         amounts.needsApproval, amounts.needsApproval ? "pending" : "auto_approved", amounts.needsApproval ? null : at.toISOString(),
         amounts.needsApproval ? null : "system",
       ],
@@ -265,6 +268,8 @@ export async function decideQuote(db: Db, quoteId: string, approve: boolean, act
       quoteId, approve ? "approved" : "declined", at.toISOString(), actor,
     ]);
     await tx.query("update public.job_lines set status = $2 where quote_id = $1::uuid and status = 'pending'", [quoteId, approve ? "active" : "void"]);
+    // Parts asked about first follow the answer (DECISIONS.md, 2026-11-20).
+    await tx.query("update public.job_parts set status = $2 where quote_id = $1::uuid and status = 'pending'", [quoteId, approve ? "active" : "void"]);
     if (job.status === "awaiting_approval") await tx.query("update public.jobs set status = 'on_site' where id = $1::uuid", [job.id]);
     await recalcTotals(tx, job.id, context.market.taxRate, context.market.taxRegistered);
     await resolveExceptionsFor(tx, job.id, ["quote_waiting"], approve ? "Owner approved the quote" : "Owner declined the quote");
@@ -293,6 +298,8 @@ export type CompleteInput = {
   /** Where the phone was when the tradie tapped Job done (or Could not get in). */
   lat?: number | null;
   lng?: number | null;
+  /** "I will send the receipt later" for an off-list part with no receipt yet. */
+  receiptsToFollow?: boolean;
 };
 
 async function finish(db: Db, job: Job, tradieId: string, outcome: "done" | "diagnosis_only" | "no_access", input: CompleteInput): Promise<StepResult> {
@@ -386,6 +393,9 @@ export async function completeJob(db: Db, jobId: string, tradieId: string, input
     if (job.status === "completed") return { ok: true, job };
     if (job.status === "awaiting_approval") return { ok: false, message: "The owner has not answered your quote yet. Wait for their answer before finishing." };
     if (job.status !== "on_site") return { ok: false, message: "Tap Arrived first, then finish the job." };
+    // An off-list part needs its receipt, or the tradie's word that it will follow (DECISIONS.md, 2026-11-20).
+    const receipts = await receiptsAtJobDone(tx, jobId, input.receiptsToFollow ?? false);
+    if (!receipts.ok) return { ok: false, message: receipts.message };
     // Off-menu work with no approved quote is a call-out and diagnosis only.
     const lines = await listLines(tx, jobId);
     const didWork = !job.offMenu || lines.some((line) => line.kind === "quote" && line.status === "active");
@@ -406,6 +416,7 @@ export async function reportNoAccess(db: Db, jobId: string, tradieId: string, in
     const active = (await listLines(tx, jobId)).filter((line) => line.status === "active");
     await tx.query("update public.quotes set status = 'withdrawn' where job_id = $1::uuid and status = 'pending'", [jobId]);
     await tx.query("update public.job_lines set status = 'void' where job_id = $1::uuid and status in ('active', 'pending')", [jobId]);
+    await tx.query("update public.job_parts set status = 'void' where job_id = $1::uuid and status in ('active', 'pending')", [jobId]);
     await insertLines(tx, jobId, noAccessLines(context.market, active), { at });
     return finish(tx, job, tradieId, "no_access", input);
   });

@@ -39,3 +39,13 @@ export function tierLine(tier: MembershipTier, market: Pick<Market, "currency" |
 export function tierPriceLabel(tier: Pick<MembershipTier, "monthlyPriceCents">, currency: string): string {
   return tier.monthlyPriceCents === 0 ? "Free to join" : `${formatMoney(tier.monthlyPriceCents, currency)} a month`;
 }
+
+/**
+ * How parts are priced, in the same words on every owner page, the terms and
+ * the price list email (DECISIONS.md, 2026-11-20). Never "retail" or "about
+ * retail": the price list is a fixed price, and anything else is the
+ * merchant's price on the receipt plus 20%.
+ */
+export function partsWords(market: Pick<Market, "partsIncludedCents" | "currency">): string {
+  return `Small parts up to ${formatMoney(market.partsIncludedCents, market.currency)} are in the price. Common parts are on the price list at a fixed price. Anything else is charged at the merchant's price plus 20% for sourcing it. Prices include GST.`;
+}

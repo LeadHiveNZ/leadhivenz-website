@@ -9,6 +9,119 @@ price, a fee or a promise, add a line here saying what and why.
 
 ---
 
+## 2026-11-20 — Parts: a fixed price list, the receipt plus 20%, and asking first
+
+What the founder decided after a dispute stress-test (summarised): parts at cost with no fee left HostFix
+paying the card fee on every part, gave tradies no reason to source well, and an owner disputing a part had
+nothing to compare it with. So: a fixed price list for common parts, the merchant's price plus 20% for anything
+else, receipts that only HostFix sees and checks, and the owner asked first above the no-ask limit. **This
+replaces the old rule "parts are passed on at cost, no fee"** everywhere (AGENTS.md, pricing.ts, the terms,
+the tradie agreement and pages, the price list email). Parts added before today stay at cost.
+
+**The rules, as built** (`src/lib/jobs/parts.ts`, sums in `src/lib/jobs/pricing.ts`):
+
+1. **Small parts up to `partsIncludedCents` (NZ$30) are in the price.** An off-list part at or under it is
+   refused with that reason. Price-list parts are always charged, however cheap (a bulb is NZ$13).
+2. **Price list** (`price_list_items`, per market, edited on More > Markets). A list part is charged at its
+   list price, any quantity (1 to 50), with no receipt. Owner pays the list price; the tradie gets it less 3%
+   (`LIST_PART_FEE_BPS`, rounded to the cent); HostFix keeps the 3%, which covers the card fee. Two GU10s at
+   NZ$13: owner 2600, tradie 2522, HostFix 78.
+3. **Off the list: receipt plus 20%.** The tradie enters what it is, the receipt total including GST, the
+   amount of it for this job (packs, van stock), an optional receipt date, and uploads the receipt as a photo,
+   a screenshot or a PDF from files (not camera-only). Owner pays amount x 1.20. The 15% fee is taken from the
+   20% only: tradie gets amount + 17%, HostFix 3%. NZ$300: owner 360, tradie 351, HostFix 9.
+4. **The receipt is seen only by staff (and the tradie who sent it).** The owner sees the part, the quantity,
+   the price and "Receipt checked by HostFix" (or "Receipt to follow", or "HostFix is checking it").
+5. **Ask first, on any job** (menu jobs too, from "Add parts", not only through a quote). If the job's parts
+   stay within `partsApprovalCents` (NZ$150) and everything extra on the job stays within the property's
+   overall limit (its own, or the market's NZ$600), they are added at once and the owner is texted ("Dave
+   needs a tap cartridge, NZ$31.41, within your NZ$150 no-ask limit"). Above that, the owner approves on the
+   job page with the existing quote buttons, before anything is bought. A quote is now for work only.
+6. **Receipt to follow** is allowed at Job done (a tick). The owner is charged as normal; the tradie's payout
+   is `held` (`src/lib/billing/holds.ts`, now shared with the 19 Nov job checks). The receipt can be added
+   from the job page afterwards, which releases the payout if nothing else holds it. **After 7 days with no
+   receipt the part is refunded to the owner automatically** (a Stripe refund with its own idempotency key; if
+   the card had not been charged yet, it simply comes off the charge), the tradie's payout drops by their
+   share of it, both are texted, and the rest is released.
+7. **Receipt checks go straight to the queue** ("Check a parts receipt", one-tap Approve or Hold on the queue
+   and the job page) and hold the payout: a receipt dated more than 90 days before the job (from the date the
+   tradie enters; reading a date out of a receipt photo or PDF was not cheap or reliable, so it is not done);
+   an amount for the job over the receipt's total; the same receipt (the same file by its SHA-256
+   fingerprint, or the same tradie, total and date) used on jobs that together claim more than its total.
+   Hold texts the tradie neutrally.
+8. **Cancelled after approving work:** parts already bought that cannot go back are charged at the receipt's
+   cost, no markup, all to the tradie, by staff on the job page ("Charge parts bought before it was
+   cancelled"), once per job.
+9. **Words** (owner terms, owner and tradie landing copy, tradie agreement, price list email, owner job page),
+   from `partsWords`: "Small parts up to $30 are in the price. Common parts are on the price list at a fixed
+   price. Anything else is charged at the merchant's price plus 20% for sourcing it." Prices include GST.
+   Never "retail". Owner-supplied parts: no parts charge, and a fault in them is not covered by the tradie's
+   30-day callback. A faulty part the tradie supplied: they handle the supplier warranty; labour under the
+   30-day callback. RUNBOOK: fitted parts are not refunded unless removed.
+
+**The price list, as loaded** (`seed/parts-queenstown.json`, once, into an empty list). **Check every price
+with the first tradies.** Both retailers refused automated visits (HTTP 403) on 19 Nov 2026, so each price was
+read from the web search engine's copy of the product or category page named, not from the page itself.
+
+| Code | Part | Price (incl. GST) | Source (19 Nov 2026) |
+| --- | --- | --- | --- |
+| PSA-01 | Smoke alarm, photoelectric, 10-year battery | NZ$39.98 | Bunnings NZ, Family Shield 10 year round mini, https://www.bunnings.co.nz/brands/f/family-shield |
+| PTP-01 | Tap washer kit | NZ$11.73 | Bunnings NZ, FIX-A-TAP Assorted Washer Kit 26 pack, https://www.bunnings.co.nz/fix-a-tap-assorted-washer-kit-26-pack_p0137789 |
+| PTP-02 | Mixer tap cartridge (40 mm) | NZ$31.41 | Bunnings NZ, FIX-A-TAP 40mm Flat Mixer Tap Cartridge, https://www.bunnings.co.nz/fix-a-tap-40mm-flat-mixer-tap-cartridge_p0272017 |
+| PTL-01 | Toilet cistern inlet valve | NZ$26.24 | Bunnings NZ, FIX-A-LOO Hush Fill Cistern Inlet Valve, https://www.bunnings.co.nz/fix-a-loo-hush-fill-cistern-inlet-valve_p0422772 |
+| PTL-02 | Toilet flush valve and button (dual flush) | NZ$65.75 | Bunnings NZ, Fluidmaster Dual Flush Toilet Cistern Valve and Button, https://www.bunnings.co.nz/fluidmaster-dual-flush-toilet-cistern-valve-and-button_p0281419 |
+| PTL-03 | Toilet seat, soft close | NZ$75.61 | Bunnings NZ, Hydrowater White Bianco Soft Close, https://www.bunnings.co.nz/hydrowater-white-bianco-soft-close-toilet-seat_p0174335 |
+| PSH-01 | Shower head, fixed | NZ$117.00 | Mitre 10 NZ, Felton Shower Head 65mm Chrome SKU 156035, https://www.mitre10.co.nz/shop/felton-shower-head-w-65mm-dia-d-125mm-chrome/p/156035 |
+| PLT-01 | LED bulb, bayonet (each) | NZ$15.93 | Bunnings NZ, Philips A60 B22 1700lm 14.5W, https://www.bunnings.co.nz/products/lighting-electrical/light-bulbs-globes/bayonet-cap-globes |
+| PLT-02 | GU10 LED downlight bulb (each) | NZ$13.00 | Bunnings NZ, Osram GU10 495lm 5W dimmable, https://www.bunnings.co.nz/products/lighting/light-bulbs-globes/downlights |
+| PEL-01 | Double power point | NZ$15.13 | Bunnings NZ, DETA 10A Wide Spaced Double Power Point, https://www.bunnings.co.nz/deta-10a-wide-spaced-double-power-point_p0310613 |
+| PEL-02 | Light switch, single | NZ$14.44 | Bunnings NZ, HPM 1 Gang Light Switch White, https://www.bunnings.co.nz/hpm-1-gang-light-switch-white_p0607148 |
+
+Not on it: none of the ten asked for was left out, but two are worth a second look. The fixed shower head is the
+one listing whose price was quoted exactly; cheaper heads (about NZ$43 to NZ$65) appeared only as approximate
+figures, so they were not used. The cistern inlet valve is a bottom-entry model; side-entry valves cost more
+(about NZ$52 to NZ$60). "Tap cartridge or washer kit" became two parts.
+
+**Worked example on PL-01 (owner 22500, tradie 19000), all by hand in `tests/unit/parts.test.ts`:**
+
+| What was added | Owner pays | Tradie gets | HostFix keeps |
+| --- | --- | --- | --- |
+| Mixer cartridge 3141 + inlet valve 2624 (no asking) | 22500 + 5765 = 28265 | 19000 + 3047 + 2545 = 24592 | 3500 + 94 + 79 = 3673 |
+| NZ$300 off the list (over NZ$150: owner approved) | 22500 + 36000 = 58500 | 19000 + 35100 = 54100 | 3500 + 900 = 4400 |
+| NZ$100 off the list, receipt never came | 34500 charged, 12000 refunded | 30700 - 11700 = 19000 | 3500 |
+| Cancelled after approval, NZ$86.50 of parts bought | 8650 | 8650 | 0 |
+
+**What changed:** migration `20261126000000_parts.sql` (adds only: `price_list_items`, `job_parts`, a file
+fingerprint on uploads, `part_id` on job lines, the queue kind `receipt_check`, and the four menu notes that
+said "at cost", changed only where they still read exactly as loaded); `seed/parts-queenstown.json` and
+`seedPriceList` (seed-core, once per market, remembered in `app_state`); `pricing.ts` (quotes are labour
+only; `listPartLine`, `receiptPartLine`, `partsApproval`); `parts.ts`; `holds.ts` (used by `openSettlement`
+and the 19 Nov checks); `work.ts` (quotes, Job done, could not get in); `create.ts` (cancelling voids pending
+parts); `settle.ts` (texts for a cancelled job's parts); the timer; the upload route (fingerprints, PDFs); the
+photo uploader (photo or PDF); the tradie, owner and staff job pages; the queue; the Markets admin screen; texts
+(`partsAdded`, `partsNeedApproval`, `receiptCheckHeld`, `receiptMissingTradie`, `receiptMissingOwner`,
+`boughtPartsCharged`); terms (section 3), tradie agreement (5, 6), both landing pages, the price list email
+and page (with the parts list), RUNBOOK, AGENTS.md, the demo (a list part on job 4; the quote on job 5 is now
+NZ$685 of work).
+
+**Decided while building, to confirm:**
+
+- Price-list parts are charged even under NZ$30; the NZ$30 rule only stops off-list parts. Otherwise a NZ$13
+  bulb on the list could never be charged.
+- "The property's overall approval limit" counts everything extra on the job: approved quotes and all parts.
+- Parts and a work quote are asked about separately; only one request can wait for the owner at a time.
+- The receipt is visible to the tradie who sent it as well as staff (it is their own document). Never to the owner.
+- A receipt-to-follow refund comes off the tradie's payout; if the owner's card had not been charged yet, it
+  comes off the charge instead.
+- The "amount over the receipt" and "receipt used twice" checks flag rather than refuse, as asked; the team
+  decides.
+- "Could not get in" takes every part off the job, the same as every other line.
+
+**Not ours to change:** the live landing pages (`hostfix-landing/`, Lovable) still say "Bigger parts go to the
+owner at cost when you add them to the job with the receipt" (`src/HostFixTradies.tsx`, the "Parts?" answer).
+
+---
+
 ## 2026-11-19 — Checking that a job was really done, without the founder looking at every one
 
 What the founder decided (summarised from his brief, not his exact words): stop a tradie tapping

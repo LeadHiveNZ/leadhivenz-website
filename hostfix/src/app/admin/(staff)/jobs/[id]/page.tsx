@@ -2,12 +2,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  staffAssign, staffCancel, staffCheckJob, staffGoAhead, staffGoodwill, staffQuote, staffReoffer, staffResolveDispute, staffRetryCharge, staffRetryPayout,
+  staffAssign, staffCancel, staffChargeBoughtParts, staffCheckJob, staffCheckReceipt, staffGoAhead, staffGoodwill, staffQuote, staffReoffer, staffResolveDispute, staffRetryCharge, staffRetryPayout,
 } from "@/app/actions/staff";
 import { ActionForm, Area, Field, RadioCards, Select } from "@/components/forms/ActionForm";
 import { SubmitButton } from "@/components/forms/SubmitButton";
 import { BeforeAfter, CostLines, Deadline, History, JobStatus, Panel, PhotoGrid } from "@/components/jobs/JobParts";
 import { flagWords, type CheckFlag } from "@/lib/jobs/checks";
+import { receiptFlagWords } from "@/lib/jobs/parts";
 import { Card, Chip, Facts, Notice, PageTitle, SectionTitle } from "@/components/ui/Bits";
 import { Reveal } from "@/components/ui/Reveal";
 import { findTrade } from "@config/trades";
@@ -46,6 +47,14 @@ const PAYOUT_WORDS: Record<string, string> = {
   failed: "Could not be sent",
   cancelled: "Cancelled",
   reversed: "Taken back after a refund",
+};
+
+const PART_RECEIPT: Record<string, string> = {
+  needed: "not sent yet",
+  attached: "sent",
+  to_follow: "to follow (promised at Job done; refunded to the owner after 7 days without it)",
+  refunding: "being refunded",
+  refunded: "never came, so the part was refunded to the owner",
 };
 
 const CONFIRM_WORDS: Record<string, string> = {
@@ -100,6 +109,7 @@ const DID: Record<string, string> = {
   work_stands: "Settled. The tradie will be paid in full.",
   tradie_paid: "Paid. The tradie has been texted.",
   charged: "The card was charged. The tradie's payment is now on its way.",
+  parts_charged: "Charged at the receipt's cost. The owner has been texted.",
 };
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
@@ -418,6 +428,78 @@ export default async function StaffJobPage({ params, searchParams }: { params: P
           </div>
         )}
       </Panel>
+
+      {view.parts.length > 0 && (
+        <Panel title="Parts">
+          <ul className="divide-y divide-line">
+            {view.parts.map((part) => {
+              const receipt = view.receipts.find((upload) => upload.id === part.receiptUploadId);
+              return (
+                <li key={part.id} className="py-3">
+                  <div className="flex flex-wrap items-baseline justify-between gap-2">
+                    <span className={`font-semibold ${part.status === "void" ? "text-muted line-through" : "text-ink"}`}>
+                      {part.description}
+                      {part.quantity > 1 ? ` × ${part.quantity}` : ""}
+                    </span>
+                    <span className="tabular text-sm text-muted">
+                      owner {fmt(part.ownerCents)} · tradie {fmt(part.tradieCents)} · we keep {fmt(part.ownerCents - part.tradieCents)}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-sm text-muted">
+                    {part.kind === "list"
+                      ? `Price list, ${fmt(part.unitCents ?? 0)} each. No receipt needed.`
+                      : `Off the list: ${fmt(part.amountCents)} of a ${fmt(part.receiptTotalCents ?? 0)} receipt${part.receiptDate ? ` dated ${part.receiptDate}` : ""}, plus 20%. Receipt: ${PART_RECEIPT[part.receiptStatus] ?? part.receiptStatus}.`}
+                    {part.status === "pending" ? " Waiting for the owner's yes." : ""}
+                  </p>
+                  {receipt && (
+                    <a href={`/files/${receipt.id}`} target="_blank" rel="noreferrer" className="mt-1 inline-block text-sm font-semibold text-brand underline underline-offset-2">
+                      Open the receipt ({receipt.contentType === "application/pdf" ? "PDF" : "photo"}, sent {formatDateTime(receipt.createdAt, market.timezone)})
+                    </a>
+                  )}
+                  {part.receiptFlags.length > 0 && (
+                    <ul className="mt-1 list-disc pl-5 text-sm text-alert">
+                      {part.receiptFlags.map((flag) => (
+                        <li key={flag}>{receiptFlagWords(flag)}</li>
+                      ))}
+                    </ul>
+                  )}
+                  {part.checkStatus && <p className="mt-1 text-sm font-semibold text-ink">Check: {part.checkStatus === "flagged" ? "waiting for you" : part.checkStatus === "approved" ? "approved" : "payment held by the team"}</p>}
+                </li>
+              );
+            })}
+          </ul>
+          {view.parts.some((part) => part.status === "active" && (part.checkStatus === "flagged" || part.checkStatus === "held")) && (
+            <ActionForm action={staffCheckReceipt} className="mt-3 flex flex-wrap gap-2">
+              <input type="hidden" name="jobId" value={job.id} />
+              <SubmitButton name="decision" value="approve" pendingLabel="Approving...">
+                Approve the receipt
+              </SubmitButton>
+              {view.parts.some((part) => part.checkStatus === "flagged") && (
+                <SubmitButton name="decision" value="hold" variant="secondary" pendingLabel="Holding...">
+                  Hold the payment
+                </SubmitButton>
+              )}
+            </ActionForm>
+          )}
+        </Panel>
+      )}
+
+      {job.status === "cancelled" && job.tradieId && !money.payment && view.quotes.some((quote) => quote.status === "approved" || quote.status === "auto_approved") && (
+        <Reveal label="Charge parts bought before it was cancelled">
+          <ActionForm action={staffChargeBoughtParts} className="space-y-3">
+            <input type="hidden" name="jobId" value={job.id} />
+            <p className="text-muted">
+              Only parts the tradie had already bought for this job and cannot return. They are charged at the receipt&apos;s cost with nothing added, and all of it goes to the tradie. Check the receipt
+              first. This charges the owner&apos;s card straight away.
+            </p>
+            <Field label="Which parts (as on the receipt)" name="boughtDescription" required maxLength={160} />
+            <Field label={`Receipt cost, including GST (${job.currency})`} name="boughtAmount" required inputMode="decimal" maxLength={10} />
+            <SubmitButton variant="danger" pendingLabel="Charging...">
+              Charge the owner for these parts
+            </SubmitButton>
+          </ActionForm>
+        </Reveal>
+      )}
 
       {(view.beforePhotos.length > 0 || view.afterPhotos.length > 0) && (
         <Panel title="Before and after">

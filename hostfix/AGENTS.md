@@ -23,7 +23,9 @@ it when you change one.
 
 | Rule | File |
 | --- | --- |
-| Prices, surcharges, tax, what each side pays and gets | `src/lib/jobs/pricing.ts` |
+| Prices, surcharges, tax, what each side pays and gets (parts sums too) | `src/lib/jobs/pricing.ts` |
+| Parts on a job: the price list, receipts, asking first, receipts to follow, receipt checks | `src/lib/jobs/parts.ts`, `seed/parts-queenstown.json` |
+| Why a payout is held (a flagged job, a receipt) and letting it go | `src/lib/billing/holds.ts` |
 | Logging a job, guest reports, cancelling | `src/lib/jobs/create.ts` |
 | Arriving, quotes, finishing, "could not get in" | `src/lib/jobs/work.ts` |
 | The offer cascade: first choice, backup, everyone, dispatcher | `src/lib/dispatch/cascade.ts` |
@@ -71,7 +73,7 @@ it when you change one.
   was removed because delivering it cost more than it charged. The 15% applies to the urgent and after-hours
   surcharges too: the tradie gets each surcharge less the fee (`surchargeShare` in `src/lib/jobs/pricing.ts`),
   on top of their menu share, and the offer text shows that share (`DECISIONS.md`, 2026-11-18). Parts are
-  passed on at cost with no fee.
+  not at cost any more: see the parts rule below.
 - **HostFix never loses its margin because a tradie is unreliable, and the owner pays only for what
   happened** (`DECISIONS.md`, 2026-11-18). No missed-promise credit is ever created (`markMissedWindows`
   in `src/lib/billing/settle.ts` only marks and flags; a credit made before 18 Nov 2026 still comes off its
@@ -108,6 +110,21 @@ it when you change one.
   Only accepted, finished jobs can be flagged. The terms, privacy page and tradie agreement read these
   numbers from the market and the constants (`tests/unit/legal.test.ts`). Never call any other map or
   address service, or a paid one, without the founder's yes.
+- **Parts: a fixed price list, the receipt plus 20%, and asking first** (`DECISIONS.md`, 2026-11-20,
+  `src/lib/jobs/parts.ts`). On any job. Small parts up to `partsIncludedCents` (NZ$30) are in the price and
+  an off-list part at or under it is refused. A part on the market's price list (`price_list_items`, admin
+  Markets screen, first loaded once from `seed/parts-<market>.json`) is charged at its list price, any
+  quantity, no receipt: the tradie gets it less 3% (`LIST_PART_FEE_BPS`). Anything else is the receipt
+  amount for this job plus 20% (`RECEIPT_MARKUP_BPS`), the 15% fee taken from the 20% only, so the tradie
+  gets the receipt plus 17% (NZ$300: owner 360, tradie 351, HostFix 9). The receipt (photo, screenshot or
+  PDF) is seen by staff and the tradie who sent it, never the owner, who sees the part, its price and
+  "receipt checked by HostFix". Up to `partsApprovalCents` (NZ$150) of parts on a job, within the property's
+  overall limit, are added at once and the owner texted; above it the owner approves first through the quote
+  approval. "Receipt to follow" at Job done holds the payout; 7 days without it refunds the part to the
+  owner out of the held payout. Receipt flags (dated over 90 days before the job, amount over the receipt,
+  the same receipt over-used across jobs) go straight to the queue and hold the payout until Approve or
+  Hold (`src/lib/billing/holds.ts`). Owner words come from `partsWords` (`src/lib/markets/display.ts`); never
+  say "retail" or "at cost" to an owner. Parts added before 20 Nov 2026 stay at cost.
 - **No insurance, no jobs.** A tradie needs public liability insurance (insurer, policy number, expiry) on
   file and the certificate of currency uploaded (an `insurance_certificate` file, `src/lib/tradies/certificate.ts`)
   before approval, and the offer query skips anyone whose insurance has run out or has no certificate, the

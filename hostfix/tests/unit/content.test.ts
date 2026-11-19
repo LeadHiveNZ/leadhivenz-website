@@ -166,6 +166,8 @@ describe("placeholders", () => {
       platform_fee: "15%",
       callout: "NZ$225",
       approval_limit: "NZ$600",
+      parts_included: "NZ$30",
+      parts_limit: "NZ$150",
       payout_days: "5 to 6 working days",
     });
     const noosa = {

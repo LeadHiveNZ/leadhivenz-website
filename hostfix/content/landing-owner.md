@@ -27,7 +27,7 @@ A tradie on site within 24 hours, at the fixed menu price. Need someone within 4
 
 ---
 
-Jobs are charged at the fixed price when the job is done, GST included. Small parts are in the price, and bigger parts are charged at cost. Not on the menu? {{callout}} for a tradie to come and look, then a quote. Nothing over {{approval_limit}} starts without your yes.
+Jobs are charged at the fixed price when the job is done, GST included. Small parts up to {{parts_included}} are in the price. Common parts are on the price list at a fixed price. Anything else is charged at the merchant's price plus 20% for sourcing it. Above {{parts_limit}} of parts, nothing is bought without your yes. Not on the menu? {{callout}} for a tradie to come and look, then a quote. Nothing over {{approval_limit}} starts without your yes.
 
 ## You only pay for what you got
 

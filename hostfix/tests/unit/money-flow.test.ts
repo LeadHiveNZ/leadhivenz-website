@@ -11,6 +11,7 @@ import { cancelJob } from "@/lib/jobs/create";
 import { getJobForStaff, listLines, listQuotes } from "@/lib/jobs/store";
 import { completeJob, decideQuote, markEnRoute, reportNoAccess, submitQuote } from "@/lib/jobs/work";
 import { saveBilling, unpaidJobs } from "@/lib/owners/service";
+import { addParts } from "@/lib/jobs/parts";
 import { DEMO_CARD_OK } from "@/lib/payments/demo-gateway";
 import type { Property } from "@/lib/properties/service";
 import { testDb } from "./db";
@@ -27,7 +28,7 @@ import { addPlusTier, arrive, auditActions, gatewayFor, HOUSE, liveMarket, logJo
  *   Off-menu call-out                       owner 22500   tradie 19000   we keep 3500
  *   A quote takes the job over the limit when quotes add up to more than 60000
  *   Parts above 15000 need the owner's yes whatever the total
- *   Off-menu labour: the tradie gets 85%. Parts pass through at cost.
+ *   Off-menu labour: the tradie gets 85%. Parts (DECISIONS.md, 2026-11-20) are in tests/unit/parts.test.ts.
  *   Essential membership: free to join (DECISIONS.md, 2026-11-17). No monthly price.
  *   Missed promise: nothing is credited any more (DECISIONS.md, 2026-11-18). A credit made before
  *   then still comes off its own job's charge.
@@ -606,15 +607,15 @@ describe("the promised time", () => {
     await markEnRoute(t.db, job.id, s.tradie.tradieId);
     const arrived = await arrive(t.db, job.id, s.tradie.tradieId, HOUSE);
     if (!arrived.ok) throw new Error(arrived.message);
-    // The tradie quotes 52000 labour + 8000 parts = 60000, inside the 60000 limit, so it goes ahead.
-    const quoted = await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Replace waste trap and isolating valve", labourCents: 52000, partsCents: 8000, uploadIds: [] });
+    // The tradie quotes 60000 of work, exactly the 60000 limit, so it goes ahead.
+    const quoted = await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Replace waste trap and isolating valve", labourCents: 60000, uploadIds: [] });
     if (!quoted.ok) throw new Error(quoted.message);
     const done = await finish(s, job.id);
-    // Owner: 22500 call-out + 60000 quote = 82500. Tradie: 19000 + 52000 x 0.85 (44200) + 8000 parts = 71200.
-    expect(done).toMatchObject({ ownerTotalCents: 82500, tradieTotalCents: 71200 });
-    // Charged 82500 - 22500 = 60000. The tradie still gets all 71200.
+    // Owner: 22500 call-out + 60000 quote = 82500. Tradie: 19000 + 60000 x 0.85 (51000) = 70000.
+    expect(done).toMatchObject({ ownerTotalCents: 82500, tradieTotalCents: 70000 });
+    // Charged 82500 - 22500 = 60000. The tradie still gets all 70000.
     expect(await payment(job.id)).toMatchObject({ status: "pending", amount_cents: 60000 });
-    expect(await payout(job.id)).toMatchObject({ amount_cents: 71200 });
+    expect(await payout(job.id)).toMatchObject({ amount_cents: 70000 });
     expect(await chargeJob(t.db, gatewayFor(t.db), job.id)).toBe("succeeded");
     expect((await t.db.query<{ status: string }>("select status from public.credits where job_id = $1::uuid", [job.id]))[0]!.status).toBe("applied");
     // It came off this job, so nothing goes to the payment company as a separate credit.
@@ -689,12 +690,12 @@ describe("off-menu work and quotes", () => {
   it("a quote of NZ$600 or less goes ahead and the owner is told", async () => {
     const s = await setup();
     const job = await onSite(s, { menuItemId: null, offMenuTrade: "plumber", offMenuTitle: "Leak under the sink" });
-    // Exactly NZ$600: NZ$520 labour and NZ$80 parts. "Over NZ$600" needs a yes, so NZ$600 itself does not.
-    const result = await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Replace waste trap and isolating valve", labourCents: 52000, partsCents: 8000, uploadIds: [] });
+    // Exactly NZ$600 of work. "Over NZ$600" needs a yes, so NZ$600 itself does not.
+    const result = await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Replace waste trap and isolating valve", labourCents: 60000, uploadIds: [] });
     if (!result.ok) throw new Error(result.message);
-    // The tradie gets 85% of the labour (520 x 0.85 = NZ$442) and all of the parts.
-    expect(result.quote).toMatchObject({ status: "auto_approved", needsApproval: false, ownerTotalCents: 60000, tradieTotalCents: 44200 + 8000 });
-    expect(result.job).toMatchObject({ status: "on_site", ownerTotalCents: 22500 + 60000, tradieTotalCents: 19000 + 52200 });
+    // The tradie gets 85% of it: 600 x 0.85 = NZ$510.
+    expect(result.quote).toMatchObject({ status: "auto_approved", needsApproval: false, ownerTotalCents: 60000, tradieTotalCents: 51000 });
+    expect(result.job).toMatchObject({ status: "on_site", ownerTotalCents: 22500 + 60000, tradieTotalCents: 19000 + 51000 });
     expect((await textsTo(t.db, s.owner.user.phone!, "quote_going_ahead"))[0]!.body).toContain("inside your pre-approved limit");
     const done = await finish(s, job.id);
     expect(done.outcome).toBe("done");
@@ -703,27 +704,27 @@ describe("off-menu work and quotes", () => {
   it("one dollar over the limit needs the owner's yes", async () => {
     const s = await setup();
     const job = await onSite(s, { menuItemId: null, offMenuTrade: "plumber", offMenuTitle: "Leak under the sink" });
-    const result = await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Replace waste trap and isolating valve", labourCents: 60100, partsCents: 0, uploadIds: [] });
+    const result = await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Replace waste trap and isolating valve", labourCents: 60100, uploadIds: [] });
     expect(result.ok && result.quote).toMatchObject({ status: "pending", needsApproval: true, ownerTotalCents: 60100 });
   });
 
   it("a quote over NZ$600 stops everything until the owner says yes", async () => {
     const s = await setup();
     const job = await onSite(s, { menuItemId: null, offMenuTrade: "plumber", offMenuTitle: "Hot water cylinder leaking" });
-    // NZ$550 labour and NZ$120 parts: NZ$670.
-    const result = await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Replace cylinder valve", labourCents: 55000, partsCents: 12000, uploadIds: [] });
+    // NZ$670 of work.
+    const result = await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Replace cylinder valve", labourCents: 67000, uploadIds: [] });
     if (!result.ok) throw new Error(result.message);
     expect(result.quote).toMatchObject({ status: "pending", needsApproval: true, ownerTotalCents: 67000 });
     // Nothing is added to the bill yet, and the job cannot be finished.
     expect(result.job).toMatchObject({ status: "awaiting_approval", ownerTotalCents: 22500 });
     expect((await textsTo(t.db, s.owner.user.phone!, "quote_needs_approval"))[0]!.body).toContain("Nothing starts until you say yes");
     expect(await completeJob(t.db, job.id, s.tradie.tradieId, { note: "", uploadIds: [await photo(t.db, `tradie:${s.tradie.tradieId}`)], ...HOUSE })).toMatchObject({ ok: false });
-    expect(await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Another", labourCents: 1000, partsCents: 0, uploadIds: [] })).toMatchObject({ ok: false });
+    expect(await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Another", labourCents: 1000, uploadIds: [] })).toMatchObject({ ok: false });
 
     const approved = await decideQuote(t.db, result.quote.id, true, `owner:${s.owner.ownerId}`);
     if (!approved.ok) throw new Error(approved.message);
-    // The platform keeps 15% of the NZ$550 labour (NZ$82.50), so the tradie gets NZ$467.50 of it. Parts pass through at cost.
-    expect(approved.job).toMatchObject({ status: "on_site", ownerTotalCents: 22500 + 67000, tradieTotalCents: 19000 + 46750 + 12000 });
+    // The platform keeps 15% of the NZ$670 (NZ$100.50), so the tradie gets NZ$569.50 of it.
+    expect(approved.job).toMatchObject({ status: "on_site", ownerTotalCents: 22500 + 67000, tradieTotalCents: 19000 + 56950 });
     expect((await textsTo(t.db, s.tradie.phone, "quote_approved"))[0]!.body).toContain("approved your quote of NZ$670");
     const done = await finish(s, job.id);
     // The call-out and the quote together: 225 + 670.
@@ -736,7 +737,7 @@ describe("off-menu work and quotes", () => {
   it("a declined quote leaves only the call-out to pay", async () => {
     const s = await setup();
     const job = await onSite(s, { menuItemId: null, offMenuTrade: "plumber", offMenuTitle: "Hot water cylinder leaking" });
-    const result = await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Replace cylinder", labourCents: 90000, partsCents: 0, uploadIds: [] });
+    const result = await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Replace cylinder", labourCents: 90000, uploadIds: [] });
     if (!result.ok) throw new Error(result.message);
     const declined = await decideQuote(t.db, result.quote.id, false, `owner:${s.owner.ownerId}`);
     if (!declined.ok) throw new Error(declined.message);
@@ -751,9 +752,9 @@ describe("off-menu work and quotes", () => {
     const s = await setup();
     const job = await onSite(s, { code: "PL-01" });
     // NZ$350 is inside the NZ$600 limit by itself. A second NZ$300 would take the extras to NZ$650, so it waits for a yes.
-    const first = await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Replace pan connector", labourCents: 35000, partsCents: 0, uploadIds: [] });
+    const first = await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Replace pan connector", labourCents: 35000, uploadIds: [] });
     expect(first.ok && first.quote.status).toBe("auto_approved");
-    const second = await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Replace isolating valve", labourCents: 30000, partsCents: 0, uploadIds: [] });
+    const second = await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Replace isolating valve", labourCents: 30000, uploadIds: [] });
     expect(second.ok && second.quote.status).toBe("pending");
   });
 
@@ -761,18 +762,14 @@ describe("off-menu work and quotes", () => {
     const s = await setup();
     await t.db.query("update public.properties set spend_limit_cents = 10000 where id = $1::uuid", [s.property.id]);
     const job = await onSite(s, { code: "PL-01" }, { ...s.property, spendLimitCents: 10000 });
-    const quote = await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Extra", labourCents: 15000, partsCents: 0, uploadIds: [] });
+    const quote = await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Extra", labourCents: 15000, uploadIds: [] });
     expect(quote.ok && quote.quote.needsApproval).toBe(true);
   });
 
-  it("parts over NZ$150 need the owner's yes even on a cheap job", async () => {
+  it("cannot carry parts any more: parts are added on their own, at the price list or the receipt plus 20% (DECISIONS.md, 2026-11-20)", async () => {
     const s = await setup();
     const job = await onSite(s, { code: "PL-04" });
-    const quote = await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "New mixer", labourCents: 0, partsCents: 18000, uploadIds: [] });
-    expect(quote.ok && quote.quote.needsApproval).toBe(true);
-    const cheap = await onSite(s, { code: "PL-07" });
-    const small = await submitQuote(t.db, cheap.id, s.tradie.tradieId, { description: "Hose", labourCents: 0, partsCents: 4500, uploadIds: [] });
-    expect(small.ok && small.quote).toMatchObject({ status: "auto_approved", ownerTotalCents: 4500, tradieTotalCents: 4500 });
+    expect(await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "New mixer", labourCents: 0, uploadIds: [] })).toMatchObject({ ok: false });
   });
 });
 
@@ -828,7 +825,10 @@ describe("other money rules", () => {
   it("every amount in the money tables is a whole number of cents", async () => {
     const s = await setup({ market: { tax_registered: true } });
     const job = await onSite(s, { urgent: true });
-    await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Odd amount", labourCents: 3333, partsCents: 1111, uploadIds: [] });
+    await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Odd amount", labourCents: 3333, uploadIds: [] });
+    const receipt = await photo(t.db, `tradie:${s.tradie.tradieId}`, "receipt");
+    const parts = await addParts(t.db, job.id, s.tradie.tradieId, { list: [], offList: { description: "Odd part", receiptTotalCents: 3333, amountCents: 3333, uploadId: receipt } });
+    expect(parts).toMatchObject({ ok: true, needsApproval: false });
     await finish(s, job.id);
     await chargeJob(t.db, gatewayFor(t.db), job.id);
     const lines = await listLines(t.db, job.id);
@@ -842,7 +842,8 @@ describe("other money rules", () => {
     const platform = lines.filter((l) => l.status === "active").reduce((sum, l) => sum + l.ownerCents - l.tradieCents, 0);
     expect(paid!.amount_cents).toBe(owed!.amount_cents + platform);
     // NZ$35 on the menu job. On the urgent surcharge: 15% of 5000 is 750. On the quote: the tradie's 85% of
-    // 3333 cents is 2833.05, paid as 2833, which leaves 500. Parts carry nothing. 3500 + 750 + 500 = 4750.
-    expect(platform).toBe(3500 + 750 + 500);
+    // 3333 cents is 2833.05, paid as 2833, which leaves 500. On the part off the list: 20% of 3333 is 666.6,
+    // charged as 667, and 15% of that is 100.05, kept as 100. 3500 + 750 + 500 + 100 = 4850.
+    expect(platform).toBe(3500 + 750 + 500 + 100);
   });
 });

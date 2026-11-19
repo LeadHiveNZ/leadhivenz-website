@@ -33,12 +33,14 @@ export type Upload = {
   lng: number | null;
   /** The time the photo file itself says it was taken, when the phone put one in it. */
   takenAt: Date | null;
+  /** A fingerprint of the file's bytes, so the same receipt is noticed if it is sent twice. */
+  sha256: string | null;
 };
 
 type UploadRow = {
   id: string; created_at: Date; kind: UploadKind; storage_key: string; content_type: string; bytes: number;
   property_id: string | null; job_id: string | null; tradie_id: string | null; lead_id?: string | null; uploaded_by: string; attached: boolean;
-  lat?: number | string | null; lng?: number | string | null; taken_at?: Date | null;
+  lat?: number | string | null; lng?: number | string | null; taken_at?: Date | null; sha256?: string | null;
 };
 
 function rowToUpload(row: UploadRow): Upload {
@@ -47,6 +49,7 @@ function rowToUpload(row: UploadRow): Upload {
     bytes: row.bytes, propertyId: row.property_id, jobId: row.job_id, tradieId: row.tradie_id, leadId: row.lead_id ?? null, uploadedBy: row.uploaded_by, attached: row.attached,
     lat: row.lat === null || row.lat === undefined ? null : Number(row.lat), lng: row.lng === null || row.lng === undefined ? null : Number(row.lng),
     takenAt: row.taken_at ? new Date(row.taken_at) : null,
+    sha256: row.sha256 ?? null,
   };
 }
 
@@ -99,15 +102,17 @@ export async function recordUpload(
     kind: UploadKind; storageKey: string; contentType: string; bytes: number; uploadedBy: string;
     /** Sent with a tradie's before and after photos (DECISIONS.md, 2026-11-19). */
     lat?: number | null; lng?: number | null; takenAt?: Date | null;
+    /** The file's fingerprint (sha-256, hex). */
+    sha256?: string | null;
   },
 ): Promise<Upload> {
   const located = typeof input.lat === "number" && typeof input.lng === "number" && Number.isFinite(input.lat) && Number.isFinite(input.lng)
     && Math.abs(input.lat) <= 90 && Math.abs(input.lng) <= 180;
   const takenAt = input.takenAt && Number.isFinite(input.takenAt.getTime()) ? input.takenAt.toISOString() : null;
   const rows = await db.query<UploadRow>(
-    `insert into public.uploads (created_at, kind, storage_key, content_type, bytes, uploaded_by, lat, lng, taken_at)
-     values ($1::timestamptz, $2, $3, $4, $5, $6, $7, $8, $9::timestamptz) returning *`,
-    [now().toISOString(), input.kind, input.storageKey, input.contentType, input.bytes, input.uploadedBy, located ? input.lat : null, located ? input.lng : null, takenAt],
+    `insert into public.uploads (created_at, kind, storage_key, content_type, bytes, uploaded_by, lat, lng, taken_at, sha256)
+     values ($1::timestamptz, $2, $3, $4, $5, $6, $7, $8, $9::timestamptz, $10) returning *`,
+    [now().toISOString(), input.kind, input.storageKey, input.contentType, input.bytes, input.uploadedBy, located ? input.lat : null, located ? input.lng : null, takenAt, input.sha256 ?? null],
   );
   return rowToUpload(rows[0]!);
 }
@@ -175,6 +180,8 @@ export async function purgeUnattached(db: Db): Promise<string[]> {
  *    property photos while they have a job under way there
  *  - an insurance certificate: only staff and the tradie it belongs to. Not an owner,
  *    not another tradie, not by any job link.
+ *  - a parts receipt: only staff and the tradie who sent it. Never the owner, who sees
+ *    the part, its price and "receipt checked by HostFix" instead (DECISIONS.md, 2026-11-20).
  *  - whoever uploaded it, until it is attached (so they can see their own thumbnail)
  */
 export async function canView(
@@ -184,6 +191,9 @@ export async function canView(
 ): Promise<boolean> {
   if (viewer.staff) return true;
   if (upload.kind === "insurance_certificate") return Boolean(viewer.tradieId && upload.tradieId === viewer.tradieId);
+  if (upload.kind === "receipt") {
+    return Boolean((viewer.tradieId && upload.uploadedBy === `tradie:${viewer.tradieId}`) || (viewer.uploader && viewer.uploader === upload.uploadedBy));
+  }
   if (viewer.uploader && viewer.uploader === upload.uploadedBy) return true;
   if (viewer.ownerId) {
     if (upload.jobId) {

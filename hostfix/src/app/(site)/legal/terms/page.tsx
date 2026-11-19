@@ -3,6 +3,8 @@ import { brand } from "@config/brand";
 import { launchMarket } from "@config/markets";
 import { LegalPage, Section } from "@/components/LegalPage";
 import { FAR_METRES, PROPOSAL_DAYS, WINDOW_HOURS } from "@/lib/jobs/arrival";
+import { partsWords } from "@/lib/markets/display";
+import { formatMoney } from "@/lib/money";
 import { FLAG_DAYS, TRUSTED_FINISHED_JOBS } from "@/lib/tradies/reliability";
 import { formatHourOfDay, TEXTING_ENDS, TEXTING_STARTS } from "@/lib/time";
 
@@ -16,7 +18,7 @@ export const metadata: Metadata = {
   description: `How ${brand.name} works for property owners: free to join, fixed prices, charged when a job is done.`,
 };
 
-const UPDATED = "19 November 2026";
+const UPDATED = "20 November 2026";
 
 /**
  * The hours in section 4 come from the launch market's settings (config/markets.ts), so the page cannot say
@@ -29,6 +31,7 @@ const quiet = `${formatHourOfDay(TEXTING_ENDS)} and ${formatHourOfDay(TEXTING_ST
 // The checks on every finished job (DECISIONS.md, 2026-11-19), from the same settings and constants the app uses.
 const minMinutes = launchMarket.minMinutesOnSite;
 const confirmHours = launchMarket.ownerConfirmHours;
+const money = (cents: number) => formatMoney(cents, launchMarket.currency);
 
 export default function Page() {
   const n = brand.name;
@@ -70,8 +73,12 @@ export default function Page() {
             the limit you set for that property, stops until you say yes. If you say no, the call-out is still charged.
           </li>
           <li>
-            <strong>Parts.</strong> Small parts are in the price. Bigger parts are charged at cost with the receipt, and above a set amount we ask
-            you first.
+            <strong>Parts.</strong> {partsWords(launchMarket)} The tradie can add parts on any job. Up to {money(launchMarket.partsApprovalCents)} of parts on a job
+            (and within the limit for that property) they are added straight away and we text you; above that, nothing is bought until you say yes on the job
+            page. We check the receipt for anything not on the price list. If you supply a part yourself there is no parts charge, but a fault in a part you
+            supplied is not covered by the tradie&rsquo;s 30-day callback. If a job is cancelled after you approved work, parts already bought for it that cannot
+            be returned are charged at what they cost, with nothing added. A faulty part is replaced under its maker&rsquo;s warranty, which the tradie deals
+            with; the labour is covered by the 30-day callback below.
           </li>
         </ul>
       </Section>

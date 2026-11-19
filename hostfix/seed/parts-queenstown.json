@@ -1,0 +1,24 @@
+{
+  "_readme": [
+    "QUEENSTOWN PARTS PRICE LIST (DECISIONS.md, 2026-11-20). Researched NZ shelf prices, not placeholders, but CHECK WITH THE FIRST TRADIES.",
+    "Each price is what the owner pays for one, including GST. The tradie gets it less 3%; HostFix keeps 3%, which covers the card fee.",
+    "Where they came from: the retailer's own product or category page, 19 November 2026. Both retailers refused automated visits (HTTP 403), so each price was read from the web search engine's copy of that page, not from the page itself.",
+    "This file only fills an EMPTY list, once. After that, change prices on the admin screen: More > Markets, prices and the menu."
+  ],
+  "market": "queenstown",
+  "currency": "NZD",
+  "pricesIncludeGst": true,
+  "items": [
+    {"code": "PSA-01", "name": "Smoke alarm, photoelectric, 10-year battery", "priceDollars": 39.98, "source": "Bunnings NZ, Family Shield 10 year round mini smoke alarm, https://www.bunnings.co.nz/brands/f/family-shield (19 Nov 2026)"},
+    {"code": "PTP-01", "name": "Tap washer kit", "priceDollars": 11.73, "source": "Bunnings NZ, FIX-A-TAP Assorted Washer Kit 26 pack, https://www.bunnings.co.nz/fix-a-tap-assorted-washer-kit-26-pack_p0137789 (19 Nov 2026)"},
+    {"code": "PTP-02", "name": "Mixer tap cartridge (40 mm)", "priceDollars": 31.41, "source": "Bunnings NZ, FIX-A-TAP 40mm Flat Mixer Tap Cartridge, https://www.bunnings.co.nz/fix-a-tap-40mm-flat-mixer-tap-cartridge_p0272017 (19 Nov 2026)"},
+    {"code": "PTL-01", "name": "Toilet cistern inlet valve", "priceDollars": 26.24, "source": "Bunnings NZ, FIX-A-LOO Hush Fill Cistern Inlet Valve I/N 0422772, https://www.bunnings.co.nz/fix-a-loo-hush-fill-cistern-inlet-valve_p0422772 (19 Nov 2026)"},
+    {"code": "PTL-02", "name": "Toilet flush valve and button (dual flush)", "priceDollars": 65.75, "source": "Bunnings NZ, Fluidmaster Dual Flush Toilet Cistern Valve and Button, https://www.bunnings.co.nz/fluidmaster-dual-flush-toilet-cistern-valve-and-button_p0281419 (19 Nov 2026)"},
+    {"code": "PTL-03", "name": "Toilet seat, soft close", "priceDollars": 75.61, "source": "Bunnings NZ, Hydrowater White Bianco Soft Close Toilet Seat, https://www.bunnings.co.nz/hydrowater-white-bianco-soft-close-toilet-seat_p0174335 (19 Nov 2026)"},
+    {"code": "PSH-01", "name": "Shower head, fixed", "priceDollars": 117.00, "source": "Mitre 10 NZ, Felton Shower Head W 65mm dia D 125mm Chrome SKU 156035, https://www.mitre10.co.nz/shop/felton-shower-head-w-65mm-dia-d-125mm-chrome/p/156035 (19 Nov 2026)"},
+    {"code": "PLT-01", "name": "LED bulb, bayonet (each)", "priceDollars": 15.93, "source": "Bunnings NZ, Philips A60 B22 LED 1700lm Warm White 14.5W globe, https://www.bunnings.co.nz/products/lighting-electrical/light-bulbs-globes/bayonet-cap-globes (19 Nov 2026)"},
+    {"code": "PLT-02", "name": "GU10 LED downlight bulb (each)", "priceDollars": 13.00, "source": "Bunnings NZ, Osram GU10 LED 495lm Warm White 5W Dimmable, https://www.bunnings.co.nz/products/lighting/light-bulbs-globes/downlights (19 Nov 2026)"},
+    {"code": "PEL-01", "name": "Double power point", "priceDollars": 15.13, "source": "Bunnings NZ, DETA 10A Wide Spaced Double Power Point I/N 0310613, https://www.bunnings.co.nz/deta-10a-wide-spaced-double-power-point_p0310613 (19 Nov 2026)"},
+    {"code": "PEL-02", "name": "Light switch, single", "priceDollars": 14.44, "source": "Bunnings NZ, HPM 1 Gang Light Switch White, https://www.bunnings.co.nz/hpm-1-gang-light-switch-white_p0607148 (19 Nov 2026)"}
+  ]
+}

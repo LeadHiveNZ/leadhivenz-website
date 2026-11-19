@@ -8,6 +8,7 @@ import { newStorageKey, recordUpload, type UploadKind } from "@/lib/files/upload
 import { createJob, type NewJob } from "@/lib/jobs/create";
 import type { Job } from "@/lib/jobs/types";
 import { completeJob, markArrived, markEnRoute, submitQuote } from "@/lib/jobs/work";
+import { addParts, listPriceList } from "@/lib/jobs/parts";
 import { updateMarket } from "@/lib/markets/admin";
 import { listMenu, listTiers } from "@/lib/markets/store";
 import { flushOutbox } from "@/lib/notify/outbox";
@@ -298,6 +299,13 @@ export async function buildSampleData(db: Db, files: FileStore | null, real: Dat
   await markEnRoute(db, one.id, dave.tradieId);
   ago(ctx, 6 * DAY - 2.5 * HOUR);
   await arrive(ctx, one.id, dave.tradieId, door(PINS.lakeview));
+  // A part off the price list, with its receipt (DECISIONS.md, 2026-11-20): NZ$45.50 plus 20% is NZ$54.60 to the owner.
+  ago(ctx, 6 * DAY - 2.75 * HOUR);
+  const trapReceipt = await picture(ctx, `tradie:${dave.tradieId}`, "receipt", "found");
+  const trap = await addParts(db, one.id, dave.tradieId, {
+    list: [], offList: { description: "Kitchen waste trap, 40 mm", receiptTotalCents: 4550, amountCents: 4550, receiptDate: null, uploadId: trapReceipt },
+  });
+  if (!trap.ok) throw new Error(`Sample data: adding parts gave "${trap.message}".`);
   ago(ctx, 6 * DAY - 3.25 * HOUR);
   await finish(ctx, one.id, dave.tradieId, "Cleared a fat blockage in the kitchen waste and flushed the trap. Ran hot water for five minutes: draining well.", door(PINS.lakeview));
   ago(ctx, 6 * DAY - 28 * HOUR);
@@ -343,6 +351,13 @@ export async function buildSampleData(db: Db, files: FileStore | null, real: Dat
   await accept(ctx, four.id, tom.tradieId);
   ago(ctx, 25 * HOUR);
   await arrive(ctx, four.id, tom.tradieId, door(PINS.studio));
+  // The new power point is on the parts price list (DECISIONS.md, 2026-11-20): added at its fixed price, inside the no-ask limit.
+  ago(ctx, 24.75 * HOUR);
+  const powerPoint = (await listPriceList(db, MARKET)).find((item) => item.code === "PEL-01");
+  if (powerPoint) {
+    const parts = await addParts(db, four.id, tom.tradieId, { list: [{ itemId: powerPoint.id, quantity: 1 }] });
+    if (!parts.ok) throw new Error(`Sample data: adding parts gave "${parts.message}".`);
+  }
   ago(ctx, 24.25 * HOUR);
   await finish(ctx, four.id, tom.tradieId, "Replaced the power point. The old one had a burnt terminal. Tested and safe.", door(PINS.studio), 1);
 
@@ -360,7 +375,7 @@ export async function buildSampleData(db: Db, files: FileStore | null, real: Dat
   await arrive(ctx, five.id, mere.tradieId, door(PINS.cabin));
   ago(ctx, 40 * MINUTE);
   const found = await picture(ctx, `tradie:${mere.tradieId}`, "quote", "found");
-  await submitQuote(db, five.id, mere.tradieId, { description: "Replace the leaking shower mixer and the section of pipe behind it", labourCents: 60000, partsCents: 8500, uploadIds: [found] });
+  await submitQuote(db, five.id, mere.tradieId, { description: "Replace the leaking shower mixer and the section of pipe behind it", labourCents: 68500, uploadIds: [found] });
 
   // ---- 6. Urgent: accepted, the tradie is on the way -----------------------
   ago(ctx, 50 * MINUTE);

@@ -157,16 +157,16 @@ export async function listLines(db: Db, jobId: string): Promise<JobLine[]> {
   return rows.map(rowToLine);
 }
 
-export async function insertLines(db: Db, jobId: string, lines: Line[], options: { status?: "active" | "pending"; quoteId?: string | null; at: Date }): Promise<void> {
+export async function insertLines(db: Db, jobId: string, lines: Line[], options: { status?: "active" | "pending"; quoteId?: string | null; partId?: string | null; at: Date }): Promise<void> {
   let offset = 0;
   for (const line of lines) {
     // A millisecond apart, so they always read back in the order they were written.
     const createdAt = new Date(options.at.getTime() + offset);
     offset += 1;
     await db.query(
-      `insert into public.job_lines (created_at, job_id, kind, label, owner_cents, tradie_cents, status, quote_id)
-       values ($1::timestamptz, $2::uuid, $3, $4, $5, $6, $7, $8::uuid)`,
-      [createdAt.toISOString(), jobId, line.kind, line.label, line.ownerCents, line.tradieCents, options.status ?? "active", options.quoteId ?? null],
+      `insert into public.job_lines (created_at, job_id, kind, label, owner_cents, tradie_cents, status, quote_id, part_id)
+       values ($1::timestamptz, $2::uuid, $3, $4, $5, $6, $7, $8::uuid, $9::uuid)`,
+      [createdAt.toISOString(), jobId, line.kind, line.label, line.ownerCents, line.tradieCents, options.status ?? "active", options.quoteId ?? null, options.partId ?? null],
     );
   }
 }

@@ -16,6 +16,7 @@ import { isUuid } from "@/lib/ids";
 import { getJobForStaff, getJobForTradie, getOffer } from "@/lib/jobs/store";
 import type { Job, Offer } from "@/lib/jobs/types";
 import { completeJob, markArrived, markEnRoute, reportNoAccess, submitQuote } from "@/lib/jobs/work";
+import { addParts, attachReceipt } from "@/lib/jobs/parts";
 import { getMarket } from "@/lib/markets/store";
 import { now } from "@/lib/clock";
 import { paymentsFor } from "@/lib/payments";
@@ -151,27 +152,72 @@ export async function sendQuote(_previous: FormState, formData: FormData): Promi
   const db = await getDb();
   const who = await whoAndJob(db, formData);
   if (!who) return problem(formData, NO_JOB);
-  const labour = text(formData, "labour");
-  const parts = text(formData, "parts");
-  const labourCents = labour === "" ? 0 : dollarsToCents(labour);
-  const partsCents = parts === "" ? 0 : dollarsToCents(parts);
-  const errors: Record<string, string> = {};
-  if (labourCents === null) errors.labour = "Enter an amount, for example 180.";
-  if (partsCents === null) errors.parts = "Enter an amount, for example 45.";
-  if (Object.keys(errors).length > 0) return problem(formData, "Please check the amounts.", errors);
+  const labourCents = dollarsToCents(text(formData, "labour"));
+  if (labourCents === null || labourCents <= 0) return problem(formData, "Please check the amount.", { labour: "Enter your price for the work, for example 180." });
   const result = await submitQuote(db, who.job.id, who.tradieId, {
-    description: text(formData, "quoteDescription"), labourCents: labourCents!, partsCents: partsCents!, uploadIds: list(formData, "quoteUploadIds"),
+    description: text(formData, "quoteDescription"), labourCents, uploadIds: list(formData, "quoteUploadIds"),
   });
   await sendQueued(db);
   if (!result.ok) return problem(formData, result.message);
   redirect(`${who.back}?quoted=${result.quote.needsApproval ? "wait" : "go"}`);
 }
 
+/**
+ * Parts, on any job (DECISIONS.md, 2026-11-20): from the price list (a
+ * number for each) and, optionally, one off the list with its receipt.
+ */
+export async function addPartsAction(_previous: FormState, formData: FormData): Promise<FormState> {
+  const db = await getDb();
+  const who = await whoAndJob(db, formData);
+  if (!who) return problem(formData, NO_JOB);
+  const errors: Record<string, string> = {};
+  const listed: { itemId: string; quantity: number }[] = [];
+  for (const [key, value] of formData.entries()) {
+    if (!key.startsWith("qty-") || typeof value !== "string" || value.trim() === "") continue;
+    const quantity = Number(value);
+    if (!Number.isInteger(quantity) || quantity < 0 || quantity > 50) errors[key] = "A whole number from 0 to 50.";
+    else if (quantity > 0) listed.push({ itemId: key.slice(4), quantity });
+  }
+  const description = text(formData, "partDescription");
+  const total = text(formData, "receiptTotal");
+  const amount = text(formData, "partAmount");
+  let offList = null;
+  if (description !== "" || total !== "" || amount !== "") {
+    const receiptTotalCents = dollarsToCents(total);
+    const amountCents = dollarsToCents(amount);
+    if (receiptTotalCents === null) errors.receiptTotal = "Enter the receipt's total, for example 64.90.";
+    if (amountCents === null) errors.partAmount = "Enter how much of it is for this job, for example 45.";
+    if (description.length < 3) errors.partDescription = "Say what the part is.";
+    offList = { description, receiptTotalCents: receiptTotalCents ?? 0, amountCents: amountCents ?? 0, receiptDate: text(formData, "receiptDate") || null, uploadId: list(formData, "receiptUploadIds")[0] ?? null };
+  }
+  if (Object.keys(errors).length > 0) return problem(formData, "Please check the parts.", errors);
+  const result = await addParts(db, who.job.id, who.tradieId, { list: listed, offList });
+  await sendQueued(db);
+  if (!result.ok) return problem(formData, result.message);
+  redirect(`${who.back}?parts=${result.needsApproval ? "wait" : "go"}`);
+}
+
+/** The receipt for an off-list part, added later: before Job done, or within 7 days after it. */
+export async function addReceiptAction(_previous: FormState, formData: FormData): Promise<FormState> {
+  const db = await getDb();
+  const who = await whoAndJob(db, formData);
+  if (!who) return problem(formData, NO_JOB);
+  const uploadId = list(formData, "receiptUploadIds")[0];
+  if (!uploadId) return problem(formData, "Add the receipt first: a photo, a screenshot or the PDF.");
+  const result = await attachReceipt(db, who.job.id, who.tradieId, text(formData, "partId"), { uploadId, receiptDate: text(formData, "receiptDate") || null });
+  await sendQueued(db);
+  if (!result.ok) return problem(formData, result.message);
+  revalidatePath(who.back);
+  return { done: result.flags.length > 0 ? "Receipt added. Our team will look at it before your payment goes." : "Receipt added. Thank you." };
+}
+
 export async function finishJob(_previous: FormState, formData: FormData): Promise<FormState> {
   const db = await getDb();
   const who = await whoAndJob(db, formData);
   if (!who) return problem(formData, NO_JOB);
-  const result = await completeJob(db, who.job.id, who.tradieId, { note: text(formData, "note"), uploadIds: list(formData, "uploadIds"), ...where(formData) });
+  const result = await completeJob(db, who.job.id, who.tradieId, {
+    note: text(formData, "note"), uploadIds: list(formData, "uploadIds"), ...where(formData), receiptsToFollow: ticked(formData, "receiptsToFollow"),
+  });
   if (!result.ok) return problem(formData, result.message);
   await settleNow(db, who.job.id);
   redirect(`${who.back}?done=1`);
