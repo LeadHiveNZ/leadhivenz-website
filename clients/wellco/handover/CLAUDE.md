@@ -10,17 +10,18 @@ Read this file before every change. Follow it over anything that looks like a qu
   bank and BAS. Wellco is the project manager.
 - Dan is not technical. Explain in plain English, one step at a time. Australian English, no jargon,
   no emoji. Ask before anything you aren't sure about.
-- He hosts it himself: **Netlify** shows the app, **Supabase** holds the data and documents. There is
-  no GitHub. He publishes by dragging the app file into Netlify.
+- He hosts it himself: **Netlify** shows the app, **Supabase** holds the data and documents (his own
+  project, Sydney). There is no GitHub. He publishes by dragging the `app` folder into Netlify.
 
 ## Files in this folder
 
 | Path | What it is |
 |---|---|
-| `app/index.html` | The whole app in one file. This is what goes to Netlify. (Arrives with Joe's connected build.) |
+| `app/index.html` | The whole app in one file, connected to Dan's Supabase project. |
+| `app/_headers` | Netlify response headers (no framing, no caching of the app file). Leave it next to `index.html`. |
 | `versions/` | Dated copies of `app/index.html` from before each change. Create the folder on first use. |
 | `supabase-schema.sql` | The database baseline (v3, 17 Nov 2026). Already run on the live project. Never re-run it. |
-| `migrations/` | Numbered database changes after go-live: `0001_short-name.sql`, `0002_...`. Create on first use. |
+| `migrations/` | Numbered database changes run after the baseline, in order. `0001_connected_app.sql` is the first (extra columns the app uses). The next one is `0002_short-name.sql`. |
 | `reference/` | Dan's own Quick Feaso spreadsheet and Letter of Offer template. The app mirrors both. |
 | `changes-*.md` | What Dan asked for on each call. Useful background for why things work the way they do. |
 | `GUIDE-for-Dan.md` | Dan's plain-English guide. Keep it in step if you change how he does something. |
@@ -30,26 +31,32 @@ Read this file before every change. Follow it over anything that looks like a qu
 One HTML file: CSS in `<style>`, a small HTML frame, then one `<script>`. The script is split by
 banner comments `/* ===== Name ===== */`. Search for them; don't guess line numbers. In order:
 
-1. **Constants**: stage templates, cost categories, GST types, document types, zonings, the offer
-   term bank, `FEASO_DEFAULTS`, `TAX_WORDING`, Xero tax-rate names.
-2. **Seed**: `buildSeed()` makes the demo data. In the connected build, data comes from Supabase instead.
+1. **Config** (top of the script): `SUPABASE_URL`, `SUPABASE_KEY` (Dan's project and its
+   *publishable* key, which is public by design), `STORAGE_BUCKET`. Then constants: cost categories,
+   GST types, `FEASO_DEFAULTS`, `TAX_WORDING`, `SCOPE_ROLES`, milestones. `TODAY` is today in Sydney.
+   Dan's own lists (project types, stage templates, contact categories and roles, zonings, document
+   types, the offer term bank) are **not** constants: they come from the database.
+2. **RFQ scope templates** (`SCOPE_ITEMS`): the standard wording of each request for quote.
 3. **Utilities and GST maths**: `h()`, `fmtMoney()`, dates, financial years, `lineGst`, `lineTotal`,
    `lineEx`, `invEx/invGst/invTotal`, `catEx`.
-4. **State**: `loadState()`, `save()`, `commit()` (save + re-render), lookups such as `getProject`.
+4. **Data layer: Supabase** (banner `Data layer`). See "How data is saved" below. Then lookups such as
+   `getProject`.
 5. **Helpers**: stages, contacts and roles, companies (`co(p)` is a project's owner), funds needed,
    `feasoCalc()`, task-date links (`rippleFrom`), offer terms (`parseTerm`).
 6. **Views**: `viewHome`, `viewProject` (+ `tabStage`, `tabMoney`, `tabDocuments`...), `viewDeals`,
    `viewDeal` (Details / Quick feaso / Offers / Documents), `viewContacts`, `viewExports`,
    `viewSettings`, `viewNew` (new project wizard). Each returns an HTML string.
 7. **Render dispatcher**: `VIEWS` maps a route (`#/project/CROOBYAR/money/in`) to a view; `render()`
-   draws it. `go(hash)` navigates. Keep the `IN_ARTIFACT` / `memHash` routing working.
+   draws it. `go(hash)` navigates.
 8. **Actions**: clicks are handled once, by `data-action="name"` on the element, looked up in
    `ACTIONS`. Forms use `data-form="name"` and `FORMS`. Typing / selects use `data-input` in the
    input and change listeners. Add a new button by adding a `data-action` and an `ACTIONS` entry.
    Never add inline `onclick`.
-9. **Exports**: `bookFor` (year-end workbook), `basBook`, `feasoBook`, `downloadBook`, `artifactSave`,
-   `offerDocx`, `offerPdf`.
-10. **Events and boot** at the very end.
+9. **Exports**: `bookFor` (year-end workbook), `basBook`, `feasoBook`, `downloadBook`, `xlsxBytes`,
+   `exportEverything` (every table, one sheet each), `offerDocx`, `offerPdf`.
+10. **Events**, then **Login, password reset and boot** at the very end: the login screen, Forgot
+   password, the set-a-new-password screen (reset links and Dan's first invitation land there),
+   sign out, and the offline bar.
 
 Rules for code:
 - **Escape everything you put into HTML with `h()`**. Names, notes and descriptions come from Dan
@@ -59,20 +66,45 @@ Rules for code:
 - Nothing is sent, issued, approved or paid without Dan approving it in a drawer (`openApproval`).
 - Keep phone and desktop working: check 390 px and 1366 px widths, no sideways scrolling.
 
-### State shape and storage
+### State shape and how data is saved
 
-- Top level: `projects`, `deals`, `contacts`, `companies`, `categories`, `roles`, `templates`,
-  `zonings`, `docTypes`, `termBank`, `scopeRoles`, `settings`, `log`, `version`.
-- A project has `stages`, `tasks`, `rfqs`, `engagements`, `invoicesIn` (bills, each with `lines`),
-  `invoicesOut`, `sales`, `funds`, `docs`, `trust`, `log`, and a `companyId`.
-- A deal has `feasos` (saved versions), `offers`, `docs`, `log`.
-- **Today the file still keeps data in the browser** (`localStorage`, key `STORE_KEY`, currently
-  `wellco_demo_v4`). The connected build moves it to Supabase tables that mirror this shape (see
-  `supabase-schema.sql`). Until then, anything Dan types lives only in that browser.
-- **Migration rule**: if you change the shape of saved data, either bump `STORE_KEY` (old data is
-  then ignored and the app starts fresh, only acceptable while it's still a demo) or write code that
-  upgrades the old shape. Once the app is on Supabase, shape changes are database migrations (below),
-  never a key bump.
+- The screens work on one in-memory `state`: `projects`, `deals`, `contacts`, `companies`,
+  `categories`, `roles`, `templates`, `zonings`, `docTypes`, `termBank`, `settings`, `log`, plus the
+  database ids behind the lists (`roleIds`, `catIds`, `zoningIds`, `termIds`).
+  A project has `stages`, `tasks`, `rfqs` (each with `quotes`), `engagements`, `invoicesIn` (bills,
+  each with `lines`), `invoicesOut`, `funds`, `docs`, `log`, `ms` (its key dates: exchange, DD
+  expiry, unconditional, DA approval, settlement) and a `companyId`. A deal has `feasos`, `offers`,
+  `docs`, `log`. Every id is the database's id (uuids; projects use their Project ID).
+- **Login**: `boot()` shows the login screen until Supabase has a session, then `loadAll()` reads every
+  table (1,000 rows a page) and `buildState()` turns the rows into `state`. Nothing is kept in the
+  browser except Supabase's own login token.
+- **Saving**: an action changes `state`, then calls `commit()` (re-render, then save) or `save()`.
+  `sync()` runs `toDb(state)` (state back into table rows), compares it with what the database held
+  (`snap`) and writes only the difference: inserts parents first, one update per changed row (only the
+  changed columns), deletes children first. Stage lists are renumbered in two steps so positions never
+  clash. Writes run one at a time. Afterwards the touched tables are read back, so values the database
+  works out itself (task dates that follow a key date or another task, bill totals, file names,
+  offer and feaso numbers) show on screen.
+- **If a save fails**, the app reads everything back from the database (so the screen shows exactly
+  what is saved) and shows a toast with the reason (the database's own message, e.g. "Needs Dan's
+  approval first..."). **Offline**, a red bar shows and any change is undone on screen with a message.
+- **Approval gate**: the database refuses "sent / issued / approved / paid" without an approved row in
+  `approvals`. `applyDiff()` writes that row first whenever a status changes that way (`GATES`), so the
+  approval Dan gives in the drawer is recorded in the database before the status changes.
+- **Database jobs go through the schema's own functions** via `dbJob()`: `create_project_from_template`,
+  `convert_deal_to_project` (new project wizard), `file_offer_letter` (letters of offer),
+  `delete_contact_role` (Manage categories), `close_company`. Projects are never inserted directly.
+- **Files** (`uploadFiles`): a `documents` row first (the database names the file and its storage path:
+  `<ProjectID>/<type>/...` or `deals/<deal id>/<type>/...`), then the file goes to the private bucket
+  `project-documents` at that path. Files open through short-lived signed links (`signedUrl`).
+- **The log**: the Log tab shows the plain-English lines the app writes (`activity_log`, source `app`)
+  and the database's summary lines; "Show every database change" adds the trigger rows. The log is
+  append-only by design.
+- **Adding a field**: add the column with a migration (below), map it in `buildState()` and `toDb()`,
+  then use it in the view and form. If the field is missing from one of those two, it won't save or
+  won't load. A field that only lives in `state` is lost on reload.
+- `HAS_M1` says whether migration 0001 is installed (the app checks the settings row's columns). Until
+  it is, the few fields it adds aren't saved and the state list is NSW and QLD only.
 
 ## Design rules
 
@@ -130,27 +162,33 @@ change here, explain the effect and suggest he checks with Lucy before you do it
 
 1. Copy the current `app/index.html` to `versions/index-YYYY-MM-DD-HHMM.html` **before** editing.
 2. Make the change. Keep it as small as the request.
-3. Open `app/index.html` in a browser (double-click it). With the connected build, log in as Dan.
-   Only look at live data; don't save test records. If a test needs a save, use a project clearly
-   named TEST and delete it straight after.
+3. Test the changed file before publishing. It talks to Dan's live database, so it must be served
+   from a web address, not double-clicked: in the `app` folder run `npx serve -l 8080 .` (or
+   `python -m http.server 8080`) and open `http://localhost:8080`, then log in as Dan. Add
+   `http://localhost:8080/**` to Supabase > Authentication > URL Configuration > Redirect URLs once, if
+   a password reset is part of the test. Only look at live data; if a test needs a save, use a deal or
+   project clearly named TEST and delete it straight after (the log keeps a line, which is fine).
 4. Click through and check nothing is broken, on a normal window and a phone-width window:
-   - Home loads with Needs attention and the projects table.
-   - Open a project (e.g. Croobyar): Stage & tasks, Quotes, Money, Documents, Log.
+   - Login works; Home loads with Needs attention and the projects table.
+   - Open a project: Stage & tasks, Quotes, Money, Documents (open a file), Log.
    - Money > Bills: open a split bill (one with lines in two categories) and check the totals.
    - Money > GST / BAS: the quarter figures show.
    - Exports: download a year-end workbook and open it.
    - A deal > Quick feaso: the Lynches Creek example above gives net profit $1,968,773, MoC 32.97%.
-5. Open the browser's developer console (F12 > Console): **no red errors**.
+5. Open the browser's developer console (F12 > Console): **no red errors**. (A red 400 line straight
+   after a deliberately wrong password is expected.)
 6. Tell Dan in two or three plain sentences what changed and what he should look at.
-7. Only then: he drags `app/index.html` into Netlify (below).
+7. Only then: he drags the `app` folder into Netlify (below).
 
 If any check fails, fix it or put back the copy from `versions/`. Never ask Dan to publish a file
 that hasn't passed.
 
 ## Publishing and undo
 
-- **Publish**: netlify.com > log in > the Wellco site > **Deploys** > drag `app/index.html` onto the
-  drop area. It goes live in under a minute at the usual address.
+- **Publish**: netlify.com > log in > the Wellco site > **Deploys** > drag the **`app` folder** (it holds
+  `index.html` and `_headers`) onto the drop area. It goes live in under a minute at the usual address.
+- If the site's address ever changes (new Netlify name or a custom domain), add it in Supabase >
+  Authentication > URL Configuration (Site URL and Redirect URLs), or password-reset links break.
 - **Undo**: Netlify > Deploys > click the previous good deploy > **Publish deploy**. Instant, and the
   data in Supabase isn't touched. Then put the matching file back from `versions/`.
 - A database migration can't be undone this way. That's why the backup comes first.
@@ -168,8 +206,16 @@ that hasn't passed.
 
 When you refuse, say why in one sentence and suggest the safe alternative.
 
-## Known demo leftovers (until Joe's connected build lands)
+## What the connected app does not do (yet)
 
-- Data is in browser storage, not Supabase. Clearing the browser clears it.
-- `TODAY` is fixed at 2 Nov 2026 for the demo; the connected build uses the real date.
-- Sending emails, OneDrive backups and file storage are shown, not done. The build connects them.
+- **Email isn't connected.** Approval drawers show the email (RFQ, chase, purchase order, invoice,
+  offer) with a Copy email button; Dan sends it from Gmail. Approving still records it in the database.
+- **No sales register or trust ledger tables.** The schema has none, so those demo sections stay
+  empty (sales invoices still work). Adding them is a migration plus a new screen: quote it.
+- **No automatic OneDrive copy** of files or workbooks yet. Exports > Everything gives a full copy of
+  the data as one workbook; files stay in Supabase Storage.
+- Task dates in templates follow key dates or other tasks in **days** (the database stores days).
+- Purchase orders, quotes and bills don't create a PDF themselves; upload the PDF in Documents.
+- Testing on a separate copy: there is no test Supabase project. Joe's developer stand-in
+  (local Postgres + a small fake Supabase, used with `?env=local` on localhost only) isn't part of
+  this pack; the app ignores `?env=local` anywhere else.

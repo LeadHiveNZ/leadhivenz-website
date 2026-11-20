@@ -20,9 +20,9 @@ All three are in your name. Joe can help only if you invite him.
    agent's phone number." One change at a time works best.
 4. Claude reads its instructions in the folder, saves a copy of the current app first, makes the
    change and checks it. Let it finish its checks.
-5. Open the app file it tells you to (double-click) and have a look yourself.
-6. Happy with it? Go to **netlify.com** > your Wellco site > **Deploys**, and drag the file
-   `app/index.html` onto the box. It's live in about a minute.
+5. Claude opens the changed app on your laptop so you can have a look yourself (log in as usual).
+6. Happy with it? Go to **netlify.com** > your Wellco site > **Deploys**, and drag the **`app`
+   folder** onto the box. It's live in about a minute.
 
 If Claude says a change needs Joe or your accountant, that's on purpose: some changes (GST, BAS,
 deleting data, the database) are risky to do on your own.
@@ -38,9 +38,10 @@ Your data isn't affected by this. Then tell Claude: "Put back the previous versi
 ## Backups
 
 - **Supabase** backs up your data every day once you're on the Pro plan. Keep Pro switched on.
-- **Every quarter**, go to **Exports** in the app, download the year-end and BAS workbooks for each
-  company, and save them in your OneDrive.
-- Your documents are also copied to OneDrive automatically each night once Joe's build is live.
+- **Every quarter**, go to **Exports** in the app, download **Everything** (one workbook with all your
+  data) plus the year-end and BAS workbooks for each company, and save them in your OneDrive.
+- Your documents (PDFs, plans, photos) live in Supabase Storage, which is backed up with your data.
+- **Forgot your password?** On the login screen, tap "Forgot your password?" and follow the email.
 - Keep your accountant's sign-off on each BAS and year-end as usual. The app helps you get the
   figures ready; Lucy still checks and lodges them.
 
