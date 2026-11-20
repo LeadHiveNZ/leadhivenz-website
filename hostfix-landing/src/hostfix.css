@@ -201,3 +201,31 @@ select.hf-input { appearance: none; -webkit-appearance: none; background-image: 
 .hf-pay-grid { margin-top: 22px; display: grid; gap: 14px; }
 .hf-pay-title { padding: 16px 0 6px; }
 @media (min-width: 900px) { .hf-pay-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+
+/* Tradie sign-up page (/tradies/join) */
+.hf-join-head { padding-top: 18px; padding-bottom: 8px; }
+.hf-join { max-width: 760px; padding-bottom: 48px; }
+.hf-join-form { display: grid; gap: 18px; margin-top: 18px; }
+.hf-join-section .hf-kicker { margin-bottom: -6px; }
+.hf-join-pair { display: grid; gap: 12px; }
+@media (min-width: 640px) { .hf-join-pair { grid-template-columns: 1fr 1fr; } }
+.hf-fine-left { text-align: left; }
+.hf-join-link { color: var(--plum); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+.hf-join-intro { font-weight: 600; color: var(--ink); }
+.hf-file { padding: 10px 12px; }
+.hf-signature { font-family: var(--display); font-weight: 700; font-size: 1.15rem; }
+.hf-check { display: grid; grid-template-columns: 22px 1fr; gap: 10px; align-items: start; font-size: 0.95rem; cursor: pointer; }
+.hf-check input { width: 20px; height: 20px; margin-top: 2px; accent-color: var(--plum); }
+.hf-check .hf-error { grid-column: 2; }
+.hf-agreement { max-height: 420px; overflow-y: auto; border: 1.5px solid var(--line); border-radius: 14px; background: #fbf9f6; padding: 16px 18px; font-size: 0.93rem; line-height: 1.55; color: var(--ink); }
+.hf-agreement:focus-visible { outline: 3px solid var(--plum); outline-offset: 2px; }
+.hf-agreement h4 { margin-top: 18px; font-family: var(--display); font-weight: 700; font-size: 1.05rem; color: var(--plum); }
+.hf-agreement h4:first-child { margin-top: 0; }
+.hf-agreement p { margin-top: 10px; }
+.hf-agreement ul { margin-top: 10px; padding-left: 20px; list-style: disc; display: grid; gap: 6px; }
+.hf-join-thanks { margin-top: 32px; padding: 26px; }
+.hf-logo-link { text-decoration: none; color: inherit; }
+.hf-join-cta { display: block; margin-top: 14px; text-align: center; }
+.hf-join-head .hf-logo { color: var(--plum); }
+.hf-join-head .hf-pill { color: var(--plum); background: rgba(59, 30, 63, 0.08); border-color: rgba(59, 30, 63, 0.15); }
+.hf-join-head .hf-logo .hf-fill-plum { fill: var(--plum); }
