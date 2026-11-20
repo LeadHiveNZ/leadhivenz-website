@@ -87,7 +87,7 @@ export const Route = createFileRoute("/api/public/leads")({
 
         const role = text(body["role"], 20);
         const town = text(body["town"], 100);
-        if (role === null || !["owner", "manager", "cohost"].includes(role) || town === null || town.length < 2) {
+        if (role === null || !["owner", "homeowner", "manager", "cohost"].includes(role) || town === null || town.length < 2) {
           return Response.json({ error: "Please check the form" }, { status: 400 });
         }
         const lead = {
@@ -129,7 +129,7 @@ export const Route = createFileRoute("/api/public/leads")({
             `Name: ${lead.name}`,
             `Mobile: ${lead.phone}`,
             `Email: ${lead.email}`,
-            `They are: ${{ owner: "the owner", manager: "a property manager", cohost: "a co-host or cleaner" }[lead.role] ?? lead.role}`,
+            `They are: ${{ owner: "a holiday-home owner", homeowner: "a homeowner (their own home, not a holiday let)", manager: "a property manager", cohost: "a co-host or cleaner" }[lead.role] ?? lead.role}`,
             `Properties: ${lead.properties}`,
             `Town: ${lead.town}`,
             `Repairs today: ${{ me: "them, ringing round", manager: "their property manager", handyman: "a handyman they know", nobody: "nobody, it piles up" }[lead.who_now ?? ""] ?? "not said"}`,
@@ -148,7 +148,7 @@ export const Route = createFileRoute("/api/public/leads")({
               from: LEAD_EMAIL_FROM,
               to: [LEAD_EMAIL_TO],
               reply_to: lead.email,
-              subject: `New HostFix lead: ${lead.name}, ${lead.properties} ${lead.properties === 1 ? "property" : "properties"} (${lead.town})${lead.role === "manager" ? " MANAGER" : ""}`,
+              subject: `New HostFix lead: ${lead.name}, ${lead.properties} ${lead.properties === 1 ? "property" : "properties"} (${lead.town})${lead.role === "manager" ? " MANAGER" : lead.role === "homeowner" ? " HOMEOWNER" : ""}`,
               text: lines.join("\n"),
             }),
           });

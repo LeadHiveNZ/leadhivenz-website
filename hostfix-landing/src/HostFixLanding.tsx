@@ -29,7 +29,7 @@ export type Lead = {
   phone: string;
   email: string;
   properties: number;
-  /** owner, manager or cohost */
+  /** owner, homeowner, manager or cohost */
   role: string;
   town: string;
   /** who sorts their maintenance today */
@@ -161,7 +161,8 @@ function Logo({ small = false }: { small?: boolean }) {
 type Errors = Partial<Record<"name" | "phone" | "email" | "properties" | "role" | "town", string>>;
 
 const ROLES: [string, string][] = [
-  ["owner", "I own it"],
+  ["owner", "I own a holiday home"],
+  ["homeowner", "It's my own home"],
   ["manager", "I manage for owners"],
   ["cohost", "I co-host or clean"],
 ];
