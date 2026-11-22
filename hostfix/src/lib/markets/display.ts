@@ -42,10 +42,10 @@ export function tierPriceLabel(tier: Pick<MembershipTier, "monthlyPriceCents">, 
 
 /**
  * How parts are priced, in the same words on every owner page, the terms and
- * the price list email (DECISIONS.md, 2026-11-20). Never "retail" or "about
- * retail": the price list is a fixed price, and anything else is the
- * merchant's price on the receipt plus 20%.
+ * the price list email (DECISIONS.md, 2026-11-23). Never "retail" or "at
+ * cost": a part is the tradie's own price, including GST, and the owner is
+ * asked first above the no-ask limit.
  */
-export function partsWords(market: Pick<Market, "partsIncludedCents" | "currency">): string {
-  return `Small parts up to ${formatMoney(market.partsIncludedCents, market.currency)} are in the price. Common parts are on the price list at a fixed price. Anything else is charged at the merchant's price plus 20% for sourcing it. Prices include GST.`;
+export function partsWords(market: Pick<Market, "partsIncludedCents" | "partsApprovalCents" | "currency">): string {
+  return `Small parts up to ${formatMoney(market.partsIncludedCents, market.currency)} are in the price. Other parts are charged at the tradie's price, including GST, and above ${formatMoney(market.partsApprovalCents, market.currency)} of parts on a job you say yes first.`;
 }

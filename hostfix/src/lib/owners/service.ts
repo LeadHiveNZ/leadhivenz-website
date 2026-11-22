@@ -216,7 +216,8 @@ export async function listCredits(db: Db, ownerId: string): Promise<CreditRow[]>
 /** Finished jobs whose card payment has not gone through yet. The tradie is waiting on these. */
 export async function unpaidJobs(db: Db, ownerId: string): Promise<{ jobId: string; number: number; title: string; amountCents: number; currency: string }[]> {
   const rows = await db.query<{ job_id: string; number: number; title: string; amount_cents: number; currency: string }>(
-    `select p.job_id, j.number, j.title, p.amount_cents, p.currency
+    // What is owed: the charge less anything already taken from the hold on the card (DECISIONS.md, 2026-11-23).
+    `select p.job_id, j.number, j.title, p.amount_cents - p.hold_captured_cents as amount_cents, p.currency
        from public.payments p join public.jobs j on j.id = p.job_id
       where p.owner_id = $1::uuid and p.status = 'failed'
       order by p.created_at
@@ -232,7 +233,8 @@ export async function unpaidJobs(db: Db, ownerId: string): Promise<{ jobId: stri
  * card that has not expired, and no earlier charge that failed and is still
  * unpaid. No live test charge is made. Null when all is well.
  */
-export type CardProblem = "no_card" | "expired" | "unpaid";
+/** declined: the hold on the card was declined when a job was being sent out (DECISIONS.md, 2026-11-23). */
+export type CardProblem = "no_card" | "expired" | "unpaid" | "declined";
 
 export async function cardProblem(db: Db, ownerId: string, country: CountryCode, at: Date, timeZone: string): Promise<CardProblem | null> {
   const unpaid = await db.query("select 1 from public.payments where owner_id = $1::uuid and status = 'failed' limit 1", [ownerId]);
@@ -256,6 +258,8 @@ export function cardProblemWords(problem: CardProblem): string {
       return "Your saved card has expired. Update it on the Billing page and we send a tradie straight away.";
     case "no_card":
       return "There is no card saved yet. Add one on the Billing page and we send a tradie straight away.";
+    case "declined":
+      return "Your card was declined when we went to hold the job's price on it. Update it on the Billing page and we send a tradie straight away.";
   }
 }
 

@@ -8,7 +8,7 @@ import { runTick } from "@/lib/dispatch/tick";
 import { listInsuranceCertificates } from "@/lib/tradies/certificate";
 import { canStillTake, eligibleTradies, getTradie, insuranceProblem, setTradiePaused, setTradieStatus, updateTradie } from "@/lib/tradies/service";
 import { testDb } from "./db";
-import { auditActions, certificate, liveMarket, logJob, makeOwner, makeProperty, makeTradie, menuItem, MONDAY_10AM, MONDAY_9PM, offersFor, openExceptions, textsTo } from "./factory";
+import { auditActions, certificate, gatewayFor, liveMarket, logJob, makeOwner, makeProperty, makeTradie, menuItem, MONDAY_10AM, MONDAY_9PM, offersFor, openExceptions, textsTo } from "./factory";
 
 const t = testDb();
 
@@ -166,7 +166,8 @@ describe("the offer cascade", () => {
     const told = await textsTo(t.db, owner.user.phone!, "still_arranging");
     expect(told).toHaveLength(1);
     expect(told[0]!.body).toContain("Our team is on it");
-    expect(await auditActions(t.db, job.id)).toEqual(["job.created", "job.dispatched", "job.unfilled", "exception.raised"]);
+    // The hold on the owner's card goes on before the job goes out (DECISIONS.md, 2026-11-23).
+    expect(await auditActions(t.db, job.id)).toEqual(["job.created", "hold.placed", "job.dispatched", "job.unfilled", "exception.raised"]);
   });
 
   it("NOBODY ACCEPTS: once everyone has passed or run out of time it goes to the dispatcher", async () => {
@@ -244,7 +245,7 @@ describe("accepting", () => {
     const told = await textsTo(t.db, owner.user.phone!, "job_booked");
     expect(told[0]!.body).toContain("Wakatipu Plum... booked for");
     expect(told[0]!.body).toContain("10am tomorrow");
-    expect(await auditActions(t.db, job.id)).toEqual(["job.created", "job.dispatched", "job.offered", "job.accepted"]);
+    expect(await auditActions(t.db, job.id)).toEqual(["job.created", "hold.placed", "job.dispatched", "job.offered", "job.accepted"]);
   });
 
   it("tapping Accept twice is harmless", async () => {
@@ -645,7 +646,7 @@ describe("reports from guests and cleaners", () => {
     const result = await createJob(t.db, {
       property, reportedBy: "team", reporterName: "Sam the cleaner", reporterPhone: "+64225550001", menuItemId: item.id, description: "Upstairs toilet",
       urgent: false, uploadIds: [], uploader: `report:${property.id}`, actor: `report:${property.id}`,
-    });
+    }, gatewayFor(t.db));
     expect(result.ok && result.job.status).toBe("offering");
     const told = await textsTo(t.db, owner.user.phone!, "job_logged");
     expect(told).toHaveLength(1);
@@ -660,7 +661,7 @@ describe("reports from guests and cleaners", () => {
     const result = await createJob(t.db, {
       property, reportedBy: "guest", reporterName: "Gina Guest", reporterPhone: null, menuItemId: item.id, description: "",
       urgent: true, uploadIds: [], uploader: `report:${property.id}`, actor: `report:${property.id}`,
-    });
+    }, gatewayFor(t.db));
     if (!result.ok) throw new Error("expected a job");
     expect(result.needsOwner).toBe(true);
     expect(result.job).toMatchObject({ status: "awaiting_owner", urgency: "standard", respondBy: null, dispatchedAt: null });
@@ -671,7 +672,7 @@ describe("reports from guests and cleaners", () => {
 
     // The owner says yes, as urgent, an hour later. The promise runs from now.
     setTestNow(addMinutes(MONDAY_10AM, 60));
-    const answered = await approveGuestReport(t.db, result.job.id, { urgent: true }, `owner:${owner.ownerId}`);
+    const answered = await approveGuestReport(t.db, result.job.id, { urgent: true }, `owner:${owner.ownerId}`, gatewayFor(t.db));
     const approved = answered.ok ? answered.job : null;
     // Owner 22500 + 5000 = 27500. Tradie 19000 + (5000 - 750) = 23250.
     expect(approved).toMatchObject({ status: "offering", urgency: "urgent", ownerTotalCents: 27500, tradieTotalCents: 23250 });
@@ -692,7 +693,7 @@ describe("reports from guests and cleaners", () => {
     const result = await createJob(t.db, {
       property: { ...property, guestAutoDispatch: true }, reportedBy: "guest", reporterName: null, reporterPhone: null, menuItemId: item.id, description: "",
       urgent: true, uploadIds: [], uploader: `report:${property.id}`, actor: `report:${property.id}`,
-    });
+    }, gatewayFor(t.db));
     if (!result.ok) throw new Error("expected a job");
     expect(result.job).toMatchObject({ status: "offering", urgency: "standard", ownerTotalCents: 22500 });
   });
@@ -705,7 +706,7 @@ describe("reports from guests and cleaners", () => {
     const again = await createJob(t.db, {
       property, reportedBy: "guest", reporterName: null, reporterPhone: null, menuItemId: item.id, description: "",
       urgent: false, uploadIds: [], uploader: `report:${property.id}`, actor: `report:${property.id}`,
-    });
+    }, gatewayFor(t.db));
     expect(again).toMatchObject({ ok: false, reason: "duplicate", existingJobId: first.id });
     // A different problem at the same property is a new job.
     expect((await logJob(t.db, property, { code: "EL-01" })).id).not.toBe(first.id);
@@ -717,11 +718,11 @@ describe("reports from guests and cleaners", () => {
     const notYet = await makeProperty(t.db, owner.ownerId, { member: false });
     const item = await menuItem(t.db, "PL-01");
     const base = { reportedBy: "owner" as const, reporterName: null, reporterPhone: null, menuItemId: item.id, description: "", urgent: false, uploadIds: [], uploader: "x", actor: "x" };
-    expect(await createJob(t.db, { ...base, property: notYet })).toMatchObject({ ok: false, reason: "not_member" });
+    expect(await createJob(t.db, { ...base, property: notYet }, gatewayFor(t.db))).toMatchObject({ ok: false, reason: "not_member" });
 
     const lapsed = await makeProperty(t.db, owner.ownerId);
     await t.db.query("update public.properties set status = 'past_due' where id = $1::uuid", [lapsed.id]);
-    const result = await createJob(t.db, { ...base, property: { ...lapsed, status: "past_due" } });
+    const result = await createJob(t.db, { ...base, property: { ...lapsed, status: "past_due" } }, gatewayFor(t.db));
     expect(result).toMatchObject({ ok: false, reason: "not_member" });
     expect(!result.ok && result.message).toContain("did not go through");
   });

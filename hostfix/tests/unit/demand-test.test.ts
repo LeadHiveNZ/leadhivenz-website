@@ -257,8 +257,8 @@ describe("the price list", () => {
       "This is what your card is charged when the job is done, GST included. No call-out fee on top.",
       "Need someone within 4 hours? Add NZ$50 and the tradie drops what they are doing, plus NZ$140 outside working hours (7am to 4:30pm, Monday to Friday).",
       "Not on the list? NZ$225 for a tradie to come and look, then a quote. Nothing over NZ$600 starts without your yes.",
-      // DECISIONS.md, 2026-11-20: the parts rule, never "at cost" and never "retail".
-      "Small parts up to NZ$30 are in the price. Common parts are on the price list at a fixed price. Anything else is charged at the merchant's price plus 20% for sourcing it. Prices include GST.",
+      // DECISIONS.md, 2026-11-23: the parts rule, never "at cost" and never "retail".
+      "Small parts up to NZ$20 are in the price. Other parts are charged at the tradie's price, including GST, and above NZ$150 of parts on a job you say yes first.",
     ]);
   });
 

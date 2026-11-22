@@ -555,15 +555,14 @@ export async function coverage(db: Db, market: string, today: string): Promise<C
  * Change this when the agreement changes, and the page's date with it
  * (tests/unit/legal.test.ts).
  */
-export const TRADIE_AGREEMENT_VERSION = "21 November 2026";
+export const TRADIE_AGREEMENT_VERSION = "23 November 2026";
 
-/**
- * The no-direct-dealing rule (DECISIONS.md, 2026-11-20, first and third entries): an owner HostFix introduced
- * may not be dealt with directly for 12 months from the tradie's first job for them; before then, a release
- * for one property costs the tradie NZ$250. Not enforced by the app: the tradie agreement says it.
+/*
+ * The 12-month no-direct-dealing rule and its NZ$250 release (DECISIONS.md, 2026-11-20) were dropped on
+ * 23 November 2026 (DECISIONS.md, 2026-11-23). In their place, one rule in the tradie agreement (section 10): a job
+ * booked in the app is finished and paid through the app; finishing an app job outside it can lead to removal,
+ * which a person decides. Owners HostFix introduces stay at the market's fee for jobs through the app, with no limit.
  */
-export const DIRECT_DEALING_MONTHS = 12;
-export const DIRECT_RELEASE_CENTS = 25_000;
 
 /** The tradie presses "I agree". Recorded with the time, and in the audit log. Safe to press twice. */
 export async function agreeToAgreement(db: Db, tradieId: string): Promise<void> {

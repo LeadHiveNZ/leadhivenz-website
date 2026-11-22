@@ -8,7 +8,7 @@ We send you fixed-price maintenance jobs at holiday homes, straight to your phon
 
 ## Why tradies join
 
-- **No tyre-kickers.** The owner's card is on file before you get the job. No quotes that go nowhere.
+- **No tyre-kickers.** The job's price is held on the owner's card before you get the job. No quotes that go nowhere.
 - **No paperwork.** No invoices, no statements, no chasing. We handle the money.
 - **Work that fits around your day.** Short jobs, close together, at homes that are often empty between guests.
 - **First pick of the jobs.** Each trade has a first-choice tradie who is offered every job first. What counts is turning up on time to the jobs you accept. Passing never counts against you.
@@ -39,11 +39,19 @@ No. Passing on a job never leads to fewer offers or to being removed. What count
 
 ### How do I get paid?
 
-By bank transfer, automatically. You set up your bank details once. Your payment is sent within two days of each job and takes a few working days to reach your bank. A job the app couldn't confirm waits for the owner to check the before and after photos, or for our team if the owner doesn't answer. Once you finish a job the owner approved, you're paid even if their card fails. Chasing is our job.
+By bank transfer, automatically. You set up your bank details once. Your payment is sent within two days of each job and takes a few working days to reach your bank. A job the app couldn't confirm waits for the owner to check the before and after photos, or for our team if the owner doesn't answer. Once you finish a job the owner approved, you're paid even if their card fails, for up to {{payout_guarantee}} of the job's price. Chasing is our job. Work you price yourself over {{payout_guarantee}} is charged to the owner's card when they approve it, before you start.
 
 ### What about parts?
 
-Small parts up to {{parts_included}} are in the job's price. Common parts are on the price list at a fixed price: you get the list price less 3%, no receipt needed. Anything else is charged at the merchant's price plus 20% for sourcing it, and you get what you paid plus 17%: upload the receipt as a photo, a screenshot or the PDF. Above {{parts_limit}} of parts on a job, the owner says yes in the app before you buy.
+Small parts up to {{parts_included}} are in the job's price. For anything else you enter the part and your own price for it, including GST: your cost plus your usual markup. The owner pays that, and you get it less 3%, which covers the card fee. No receipt is needed, but keep it: we sometimes ask for one. Above {{parts_limit}} of parts on a job, the owner says yes in the app before you buy.
+
+### What if the owner cancels?
+
+Before you tap "I have arrived", even when you're on the way, the owner can cancel for free, and the travel is yours. Once you've tapped Arrived, cancelling charges the owner the call-out, and you're paid your share of it.
+
+### Can I bring my own clients?
+
+Yes. Send them an invite from the app. Jobs for a client you bring are {{own_client_fee}}, not {{platform_fee}}: that covers the card fees (about 3%), the automatic texts and payment, and chasing late payers. Owners HostFix introduces stay at {{platform_fee}} for jobs through the app.
 
 ### When do you start?
 

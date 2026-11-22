@@ -199,7 +199,7 @@ describe("quote rate (DECISIONS.md, 2026-11-20, third entry)", () => {
       }
       await arrive(t.db, job.id, tradieId, HOUSE);
       if (quoted === "work") await submitQuote(t.db, job.id, tradieId, { description: "More", hours: 0.25, uploadIds: [] });
-      if (quoted === "parts") await addParts(t.db, job.id, tradieId, { list: [], offList: { description: "Valve", receiptTotalCents: 5000, amountCents: 5000, uploadId: await photo(t.db, `tradie:${tradieId}`, "receipt") } });
+      if (quoted === "parts") await addParts(t.db, job.id, tradieId, { parts: [{ name: "Valve", quantity: 1, unitCents: 5000 }] });
       const done = await completeJob(t.db, job.id, tradieId, { note: "", uploadIds: [await photo(t.db, `tradie:${tradieId}`)], receiptsToFollow: false, ...HOUSE });
       if (!done.ok) throw new Error(done.message);
     };

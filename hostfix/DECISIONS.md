@@ -9,6 +9,130 @@ price, a fee or a promise, add a line here saying what and why.
 
 ---
 
+## 2026-11-23 — A hold on the card at booking, pattern flags, the payout guarantee capped at NZ$1,000, simpler parts, 5% for own clients, one in-app rule
+
+(Approved by Joe on 23 Nov 2026, NZ time. Migration `supabase/migrations/20261201000000_holds_parts_own_clients.sql`, which only adds,
+and moves a market still on NZ$30 small parts to NZ$20. The tradie agreement is now version "23 November 2026", so every tradie agrees again
+in the app before their next offer: fine before launch. Tests, every amount worked by hand: `tests/unit/holds-and-own-clients.test.ts`,
+`tests/unit/parts.test.ts`, `tests/unit/stripe-sandbox.test.ts` (the hold calls against a stand-in Stripe), `tests/unit/legal.test.ts`.)
+Stripe's documentation read for this: docs.stripe.com/payments/place-a-hold-on-a-payment-method (23 Nov 2026). Holds last about 7 days, a Visa
+payment the merchant starts 4 days 18 hours; `capture_before` is on the charge (`payment_method_details.card.capture_before`); a capture can take
+less than the hold (`amount_to_capture`) and lets the rest go, never more, and only once; cancelling an uncaptured PaymentIntent costs nothing (our
+sandbox, 22 Nov: hold then cancel made no balance transaction, and a partial capture's fee was only on the amount captured).
+
+**1. A hold on the owner's card when a job goes out** (`src/lib/billing/card-holds.ts`, `sendOut` in `src/lib/jobs/create.ts`). This is Open
+spec 5 below, built at send-out rather than at accept.
+- Before a job is offered to anyone, a manual-capture, off-session hold on the saved card for the job's known price: the menu price with GST and
+  any surcharge known then; for an off-menu job the call-out. PL-03: 23500. PL-01 urgent: 22500 + 5000 = 27500. Off-menu: 22500. A surcharge a
+  membership covers is not held (the owner pays 0 for it). Claimed first (`card_holds`, `placing`), asked for with the key
+  `hostfix-job-<job>-hold-<seq>`, then written down. With card payments not set up for the country, the job goes out with no hold, as before.
+- **A declined hold is a card problem** (`card_hold = 'declined'`, `cardProblemWords("declined")`). The owner logging it is refused with the words
+  and the job is recorded as cancelled at no cost ("The owner's card declined the hold, so the job was not sent"); anyone else's report waits, the
+  owner is texted ("your card declined"), the team sees "Owner's card needs updating", and the timer tries again only once a new card is saved
+  (`releaseCardHolds`). An unclear answer from Stripe (a timeout, a server error) leaves the job waiting; the timer asks again with the same key.
+- **Settlement** (`chargeJob`): the charge is taken from the hold, up to the held amount (`hostfix-hold-<hold>-capture`). Anything beyond it
+  (approved parts or work, a surcharge that grew) is a second, separate off-session charge as before (`hostfix-job-<job>-charge-<try>`).
+  `payments.payment_intent_id`/`charge_id` are the first payment; `extra_payment_intent_id`/`extra_charge_id` the second; `hold_captured_cents`
+  what came from the hold. Refunds come off the first payment until it is used up, then the second (`refundAcross`). A hold that ran out is skipped
+  and the whole amount charged the usual way. Worked: PL-03 plus a NZ$45 part: 23500 captured, 4500 charged beyond it, 28000 in all. Urgent PL-01
+  reached late: held 27500, captured 22500, the rest let go.
+- **Keeping it alive** (`keepHoldsAlive`, every timer run). A hold running out within 12 hours (`HOLD_REFRESH_HOURS`) on an open job is replaced
+  by a fresh one, then let go. A visit further away than a fresh hold would last (from 102 hours: 114 - 12) has its hold let go and placed again a
+  day before the visit (`jobs.hold_due_at`, `HOLD_LEAD_HOURS`). When Stripe does not say when a hold runs out, 4 days 18 hours is assumed. A
+  renewal the card declines leaves the job booked: "Owner's card declined renewing a hold" in the queue, the owner texted once, retried only after a
+  new card.
+- **Cancelling** (`cancelJob`). Before the tradie taps Arrived, even after On my way: free, the hold is let go (`cancelDueHolds`), nothing charged,
+  the tradie bears their travel (tradie agreement section 6 says so plainly). After Arrived the owner can now cancel in the app (it used to need our
+  team): the call-out is charged instead of the job, never more than the job, with any urgent or after-hours line kept as for "could not get in"
+  (`cancelledOnSiteLines`), taken from the hold, and the tradie paid their share as for a call-out. PL-03 cancelled after Arrived: owner 22500,
+  tradie 19000. Our team cancelling after Arrived chooses: the call-out (ticked by default) or no charge (to charge only parts already bought).
+- The demo gateway (a declining card declines the hold; holds last 114 hours on the app's clock) and `e2e/fake-stripe.mjs` (`/v1/payment_intents`,
+  `/capture`, `/cancel`, never capturing more than held) behave the same.
+
+**2. Pattern flags** (`src/lib/ops/patterns.ts`): to the queue, never a removal, never counted as a decline, neutral words. (a) The same tradie and
+owner with `PATTERN_PAIR_JOBS` (2) or more jobs in `PATTERN_DAYS` (90) that the tradie accepted and that ended without Job done (cancelled after On
+my way or after Arrived, or a no-show): "Worth a look: the same tradie and owner". (b) A tradie with `PATTERN_TRADIE_CANCELS` (3) or more accepted
+jobs in 90 days cancelled after On my way: "Worth a look: cancelled after On my way". Checked on each such cancel and each no-show. The tradie
+agreement (section 8) and RUNBOOK say what happens.
+
+**3. The payout guarantee, capped at NZ$1,000 a job** (`payoutWaits` in `pricing.ts`, `releasePayout` and `releaseDueRests` in `settle.ts`,
+`markets.payout_guarantee_cents`, 100000, More > Markets; `PAYOUT_GUARANTEE_CENTS` is the starting value). Read as: HostFix pays the tradie ahead
+of the card for up to NZ$1,000 of the job's price that has not been collected. Above it, the tradie's share of the uncollected amount, in the
+job's own proportion, waits (`payouts.waits_cents`, worked out once on the payout's first try) and goes as a second transfer once the card pays
+(`hostfix-job-<job>-payout-rest`). Worked: PL-01 plus 6.25 hours at NZ$160 (100000) plus NZ$150 of parts: owner 137500, tradie 19000 + 85000 +
+14550 = 118550; the 22500 hold taken, the 115000 beyond it declined; not collected 115000, over NZ$1,000 15000; waits 15000 x 118550 / 137500 =
+12932.7, so 12933; sent at the usual time 105617; the rest when a new card pays. Jobs up to NZ$1,000 pay exactly as before.
+- **Work a tradie prices themselves over NZ$1,000** (the "over NZ$1,000, their own price" path) always waits for the owner, even inside their
+  limit, and is charged in full when they approve it (`answerQuote` in `work.ts`, `job_prepayments`, key `hostfix-quote-<quote>-prepay-<try>`).
+  Declined: the quote stays unapproved, the owner is told to update the card, the tradie is texted the work can't start yet. `decideQuote` refuses
+  to approve one that has not been paid. At Job done the paid amount is not charged again; if the work does not go ahead (the job is cancelled, or
+  the quote's lines come off the job) it is refunded in full by the timer (`refundDuePrepayments`). Worked: a NZ$1,500 quote on PL-01: 150000
+  charged on approval, 22500 from the hold at Job done; the tradie's 19000 + 127500 = 146500 goes tied to the quote's charge.
+
+**4. Parts, simplified** (`src/lib/jobs/parts.ts`; replaces the 2026-11-20 rule for parts added from today; parts added before keep their terms,
+which still work: list parts, receipt parts, "receipt to follow", the receipt checks).
+- Each part: its name, how many, and the tradie's own price for one including GST (their cost plus their usual markup), `kind = 'priced'`. The
+  owner pays it; the tradie gets it less 3% (`PART_FEE_BPS`, the same 3% as `LIST_PART_FEE_BPS`); HostFix keeps the 3%. No receipt, no +20/+17%.
+  NZ$45: owner 4500, tradie 4365.
+- The price list stays as quick picks (`PartPicker`): picking one fills in its name and price, both editable. Picked and priced over 1.5 times the
+  list price (`PART_PRICE_FLAG_MULTIPLE`): "Worth a look: a part priced over the list" in the queue, nothing held (4712 against 3141 is; 4711 is not).
+- Small parts in the price: NZ$20 (`parts_included_cents` 2000, was 3000), at or under it refused, on price times quantity. So a single NZ$13 bulb
+  from the list is now a small part (judgement call, below). The NZ$150 ask-first limit is unchanged.
+- **Spot checks.** Staff press "Request the receipt (spot check)" on any part on the job page (`requestReceipt`): the tradie is texted neutrally,
+  the payout is held (`holds.ts`, `receipt_status = 'requested'`), and 7 days without it refunds the part to the owner out of the held payout (the
+  existing `refundMissingReceipts`). A receipt sent releases it, unless it is dated over 90 days before the job or the same file is on another
+  job's part (still meaningful, so kept); "amount over the receipt" and "over-used receipt total" apply only to parts from before today.
+- Owner words (`partsWords`): "Small parts up to NZ$20 are in the price. Other parts are charged at the tradie's price, including GST, and above
+  NZ$150 of parts on a job you say yes first." Never "retail" or "at cost".
+
+**5. Own clients at 5%** (`src/lib/clients/own-clients.ts`, `/i/<token>`, `src/app/actions/clients.ts`, `OwnClients.tsx`). The rate belongs to a
+tradie + property pair (`own_client_pairs`), made by an invite link from either side (`client_invites`; opening the link changes nothing, the button
+does): a tradie invites a client from their profile, the owner signs up or in and picks the property; or an owner uses "Bring your own tradie" on a
+property page, the tradie gets a one-tap link, signs up through the normal application and approval, signs in and presses the button. **The
+guard:** no pair if HostFix already offered that tradie a job, or they did one, at that place, matched by normalised address (`addressKey`) or a map
+pin within 25 m, never by account (an own-client offer, `offers.own_client`, does not count). Jobs between the pair take `OWN_CLIENT_FEE_BPS` (500),
+set on the job when that tradie accepts (`jobs.platform_fee_bps`, `applyOwnClientFee`) on everything the 15% applies to: menu share, surcharges,
+call-out, quotes, hourly. The paired tradie is first choice for that property in their trades (the market's first choice moves to the backup stage
+there) and is offered the job at the 5% payout. Every other tradie and trade there stays 15%. Worked: PL-03: tradie 23500 - 1175 = 22325 (not
+20000). PL-01 urgent: owner 27500, tradie 21375 + 4750 = 26125. 2 hours at NZ$160: tradie 32000 - 1600 = 30400.
+
+**6. The 12-month no-direct-dealing rule and the NZ$250 buyout are gone** (`DIRECT_DEALING_MONTHS`, `DIRECT_RELEASE_CENTS`, tradie agreement
+section 10). One rule instead: a job booked in the app is finished and paid through the app; finishing an app job outside it can lead to removal
+from the network, which a person decides. Owners HostFix introduced stay at 15% for jobs through the app, with no time limit. Nothing was ever
+built for the buyout, so nothing else is removed.
+
+**7. Words.** Tradie agreement "23 November 2026": sections 5 (quotes over NZ$1,000, parts), 6 (the hold, cancelling and travel, the NZ$1,000
+guarantee), 8 (pattern flags), 10 (own clients at 5%, the one rule). Owner terms (sections 1, 2, 7, 9: the hold at booking, "You're only charged
+once it's fixed", cancelling, quotes over NZ$1,000, parts by the tradie with approval above NZ$150), privacy (invite contact details), both landing
+pages, `docs/outreach/hostfix-for-tradies*.html`, RUNBOOK, the Stripe test checklist (B2a). The booking screen: "We hold NZ$235 on your card now.
+You're only charged once it's fixed." Every new text fits 160 GSM-7 characters with the STOP line (`tests/unit/messages.test.ts`).
+
+**Decided while building, to confirm with Joe:**
+- The hold goes on when a job is sent out (before any offer), as decided, not when a tradie accepts (Open spec 5's wording).
+- An owner whose card declines the hold while logging a job sees the job as cancelled ("not sent") in their list; nothing is charged.
+- A hold renewal the card declines does not stop a booked job; the team rings the owner. Stopping the job would leave a tradie on the way unpaid.
+- "Owner cancels after Arrived" charges the call-out plus any urgent or after-hours line, the same as "could not get in".
+- The guarantee is a cap on what HostFix fronts per job (up to NZ$1,000 of uncollected price), not "the first NZ$1,000 of the price is
+  guaranteed and the rest waits even if the hold paid it". With a hold in place it only bites when more than NZ$1,000 beyond the hold fails.
+- A payout bigger than either payment (for example PL-03 plus a part: 24365 against 23500 and 4500) is sent from HostFix's own Stripe balance,
+  because one transfer can be tied to one charge. Keep the NZ$500 to NZ$1,000 float (2026-11-21); the existing "Top up" item covers a low balance.
+- Work a tradie prices over NZ$1,000 always asks the owner, even inside a higher property limit, so the charge happens on a press.
+- A refund through "Something's wrong" refunds the job's charge only; a quote paid on approval is refunded automatically if its work does not go
+  ahead, and otherwise by hand in Stripe.
+- Small parts: price times quantity at or under NZ$20 is refused, list picks included (a single NZ$13 GU10 is now in the job price; two are not).
+- A receipt can be requested at any time; once the tradie has been paid there is nothing to hold, and a refund after 7 days comes out of HostFix.
+- The 5% covers the call-out too (it is part of what the 15% applies to). The paired tradie is first choice for invites from either side.
+- An invited tradie applies through the normal tradie form and approval, then opens the link again and presses the button; an invited owner signs
+  up, adds the property, then opens the link again. Nothing is matched automatically by phone number.
+
+**Not done:** the PDF and PNG copies of the outreach pages (`docs/outreach/*.pdf`, `*.png`) were not regenerated; `docs/outreach/for-qianyi.html`
+is a letter about the old 12-month wording and was left as it was sent. The public sign-up form (`hostfix-landing/lovable/join`, the 21 Nov
+agreement text) needs the new agreement sections mirrored. The payments copy of the site in the browser tests only runs the deposit journey, so
+the stand-in Stripe's hold endpoints are checked by `tests/unit/stripe-sandbox.test.ts`, not a browser test. Run section B2a of
+`docs/STRIPE-TEST-CHECKLIST.md` in the sandbox before launch.
+
+---
+
 ## 2026-11-21 — A payout Stripe refuses for any other reason is retried with a new key
 
 (Migration `supabase/migrations/20261130000000_payout_refusals.sql`. Tests: `tests/unit/stripe-sandbox.test.ts`, "a payout Stripe refuses for another reason".)
@@ -268,7 +392,8 @@ report hazards they find.
 
 **6. Open: an owner can still cancel free after "On my way".** Cancelling is free until the tradie taps
 Arrived, even once they have tapped On my way and are driving there. Joe has not decided whether to charge a
-fee for that. Nothing is built.
+fee for that. Nothing is built. **Decided 2026-11-23: it stays free; the tradie bears their travel; after
+Arrived the call-out is charged.**
 
 **7. The 12-month rule (decided 2026-11-19), recorded here.**
 
@@ -1300,10 +1425,9 @@ timing as item 3 — it is meaningless until the volume exists.
 
 ### 5. Pre-authorise on accept, capture on close
 
-This answers "who carries the risk when the owner's card fails after the tradie
-has done the work". Nobody should. Pre-authorise the owner's card at the moment
-the tradie accepts the offer, and capture when the job closes. A card that
-cannot be pre-authorised means the job never gets offered.
+**Built on 2026-11-23** (entry above), at the moment the job is sent out rather than when a tradie accepts:
+a hold on the owner's card for the job's known price, captured when it is done, and a card that declines the
+hold means the job is not offered.
 
 ### 6. Stripe Accounts v2 for tradie payout accounts (from 2026-11-21)
 

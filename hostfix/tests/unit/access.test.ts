@@ -7,7 +7,8 @@ import { completeJob, markArrived, markEnRoute, reportHazard, reportNoAccess, re
 import { balanceOwed } from "@/lib/billing/chargebacks";
 import { removePushSubscriptions, savePushSubscription } from "@/lib/notify/push";
 import { confirmFixed } from "@/lib/jobs/confirm";
-import { addParts } from "@/lib/jobs/parts";
+import { addParts, attachReceipt, requestReceipt } from "@/lib/jobs/parts";
+import { acceptClientInvite, inviteClient, inviteFromLink, inviteOwnTradie, pairsForProperty, pairsForTradie } from "@/lib/clients/own-clients";
 import { confirmPin, propertiesNeedingPin } from "@/lib/properties/pin";
 import { laterWindows } from "@/lib/jobs/arrival";
 import { loadJobView } from "@/lib/jobs/view";
@@ -280,14 +281,19 @@ describe("checking a finished job (DECISIONS.md, 2026-11-19)", () => {
   });
 });
 
-describe("parts receipts (DECISIONS.md, 2026-11-20)", () => {
+describe("parts receipts (DECISIONS.md, 2026-11-20; asked for as a spot check since 2026-11-23)", () => {
   it("are seen by staff and the tradie who sent them. Never the owner, another owner or another tradie", async () => {
     const { alice, bob, mike, dave, aliceJob } = await twoOfEverything();
     await arrive(t.db, aliceJob.id, mike.tradieId, HOUSE);
     const id = await photo(t.db, `tradie:${mike.tradieId}`, "receipt");
     // Dave cannot put parts on Mike's job, nor attach Mike's receipt.
-    expect(await addParts(t.db, aliceJob.id, dave.tradieId, { list: [], offList: { description: "Pipe", receiptTotalCents: 5000, amountCents: 5000, uploadId: id } })).toMatchObject({ ok: false });
-    expect(await addParts(t.db, aliceJob.id, mike.tradieId, { list: [], offList: { description: "Pipe", receiptTotalCents: 5000, amountCents: 5000, uploadId: id } })).toMatchObject({ ok: true });
+    expect(await addParts(t.db, aliceJob.id, dave.tradieId, { parts: [{ name: "Pipe", quantity: 1, unitCents: 5000 }] })).toMatchObject({ ok: false });
+    const added = await addParts(t.db, aliceJob.id, mike.tradieId, { parts: [{ name: "Pipe", quantity: 1, unitCents: 5000 }] });
+    expect(added).toMatchObject({ ok: true });
+    const pipe = added.ok ? added.parts[0]! : null;
+    await requestReceipt(t.db, pipe!.id, "staff:test");
+    expect(await attachReceipt(t.db, aliceJob.id, dave.tradieId, pipe!.id, { uploadId: id })).toMatchObject({ ok: false });
+    expect(await attachReceipt(t.db, aliceJob.id, mike.tradieId, pipe!.id, { uploadId: id })).toMatchObject({ ok: true });
     const upload = (await getUpload(t.db, id))!;
     expect(upload).toMatchObject({ kind: "receipt", attached: true, jobId: aliceJob.id });
     expect(await canView(t.db, upload, { staff: true })).toBe(true);
@@ -573,5 +579,23 @@ describe("the database itself", () => {
   it("has no policies that would open a table to the public key", async () => {
     const rows = await t.db.query("select 1 from pg_policies where schemaname = 'public'");
     expect(rows).toEqual([]);
+  });
+});
+
+describe("own-client invites (DECISIONS.md, 2026-11-23)", () => {
+  it("only the owner of a property can pair it, only by pressing the button, and an owner's invite only for their own property", async () => {
+    const { alice, bob, aliceHome, bobHome, dave } = await twoOfEverything();
+    const invite = await inviteClient(t.db, { tradieId: dave.tradieId, businessName: "Dave Ltd", name: "Alice", phone: null, email: "alice@example.com" });
+    if (!invite.ok) throw new Error(invite.message);
+    // Bob holding Alice's invite link cannot pair Alice's property, and a forged token opens nothing.
+    expect(await acceptClientInvite(t.db, invite.invite.token, bob.ownerId, aliceHome.id)).toMatchObject({ ok: false });
+    expect(await inviteFromLink(t.db, "not-a-real-token-at-all-0000")).toBeNull();
+    expect(await t.db.query("select 1 from public.own_client_pairs")).toHaveLength(0);
+    // Bob cannot invite a tradie for Alice's property.
+    expect(await inviteOwnTradie(t.db, { ownerId: bob.ownerId, ownerName: "Bob", property: aliceHome, name: "Mike", phone: "+64225550111", trade: "plumber" })).toMatchObject({ ok: false });
+    // What each sees of the pairs is their own: Bob's property has none.
+    expect(await acceptClientInvite(t.db, invite.invite.token, alice.ownerId, aliceHome.id)).toMatchObject({ ok: true });
+    expect((await pairsForProperty(t.db, bobHome.id))).toEqual([]);
+    expect((await pairsForTradie(t.db, dave.tradieId)).map((pair) => pair.propertyId)).toEqual([aliceHome.id]);
   });
 });

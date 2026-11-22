@@ -121,6 +121,7 @@ export async function saveMarketSettings(_previous: FormState, formData: FormDat
     approvalThresholdCents: amount(formData, "approvalThreshold", errors),
     partsIncludedCents: amount(formData, "partsIncluded", errors),
     partsApprovalCents: amount(formData, "partsApproval", errors),
+    payoutGuaranteeCents: amount(formData, "payoutGuarantee", errors),
     referralRewardCents: amount(formData, "referralReward", errors),
     offerMinutes: whole(formData, "offerMinutes", errors),
     hoursStart: hourOfDay(formData, "hoursStart", errors),

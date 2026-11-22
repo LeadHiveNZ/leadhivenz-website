@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import {
-  staffAssign, staffCancel, staffChargebackFault, staffNotDescribed, staffChargeBoughtParts, staffCheckJob, staffCheckReceipt, staffGoAhead, staffGoodwill, staffQuote, staffReoffer, staffResolveDispute, staffRetryCharge, staffRetryPayout,
+  staffAssign, staffCancel, staffRequestReceipt, staffChargebackFault, staffNotDescribed, staffChargeBoughtParts, staffCheckJob, staffCheckReceipt, staffGoAhead, staffGoodwill, staffQuote, staffReoffer, staffResolveDispute, staffRetryCharge, staffRetryPayout,
 } from "@/app/actions/staff";
-import { ActionForm, Area, Field, RadioCards, Select } from "@/components/forms/ActionForm";
+import { ActionForm, Area, Field, RadioCards, Select, Tick } from "@/components/forms/ActionForm";
 import { SubmitButton } from "@/components/forms/SubmitButton";
 import { BeforeAfter, CostLines, Deadline, History, JobStatus, Panel, PhotoGrid } from "@/components/jobs/JobParts";
 import { flagWords, type CheckFlag } from "@/lib/jobs/checks";
@@ -53,6 +53,8 @@ const PAYOUT_WORDS: Record<string, string> = {
 };
 
 const PART_RECEIPT: Record<string, string> = {
+  not_needed: "not needed",
+  requested: "asked for by the team (a spot check): the payment waits for it, and the part is refunded to the owner after 7 days without it",
   needed: "not sent yet",
   attached: "sent",
   to_follow: "to follow (promised at Job done; refunded to the owner after 7 days without it)",
@@ -254,7 +256,14 @@ export default async function StaffJobPage({ params, searchParams }: { params: P
       </Card>
 
       {/* WHAT NEEDS DOING */}
-      {job.status === "awaiting_owner" && job.cardHold && (
+      {job.status === "awaiting_owner" && job.cardHold === "placing" && (
+        <Card className="border-brand/30 sm:p-6">
+          <SectionTitle>Placing the hold on the owner&apos;s card</SectionTitle>
+          <p className="text-muted">It goes to tradies as soon as the hold is in place. If this stays here for more than a couple of minutes, the timer asks Stripe again by itself.</p>
+        </Card>
+      )}
+
+      {job.status === "awaiting_owner" && job.cardHold && job.cardHold !== "placing" && (
         <Card className="border-alert/40 sm:p-6">
           <SectionTitle>Held: the owner&apos;s card needs updating</SectionTitle>
           <p className="text-muted">
@@ -556,11 +565,23 @@ export default async function StaffJobPage({ params, searchParams }: { params: P
                     </span>
                   </div>
                   <p className="mt-1 text-sm text-muted">
-                    {part.kind === "list"
-                      ? `Price list, ${fmt(part.unitCents ?? 0)} each. No receipt needed.`
-                      : `Off the list: ${fmt(part.amountCents)} of a ${fmt(part.receiptTotalCents ?? 0)} receipt${part.receiptDate ? ` dated ${part.receiptDate}` : ""}, plus 20%. Receipt: ${PART_RECEIPT[part.receiptStatus] ?? part.receiptStatus}.`}
+                    {part.kind === "priced"
+                      ? `The tradie's price, ${fmt(part.unitCents ?? 0)} each including GST, less 3% to them.${part.listPriceCents !== null ? ` Picked from the price list at ${fmt(part.listPriceCents)}.` : ""} Receipt: ${PART_RECEIPT[part.receiptStatus] ?? part.receiptStatus}.`
+                      : part.kind === "list"
+                        ? `Price list (added before 23 Nov 2026), ${fmt(part.unitCents ?? 0)} each. No receipt needed.`
+                        : `Off the list (added before 23 Nov 2026): ${fmt(part.amountCents)} of a ${fmt(part.receiptTotalCents ?? 0)} receipt${part.receiptDate ? ` dated ${part.receiptDate}` : ""}, plus 20%. Receipt: ${PART_RECEIPT[part.receiptStatus] ?? part.receiptStatus}.`}
                     {part.status === "pending" ? " Waiting for the owner's yes." : ""}
                   </p>
+                  {part.status === "active" && part.receiptStatus === "not_needed" && (
+                    <ActionForm action={staffRequestReceipt} className="mt-2">
+                      <input type="hidden" name="jobId" value={job.id} />
+                      <input type="hidden" name="partId" value={part.id} />
+                      <SubmitButton variant="secondary" pendingLabel="Asking...">
+                        Request the receipt (spot check)
+                      </SubmitButton>
+                      {money.payout?.status === "sent" && <p className="mt-1 text-sm text-muted">The tradie has already been paid, so nothing is held: a refund after 7 days would come from HostFix.</p>}
+                    </ActionForm>
+                  )}
                   {receipt && (
                     <a href={`/files/${receipt.id}`} target="_blank" rel="noreferrer" className="mt-1 inline-block text-sm font-semibold text-brand underline underline-offset-2">
                       Open the receipt ({receipt.contentType === "application/pdf" ? "PDF" : "photo"}, sent {formatDateTime(receipt.createdAt, market.timezone)})
@@ -744,7 +765,13 @@ export default async function StaffJobPage({ params, searchParams }: { params: P
           <ActionForm action={staffCancel} className="space-y-3">
             <input type="hidden" name="jobId" value={job.id} />
             <Field label="Why?" name="cancelReason" required maxLength={200} placeholder="Owner rang: the guest fixed it themselves." />
-            <p className="text-sm text-muted">Nothing is charged and the tradie is not paid. If a tradie has already been out, do not cancel: let them finish, or use &ldquo;could not get in&rdquo; on their side so they are paid the call-out.</p>
+            {job.status === "on_site" || job.status === "awaiting_approval" ? (
+              <>
+                <Tick name="chargeCallOut" label="The owner asked to cancel: charge them the call-out and pay the tradie theirs" hint="As if the owner cancelled in the app after the tradie arrived. Leave it unticked to charge nothing (for example to charge only parts already bought)." defaultChecked />
+              </>
+            ) : (
+              <p className="text-sm text-muted">The tradie has not tapped Arrived, so nothing is charged, the hold on the owner&apos;s card is let go, and the tradie is not paid (the travel is theirs).</p>
+            )}
             <SubmitButton variant="danger" pendingLabel="Cancelling...">
               Cancel the job
             </SubmitButton>

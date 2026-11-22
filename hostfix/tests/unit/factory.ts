@@ -178,7 +178,7 @@ export async function logJob(db: Db, property: Property, overrides: Partial<NewJ
   const result = await createJob(db, {
     property, reportedBy: "owner", reporterName: null, reporterPhone: null, menuItemId: item?.id ?? null, description: "",
     urgent: false, uploadIds: [], uploader: `owner:${property.ownerId}`, actor: `owner:${property.ownerId}`, ...rest,
-  });
+  }, gatewayFor(db));
   if (!result.ok) throw new Error(`Job was not created: ${result.reason} ${result.message}`);
   return result.job;
 }
@@ -275,4 +275,26 @@ export async function makePortfolio(
   // Read back: starting the retainer covered them all.
   const fresh = await Promise.all(properties.map(async (property) => (await getProperty(db, ownerId, property.id))!));
   return { portfolio, properties: fresh };
+}
+
+/**
+ * The owner's card starts declining after their job went out (DECISIONS.md, 2026-11-23): the hold placed at
+ * booking is still there, but any new charge or hold on the card is declined.
+ */
+export async function cardDeclinesFromNow(db: Db, ownerId: string): Promise<void> {
+  const billing = await db.query<{ customer_id: string }>("select customer_id from public.owner_billing where owner_id = $1::uuid", [ownerId]);
+  await saveBilling(db, { ownerId, country: "NZ", provider: "demo", customerId: billing[0]?.customer_id ?? "demo_cus_x", card: DEMO_CARD_DECLINES });
+}
+
+/** The hold on a job's card ran out (or the card network let it go), so the charge goes to the card the usual way. */
+export async function holdRanOut(db: Db, jobId: string): Promise<void> {
+  await db.query("update public.card_holds set status = 'expired' where job_id = $1::uuid and status = 'held'", [jobId]);
+}
+
+/** The holds placed for a job, oldest first. */
+export async function holdsFor(db: Db, jobId: string) {
+  return db.query<{ id: string; seq: number; status: string; amount_cents: number; captured_cents: number; reason: string; capture_before: Date | null; payment_intent_id: string | null }>(
+    "select id, seq, status, amount_cents, captured_cents, reason, capture_before, payment_intent_id from public.card_holds where job_id = $1::uuid order by seq",
+    [jobId],
+  );
 }

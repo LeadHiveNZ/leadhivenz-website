@@ -47,6 +47,22 @@ export type ChargeResult =
     };
 
 /**
+ * A hold on the owner's saved card (DECISIONS.md, 2026-11-23): the price is reserved, nothing is charged.
+ * Stripe: a PaymentIntent with capture_method "manual", confirmed off-session on the saved card. It lasts until
+ * `captureBefore` (the charge's payment_method_details.card.capture_before): about 7 days, and 4 days 18 hours
+ * for a Visa payment the merchant starts (docs.stripe.com/payments/place-a-hold-on-a-payment-method, read 23 Nov 2026).
+ */
+export type HoldResult =
+  | { status: "held"; paymentIntentId: string; chargeId: string | null; captureBefore: Date | null }
+  | { status: "declined"; reason: string; code: string | null; paymentIntentId: string | null };
+
+/** Taking the charge from a hold: never more than was held. A partial capture lets the rest go. */
+export type CaptureResult =
+  | { status: "captured"; amountCents: number; chargeId: string | null }
+  /** The hold can no longer be taken from (it ran out or was let go): charge the card the usual way instead. */
+  | { status: "gone"; reason: string };
+
+/**
  * Thrown by transfer() when the payment company says the platform's own
  * available balance is too low to send it. Nothing was sent, so it is safe to
  * try again (with a new key) once there is money there. Only a transfer that
@@ -143,6 +159,26 @@ export interface PaymentsGateway {
     /** The same key always produces the same charge, never two. */
     idempotencyKey: string;
   }): Promise<ChargeResult>;
+
+  /**
+   * Places a hold for the job's known price on the owner's saved card, with the customer not present. Never throws
+   * for a declined card. The same key always gives the same hold, never two.
+   */
+  placeHold(input: {
+    customerId: string;
+    paymentMethodId: string | null;
+    amountCents: number;
+    currency: string;
+    description: string;
+    jobNumber: number;
+    idempotencyKey: string;
+  }): Promise<HoldResult>;
+
+  /** Takes up to the held amount from a hold. Never more: anything beyond it is a separate chargeJob. */
+  captureHold(input: { paymentIntentId: string; amountCents: number; idempotencyKey: string }): Promise<CaptureResult>;
+
+  /** Lets a hold go. Nothing is charged and there is no fee. Safe to call on one already let go. */
+  cancelHold(input: { paymentIntentId: string; idempotencyKey: string }): Promise<void>;
 
   refund(input: { paymentIntentId: string; amountCents: number; idempotencyKey: string }): Promise<{ refundId: string }>;
 

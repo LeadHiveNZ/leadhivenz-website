@@ -12,7 +12,9 @@ means and what to do about it. The last section is for the admin.
    they pass or do not answer, it goes to the backup for 15 minutes, then to every other approved tradie
    in that trade at once. First to accept gets it.
 3. The tradie accepts from the text, taps **I have arrived** at the property, and finishes with a photo.
-4. The owner's card is charged the fixed price when the job is done. The tradie's payment is sent a
+4. When the job goes out, its price is held on the owner's card; it is taken from that hold when the job
+   is done (anything approved on top is charged then too). Cancelled before the tradie taps Arrived, the
+   hold is let go; after it, the call-out is charged. The tradie's payment is sent a
    day later, and takes a few working days more to reach their bank. That day is the owner's chance to
    say something is wrong.
 5. **You only see what the system could not sort out by itself.** That list is the **Queue**. An empty
@@ -124,6 +126,26 @@ sees receipts: an owner cannot judge one.
 invoice can cover several jobs), press **Approve the receipt**. If not, press **Hold the payment** and ring
 the tradie. Never tell the owner the tradie did anything wrong.
 
+### Worth a look: the same tradie and owner / cancelled after On my way
+**Means (DECISIONS.md, 2026-11-23).** Either the same tradie and owner have had 2 or more jobs in 90 days that the
+tradie accepted and that ended without Job done (cancelled after On my way, or a no-show), or one tradie has had
+3 or more accepted jobs in 90 days cancelled after On my way. It can be ordinary (a guest fixed it, plans changed).
+It can also mean an app job is being finished off the app.
+
+**Do.** Look at the jobs. If it keeps happening, have a friendly word with each: a job booked in the app is
+finished and paid through the app. Nothing changes on anyone's account by itself, and it never counts as a
+decline. Removal is only ever a person's decision after a conversation.
+
+### Worth a look: a part priced over the list
+**Means.** A tradie picked a part from the price list and priced it at more than 1.5 times the list price.
+Nothing is held. **Do.** If it looks high, press **Request the receipt (spot check)** on the job page, or ring
+the tradie. There can be good reasons: a better or harder-to-get part.
+
+### Owner's card declined renewing a hold
+**Means.** A hold on the owner's card lasts a few days. It was renewed on an open job and the card declined. The
+job is still booked and the tradie still going. **Do.** Ring the owner and ask them to update their card on the
+Billing page: it is tried again by itself.
+
 ### Tradie's jobs keep being flagged
 **Means.** 3 or more of a tradie's jobs in 90 days could not be confirmed. Their page shows it too.
 
@@ -158,8 +180,8 @@ new jobs are refused until it is paid.
 will not pay, tell the admin.
 
 ### Owner's card needs updating
-**Means.** A job could not be sent out because the owner has no card saved, their card has expired, or an
-earlier charge is unpaid. The owner has been texted a link to **Billing**. If the owner logged it
+**Means.** A job could not be sent out because the owner has no card saved, their card has expired, an
+earlier charge is unpaid, or the card declined the hold on the job's price (DECISIONS.md, 2026-11-23). The owner has been texted a link to **Billing**. If the owner logged it
 themselves they were stopped and told; if their team or a guest did, the job is waiting.
 
 **Do.** Ring the owner if it is urgent. The job goes out by itself within a minute of the card being sorted.
@@ -277,13 +299,17 @@ company, or someone made a refund in Stripe instead of on the job page.
 
 ---
 
-### Parts, in one minute (DECISIONS.md, 2026-11-20)
-- Small parts up to NZ$30 are in the price. Common parts are on the price list (More > Markets) at a fixed
-  price. Anything else is the merchant's price plus 20%. Prices include GST. Never say "retail" to an owner.
+### Parts, in one minute (DECISIONS.md, 2026-11-23)
+- Small parts up to NZ$20 are in the price. Every other part is the tradie's own price including GST; they get
+  it less 3%. The price list (More > Markets) is only a set of quick picks that fill in a name and price. Never
+  say "retail" or "at cost" to an owner.
 - Up to NZ$150 of parts on a job are added without asking and the owner is texted; above that the owner says
   yes in the app before the tradie buys.
-- A receipt "to follow" holds the tradie's payment. After 7 days without it, the part is refunded to the owner
-  automatically and the tradie is texted.
+- **Spot checks.** On any part, **Request the receipt (spot check)** on the job page texts the tradie and holds
+  their payment for the job until it arrives. After 7 days without it, the part is refunded to the owner out of
+  that payment automatically and the tradie is texted. Do this before the tradie is paid (24 hours after Job done).
+- Parts added before 23 November 2026 keep their old terms (the list price, or a receipt plus 20%, with
+  "receipt to follow" at Job done).
 - **Fitted parts are not refunded unless they are removed.** If an owner wants a part refunded, the tradie
   takes it out first; then settle it as a problem with a part refund.
 - An owner who supplies a part pays no parts charge, and a fault in that part is not covered by the tradie's

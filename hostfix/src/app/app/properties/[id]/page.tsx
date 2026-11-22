@@ -34,6 +34,8 @@ import { mapTiles } from "@/lib/maps/tiles";
 import { PinCard } from "@/components/properties/PinCard";
 import { listGroups, listTeam } from "@/lib/team/service";
 import { formatDate } from "@/lib/time";
+import { BringYourOwnTradie } from "@/components/jobs/OwnClients";
+import { invitesForProperty, pairsForProperty } from "@/lib/clients/own-clients";
 
 export const metadata: Metadata = { title: "Property" };
 
@@ -231,6 +233,9 @@ export default async function PropertyPage({ params, searchParams }: { params: P
               </Reveal>
             </div>
           </Card>
+
+          {query.own === "1" && <Notice tone="good" title="Done">Your tradie is now your first choice here, booked and paid through {brand.name}.</Notice>}
+          <BringYourOwnTradie propertyId={property.id} pairs={await pairsForProperty(db, property.id)} invites={await invitesForProperty(db, viewer.ownerId, property.id)} timeZone={market?.timezone ?? "Pacific/Auckland"} />
 
           <Card>
             <SectionTitle>For your cleaner or co-host</SectionTitle>

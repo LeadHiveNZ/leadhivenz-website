@@ -31,6 +31,7 @@ export type JobRow = {
   confirm_status?: ConfirmStatus | null; confirm_by?: Date | null; confirm_decided_at?: Date | null; confirm_decided_by?: string | null;
   card_hold?: Job["cardHold"]; guest_staying?: Job["guestStaying"]; guest_name?: string | null; guest_phone?: string | null; may_let_in?: boolean | null;
   not_described_at?: Date | null; not_described_reason?: string | null; not_described_status?: Job["notDescribedStatus"]; not_described_by?: Date | null;
+  hold_due_at?: Date | null; platform_fee_bps?: number | null;
 };
 
 const num = (value: number | string | null | undefined) => (value === null || value === undefined ? null : Number(value));
@@ -64,6 +65,7 @@ export function rowToJob(row: JobRow): Job {
     mayLetIn: row.may_let_in ?? true,
     notDescribedAt: d(row.not_described_at ?? null), notDescribedReason: row.not_described_reason ?? null,
     notDescribedStatus: row.not_described_status ?? null, notDescribedBy: d(row.not_described_by ?? null),
+    holdDueAt: d(row.hold_due_at ?? null), platformFeeBps: num(row.platform_fee_bps),
   };
 }
 

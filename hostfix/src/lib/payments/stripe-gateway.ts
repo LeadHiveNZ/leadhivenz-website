@@ -2,7 +2,7 @@ import Stripe from "stripe";
 import { brand } from "@config/brand";
 import type { Market } from "@config/markets";
 import { formatMoney } from "@/lib/money";
-import { PlatformBalanceTooLow, TransferRefused, type CardSummary, type ChargeResult, type InvoiceSummary, type MembershipStart, type PaymentsGateway, type TierForBilling } from "./gateway";
+import { PlatformBalanceTooLow, TransferRefused, type CaptureResult, type CardSummary, type ChargeResult, type HoldResult, type InvoiceSummary, type MembershipStart, type PaymentsGateway, type TierForBilling } from "./gateway";
 import { stripeClient, type StripeAccount } from "./stripe";
 
 /**
@@ -33,6 +33,17 @@ import { stripeClient, type StripeAccount } from "./stripe";
  *    (docs.stripe.com, "Set up future payments" with Checkout, read Nov 2026).
  *  - Every call that moves money carries an idempotency key, so a repeat of
  *    the same call can never charge or pay twice.
+ *  - A hold on the owner's card (DECISIONS.md, 2026-11-23) is a PaymentIntent
+ *    with capture_method "manual", confirmed off-session on the saved card. It
+ *    sits at "requires_capture". The charge's
+ *    payment_method_details.card.capture_before says when the card network lets
+ *    it go: about 7 days, and 4 days 18 hours for a Visa payment the merchant
+ *    starts. Capturing takes up to the held amount (amount_to_capture) and lets
+ *    the rest go; never more, and only once. Cancelling an uncaptured
+ *    PaymentIntent lets the hold go, and costs nothing: in our sandbox (22 Nov
+ *    2026) a hold then a cancel made no balance transaction, and a partial
+ *    capture's fee was only on the amount captured
+ *    (docs.stripe.com/payments/place-a-hold-on-a-payment-method, read 23 Nov 2026).
  *
  * NOT YET RUN AGAINST A REAL STRIPE ACCOUNT. The shapes are checked against
  * Stripe's library by the compiler, and the rules around them are tested with
@@ -431,6 +442,85 @@ export function createStripeGateway(account: StripeAccount): PaymentsGateway {
         return { status: "failed", reason: `The payment did not complete (Stripe says "${intent.status}").`, code: intent.status, paymentIntentId: intent.id };
       } catch (error) {
         return { status: "failed", ...plainReason(error) };
+      }
+    },
+
+    async placeHold(input): Promise<HoldResult> {
+      let paymentMethodId = input.paymentMethodId;
+      try {
+        if (!paymentMethodId) {
+          const card = await defaultCard(account, input.customerId);
+          paymentMethodId = card?.paymentMethodId ?? null;
+        }
+        if (!paymentMethodId) return { status: "declined", reason: "There is no card on file.", code: "no_card", paymentIntentId: null };
+        const intent = await stripe.paymentIntents.create(
+          {
+            amount: input.amountCents,
+            currency: input.currency.toLowerCase(),
+            customer: input.customerId,
+            payment_method: paymentMethodId,
+            off_session: true,
+            confirm: true,
+            // Authorise only: the price is held on the card and taken when the job is done.
+            capture_method: "manual",
+            description: input.description,
+            metadata: { hostfix_job: String(input.jobNumber), hostfix_hold: "1" },
+            transfer_group: `hostfix-job-${input.jobNumber}`,
+            payment_method_options: { card: { stored_credential_usage: "unscheduled" } },
+            // The charge says when the hold runs out (payment_method_details.card.capture_before).
+            expand: ["latest_charge"],
+          },
+          { idempotencyKey: input.idempotencyKey },
+        );
+        if (intent.status === "requires_capture") {
+          const charge = typeof intent.latest_charge === "object" ? intent.latest_charge : null;
+          const before = charge?.payment_method_details?.card?.capture_before;
+          return {
+            status: "held", paymentIntentId: intent.id, chargeId: charge?.id ?? (typeof intent.latest_charge === "string" ? intent.latest_charge : null),
+            captureBefore: before ? new Date(before * 1000) : null,
+          };
+        }
+        return { status: "declined", reason: `The hold did not go through (Stripe says "${intent.status}").`, code: intent.status, paymentIntentId: intent.id };
+      } catch (error) {
+        // A card decline, or another definite "no" from Stripe (a card that cannot be used), is a card problem.
+        // Anything else (a timeout, a dropped connection, a Stripe server error) leaves it unknown whether the hold
+        // exists, so it is thrown: the app tries again later with the same key, and Stripe hands back the same hold.
+        if (error instanceof Stripe.errors.StripeCardError) return { status: "declined", ...plainReason(error) };
+        if (
+          error instanceof Stripe.errors.StripeInvalidRequestError && !(error instanceof Stripe.errors.StripeIdempotencyError) &&
+          error.statusCode !== undefined && error.statusCode >= 400 && error.statusCode < 500 && error.statusCode !== 409 && error.statusCode !== 429
+        ) {
+          return { status: "declined", reason: error.message, code: error.code ?? "invalid_request", paymentIntentId: null };
+        }
+        throw error;
+      }
+    },
+
+    async captureHold(input): Promise<CaptureResult> {
+      try {
+        const intent = await stripe.paymentIntents.capture(input.paymentIntentId, { amount_to_capture: input.amountCents }, { idempotencyKey: input.idempotencyKey });
+        const charge = intent.latest_charge;
+        return { status: "captured", amountCents: intent.amount_received ?? input.amountCents, chargeId: typeof charge === "string" ? charge : (charge?.id ?? null) };
+      } catch (error) {
+        // Already taken (a repeat after the key's 24 hours), or no longer there to take from (it ran out or was let go).
+        const intent = await stripe.paymentIntents.retrieve(input.paymentIntentId).catch(() => null);
+        if (intent?.status === "succeeded") {
+          const charge = intent.latest_charge;
+          return { status: "captured", amountCents: intent.amount_received, chargeId: typeof charge === "string" ? charge : (charge?.id ?? null) };
+        }
+        if (intent && intent.status !== "requires_capture") return { status: "gone", reason: `The hold is no longer there (Stripe says "${intent.status}").` };
+        throw error;
+      }
+    },
+
+    async cancelHold(input) {
+      try {
+        await stripe.paymentIntents.cancel(input.paymentIntentId, { cancellation_reason: "abandoned" }, { idempotencyKey: input.idempotencyKey });
+      } catch (error) {
+        // Already let go (or it ran out): nothing to do.
+        const intent = await stripe.paymentIntents.retrieve(input.paymentIntentId).catch(() => null);
+        if (intent?.status === "canceled") return;
+        throw error;
       }
     },
 

@@ -5,6 +5,7 @@ import { LegalPage, Section } from "@/components/LegalPage";
 import { FAR_METRES, PROPOSAL_DAYS, WINDOW_HOURS } from "@/lib/jobs/arrival";
 import { partsWords } from "@/lib/markets/display";
 import { formatMoney } from "@/lib/money";
+import { HOURLY_LIMIT_CENTS } from "@/lib/jobs/rates";
 import { FLAG_DAYS, TRUSTED_FINISHED_JOBS } from "@/lib/tradies/reliability";
 import { formatHourOfDay, TEXTING_ENDS, TEXTING_STARTS } from "@/lib/time";
 
@@ -18,7 +19,7 @@ export const metadata: Metadata = {
   description: `How ${brand.name} works for property owners: free to join, fixed prices, charged when a job is done.`,
 };
 
-const UPDATED = "21 November 2026";
+const UPDATED = "23 November 2026";
 
 /**
  * The hours in section 4 come from the launch market's settings (config/markets.ts), so the page cannot say
@@ -44,7 +45,7 @@ export default function Page() {
       <Section n={1} title="What we do">
         <p>
           {n} arranges maintenance at your property. You, your cleaner or your guest reports a problem. We offer it to a local tradie we have
-          checked, who comes and fixes it. Your saved card is charged the fixed price when the job is done. We are the business you deal with:
+          checked, who comes and fixes it. When the job is sent out we hold its price on your saved card. You&rsquo;re only charged once it&rsquo;s fixed. We are the business you deal with:
           you pay us, we pay the tradie, and you can raise any problem with us.
         </p>
       </Section>
@@ -52,7 +53,8 @@ export default function Page() {
       <Section n={2} title="Joining and your card">
         <p>
           There is no joining fee and no monthly fee. To cover a property you add it to the app and put a card on file with Stripe, our payment
-          company. We never see your card number. Nothing is charged until a job is done at your property.
+          company. We never see your card number. Nothing is charged until a job is done at your property. When a job is sent out, its price is held on your
+          card: a hold is not a charge, and it is let go if the job does not go ahead.
         </p>
       </Section>
 
@@ -83,7 +85,7 @@ export default function Page() {
           <li>
             <strong>Parts.</strong> {partsWords(launchMarket)} The tradie can add parts on any job. Up to {money(launchMarket.partsApprovalCents)} of parts on a job
             (and within the limit for that property) they are added straight away and we text you; above that, nothing is bought until you say yes on the job
-            page. We check the receipt for anything not on the price list. If you supply a part yourself there is no parts charge, but a fault in a part you
+            page. Our team can ask the tradie for the receipt for any part, and checks it. If you supply a part yourself there is no parts charge, but a fault in a part you
             supplied is not covered by the tradie&rsquo;s 30-day callback. If a job is cancelled after you approved work, parts already bought for it that cannot
             be returned are charged at what they cost, with nothing added. A faulty part is replaced under its maker&rsquo;s warranty, which the tradie deals
             with; the labour is covered by the 30-day callback below.
@@ -187,10 +189,23 @@ export default function Page() {
           team told (a guest&rsquo;s report waits for your yes, as always).
         </p>
         <p>
-          When the tradie finishes, with a photo and a note, your card is charged the job&rsquo;s price. There is no approval step at that point,
-          because you approved the price when the job was logged. If the charge fails we try again, a day apart, four times, and then a person
-          contacts you. The tradie is paid at the usual time either way, so a charge that still fails is an amount you owe us. You cannot send new
-          jobs until it is paid. A new card on the Billing page is tried straight away.
+          <strong>A hold on your card.</strong> When a job is sent out, we hold the price you saw on your card: the menu price with GST and any urgent or
+          after-hours charge, or for a job not on the menu the {money(launchMarket.diagnosisFeeCents)} call-out. A hold is not a charge. If your card declines
+          the hold, the job is not sent, and we ask you to update your card. A card lets go of a hold after a few days, so for a job that is still open we
+          place a fresh hold before the old one runs out, and let the old one go. For a visit booked further ahead, the hold is placed a day before it.
+        </p>
+        <p>
+          <strong>You&rsquo;re only charged once it&rsquo;s fixed.</strong> When the tradie finishes, with a photo and a note, the job&rsquo;s price is taken
+          from the hold. Anything approved beyond it (parts, more work) is charged then, separately, to the same card. There is no approval step at that point,
+          because you approved the price when the job was logged and anything more as it came up. Work a tradie prices themselves over{" "}
+          {money(HOURLY_LIMIT_CENTS)} is different: it is charged in full when you approve it, before the work starts, and refunded if the work then does not go
+          ahead. If a charge fails we try again, a day apart, four times, and then a person contacts you. The tradie is paid at the usual time either way, so
+          a charge that still fails is an amount you owe us. You cannot send new jobs until it is paid. A new card on the Billing page is tried straight away.
+        </p>
+        <p>
+          <strong>Cancelling.</strong> You can cancel a job on its page. Until the tradie taps &ldquo;I have arrived&rdquo;, even when they are on the way, it
+          is free: the hold is let go and you pay nothing. After they have arrived, cancelling charges the call-out (never more than the job would have cost,
+          plus any urgent or after-hours charge) instead of the job, taken from the hold.
         </p>
         <p>One statement a month in the app shows every job, charge and credit, with the GST inside the total.</p>
       </Section>
@@ -217,7 +232,7 @@ export default function Page() {
       <Section n={9} title="Leaving">
         <p>
           You can remove a property or close your account at any time from the app. There is nothing to cancel and nothing to refund, because
-          nothing is charged except finished jobs. Jobs already under way are finished and charged under these terms.
+          nothing is charged except jobs a tradie has come out for (section 7). Jobs already under way are finished and charged under these terms.
         </p>
       </Section>
 

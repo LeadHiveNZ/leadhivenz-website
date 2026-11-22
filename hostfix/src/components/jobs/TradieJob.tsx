@@ -3,6 +3,7 @@ import { HOURLY_LIMIT_CENTS } from "@/lib/jobs/rates";
 import { GuestNote, HazardNote } from "./SafetyNotes";
 import { ActionForm, Area, Field, Tick } from "@/components/forms/ActionForm";
 import { RECEIPT_TO_FOLLOW_DAYS, type PriceListItem } from "@/lib/jobs/parts";
+import { callOutPayout } from "@/lib/jobs/pricing";
 import { AddPartsForm, TradieParts } from "./PartsForms";
 import { PhotoUploader } from "@/components/forms/PhotoUploader";
 import { SubmitButton } from "@/components/forms/SubmitButton";
@@ -88,7 +89,8 @@ export function TradieJob({ view, now, code, flash = {}, propertyPhotos, priceLi
   const pendingQuote = view.quotes.find((quote) => quote.status === "pending") ?? null;
   const hasApprovedWork = view.lines.some((line) => line.kind === "quote" && line.status === "active");
   const limit = property.spendLimitCents ?? market.approvalThresholdCents;
-  const share = 100 - market.platformFeeBps / 100;
+  // An own-client job (DECISIONS.md, 2026-11-23) takes 5%, so the tradie keeps 95%.
+  const share = 100 - (job.platformFeeBps ?? market.platformFeeBps) / 100;
   const paid = payoutLine(view);
   const open = job.status === "accepted" || job.status === "on_site" || job.status === "awaiting_approval";
   const receiptsMissing = view.parts.some((part) => part.status === "active" && part.receiptStatus === "needed");
@@ -229,7 +231,7 @@ export function TradieJob({ view, now, code, flash = {}, propertyPhotos, priceLi
                 <input type="hidden" name="notDescribed" value="yes" />
                 <p className="text-sm text-muted">
                   Only when what you found is not the job the owner described (the dripping tap is a burst pipe in the wall). The menu price comes off and you are paid
-                  the {fmt(market.diagnosisPayoutCents)} call-out once the owner approves your quote, or has not objected within {market.notDescribedHours} hours. If they say it was the job
+                  the {fmt(callOutPayout(market, job.platformFeeBps))} call-out once the owner approves your quote, or has not objected within {market.notDescribedHours} hours. If they say it was the job
                   they described, our team decides from your photos.
                 </p>
                 <Field label="Why, in one line" name="notDescribedReason" required maxLength={160} placeholder="The tap is fine. The pipe behind the wall has burst." />
@@ -363,7 +365,7 @@ export function TradieJob({ view, now, code, flash = {}, propertyPhotos, priceLi
       {job.status !== "cancelled" && view.lines.length > 0 && (
         <Panel title="What you get">
           <CostLines lines={view.lines} currency={job.currency} side="tradie" totalLabel="You get" />
-          <p className="mt-3 text-sm text-muted">{payTiming(market).line} Parts on the price list pay the list price less 3%; other parts pay what you paid plus 17%. Urgent and after-hours amounts are your share, after the platform fee. The urgent share is paid only if you tap Arrived by the urgent deadline, and the after-hours share only if you arrive outside working hours.</p>
+          <p className="mt-3 text-sm text-muted">{payTiming(market).line} Parts pay your price less 3% (parts added before 23 November 2026: the list price less 3%, or what you paid plus 17%). Urgent and after-hours amounts are your share, after the platform fee. The urgent share is paid only if you tap Arrived by the urgent deadline, and the after-hours share only if you arrive outside working hours.</p>
         </Panel>
       )}
 

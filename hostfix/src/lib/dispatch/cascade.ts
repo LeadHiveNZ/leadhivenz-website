@@ -12,6 +12,8 @@ import { raiseException, resolveExceptionsFor } from "@/lib/ops/exceptions";
 import { laterWave, onTimeRecords } from "@/lib/tradies/reliability";
 import { canStillTake, eligibleTradies, getTradie, type Candidate } from "@/lib/tradies/service";
 import { addTextingHours, formatDeadline, isQuietHours, nextTextingTime } from "@/lib/time";
+import { activePair, applyOwnClientFee, pairedTradieIds } from "@/lib/clients/own-clients";
+import { ownClientLines } from "@/lib/jobs/pricing";
 
 /**
  * THE OFFER CASCADE.
@@ -45,18 +47,24 @@ import { addTextingHours, formatDeadline, isQuietHours, nextTextingTime } from "
 
 export type CascadeOutcome = "not_offering" | "waiting" | "offered" | "unfilled";
 
-async function offerTo(db: Db, context: JobContext, candidates: Candidate[], stage: number, at: Date): Promise<Offer[]> {
+async function offerTo(db: Db, context: JobContext, candidates: Candidate[], stage: number, at: Date, paired: Set<string> = new Set()): Promise<Offer[]> {
   const { job, market, property } = context;
   const expiresAt = addMinutes(at, market.offerMinutes);
   const created: Offer[] = [];
+  const active = (await listLines(db, job.id)).filter((line) => line.status === "active");
   // An urgent job's urgent share is only paid if the tradie is on site by the deadline. The offer says so.
-  const urgentLine = job.urgency === "urgent" ? (await listLines(db, job.id)).find((line) => line.kind === "urgent" && line.status === "active") : undefined;
+  const urgentLine = job.urgency === "urgent" ? active.find((line) => line.kind === "urgent") : undefined;
+  // The tradie of an own-client pair is offered the job at the own-client fee (DECISIONS.md, 2026-11-23).
+  const ownLines = ownClientLines(market, active);
+  const ownPayout = Math.max(0, ownLines.reduce((sum, line) => sum + line.tradieCents, 0));
+  const ownUrgent = job.urgency === "urgent" ? ownLines.find((line) => line.kind === "urgent") : undefined;
   for (const candidate of candidates) {
+    const own = paired.has(candidate.tradieId);
     const rows = await db.query<OfferRow>(
-      `insert into public.offers (job_id, tradie_id, stage, round, sent_at, expires_at, payout_cents)
-       values ($1::uuid, $2::uuid, $3, $4, $5::timestamptz, $6::timestamptz, $7)
+      `insert into public.offers (job_id, tradie_id, stage, round, sent_at, expires_at, payout_cents, own_client)
+       values ($1::uuid, $2::uuid, $3, $4, $5::timestamptz, $6::timestamptz, $7, $8)
        returning *`,
-      [job.id, candidate.tradieId, stage, job.offerRound, at.toISOString(), expiresAt.toISOString(), job.tradieTotalCents],
+      [job.id, candidate.tradieId, stage, job.offerRound, at.toISOString(), expiresAt.toISOString(), own ? ownPayout : job.tradieTotalCents, own],
     );
     const offer = rowToOffer(rows[0]!);
     created.push(offer);
@@ -64,9 +72,9 @@ async function offerTo(db: Db, context: JobContext, candidates: Candidate[], sta
     await enqueue(db, {
       channel: "sms", to: candidate.phone, template: "offer", audience: "tradie", jobId: job.id, userId: candidate.userId,
       body: words({
-        title: job.title, suburb: property.suburb, payoutCents: job.tradieTotalCents, currency: job.currency,
+        title: job.title, suburb: property.suburb, payoutCents: own ? ownPayout : job.tradieTotalCents, currency: job.currency,
         deadline: job.respondBy ? formatDeadline(job.respondBy, at, market.timezone) : "as soon as you can",
-        minutes: market.offerMinutes, urgent: job.urgency === "urgent", urgentShareCents: urgentLine?.tradieCents ?? null, link: offerUrl(offer),
+        minutes: market.offerMinutes, urgent: job.urgency === "urgent", urgentShareCents: (own ? ownUrgent : urgentLine)?.tradieCents ?? null, link: offerUrl(offer),
       }),
       dedupeKey: `offer:${offer.id}`,
       // With app notifications on, the offer goes by notification first; the text follows only if it is still unopened.
@@ -104,7 +112,13 @@ export async function advanceCascade(db: Db, jobId: string): Promise<CascadeOutc
   const already = new Set(
     (await db.query<{ tradie_id: string }>("select tradie_id from public.offers where job_id = $1::uuid and round = $2", [jobId, job.offerRound])).map((row) => row.tradie_id),
   );
-  const fresh = all.filter((candidate) => !already.has(candidate.tradieId));
+  // The tradie of an own-client pair is the first choice for this property in their trades (DECISIONS.md,
+  // 2026-11-23). The market's first choice moves to the backup stage for this property.
+  const paired = await pairedTradieIds(db, job.propertyId);
+  const ranked = paired.size === 0 || !all.some((candidate) => paired.has(candidate.tradieId))
+    ? all
+    : all.map((candidate): Candidate => (paired.has(candidate.tradieId) ? { ...candidate, slotRank: 1 } : candidate.slotRank === 1 ? { ...candidate, slotRank: 2 } : candidate));
+  const fresh = ranked.filter((candidate) => !already.has(candidate.tradieId));
   // Everyone else is one stage, in two waves: those on time first, then those whose record has slipped.
   const records = await onTimeRecords(db, fresh.filter((candidate) => candidate.slotRank === null).map((candidate) => candidate.tradieId));
   const slipped = (candidate: Candidate) => candidate.slotRank === null && laterWave(records.get(candidate.tradieId));
@@ -117,7 +131,7 @@ export async function advanceCascade(db: Db, jobId: string): Promise<CascadeOutc
       if (first.length > 0) candidates = first;
     }
     if (candidates.length === 0) continue;
-    const offers = await offerTo(db, context, candidates, stage, at);
+    const offers = await offerTo(db, context, candidates, stage, at, paired);
     await db.query("update public.jobs set stage = $2 where id = $1::uuid", [jobId, stage]);
     await audit(db, {
       actor: "system", action: "job.offered", entity: "job", entityId: jobId,
@@ -221,6 +235,8 @@ export async function acceptOffer(db: Db, offerId: string, via: "link" | "text" 
     "update public.jobs set status = 'accepted', tradie_id = $2::uuid, accepted_at = $3::timestamptz, arrival_window_start = $4::timestamptz, arrival_window_end = $5::timestamptz where id = $1::uuid",
     [job.id, current.tradieId, at.toISOString(), window?.start.toISOString() ?? null, window?.end.toISOString() ?? null],
   );
+  // An own-client pair's job takes the 5% fee from here on (DECISIONS.md, 2026-11-23).
+  await applyOwnClientFee(db, job.id, current.tradieId, job.propertyId, market);
   await resolveExceptionsFor(db, job.id, ["nobody_accepted", "not_taken_yet"], `${tradie.businessName} accepted`);
   await audit(db, {
     actor: actor ?? `tradie:${current.tradieId}`, action: "job.accepted", entity: "job", entityId: job.id,
@@ -307,10 +323,11 @@ export async function assignTradie(db: Db, jobId: string, tradieId: string, acto
   );
   let offerId = existing[0]?.id;
   if (!offerId) {
+    const own = Boolean(await activePair(db, tradieId, job.propertyId));
     const rows = await db.query<OfferRow>(
-      `insert into public.offers (job_id, tradie_id, stage, round, sent_at, expires_at, payout_cents)
-       values ($1::uuid, $2::uuid, 4, $3, $4::timestamptz, $4::timestamptz, $5) returning *`,
-      [jobId, tradieId, job.offerRound, at.toISOString(), job.tradieTotalCents],
+      `insert into public.offers (job_id, tradie_id, stage, round, sent_at, expires_at, payout_cents, own_client)
+       values ($1::uuid, $2::uuid, 4, $3, $4::timestamptz, $4::timestamptz, $5, $6) returning *`,
+      [jobId, tradieId, job.offerRound, at.toISOString(), job.tradieTotalCents, own],
     );
     offerId = rows[0]!.id;
     // Offered and taken in the same breath, so it does not count for or against their scorecard.

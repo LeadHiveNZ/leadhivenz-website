@@ -2,7 +2,7 @@ import type { CountryCode } from "@config/markets";
 import { now } from "@/lib/clock";
 import type { Db } from "@/lib/db/types";
 import { randomToken } from "@/lib/ids";
-import { addMonths, type CardSummary, type ChargeResult, type InvoiceSummary, type PaymentsGateway } from "./gateway";
+import { addMonths, type CardSummary, type ChargeResult, type HoldResult, type InvoiceSummary, type PaymentsGateway } from "./gateway";
 
 /**
  * PRETEND MONEY, for demo mode and the automated tests. It follows the same
@@ -12,7 +12,15 @@ import { addMonths, type CardSummary, type ChargeResult, type InvoiceSummary, ty
  * Two switches make the unhappy paths easy to see:
  *  - a card whose id ends in "declines" is always declined
  *  - a payout account whose id ends in "broken" always fails
+ *
+ * Holds on the card (DECISIONS.md, 2026-11-23) behave as Stripe's do: a
+ * declining card declines the hold too; a hold lasts 4 days 18 hours on the
+ * app's clock (the shortest card window, a Visa payment the merchant starts);
+ * taking from it never takes more than was held; letting it go costs nothing.
  */
+
+/** How long a pretend hold lasts: 4 days 18 hours, like Stripe's shortest (Visa, merchant-initiated). */
+export const DEMO_HOLD_HOURS = 4 * 24 + 18;
 
 export const DEMO_CARD_OK: CardSummary = { paymentMethodId: "demo_pm_ok", brand: "visa", last4: "4242", expMonth: 12, expYear: 2030 };
 export const DEMO_CARD_DECLINES: CardSummary = { paymentMethodId: "demo_pm_declines", brand: "visa", last4: "0002", expMonth: 12, expYear: 2030 };
@@ -161,6 +169,24 @@ export function createDemoGateway(db: Db, country: CountryCode): PaymentsGateway
       }
       const ref = input.idempotencyKey.replace(/[^a-z0-9]/gi, "").slice(-18);
       return { status: "succeeded", paymentIntentId: `demo_pi_${ref}`, chargeId: `demo_ch_${ref}` };
+    },
+
+    async placeHold(input): Promise<HoldResult> {
+      if (!input.paymentMethodId) return { status: "declined", reason: "There is no card on file.", code: "no_card", paymentIntentId: null };
+      const ref = input.idempotencyKey.replace(/[^a-z0-9]/gi, "").slice(-18);
+      if (input.paymentMethodId.endsWith("declines")) {
+        return { status: "declined", reason: "The card was declined.", code: "card_declined", paymentIntentId: `demo_pi_${ref}` };
+      }
+      return { status: "held", paymentIntentId: `demo_pi_${ref}`, chargeId: `demo_ch_${ref}`, captureBefore: new Date(now().getTime() + DEMO_HOLD_HOURS * 3_600_000) };
+    },
+
+    async captureHold(input) {
+      // The app never asks for more than it held; a real hold would refuse it.
+      return { status: "captured", amountCents: input.amountCents, chargeId: input.paymentIntentId.replace(/^demo_pi_/, "demo_ch_") };
+    },
+
+    async cancelHold() {
+      // Nothing was charged, so there is nothing to give back.
     },
 
     async refund(input) {

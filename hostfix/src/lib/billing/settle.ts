@@ -4,7 +4,7 @@ import { addHours, addMinutes, now } from "@/lib/clock";
 import type { Db } from "@/lib/db/types";
 import { baseUrl } from "@/lib/env";
 import { loadContext, ownerJobUrl } from "@/lib/jobs/context";
-import { refundSplit, taxPortion } from "@/lib/jobs/pricing";
+import { payoutWaits, refundSplit, taxPortion } from "@/lib/jobs/pricing";
 import { getJobForStaff, lockJob } from "@/lib/jobs/store";
 import type { Job } from "@/lib/jobs/types";
 import { getMarket } from "@/lib/markets/store";
@@ -13,16 +13,25 @@ import { enqueue } from "@/lib/notify/outbox";
 import { raiseException, resolveExceptionsFor } from "@/lib/ops/exceptions";
 import { getBilling } from "@/lib/owners/service";
 import { holdReasons } from "./holds";
+import { releaseJobHolds } from "./card-holds";
 import { PlatformBalanceTooLow, TransferRefused, type PaymentsGateway, type Provider } from "@/lib/payments/gateway";
 import { formatDeadline, monthKey, monthLabel } from "@/lib/time";
 import { formatMoney } from "@/lib/money";
 import { NO_SHOW_DAYS, needsReview, recentNoShows } from "@/lib/tradies/reliability";
+import { notePatterns } from "@/lib/ops/patterns";
 
 /**
  * EVERY MONEY MOVEMENT ON A JOB.
  *
- *   job done      the owner's card is charged the total straight away
- *   24 hours on   the tradie's share is sent, unless the owner has raised a problem
+ *   job done      the owner's card is charged the total straight away: taken
+ *                 from the hold placed when the job went out, up to the held
+ *                 amount, and anything beyond it as a second, separate charge
+ *                 (DECISIONS.md, 2026-11-23; src/lib/billing/card-holds.ts)
+ *   24 hours on   the tradie's share is sent, unless the owner has raised a problem.
+ *                 It never waits for the owner's card for the first NZ$1,000
+ *                 of the job's price not yet collected (the payout guarantee);
+ *                 the tradie's share of anything above that waits until the
+ *                 card pays, and then goes as a second transfer
  *   a flagged job the tradie's share is held until the owner confirms, or the
  *                 timer or the team decides (src/lib/jobs/confirm.ts)
  *   a problem     pauses the tradie's money and puts the job in front of the dispatcher
@@ -47,12 +56,56 @@ const RETRY_HOURS = 24;
 type PaymentRow = {
   id: string; job_id: string; owner_id: string; amount_cents: number; tax_cents: number; currency: string; status: string;
   provider: Provider; payment_intent_id: string | null; charge_id: string | null; attempts: number; refunded_cents: number;
+  hold_captured_cents?: number; extra_payment_intent_id?: string | null; extra_charge_id?: string | null;
 };
+
+type HoldClaim = { id: string; amount_cents: number; currency: string; payment_intent_id: string | null; charge_id: string | null; provider: Provider | null };
 
 type PayoutRow = {
   id: string; job_id: string; tradie_id: string; amount_cents: number; currency: string; status: string; release_at: Date;
   transfer_id: string | null; attempts: number; provider: Provider | null; deducted_cents?: number; balance_waits?: number; refusals?: number;
+  waits_cents?: number; rest_status?: string | null;
 };
+
+/**
+ * Refunds part of a job's charge, which may be two payments: what was taken from the hold first, then the separate
+ * charge for anything beyond it (DECISIONS.md, 2026-11-23). Refunds come off the first payment until it is used up,
+ * then off the second, so how much each has given back always follows from the total refunded so far. Returns the
+ * first refund's id.
+ */
+async function refundAcross(gateway: PaymentsGateway, payment: PaymentRow, refundCents: number, idempotencyKey: string): Promise<{ refundId: string }> {
+  const held = Number(payment.hold_captured_cents ?? 0);
+  const firstAmount = held > 0 && payment.extra_payment_intent_id ? held : payment.amount_cents;
+  const firstLeft = Math.max(0, firstAmount - Math.min(payment.refunded_cents, firstAmount));
+  const fromFirst = Math.min(refundCents, firstLeft);
+  const fromSecond = refundCents - fromFirst;
+  let refundId: string | null = null;
+  if (fromFirst > 0) refundId = (await gateway.refund({ paymentIntentId: payment.payment_intent_id!, amountCents: fromFirst, idempotencyKey })).refundId;
+  if (fromSecond > 0 && payment.extra_payment_intent_id) {
+    const second = await gateway.refund({ paymentIntentId: payment.extra_payment_intent_id, amountCents: fromSecond, idempotencyKey: `${idempotencyKey}-x` });
+    refundId ??= second.refundId;
+  }
+  if (!refundId) throw new Error("There is nothing left of this charge to refund.");
+  return { refundId };
+}
+
+export { refundAcross };
+
+/**
+ * What the owner has paid for a job so far (DECISIONS.md, 2026-11-23): the charge if it went through, otherwise
+ * what was taken from the hold, plus any quote paid when it was approved. With nothing to charge, all of it.
+ */
+export async function collectedCents(db: Db, jobId: string, ownerTotalCents: number): Promise<number> {
+  const payment = (await db.query<{ status: string; amount_cents: number; hold_captured_cents: number }>(
+    "select status, amount_cents, hold_captured_cents from public.payments where job_id = $1::uuid",
+    [jobId],
+  ))[0];
+  const prepaid = await db.query<{ total: number }>("select coalesce(sum(amount_cents), 0) as total from public.job_prepayments where job_id = $1::uuid and status = 'succeeded'", [jobId]);
+  const fromPrepaid = Number(prepaid[0]?.total ?? 0);
+  if (!payment) return Math.max(ownerTotalCents, fromPrepaid);
+  const fromCharge = ["succeeded", "part_refunded", "refunded"].includes(payment.status) ? Number(payment.amount_cents) : Number(payment.hold_captured_cents ?? 0);
+  return fromCharge + fromPrepaid;
+}
 
 /**
  * Called in the same database step that marks a job done: writes down what
@@ -81,6 +134,20 @@ export async function openSettlement(db: Db, job: Job, market: Market): Promise<
       actor: "system", action: "credit.applied", entity: "job", entityId: job.id, amount: off, currency: job.currency,
       detail: { reason: "missed_window", credit: credit.id, charged: chargeCents }, dedupeKey: `credit.applied:${credit.id}`,
     });
+  }
+  // A quote over NZ$1,000 was charged when the owner approved it (DECISIONS.md, 2026-11-23): it is not charged again.
+  // One whose work did not go ahead (its lines are no longer on the job) is refunded instead (refundDuePrepayments).
+  const prepaid = await db.query<{ id: string; amount_cents: number; quote_id: string }>(
+    "select id, amount_cents, quote_id from public.job_prepayments where job_id = $1::uuid and status = 'succeeded' for update",
+    [job.id],
+  );
+  for (const row of prepaid) {
+    const going = await db.query("select 1 from public.job_lines where quote_id = $1::uuid and status = 'active' limit 1", [row.quote_id]);
+    if (going.length === 0) {
+      await db.query("update public.job_prepayments set status = 'refund_due' where id = $1::uuid and status = 'succeeded'", [row.id]);
+      continue;
+    }
+    chargeCents -= Math.min(Number(row.amount_cents), chargeCents);
   }
   const taxCents = chargeCents === job.ownerTotalCents ? job.taxCents : job.taxCents > 0 ? taxPortion(chargeCents, market.taxRate) : 0;
 
@@ -111,7 +178,15 @@ export async function openSettlement(db: Db, job: Job, market: Market): Promise<
 
 export type ChargeOutcome = "succeeded" | "failed" | "skipped";
 
-/** Charges the owner's saved card for a finished job. Safe to call again: a job is never charged twice. */
+/**
+ * Charges the owner for a finished job. Safe to call again: a job is never charged twice.
+ *
+ * With a hold on the card (DECISIONS.md, 2026-11-23), the charge is taken from it first, up to the held amount (a
+ * partial capture lets the rest of the hold go). Anything beyond the hold is a second, separate charge on the saved
+ * card, made the way every charge was before holds. A hold that has run out is skipped: the whole amount is charged
+ * the usual way. Each Stripe call has its own key (the capture's names the hold, the charge's names the try), so a
+ * repeat after a crash is handed back by Stripe, never made twice.
+ */
 export async function chargeJob(db: Db, gatewayFor: GatewayFor, jobId: string, options: { force?: boolean } = {}): Promise<ChargeOutcome> {
   const claim = await db.tx(async (tx) => {
     const at = now();
@@ -129,57 +204,123 @@ export async function chargeJob(db: Db, gatewayFor: GatewayFor, jobId: string, o
     const context = await loadContext(tx, job);
     const billing = await getBilling(tx, job.ownerId, context.market.country);
     await tx.query("update public.payments set claimed_until = $2::timestamptz, next_retry_at = null, last_attempt_at = $3::timestamptz where id = $1::uuid", [payment.id, addMinutes(at, 2).toISOString(), at.toISOString()]);
+    // The hold on the card, if the charge has not been taken from one yet.
+    const hold = Number(payment.hold_captured_cents ?? 0) > 0
+      ? null
+      : ((await tx.query<HoldClaim>(
+          "select id, amount_cents, currency, payment_intent_id, charge_id, provider from public.card_holds where job_id = $1::uuid and status = 'held' order by seq desc limit 1 for update",
+          [jobId],
+        ))[0] ?? null);
     // The try number only goes up when a try ends in a definite "no". If this
     // server dies half-way, the next try uses the same number and so the same
     // key, and the payment company treats it as the same charge.
-    return { payment: { ...payment, attempts: payment.attempts + 1 }, job, context, billing };
+    return { payment: { ...payment, attempts: payment.attempts + 1 }, job, context, billing, hold };
   });
   if (!claim) return "skipped";
-  const { payment, job, context, billing } = claim;
+  const { payment, job, context, billing, hold } = claim;
 
   const gateway = gatewayFor(context.market.country);
+  // 1. From the hold, up to the held amount.
+  let captured: { holdId: string; amountCents: number; paymentIntentId: string; chargeId: string | null } | null = null;
+  let holdGone: { holdId: string; reason: string } | null = null;
+  let captureError: string | null = null;
+  if (hold && gateway && hold.payment_intent_id && (!hold.provider || hold.provider === gateway.provider)) {
+    const take = Math.min(Number(hold.amount_cents), payment.amount_cents);
+    try {
+      const taken = await gateway.captureHold({ paymentIntentId: hold.payment_intent_id, amountCents: take, idempotencyKey: `hostfix-hold-${hold.id}-capture` });
+      if (taken.status === "captured") captured = { holdId: hold.id, amountCents: Math.min(taken.amountCents, take), paymentIntentId: hold.payment_intent_id, chargeId: taken.chargeId ?? hold.charge_id };
+      else holdGone = { holdId: hold.id, reason: taken.reason };
+    } catch (error) {
+      // Unknown whether it was taken: nothing more is asked for now, and the next try uses the same key.
+      captureError = error instanceof Error ? error.message : String(error);
+    }
+  }
+  const alreadyFromHold = Number(payment.hold_captured_cents ?? 0) + (captured?.amountCents ?? 0);
+  const remaining = payment.amount_cents - alreadyFromHold;
+
+  // 2. Anything beyond the hold: a separate charge on the saved card.
   let result: Awaited<ReturnType<PaymentsGateway["chargeJob"]>>;
-  if (!gateway) {
+  if (captureError) {
+    result = { status: "failed", reason: `Taking the charge from the hold on the card did not finish: ${captureError}`, code: "error", paymentIntentId: null };
+  } else if (remaining <= 0) {
+    result = { status: "succeeded", paymentIntentId: captured?.paymentIntentId ?? payment.payment_intent_id ?? "", chargeId: captured?.chargeId ?? payment.charge_id };
+  } else if (!gateway) {
     result = { status: "failed", reason: "Card payments are not set up for this country.", code: "not_configured", paymentIntentId: null };
   } else if (!billing || billing.provider !== gateway.provider) {
     result = { status: "failed", reason: "The owner has no card on file.", code: "no_card", paymentIntentId: null };
   } else {
     try {
       result = await gateway.chargeJob({
-        customerId: billing.customerId, paymentMethodId: billing.paymentMethodId, amountCents: payment.amount_cents, currency: payment.currency,
-        description: `Job ${job.number}: ${job.title} at ${context.property.name}`.slice(0, 200), jobNumber: job.number,
+        customerId: billing.customerId, paymentMethodId: billing.paymentMethodId, amountCents: remaining, currency: payment.currency,
+        description: `Job ${job.number}: ${job.title} at ${context.property.name}${alreadyFromHold > 0 ? " (beyond the hold)" : ""}`.slice(0, 200), jobNumber: job.number,
         receiptEmail: context.owner.email, idempotencyKey: `hostfix-job-${jobId}-charge-${payment.attempts}`,
       });
     } catch (error) {
       result = { status: "failed", reason: error instanceof Error ? error.message : String(error), code: "error", paymentIntentId: null };
     }
   }
+  const twoPayments = alreadyFromHold > 0 && remaining > 0;
 
   return db.tx(async (tx) => {
     const at = now();
+    if (captured) {
+      await tx.query("update public.card_holds set status = 'captured', captured_cents = $2, captured_at = $3::timestamptz, claimed_until = null where id = $1::uuid", [captured.holdId, captured.amountCents, at.toISOString()]);
+      await tx.query("update public.payments set hold_id = $2::uuid, hold_captured_cents = $3, payment_intent_id = $4, charge_id = $5, provider = $6 where id = $1::uuid", [
+        payment.id, captured.holdId, alreadyFromHold, captured.paymentIntentId, captured.chargeId, gateway!.provider,
+      ]);
+      await audit(tx, {
+        actor: gateway!.provider, action: "hold.captured", entity: "job", entityId: jobId, amount: captured.amountCents, currency: payment.currency,
+        detail: { hold: captured.holdId, held: Number(hold!.amount_cents), payment_intent: captured.paymentIntentId, beyond_hold: Math.max(0, remaining) },
+        dedupeKey: `hold.captured:${captured.holdId}`,
+      });
+      // Any other hold on the job is let go.
+      await releaseJobHolds(tx, jobId, "The job's charge was taken from another hold.");
+    } else if (holdGone) {
+      await tx.query("update public.card_holds set status = 'expired', claimed_until = null, last_error = $2 where id = $1::uuid", [holdGone.holdId, holdGone.reason.slice(0, 500)]);
+      await audit(tx, { actor: gateway?.provider ?? "system", action: "hold.expired", entity: "job", entityId: jobId, detail: { hold: holdGone.holdId, reason: holdGone.reason } });
+    } else if (hold && captureError) {
+      await tx.query("update public.card_holds set claimed_until = null, last_error = $2 where id = $1::uuid", [hold.id, captureError.slice(0, 500)]);
+    }
     if (result.status === "succeeded") {
-      await tx.query(
-        `update public.payments set status = 'succeeded', paid_at = $2::timestamptz, payment_intent_id = $3, charge_id = $4, provider = $5,
-                last_error = null, attempts = $6, claimed_until = null
-          where id = $1::uuid`,
-        [payment.id, at.toISOString(), result.paymentIntentId, result.chargeId, gateway!.provider, payment.attempts],
-      );
+      if (twoPayments) {
+        await tx.query(
+          `update public.payments set status = 'succeeded', paid_at = $2::timestamptz, extra_payment_intent_id = $3, extra_charge_id = $4, provider = $5,
+                  last_error = null, attempts = $6, claimed_until = null
+            where id = $1::uuid`,
+          [payment.id, at.toISOString(), result.paymentIntentId, result.chargeId, gateway!.provider, payment.attempts],
+        );
+      } else {
+        await tx.query(
+          `update public.payments set status = 'succeeded', paid_at = $2::timestamptz, payment_intent_id = $3, charge_id = $4, provider = $5,
+                  last_error = null, attempts = $6, claimed_until = null
+            where id = $1::uuid`,
+          [payment.id, at.toISOString(), result.paymentIntentId || payment.payment_intent_id, result.chargeId, gateway?.provider ?? payment.provider, payment.attempts],
+        );
+      }
+      await releaseJobHolds(tx, jobId, "The job is charged.");
       const dispute = await tx.query("select 1 from public.disputes where job_id = $1::uuid and status = 'open'", [jobId]);
       await tx.query("update public.payouts set status = $2 where job_id = $1::uuid and status = 'waiting'", [jobId, dispute.length > 0 ? "paused" : "scheduled"]);
+      // The part of a big job's payout that waited for the card can go now (DECISIONS.md, 2026-11-23).
+      await tx.query("update public.payouts set rest_status = 'due' where job_id = $1::uuid and rest_status = 'waiting' and status = 'sent'", [jobId]);
+      await tx.query("update public.payouts set release_at = $2::timestamptz, rest_status = null where job_id = $1::uuid and rest_status = 'waiting' and status = 'scheduled'", [jobId, at.toISOString()]);
       await resolveExceptionsFor(tx, jobId, ["payment_failed", "owner_owes"], "Card charged");
       await audit(tx, {
-        actor: gateway!.provider, action: "payment.succeeded", entity: "job", entityId: jobId, amount: payment.amount_cents, currency: payment.currency,
-        detail: { payment_intent: result.paymentIntentId, attempt: payment.attempts, tax: payment.tax_cents }, dedupeKey: `payment.succeeded:${jobId}`,
+        actor: gateway?.provider ?? payment.provider, action: "payment.succeeded", entity: "job", entityId: jobId, amount: payment.amount_cents, currency: payment.currency,
+        detail: { payment_intent: result.paymentIntentId, attempt: payment.attempts, tax: payment.tax_cents, from_hold: alreadyFromHold, beyond_hold: Math.max(0, remaining) }, dedupeKey: `payment.succeeded:${jobId}`,
       });
       if (context.owner.phone) {
         // A flagged job: the same text asks the owner to look at the photos and confirm, on the job page (DECISIONS.md, 2026-11-19).
         const check = job.confirmStatus === "waiting";
-        // A cancelled job is only ever charged for parts bought for it that could not go back (DECISIONS.md, 2026-11-20).
+        // A cancelled job is charged only the call-out (cancelled after the tradie arrived, DECISIONS.md, 2026-11-23),
+        // or parts bought for it that could not go back (DECISIONS.md, 2026-11-20).
         const cancelled = job.status === "cancelled";
+        const boughtParts = cancelled && (await tx.query("select 1 from public.job_lines where job_id = $1::uuid and status = 'active' and kind = 'adjustment' and label like 'Parts bought before%' limit 1", [jobId])).length > 0;
         await enqueue(tx, {
-          channel: "sms", to: context.owner.phone, template: cancelled ? "bought_parts_charged" : check ? "job_check" : "job_done", audience: "owner", jobId, userId: context.owner.userId,
+          channel: "sms", to: context.owner.phone, template: cancelled ? (boughtParts ? "bought_parts_charged" : "call_out_charged") : check ? "job_check" : "job_done", audience: "owner", jobId, userId: context.owner.userId,
           body: cancelled
-            ? texts.boughtPartsCharged({ number: job.number, property: context.property.name, totalCents: payment.amount_cents, currency: payment.currency, link: ownerJobUrl(job) })
+            ? boughtParts
+              ? texts.boughtPartsCharged({ number: job.number, property: context.property.name, totalCents: payment.amount_cents, currency: payment.currency, link: ownerJobUrl(job) })
+              : texts.callOutCharged({ number: job.number, totalCents: payment.amount_cents, currency: payment.currency, link: ownerJobUrl(job) })
             : check
               ? texts.jobCheck({ title: job.title, property: context.property.name, totalCents: payment.amount_cents, currency: payment.currency, flags: job.checkFlags, link: ownerJobUrl(job) })
               : texts.jobDone({ title: job.title, property: context.property.name, totalCents: payment.amount_cents, currency: payment.currency, link: ownerJobUrl(job) }),
@@ -195,20 +336,22 @@ export async function chargeJob(db: Db, gatewayFor: GatewayFor, jobId: string, o
       return "succeeded";
     }
 
+    const owed = Math.max(0, payment.amount_cents - alreadyFromHold);
     const retry = payment.attempts < MAX_CHARGE_ATTEMPTS;
     await tx.query(
       `update public.payments set status = 'failed', last_error = $2, next_retry_at = $3::timestamptz,
-              payment_intent_id = coalesce($4, payment_intent_id), attempts = $5, claimed_until = null
+              ${alreadyFromHold > 0 ? "extra_payment_intent_id = coalesce($4, extra_payment_intent_id)" : "payment_intent_id = coalesce($4, payment_intent_id)"}, attempts = $5, claimed_until = null
         where id = $1::uuid`,
       [payment.id, result.reason.slice(0, 500), retry ? addHours(at, RETRY_HOURS).toISOString() : null, result.paymentIntentId, payment.attempts],
     );
     await audit(tx, {
-      actor: gateway?.provider ?? "system", action: "payment.failed", entity: "job", entityId: jobId, amount: payment.amount_cents, currency: payment.currency,
-      detail: { reason: result.reason, code: result.code, attempt: payment.attempts, will_retry: retry }, dedupeKey: `payment.failed:${jobId}:${payment.attempts}`,
+      actor: gateway?.provider ?? "system", action: "payment.failed", entity: "job", entityId: jobId, amount: owed, currency: payment.currency,
+      detail: { reason: result.reason, code: result.code, attempt: payment.attempts, will_retry: retry, from_hold: alreadyFromHold }, dedupeKey: `payment.failed:${jobId}:${payment.attempts}`,
     });
+    const fromHoldWords = alreadyFromHold > 0 ? ` ${formatMoney(alreadyFromHold, payment.currency)} was taken from the hold on the card; ${formatMoney(owed, payment.currency)} beyond it was not.` : "";
     await raiseException(tx, {
       kind: "payment_failed", market: job.market, jobId,
-      summary: `Job ${job.number}: the owner's card was not charged (${result.reason}). ${retry ? "It will be tried again tomorrow." : "It has been tried four times."} The tradie is paid at the usual time anyway: chasing the owner is ours.`,
+      summary: `Job ${job.number}: the owner's card was not charged (${result.reason}).${fromHoldWords} ${retry ? "It will be tried again tomorrow." : "It has been tried four times."} The tradie is paid at the usual time anyway, up to the payout guarantee: chasing the owner is ours.`,
       dedupeKey: `payment_failed:${jobId}`,
     });
     if (!retry) {
@@ -216,14 +359,14 @@ export async function chargeJob(db: Db, gatewayFor: GatewayFor, jobId: string, o
       // and no new jobs go out for them until it is paid (cardProblem, src/lib/owners/service.ts).
       await raiseException(tx, {
         kind: "owner_owes", market: job.market, jobId,
-        summary: `${context.owner.name} owes ${formatMoney(payment.amount_cents, payment.currency)} for job ${job.number} at ${context.property.name}: the card was tried four times. The tradie is paid by us anyway. Ring the owner${context.owner.phone ? ` on ${context.owner.phone}` : ""}.`,
+        summary: `${context.owner.name} owes ${formatMoney(owed, payment.currency)} for job ${job.number} at ${context.property.name}: the card was tried four times. The tradie is paid by us anyway, up to the payout guarantee. Ring the owner${context.owner.phone ? ` on ${context.owner.phone}` : ""}.`,
         dedupeKey: `owner_owes:${jobId}`,
       });
     }
     if (context.owner.phone) {
       await enqueue(tx, {
         channel: "sms", to: context.owner.phone, template: "payment_failed", audience: "owner", jobId, userId: context.owner.userId,
-        body: texts.paymentFailed({ amountCents: payment.amount_cents, currency: payment.currency, number: job.number, link: `${baseUrl()}/app/billing` }),
+        body: texts.paymentFailed({ amountCents: owed, currency: payment.currency, number: job.number, link: `${baseUrl()}/app/billing` }),
         dedupeKey: `payment_failed:${jobId}`,
       });
     }
@@ -300,13 +443,31 @@ export async function releasePayout(db: Db, gatewayFor: GatewayFor, payoutId: st
     }
     // The tradie is paid at the usual time whatever the owner's card has done (DECISIONS.md, 2026-11-20, second entry).
     // Without a charge to pay from, the transfer comes out of HostFix's own balance.
-    const paid = await tx.query<{ charge_id: string | null; status: string; amount_cents: number; refunded_cents: number }>(
-      "select charge_id, status, amount_cents, refunded_cents from public.payments where job_id = $1::uuid",
+    const paid = await tx.query<{ charge_id: string | null; status: string; amount_cents: number; refunded_cents: number; hold_captured_cents: number; extra_charge_id: string | null }>(
+      "select charge_id, status, amount_cents, refunded_cents, hold_captured_cents, extra_charge_id from public.payments where job_id = $1::uuid",
       [payout.job_id],
     );
     const charged = !paid[0] || ["succeeded", "part_refunded"].includes(paid[0].status);
-    // What is left of the owner's charge after refunds: the most a transfer tied to it may be.
-    const chargeLeft = paid[0] ? Number(paid[0].amount_cents) - Number(paid[0].refunded_cents) : 0;
+    // The charges a transfer may be tied to, each with what is left of it after refunds (the most a transfer tied to
+    // it may be). The first payment (from the hold, or the whole charge); the second (beyond the hold); a quote paid
+    // when it was approved (DECISIONS.md, 2026-11-23). Refunds come off the first payment first (refundAcross).
+    const sources: { chargeId: string; left: number }[] = [];
+    if (paid[0]) {
+      const p = paid[0];
+      const held = Number(p.hold_captured_cents ?? 0);
+      const split = held > 0 && p.extra_charge_id;
+      const firstAmount = split ? held : Number(p.amount_cents);
+      const firstRefunded = Math.min(Number(p.refunded_cents), firstAmount);
+      // Taken from the hold, that part has been paid even if the charge beyond it failed.
+      if (p.charge_id && (charged || held > 0)) sources.push({ chargeId: p.charge_id, left: firstAmount - firstRefunded });
+      if (split && charged) sources.push({ chargeId: p.extra_charge_id!, left: Number(p.amount_cents) - held - (Number(p.refunded_cents) - firstRefunded) });
+    }
+    for (const row of await tx.query<{ charge_id: string | null; amount_cents: number; refunded_cents: number }>(
+      "select charge_id, amount_cents, refunded_cents from public.job_prepayments where job_id = $1::uuid and status = 'succeeded' and charge_id is not null order by created_at",
+      [payout.job_id],
+    )) {
+      sources.push({ chargeId: row.charge_id!, left: Number(row.amount_cents) - Number(row.refunded_cents) });
+    }
     // A balance the tradie owes (a lost chargeback that was their fault) comes off, never more than half of this payout.
     // Worked out once and kept, so a retried transfer always asks for the same amount.
     let deducted = Number(payout.deducted_cents ?? 0);
@@ -321,6 +482,30 @@ export async function releasePayout(db: Db, gatewayFor: GatewayFor, payoutId: st
       if (deducted > 0) await tx.query("update public.payouts set deducted_cents = $2 where id = $1::uuid", [payoutId, deducted]);
     }
     const job = await getJobForStaff(tx, payout.job_id);
+    const jobMarket = job ? await getMarket(tx, job.market) : null;
+    // The payout guarantee (DECISIONS.md, 2026-11-23): paid ahead of the owner's card for up to the market's NZ$1,000
+    // of the job's price not yet collected. The tradie's share of anything above that waits for the card and goes as a
+    // second transfer once it pays (releaseDueRests). Worked out once, on the first try, so every retry asks for the same.
+    let waits = Number(payout.waits_cents ?? 0);
+    if (job && jobMarket && payout.attempts === 0 && waits === 0) {
+      waits = payoutWaits({
+        ownerTotalCents: job.ownerTotalCents, collectedCents: await collectedCents(tx, job.id, job.ownerTotalCents),
+        guaranteeCents: jobMarket.payoutGuaranteeCents, payoutCents: payout.amount_cents - deducted,
+      });
+      if (waits > 0 && waits >= payout.amount_cents - deducted) {
+        // Everything waits for the card (a guarantee of nothing): checked again in a day, or as soon as the card pays.
+        await tx.query("update public.payouts set rest_status = 'waiting', release_at = $2::timestamptz where id = $1::uuid", [payoutId, addHours(at, 24).toISOString()]);
+        await audit(tx, { actor: "system", action: "payout.waits_for_charge", entity: "job", entityId: job.id, amount: waits, currency: payout.currency, detail: { all: true } });
+        return null;
+      }
+      if (waits > 0) {
+        await tx.query("update public.payouts set waits_cents = $2, rest_status = 'waiting' where id = $1::uuid", [payoutId, waits]);
+        await audit(tx, {
+          actor: "system", action: "payout.waits_for_charge", entity: "job", entityId: job.id, amount: waits, currency: payout.currency,
+          detail: { owner_total: job.ownerTotalCents, guarantee: jobMarket.payoutGuaranteeCents, sent_now: payout.amount_cents - deducted - waits },
+        });
+      }
+    }
     const tradie = await tx.query<{ payout_account_id: string | null; payouts_enabled: boolean; business_name: string; phone: string | null; user_id: string }>(
       `select t.payout_account_id, t.payouts_enabled, t.business_name, u.phone, t.user_id
          from public.tradies t join public.users u on u.id = t.user_id where t.id = $1::uuid`,
@@ -330,9 +515,9 @@ export async function releasePayout(db: Db, gatewayFor: GatewayFor, payoutId: st
     if (!job || !market || !tradie[0]) return null;
     // Push the release time out so another server does not pick it up while we talk to the payment company.
     await tx.query("update public.payouts set attempts = attempts + 1, release_at = $2::timestamptz where id = $1::uuid", [payoutId, addMinutes(at, 10).toISOString()]);
-    const sendCents = payout.amount_cents - deducted;
-    // Tied to the charge only while the charge can cover it (see above).
-    const chargeId = charged && paid[0]?.charge_id && sendCents <= chargeLeft ? paid[0].charge_id : null;
+    const sendCents = payout.amount_cents - deducted - waits;
+    // Tied to a charge only while that charge can cover it (see above).
+    const chargeId = sources.find((source) => sendCents <= source.left)?.chargeId ?? null;
     return { payout: { ...payout, attempts: payout.attempts + 1 }, job, market, tradie: tradie[0], chargeId, charged, deducted, sendCents };
   });
   if (!claim) return "skipped";
@@ -412,7 +597,7 @@ export async function releasePayout(db: Db, gatewayFor: GatewayFor, payoutId: st
       if (tradie.phone) {
         await enqueue(tx, {
           channel: "sms", to: tradie.phone, template: "payout_sent", audience: "tradie", jobId: job.id, userId: tradie.user_id,
-          body: texts.payoutSent({ number: job.number, amountCents: payout.amount_cents, currency: payout.currency, deductedCents: deducted }), dedupeKey: `payout_sent:${job.id}`,
+          body: texts.payoutSent({ number: job.number, amountCents: sendCents + deducted, currency: payout.currency, deductedCents: deducted }), dedupeKey: `payout_sent:${job.id}`,
         });
       }
       return "sent";
@@ -455,6 +640,136 @@ export async function retryPayout(db: Db, gatewayFor: GatewayFor, jobId: string,
   if (!rows[0]) return "skipped";
   await audit(db, { actor, action: "payout.retried", entity: "job", entityId: jobId });
   return releasePayout(db, gatewayFor, rows[0].id);
+}
+
+/**
+ * Run by the timer: the part of a payout that waited for the owner's card, once the card has paid (DECISIONS.md,
+ * 2026-11-23). Sent as its own transfer with its own key, tied to the charge beyond the hold when that can cover it.
+ * A failed try stays due and is tried again on the next run, with the same key.
+ */
+export async function releaseDueRests(db: Db, gatewayFor: GatewayFor): Promise<number> {
+  const due = await db.query<{ id: string }>("select id from public.payouts where rest_status = 'due' and status = 'sent' and waits_cents > 0 order by created_at limit 50");
+  let sent = 0;
+  for (const row of due) {
+    const claim = await db.tx(async (tx) => {
+      const payout = (await tx.query<PayoutRow & { rest_transfer_id: string | null }>("select * from public.payouts where id = $1::uuid and rest_status = 'due' for update", [row.id]))[0];
+      if (!payout) return null;
+      const job = await getJobForStaff(tx, payout.job_id);
+      const market = job ? await getMarket(tx, job.market) : null;
+      const tradie = (await tx.query<{ payout_account_id: string | null; business_name: string; phone: string | null; user_id: string }>(
+        "select t.payout_account_id, t.business_name, u.phone, t.user_id from public.tradies t join public.users u on u.id = t.user_id where t.id = $1::uuid",
+        [payout.tradie_id],
+      ))[0];
+      const paid = (await tx.query<{ extra_charge_id: string | null; charge_id: string | null; amount_cents: number; refunded_cents: number; hold_captured_cents: number }>(
+        "select extra_charge_id, charge_id, amount_cents, refunded_cents, hold_captured_cents from public.payments where job_id = $1::uuid",
+        [payout.job_id],
+      ))[0];
+      if (!job || !market || !tradie) return null;
+      const waits = Number(payout.waits_cents ?? 0);
+      const extraLeft = paid?.extra_charge_id ? Number(paid.amount_cents) - Number(paid.hold_captured_cents) - Math.max(0, Number(paid.refunded_cents) - Number(paid.hold_captured_cents)) : 0;
+      const chargeId = paid?.extra_charge_id && waits <= extraLeft ? paid.extra_charge_id : null;
+      return { payout, job, market, tradie, waits, chargeId };
+    });
+    if (!claim) continue;
+    const { payout, job, market, tradie, waits, chargeId } = claim;
+    const gateway = gatewayFor(market.country);
+    let transferId: string | null = null;
+    let failure: string | null = null;
+    if (!gateway) failure = "Payments are not set up for this country.";
+    else if (!tradie.payout_account_id) failure = `${tradie.business_name} has not added bank details yet.`;
+    else {
+      try {
+        transferId = (await gateway.transfer({ accountId: tradie.payout_account_id, amountCents: waits, currency: payout.currency, chargeId, jobNumber: job.number, idempotencyKey: `hostfix-job-${job.id}-payout-rest` })).transferId;
+      } catch (error) {
+        failure = error instanceof Error ? error.message : String(error);
+      }
+    }
+    await db.tx(async (tx) => {
+      const at = now();
+      if (!transferId) {
+        await tx.query("update public.payouts set rest_error = $2 where id = $1::uuid", [payout.id, (failure ?? "").slice(0, 500)]);
+        await raiseException(tx, {
+          kind: "payout_failed", market: job.market, jobId: job.id, tradieId: payout.tradie_id,
+          summary: `Job ${job.number}: the rest of ${tradie.business_name}'s payment (${formatMoney(waits, payout.currency)}, which waited for the owner's card) could not be sent yet (${failure}). It is tried again every minute.`,
+          dedupeKey: `payout_rest_failed:${job.id}`,
+        });
+        return;
+      }
+      await tx.query("update public.payouts set rest_status = 'sent', rest_transfer_id = $2, rest_sent_at = $3::timestamptz, rest_error = null where id = $1::uuid", [payout.id, transferId, at.toISOString()]);
+      await resolveExceptionsFor(tx, job.id, ["payout_failed"], "The rest of the tradie's payment was sent");
+      await audit(tx, {
+        actor: gateway!.provider, action: "payout.rest_sent", entity: "job", entityId: job.id, amount: waits, currency: payout.currency,
+        detail: { transfer: transferId, from_charge: Boolean(chargeId) }, dedupeKey: `payout.rest_sent:${job.id}`,
+      });
+      if (tradie.phone) {
+        await enqueue(tx, {
+          channel: "sms", to: tradie.phone, template: "payout_sent", audience: "tradie", jobId: job.id, userId: tradie.user_id,
+          body: texts.payoutSent({ number: job.number, amountCents: waits, currency: payout.currency }), dedupeKey: `payout_rest_sent:${job.id}`,
+        });
+      }
+    });
+    if (transferId) sent += 1;
+  }
+  return sent;
+}
+
+/**
+ * Run by the timer: a quote the owner paid when they approved it (DECISIONS.md, 2026-11-23) whose work then did
+ * not happen (the job was cancelled, or the quote's lines came off the job) is refunded in full. Claimed first,
+ * then refunded with a key that makes a repeat harmless, then written down.
+ */
+export async function refundDuePrepayments(db: Db, gatewayFor: GatewayFor): Promise<number> {
+  const due = await db.query<{ id: string }>("select id from public.job_prepayments where status = 'refund_due' order by created_at limit 50");
+  let refunded = 0;
+  for (const row of due) {
+    const claim = await db.tx(async (tx) => {
+      const found = (await tx.query<{ id: string; job_id: string; amount_cents: number; refunded_cents: number; currency: string; payment_intent_id: string | null; country: CountryCode; number: number; owner_phone: string | null; owner_user: string }>(
+        `select pp.id, pp.job_id, pp.amount_cents, pp.refunded_cents, pp.currency, pp.payment_intent_id, m.country, j.number, u.phone as owner_phone, u.id as owner_user
+           from public.job_prepayments pp join public.jobs j on j.id = pp.job_id join public.markets m on m.slug = j.market
+           join public.owners o on o.id = pp.owner_id join public.users u on u.id = o.user_id
+          where pp.id = $1::uuid and pp.status = 'refund_due' for update of pp`,
+        [row.id],
+      ))[0];
+      if (!found) return null;
+      await tx.query("update public.job_prepayments set status = 'refunding' where id = $1::uuid", [row.id]);
+      return found;
+    });
+    if (!claim) continue;
+    const gateway = gatewayFor(claim.country);
+    const amount = Number(claim.amount_cents) - Number(claim.refunded_cents);
+    let refundId: string | null = null;
+    let failure: string | null = null;
+    try {
+      if (!gateway || !claim.payment_intent_id) throw new Error("Payments are not set up for this country.");
+      refundId = (await gateway.refund({ paymentIntentId: claim.payment_intent_id, amountCents: amount, idempotencyKey: `hostfix-prepay-${claim.id}-refund` })).refundId;
+    } catch (error) {
+      failure = error instanceof Error ? error.message : String(error);
+    }
+    await db.tx(async (tx) => {
+      if (!refundId) {
+        await tx.query("update public.job_prepayments set status = 'refund_due', last_error = $2 where id = $1::uuid", [claim.id, (failure ?? "").slice(0, 500)]);
+        await raiseException(tx, {
+          kind: "needs_review", jobId: claim.job_id,
+          summary: `Job ${Number(claim.number)}: the ${formatMoney(amount, claim.currency)} the owner paid for an approved quote should be refunded (the work did not go ahead), but the refund did not go through (${failure}). It is tried again every minute.`,
+          dedupeKey: `prepay_refund_failed:${claim.id}`,
+        });
+        return;
+      }
+      await tx.query("update public.job_prepayments set status = 'refunded', refunded_cents = amount_cents, last_error = null where id = $1::uuid", [claim.id]);
+      await audit(tx, {
+        actor: gateway!.provider, action: "refund.issued", entity: "job", entityId: claim.job_id, amount, currency: claim.currency,
+        detail: { refund: refundId, prepayment: claim.id, why: "The approved work did not go ahead." }, dedupeKey: `refund:prepay:${claim.id}`,
+      });
+      if (claim.owner_phone) {
+        await enqueue(tx, {
+          channel: "sms", to: claim.owner_phone, template: "quote_refunded", audience: "owner", jobId: claim.job_id, userId: claim.owner_user,
+          body: texts.quoteRefunded({ number: Number(claim.number), amountCents: amount, currency: claim.currency }), dedupeKey: `quote_refunded:${claim.id}`,
+        });
+      }
+    });
+    if (refundId) refunded += 1;
+  }
+  return refunded;
 }
 
 // ---------------------------------------------------------------------------
@@ -561,16 +876,18 @@ export async function resolveDispute(db: Db, gatewayFor: GatewayFor, disputeId: 
   if (!gateway) return { ok: false, message: "Payments are not set up for this country." };
   let refundId: string;
   try {
-    refundId = (await gateway.refund({ paymentIntentId: payment.payment_intent_id, amountCents: refundCents, idempotencyKey: `hostfix-job-${job.id}-refund-${disputeId}` })).refundId;
+    refundId = (await refundAcross(gateway, payment, refundCents, `hostfix-job-${job.id}-refund-${disputeId}`)).refundId;
   } catch (error) {
     return { ok: false, message: `The refund did not go through: ${error instanceof Error ? error.message : String(error)}` };
   }
 
-  // If the tradie has already been paid, try to take their share of the refund back.
+  // If the tradie has already been paid, try to take their share of the refund back. A part of their payment still
+  // waiting for the owner's card (DECISIONS.md, 2026-11-23) comes off first, as it has not gone.
   let clawback: "not_needed" | "done" | "failed" = "not_needed";
-  if (payout && payout.status === "sent" && payout.transfer_id && split.fromTradieCents > 0) {
+  const restOff = payout && payout.status === "sent" && ["waiting", "due"].includes(payout.rest_status ?? "") ? Math.min(Number(payout.waits_cents ?? 0), split.fromTradieCents) : 0;
+  if (payout && payout.status === "sent" && payout.transfer_id && split.fromTradieCents - restOff > 0) {
     try {
-      await gateway.reverseTransfer({ transferId: payout.transfer_id, amountCents: split.fromTradieCents, idempotencyKey: `hostfix-job-${job.id}-reverse-${disputeId}` });
+      await gateway.reverseTransfer({ transferId: payout.transfer_id, amountCents: split.fromTradieCents - restOff, idempotencyKey: `hostfix-job-${job.id}-reverse-${disputeId}` });
       clawback = "done";
     } catch {
       clawback = "failed";
@@ -590,6 +907,11 @@ export async function resolveDispute(db: Db, gatewayFor: GatewayFor, disputeId: 
       actor, action: "refund.issued", entity: "job", entityId: job.id, amount: refundCents, currency: payment.currency,
       detail: { refund: refundId, from_tradie: split.fromTradieCents, from_platform: split.fromPlatformCents, note }, dedupeKey: `refund:${disputeId}`,
     });
+    if (payout && restOff > 0) {
+      const left = Number(payout.waits_cents ?? 0) - restOff;
+      await tx.query("update public.payouts set waits_cents = $2, rest_status = case when $2 = 0 then 'cancelled' else rest_status end where id = $1::uuid", [payout.id, left]);
+      await audit(tx, { actor, action: "payout.rest_reduced", entity: "job", entityId: job.id, amount: restOff, currency: payout.currency, detail: { still_waiting: left } });
+    }
     if (payout) {
       const remaining = payout.amount_cents - split.fromTradieCents;
       if (["paused", "waiting", "scheduled", "held"].includes(payout.status)) {
@@ -677,6 +999,8 @@ export async function markMissedWindows(db: Db): Promise<{ missed: number; noSho
         summary: `Job ${job.number}: ${tradie?.businessName ?? "the tradie"} accepted and is not on site at ${property.name} by ${promised}. Call the tradie${tradie?.phone ? ` on ${tradie.phone}` : ""}.`,
         dedupeKey: `no_show:${job.id}`,
       });
+      // The same tradie and owner, or the same tradie, ending accepted jobs without Job done: a pattern to look at (DECISIONS.md, 2026-11-23).
+      await notePatterns(tx, job, at);
       const count = await recentNoShows(tx, job.tradieId!, at);
       if (needsReview(count)) {
         await raiseException(tx, {

@@ -17,14 +17,19 @@ import type { Market } from "@config/markets";
  *  - Off-menu: a fixed diagnosis fee, then a quote. The platform keeps its fee
  *    percentage of the quoted work.
  *  - A quote above the limit needs the owner's approval before work starts.
- *  - Parts (DECISIONS.md, 2026-11-20), on any job: small parts up to the
- *    market's included amount (NZ$30) are in the price. A part on the price
- *    list is charged at its fixed price; the tradie gets it less 3%, and the
- *    3% covers the card fee. Anything else is charged at the merchant's price
- *    on the receipt plus 20% for sourcing it; the platform fee (15%) is taken
- *    from the 20% only, so the tradie gets the receipt amount plus 17%. Above
- *    the no-ask limit the owner says yes first. (Until 20 November 2026 parts
- *    were passed on at cost with no fee; parts added before then keep that.)
+ *  - Parts (DECISIONS.md, 2026-11-23), on any job: small parts up to the
+ *    market's included amount (NZ$20) are in the price. Every other part is
+ *    priced by the tradie, including GST (their cost plus their own usual
+ *    markup). The owner pays that price; the tradie gets it less 3%, which
+ *    covers the card fee. Above the no-ask limit the owner says yes first.
+ *    Parts added before 23 November 2026 keep their terms: a price-list part
+ *    at its list price less 3%, an off-list part at the receipt plus 20% with
+ *    the tradie getting the receipt plus 17% (20 Nov 2026), and before 20 Nov
+ *    2026 parts at cost with no fee.
+ *  - Own clients (DECISIONS.md, 2026-11-23): a job between a tradie and a
+ *    property they brought to HostFix themselves (an own-client pair) takes a
+ *    5% platform fee instead of 15% on everything the 15% applies to: the
+ *    menu share, the surcharges, the call-out, quotes and hourly work.
  */
 
 export type LineKind = "menu" | "diagnosis" | "urgent" | "after_hours" | "quote" | "parts" | "no_access" | "adjustment";
@@ -80,6 +85,75 @@ export function platformFee(cents: number, feeBps: number): number {
   whole(cents, "Amount");
   if (!Number.isInteger(feeBps) || feeBps < 0 || feeBps > 5000) throw new Error(`Fee must be between 0 and 5000 basis points. Got ${feeBps}.`);
   return Math.round((cents * feeBps) / 10_000);
+}
+
+/**
+ * The platform fee on a job between an own-client pair (DECISIONS.md, 2026-11-23): 5%, which covers the card fees
+ * (about 3%), the automatic texts and payment, and chasing late payers. Every other job pays the market's fee (15%).
+ */
+export const OWN_CLIENT_FEE_BPS = 500;
+
+/**
+ * The payout guarantee (DECISIONS.md, 2026-11-23). A finished job's payout never waits for the owner's card for the
+ * first NZ$1,000 of the job's price. The market's own figure (payout_guarantee_cents, More > Markets) is what the
+ * app uses; this is the starting value for a new market.
+ */
+export const PAYOUT_GUARANTEE_CENTS = 100_000;
+
+/** The market's numbers with a job's own fee in place of the market's: the own-client rate when the job has one. */
+export function withFee<T extends Pick<Market, "platformFeeBps">>(market: T, feeBps: number | null | undefined): T {
+  return feeBps === null || feeBps === undefined ? market : { ...market, platformFeeBps: feeBps };
+}
+
+/**
+ * What the tradie gets of the call-out. At the market's own fee it is the market's call-out payout (NZ$190 of
+ * NZ$225). At another fee (an own-client job) it is the call-out less that fee: NZ$225 less 5% (1125) = 21375.
+ */
+export function callOutPayout(market: Pick<Market, "diagnosisFeeCents" | "diagnosisPayoutCents" | "platformFeeBps">, feeBps: number | null | undefined): number {
+  if (feeBps === null || feeBps === undefined || feeBps === market.platformFeeBps) return market.diagnosisPayoutCents;
+  return market.diagnosisFeeCents - platformFee(market.diagnosisFeeCents, feeBps);
+}
+
+/**
+ * The lines a job starts with, priced again at the own-client fee once the tradie of an own-client pair takes it
+ * (DECISIONS.md, 2026-11-23). The owner pays the same; only the tradie's share changes. The menu line: the price
+ * less 5% (PL-03, NZ$235: 23500 - 1175 = 22325, instead of the menu's 20000). The call-out: 22500 - 1125 = 21375.
+ * A surcharge: the market's surcharge less 5% (NZ$50 urgent: 4750), also when a membership covers it for the owner.
+ * Any other line is left as it is.
+ */
+export function ownClientLines<T extends Pick<Line, "kind" | "ownerCents" | "tradieCents">>(
+  market: Pick<Market, "urgentSurchargeCents" | "afterHoursSurchargeCents" | "diagnosisFeeCents">, lines: T[], feeBps: number = OWN_CLIENT_FEE_BPS,
+): T[] {
+  return lines.map((line) => {
+    switch (line.kind) {
+      case "menu":
+      case "diagnosis":
+        return { ...line, tradieCents: line.ownerCents - platformFee(line.ownerCents, feeBps) };
+      case "urgent":
+        return { ...line, tradieCents: surchargeShare(line.ownerCents > 0 ? line.ownerCents : market.urgentSurchargeCents, feeBps) };
+      case "after_hours":
+        return { ...line, tradieCents: surchargeShare(line.ownerCents > 0 ? line.ownerCents : market.afterHoursSurchargeCents, feeBps) };
+      default:
+        return line;
+    }
+  });
+}
+
+/**
+ * How much of a finished job's payout waits for the owner's card (DECISIONS.md, 2026-11-23). Of the job's price, the
+ * part the owner has not paid yet is `ownerTotal - collected`. HostFix pays the tradie ahead of the card for up to
+ * `guarantee` (NZ$1,000) of it. The tradie's share of anything above that waits until it is collected, in the
+ * job's own proportion (tradie total / owner total). Worked by hand: a NZ$1,500 job, tradie 127500, the hold took
+ * NZ$235 and the NZ$1,265 charge for the rest failed: not collected 126500, over the guarantee 26500, waits
+ * 26500 x 127500 / 150000 = 22525, so 127500 - 22525 = 104975 goes at the usual time.
+ */
+export function payoutWaits(input: { ownerTotalCents: number; collectedCents: number; guaranteeCents: number; payoutCents: number }): number {
+  const owner = whole(input.ownerTotalCents, "Owner total");
+  if (owner === 0) return 0;
+  const notCollected = Math.max(0, owner - whole(input.collectedCents, "Collected"));
+  const over = Math.max(0, notCollected - whole(input.guaranteeCents, "Guarantee"));
+  if (over === 0) return 0;
+  return Math.min(whole(input.payoutCents, "Payout"), Math.round((over * input.payoutCents) / owner));
 }
 
 /** The payout the menu editor suggests for an owner price: the price less the platform fee. */
@@ -228,11 +302,22 @@ export function hourlyLabour(hours: number, rateCents: number): number {
 }
 
 // ---------------------------------------------------------------------------
-// PARTS (DECISIONS.md, 2026-11-20)
+// PARTS (DECISIONS.md, 2026-11-23; parts added before then: 2026-11-20)
 // ---------------------------------------------------------------------------
 
-/** What HostFix keeps of a price-list part: 3%, which covers the card fee. */
+/** What HostFix keeps of a part: 3%, which covers the card fee. */
 export const LIST_PART_FEE_BPS = 300;
+/** The same 3%, by the name it has had since 23 November 2026, when every part became the tradie's own price. */
+export const PART_FEE_BPS = LIST_PART_FEE_BPS;
+
+/**
+ * A part at the tradie's own price including GST (their cost plus their own usual markup), from 23 November 2026.
+ * The owner pays it; the tradie gets it less 3%. A NZ$45 inlet valve: owner 4500, tradie 4500 - 135 = 4365, we
+ * keep 135. Two at NZ$13.50: owner 2700, tradie 2700 - 81 = 2619.
+ */
+export function pricedPartLine(name: string, unitCents: number, quantity: number): Line {
+  return listPartLine(name, unitCents, quantity);
+}
 /** What an off-list part costs the owner on top of the receipt: 20%, for sourcing it. */
 export const RECEIPT_MARKUP_BPS = 2000;
 
@@ -287,12 +372,28 @@ export function partsApproval(
  * by the call-out fee (never more than the job would have cost). Surcharges
  * stay, because the tradie still came out urgently or after hours.
  */
-export function noAccessLines(market: PricingMarket, lines: Line[]): Line[] {
+export function noAccessLines(market: PricingMarket, lines: Line[], feeBps?: number | null): Line[] {
   const base = lines.find((line) => line.kind === "menu" || line.kind === "diagnosis");
   const kept = lines.filter((line) => line.kind === "urgent" || line.kind === "after_hours");
   const ownerCents = Math.min(market.diagnosisFeeCents, base?.ownerCents ?? market.diagnosisFeeCents);
-  const tradieCents = Math.min(market.diagnosisPayoutCents, base?.tradieCents ?? market.diagnosisPayoutCents, ownerCents);
+  const payout = callOutPayout(market, feeBps);
+  const tradieCents = Math.min(payout, base?.tradieCents ?? payout, ownerCents);
   return [{ kind: "no_access", label: "Call-out: could not get into the property", ownerCents, tradieCents }, ...kept];
+}
+
+/**
+ * The owner cancels after the tradie tapped Arrived (DECISIONS.md, 2026-11-23): the call-out is charged instead of
+ * the job (never more than the job would have cost), and the tradie is paid their share of it as for a call-out.
+ * Surcharges stay, because the tradie still came out urgently or after hours, the same as "could not get in".
+ * PL-03 (owner 23500, tradie 20000), cancelled after Arrived: owner 22500, tradie 19000.
+ */
+export function cancelledOnSiteLines(market: PricingMarket, lines: Line[], feeBps?: number | null): Line[] {
+  const base = lines.find((line) => line.kind === "menu" || line.kind === "diagnosis");
+  const kept = lines.filter((line) => line.kind === "urgent" || line.kind === "after_hours");
+  const ownerCents = Math.min(market.diagnosisFeeCents, base?.ownerCents ?? market.diagnosisFeeCents);
+  const payout = callOutPayout(market, feeBps);
+  const tradieCents = Math.min(payout, ownerCents);
+  return [{ kind: "diagnosis", label: "Call-out: cancelled after the tradie arrived", ownerCents, tradieCents }, ...kept];
 }
 
 /**

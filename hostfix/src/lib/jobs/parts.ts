@@ -10,43 +10,55 @@ import { enqueue } from "@/lib/notify/outbox";
 import type { PaymentsGateway, Provider } from "@/lib/payments/gateway";
 import { raiseException, resolveExceptionsFor } from "@/lib/ops/exceptions";
 import { loadContext, offerUrl, ownerJobUrl } from "./context";
-import { listPartLine, partsApproval, receiptPartLine, taxPortion, type Line } from "./pricing";
+import { baseUrl } from "@/lib/env";
+import { partsApproval, pricedPartLine, taxPortion, type Line } from "./pricing";
+import { refundAcross } from "@/lib/billing/settle";
 import { getJobForStaff, insertLines, lockJob, recalcTotals, rowToQuote } from "./store";
 import type { Job, Quote } from "./types";
 
 /**
- * PARTS ON A JOB (DECISIONS.md, 2026-11-20). On any job, menu jobs included.
+ * PARTS ON A JOB (DECISIONS.md, 2026-11-23). On any job, menu jobs included.
  *
- *   small parts      up to the market's included amount (NZ$30): in the
- *                    price, never added.
- *   price list       a part on the market's list is charged at its fixed
- *                    price, as many as are fitted. The tradie gets it less 3%.
- *                    No receipt needed.
- *   off the list     the merchant's price, from a receipt (photo, screenshot
- *                    or PDF), plus 20%. The tradie enters the receipt's total
- *                    and the amount of it used on this job (packs, van stock).
- *                    Only staff and the tradie see the receipt; the owner sees
- *                    the part, its price and "receipt checked by HostFix".
+ *   small parts      up to the market's included amount (NZ$20): in the
+ *                    price, never added. A part costing that or less (its
+ *                    price times how many) is refused.
+ *   the tradie's     every other part: what it is, how many, and the tradie's
+ *   price            own price for one, including GST (their cost plus their
+ *                    own usual markup). The owner pays that; the tradie gets
+ *                    it less 3% (the card fee), which HostFix keeps. No
+ *                    receipt is needed.
+ *   the price list   the market's list (price_list_items) is a set of quick
+ *                    picks that fill in a name and a price, which the tradie
+ *                    can change. A part picked from it but priced over 1.5
+ *                    times its list price goes to the queue for a look.
+ *                    Nothing is held for that.
  *   asking first     up to the market's parts limit (NZ$150) for the job, and
  *                    inside the property's overall limit, parts are added
  *                    straight away and the owner is texted. Above that the
  *                    owner says yes in the app before the tradie buys them:
  *                    the same quote approval as extra work.
- *   receipt to       allowed at Job done. The owner is charged as normal; the
- *   follow           tradie's payment waits for the receipt. No receipt in 7
- *                    days: the part is refunded to the owner out of that
- *                    payment, and the tradie is texted.
- *   receipt checks   go straight to the team (an owner cannot judge a
- *                    receipt), holding the payment until Approve or Hold:
- *                    a receipt dated more than 90 days before the job, an
- *                    amount for the job bigger than the receipt, or the same
- *                    receipt (the same file, or the same tradie, total and
- *                    date) used on jobs that add up to more than it.
+ *   a spot check     our team can ask for the receipt for any part, from the
+ *                    job page. The tradie is texted; their payment for the job
+ *                    waits for it. No receipt in 7 days: the part is refunded
+ *                    to the owner out of that payment, and the tradie is told.
+ *                    A receipt sent is checked: a date more than 90 days before
+ *                    the job, or the same file used on another job, holds the
+ *                    payment for the team to Approve or Hold.
+ *
+ * Parts added before 23 November 2026 keep their terms (DECISIONS.md,
+ * 2026-11-20): a price-list part at its list price, an off-list part from its
+ * receipt plus 20%, "receipt to follow" at Job done, and the receipt checks
+ * (dated over 90 days before the job, an amount over the receipt, the same
+ * receipt over-used). Those rows still work as they did.
  */
 
 export const RECEIPT_TO_FOLLOW_DAYS = 7;
 export const OLD_RECEIPT_DAYS = 90;
 export const MAX_QUANTITY = 50;
+/** How many part rows the Add parts form has. */
+export const PART_ROWS = 4;
+/** A part picked from the price list but priced over this many times its list price goes to the queue for a look. */
+export const PART_PRICE_FLAG_MULTIPLE = 1.5;
 
 export type ReceiptFlag = "old_receipt" | "over_receipt" | "reused_receipt";
 
@@ -71,7 +83,8 @@ export type JobPart = {
   jobId: string;
   tradieId: string;
   quoteId: string | null;
-  kind: "list" | "receipt";
+  /** priced: the tradie's own price (from 23 Nov 2026). list and receipt: added before then. */
+  kind: "list" | "receipt" | "priced";
   description: string;
   quantity: number;
   unitCents: number | null;
@@ -80,18 +93,22 @@ export type JobPart = {
   ownerCents: number;
   tradieCents: number;
   status: "pending" | "active" | "void";
-  receiptStatus: "not_needed" | "needed" | "attached" | "to_follow" | "refunding" | "refunded";
+  receiptStatus: "not_needed" | "needed" | "attached" | "to_follow" | "requested" | "refunding" | "refunded";
   receiptUploadId: string | null;
   receiptDate: string | null;
   receiptFlags: ReceiptFlag[];
   checkStatus: "flagged" | "approved" | "held" | null;
+  /** A priced part picked from the price list: the list price it was compared with. */
+  listPriceCents: number | null;
+  /** When our team asked for the receipt (a spot check), if they did. */
+  receiptRequestedAt: Date | null;
 };
 
 type PartRow = {
-  id: string; created_at: Date; job_id: string; tradie_id: string; quote_id: string | null; kind: "list" | "receipt"; description: string;
+  id: string; created_at: Date; job_id: string; tradie_id: string; quote_id: string | null; kind: JobPart["kind"]; description: string;
   quantity: number; unit_cents: number | null; receipt_total_cents: number | null; amount_cents: number; owner_cents: number; tradie_cents: number;
   status: JobPart["status"]; receipt_status: JobPart["receiptStatus"]; receipt_upload_id: string | null; receipt_date: string | Date | null;
-  receipt_flags: string[] | null; check_status: JobPart["checkStatus"];
+  receipt_flags: string[] | null; check_status: JobPart["checkStatus"]; list_price_cents?: number | null; receipt_requested_at?: Date | null;
 };
 
 const dateOnly = (value: string | Date | null): string | null => {
@@ -108,6 +125,8 @@ function rowToPart(row: PartRow): JobPart {
     ownerCents: Number(row.owner_cents), tradieCents: Number(row.tradie_cents), status: row.status, receiptStatus: row.receipt_status,
     receiptUploadId: row.receipt_upload_id, receiptDate: dateOnly(row.receipt_date), receiptFlags: (row.receipt_flags ?? []) as ReceiptFlag[],
     checkStatus: row.check_status,
+    listPriceCents: row.list_price_cents === null || row.list_price_cents === undefined ? null : Number(row.list_price_cents),
+    receiptRequestedAt: row.receipt_requested_at ? new Date(row.receipt_requested_at) : null,
   };
 }
 
@@ -123,10 +142,11 @@ async function lockPart(db: Db, partId: string): Promise<JobPart | null> {
 }
 
 export type PartsInput = {
-  /** Parts from the price list, and how many of each. */
-  list: { itemId: string; quantity: number }[];
-  /** One part off the list, with its receipt if the tradie has it already. */
-  offList?: { description: string; receiptTotalCents: number; amountCents: number; receiptDate?: string | null; uploadId?: string | null } | null;
+  /**
+   * Each part: what it is, how many, and the tradie's own price for one including GST (DECISIONS.md, 2026-11-23).
+   * `priceListItemId` when it was picked from the price list (which filled in the name and price, both editable).
+   */
+  parts: { name: string; quantity: number; unitCents: number; priceListItemId?: string | null }[];
 };
 
 export type AddPartsResult = { ok: true; job: Job; quote: Quote; needsApproval: boolean; parts: JobPart[] } | { ok: false; message: string };
@@ -140,10 +160,15 @@ function cleanDate(value: string | null | undefined): string | null | "bad" {
   return value;
 }
 
+/** True when a part picked from the price list is priced over 1.5 times its list price: a NZ$40 part listed at NZ$31.41 is not (8000 is not more than 9423); NZ$47.20 against NZ$31.41 is (9440 > 9423). */
+export function overListPrice(unitCents: number, listCents: number): boolean {
+  return unitCents * 2 > listCents * 3;
+}
+
 /**
- * The tradie adds parts. Inside the no-ask limits they are added straight
- * away and the owner is texted; above them the owner is asked, and nothing
- * is bought until they say yes.
+ * The tradie adds parts at their own prices. Inside the no-ask limits they are
+ * added straight away and the owner is texted; above them the owner is asked,
+ * and nothing is bought until they say yes.
  */
 export async function addParts(db: Db, jobId: string, tradieId: string, input: PartsInput): Promise<AddPartsResult> {
   return db.tx(async (tx) => {
@@ -154,51 +179,23 @@ export async function addParts(db: Db, jobId: string, tradieId: string, input: P
     const context = await loadContext(tx, job);
     const { market, property, owner, tradie } = context;
 
-    // Price-list parts, each at its fixed price.
-    const wanted = input.list.filter((entry) => entry.quantity > 0);
     const catalogue = new Map((await listPriceList(tx, market.slug)).map((item) => [item.id, item]));
-    const lines: { line: Line; itemId: string | null; part: Omit<JobPart, "id" | "createdAt" | "jobId" | "tradieId" | "quoteId" | "status" | "receiptFlags" | "checkStatus"> }[] = [];
-    for (const entry of wanted) {
-      const item = catalogue.get(entry.itemId);
-      if (!item) return { ok: false, message: "One of those parts is not on the price list any more. Refresh the page and choose again." };
-      if (!Number.isInteger(entry.quantity) || entry.quantity < 1 || entry.quantity > MAX_QUANTITY) return { ok: false, message: `Enter how many of ${item.name}, from 1 to ${MAX_QUANTITY}.` };
-      const line = listPartLine(item.name, item.priceCents, entry.quantity);
-      lines.push({
-        line,
-        itemId: item.id,
-        part: {
-          kind: "list", description: item.name, quantity: entry.quantity, unitCents: item.priceCents, receiptTotalCents: null, amountCents: line.ownerCents,
-          ownerCents: line.ownerCents, tradieCents: line.tradieCents, receiptStatus: "not_needed", receiptUploadId: null, receiptDate: null,
-        },
-      });
-    }
-
-    // A part off the list: the receipt amount plus 20%.
-    const off = input.offList ?? null;
-    let receiptDate: string | null = null;
-    if (off) {
-      const description = off.description.replace(/\s+/g, " ").trim();
-      if (description.length < 3) return { ok: false, message: "Say what the part is, for example: 15 mm copper elbow and 2 m of pipe." };
-      if (!Number.isInteger(off.receiptTotalCents) || off.receiptTotalCents <= 0) return { ok: false, message: "Enter the receipt's total, including GST." };
-      if (!Number.isInteger(off.amountCents) || off.amountCents <= 0) return { ok: false, message: "Enter how much of the receipt is for this job." };
-      if (off.amountCents <= market.partsIncludedCents) {
-        return { ok: false, message: `Parts up to ${formatMoney(market.partsIncludedCents, job.currency)} are part of the job's price, so there is nothing to add for these.` };
+    const lines: { line: Line; itemId: string | null; listCents: number | null; part: { description: string; quantity: number; unitCents: number } }[] = [];
+    for (const entry of input.parts) {
+      const name = entry.name.replace(/\s+/g, " ").trim();
+      if (name.length < 3) return { ok: false, message: "Say what each part is, for example: 15 mm copper elbow." };
+      if (name.length > 160) return { ok: false, message: "Keep each part's name short (160 characters)." };
+      if (!Number.isInteger(entry.quantity) || entry.quantity < 1 || entry.quantity > MAX_QUANTITY) return { ok: false, message: `Enter how many of ${name}, from 1 to ${MAX_QUANTITY}.` };
+      if (!Number.isInteger(entry.unitCents) || entry.unitCents <= 0) return { ok: false, message: `Enter your price for ${name}, including GST.` };
+      if (entry.unitCents * entry.quantity > 2_000_000) return { ok: false, message: "That is more than can be added here. Contact us about this job." };
+      // Small parts are in the job's price (DECISIONS.md, 2026-11-23: NZ$20). Price and quantity together.
+      if (entry.unitCents * entry.quantity <= market.partsIncludedCents) {
+        return { ok: false, message: `Parts up to ${formatMoney(market.partsIncludedCents, job.currency)} are part of the job's price, so there is nothing to add for ${name}.` };
       }
-      if (off.amountCents > 2_000_000) return { ok: false, message: "That is more than can be added here. Contact us about this job." };
-      const date = cleanDate(off.receiptDate);
-      if (date === "bad") return { ok: false, message: "Enter the receipt's date as a date, or leave it empty." };
-      receiptDate = date;
-      const line = receiptPartLine(market, description, off.amountCents);
-      lines.push({
-        line,
-        itemId: null,
-        part: {
-          kind: "receipt", description, quantity: 1, unitCents: null, receiptTotalCents: off.receiptTotalCents, amountCents: off.amountCents,
-          ownerCents: line.ownerCents, tradieCents: line.tradieCents, receiptStatus: "needed", receiptUploadId: null, receiptDate: date,
-        },
-      });
+      const item = entry.priceListItemId ? catalogue.get(entry.priceListItemId) ?? null : null;
+      lines.push({ line: pricedPartLine(name, entry.unitCents, entry.quantity), itemId: item?.id ?? null, listCents: item?.priceCents ?? null, part: { description: name, quantity: entry.quantity, unitCents: entry.unitCents } });
     }
-    if (lines.length === 0) return { ok: false, message: "Choose a part from the list, or add one that is not on it." };
+    if (lines.length === 0) return { ok: false, message: "Add at least one part: what it is, how many and your price." };
 
     // Ask first? Parts on this job so far, and everything extra on it, against the limits.
     const sofar = await tx.query<{ parts: number }>("select coalesce(sum(owner_cents), 0) as parts from public.job_parts where job_id = $1::uuid and status in ('active', 'pending')", [jobId]);
@@ -219,35 +216,48 @@ export async function addParts(db: Db, jobId: string, tradieId: string, input: P
        values ($1::timestamptz, $2::uuid, $3::uuid, $4, 0, $5, $6, $7, $8, $9, $10::timestamptz, $11)
        returning *`,
       [
-        at.toISOString(), jobId, tradieId, `Parts: ${summary}`, lines.reduce((sum, entry) => sum + entry.part.amountCents, 0), newPartsCents, newTradieCents,
+        at.toISOString(), jobId, tradieId, `Parts: ${summary}`, newPartsCents, newPartsCents, newTradieCents,
         approval.needsApproval, approval.needsApproval ? "pending" : "auto_approved", approval.needsApproval ? null : at.toISOString(), approval.needsApproval ? null : "system",
       ],
     );
     const quote = rowToQuote(quoteRows[0]!);
     const status = approval.needsApproval ? "pending" : "active";
     let offset = 0;
+    const flagged: { id: string; name: string; unitCents: number; listCents: number }[] = [];
     for (const entry of lines) {
       const created = new Date(at.getTime() + offset);
       offset += 1;
       const rows = await tx.query<{ id: string }>(
         `insert into public.job_parts
            (created_at, job_id, tradie_id, quote_id, kind, price_list_item_id, description, quantity, unit_cents, receipt_total_cents, amount_cents,
-            owner_cents, tradie_cents, status, receipt_status, receipt_date)
-         values ($1::timestamptz, $2::uuid, $3::uuid, $4::uuid, $5, $6::uuid, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16::date)
+            owner_cents, tradie_cents, status, receipt_status, list_price_cents)
+         values ($1::timestamptz, $2::uuid, $3::uuid, $4::uuid, 'priced', $5::uuid, $6, $7, $8, null, $9, $10, $11, $12, 'not_needed', $13)
          returning id`,
         [
-          created.toISOString(), jobId, tradieId, quote.id, entry.part.kind,
-          entry.itemId,
-          entry.part.description, entry.part.quantity, entry.part.unitCents, entry.part.receiptTotalCents, entry.part.amountCents,
-          entry.part.ownerCents, entry.part.tradieCents, status, entry.part.receiptStatus, entry.part.receiptDate,
+          created.toISOString(), jobId, tradieId, quote.id, entry.itemId, entry.part.description, entry.part.quantity, entry.part.unitCents,
+          entry.line.ownerCents, entry.line.ownerCents, entry.line.tradieCents, status, entry.listCents,
         ],
       );
       await insertLines(tx, jobId, [entry.line], { at: created, status, quoteId: quote.id, partId: rows[0]!.id });
+      if (entry.listCents !== null && overListPrice(entry.part.unitCents, entry.listCents)) {
+        flagged.push({ id: rows[0]!.id, name: entry.part.description, unitCents: entry.part.unitCents, listCents: entry.listCents });
+      }
     }
     await audit(tx, {
       actor: `tradie:${tradieId}`, action: "parts.added", entity: "job", entityId: jobId, amount: newPartsCents, currency: job.currency,
-      detail: { quote: quote.id, parts: lines.map((entry) => ({ kind: entry.part.kind, label: entry.line.label, owner: entry.line.ownerCents, tradie: entry.line.tradieCents })), needs_approval: approval.needsApproval, reason: approval.reason },
+      detail: {
+        quote: quote.id, parts: lines.map((entry) => ({ kind: "priced", label: entry.line.label, owner: entry.line.ownerCents, tradie: entry.line.tradieCents, list_price: entry.listCents })),
+        needs_approval: approval.needsApproval, reason: approval.reason,
+      },
     });
+    // Priced well over the list: a look, never a hold (DECISIONS.md, 2026-11-23).
+    for (const part of flagged) {
+      await raiseException(tx, {
+        kind: "part_price", market: job.market, jobId, tradieId,
+        summary: `Job ${job.number}: ${tradie?.businessName ?? "the tradie"} priced "${part.name}" at ${formatMoney(part.unitCents, job.currency)} each, more than ${PART_PRICE_FLAG_MULTIPLE} times its price-list price of ${formatMoney(part.listCents, job.currency)}. There can be good reasons (a better part, a hard-to-get one). Nothing is held. If it seems high, request the receipt on the job page.`,
+        dedupeKey: `part_price:${part.id}`,
+      });
+    }
 
     if (approval.needsApproval) {
       await tx.query("update public.jobs set status = 'awaiting_approval' where id = $1::uuid", [jobId]);
@@ -263,14 +273,39 @@ export async function addParts(db: Db, jobId: string, tradieId: string, input: P
         dedupeKey: `parts:${quote.id}`,
       });
     }
-    // A receipt sent with the part is attached straight away.
-    const parts = await listParts(tx, jobId);
-    const offPart = off ? parts.find((part) => part.quoteId === quote.id && part.kind === "receipt") : null;
-    if (offPart && off?.uploadId) {
-      const attached = await attachReceiptInside(tx, job, tradieId, offPart, { uploadId: off.uploadId, receiptDate });
-      if (!attached.ok) return { ok: false, message: attached.message };
-    }
     return { ok: true, job: (await lockJob(tx, jobId))!, quote, needsApproval: approval.needsApproval, parts: await listParts(tx, jobId) };
+  });
+}
+
+/**
+ * Our team asks for the receipt for a part (a spot check, DECISIONS.md, 2026-11-23), from the job page. The
+ * tradie is texted, in neutral words. Their payment for the job waits for it (holds.ts); no receipt in 7 days and
+ * the part is refunded to the owner out of that payment (refundMissingReceipts).
+ */
+export async function requestReceipt(db: Db, partId: string, actor: string): Promise<{ ok: true; part: JobPart } | { ok: false; message: string }> {
+  return db.tx(async (tx) => {
+    const found = await lockPart(tx, partId);
+    if (!found) return { ok: false, message: "We could not find that part." };
+    const job = await lockJob(tx, found.jobId);
+    if (!job) return { ok: false, message: "We could not find that job." };
+    const part = (await lockPart(tx, partId))!;
+    if (part.status !== "active") return { ok: false, message: "That part is not on the job any more." };
+    if (part.receiptStatus === "requested") return { ok: true, part };
+    if (part.receiptStatus !== "not_needed") return { ok: false, message: "This part already has a receipt, or one is on its way." };
+    const at = now();
+    await tx.query("update public.job_parts set receipt_status = 'requested', receipt_requested_at = $2::timestamptz, receipt_requested_by = $3 where id = $1::uuid", [partId, at.toISOString(), actor]);
+    const held = await holdPayout(tx, job.id);
+    await audit(tx, { actor, action: "parts.receipt_requested", entity: "job", entityId: job.id, amount: part.ownerCents, currency: job.currency, detail: { part: part.id, description: part.description, payout_held: held } });
+    const context = await loadContext(tx, job);
+    if (context.tradie?.phone) {
+      const offer = await tx.query<{ id: string; number: number }>("select id, number from public.offers where job_id = $1::uuid and tradie_id = $2::uuid and status = 'accepted' limit 1", [job.id, part.tradieId]);
+      await enqueue(tx, {
+        channel: "sms", to: context.tradie.phone, template: "receipt_requested", audience: "tradie", jobId: job.id, userId: context.tradie.userId,
+        body: texts.receiptRequested({ number: job.number, what: part.description, days: RECEIPT_TO_FOLLOW_DAYS, link: offer[0] ? offerUrl({ id: offer[0].id, number: Number(offer[0].number) }) : `${baseUrl()}/tradie` }),
+        dedupeKey: `receipt_requested:${part.id}`,
+      });
+    }
+    return { ok: true, part: (await lockPart(tx, partId))! };
   });
 }
 
@@ -282,7 +317,10 @@ export async function attachReceipt(db: Db, jobId: string, tradieId: string, par
     const job = await lockJob(tx, jobId);
     if (!job || job.tradieId !== tradieId) return { ok: false, message: NOT_YOURS };
     const part = await lockPart(tx, partId);
-    if (!part || part.jobId !== jobId || part.kind !== "receipt" || part.status === "void") return { ok: false, message: "We could not find that part on this job." };
+    // An off-list part from before 23 Nov 2026, or any part whose receipt our team asked for.
+    if (!part || part.jobId !== jobId || part.status === "void" || (part.kind !== "receipt" && part.receiptStatus !== "requested" && part.receiptStatus !== "attached")) {
+      return { ok: false, message: "We could not find that part on this job." };
+    }
     const date = cleanDate(input.receiptDate);
     if (date === "bad") return { ok: false, message: "Enter the receipt's date as a date, or leave it empty." };
     const result = await attachReceiptInside(tx, job, tradieId, part, { uploadId: input.uploadId, receiptDate: date ?? part.receiptDate });
@@ -321,7 +359,7 @@ export function receiptFlagWords(flag: ReceiptFlag): string {
     case "over_receipt":
       return "The amount for this job is more than the receipt's total.";
     case "reused_receipt":
-      return "The same receipt is on other jobs, and together they claim more than its total.";
+      return "The same receipt is on other jobs (for a part from before 23 November 2026: and together they claim more than its total).";
   }
 }
 
@@ -345,6 +383,17 @@ export async function receiptFlags(db: Db, part: JobPart, job: Pick<Job, "create
   if (same.length > 0 && part.receiptTotalCents !== null) {
     const claimed = same.reduce((sum, row) => sum + Number(row.amount_cents), part.amountCents);
     if (claimed > part.receiptTotalCents) flags.push("reused_receipt");
+  }
+  // A part at the tradie's own price has no receipt total to add up against (DECISIONS.md, 2026-11-23): the same
+  // file already sent for a part on another job is enough to look at.
+  if (part.receiptTotalCents === null && part.receiptUploadId) {
+    const elsewhere = await db.query(
+      `select 1 from public.job_parts p join public.uploads u on u.id = p.receipt_upload_id
+        where p.id <> $1::uuid and p.job_id <> $3::uuid and p.status <> 'void' and u.sha256 is not null
+          and u.sha256 = (select sha256 from public.uploads where id = $2::uuid) limit 1`,
+      [part.id, part.receiptUploadId, part.jobId],
+    );
+    if (elsewhere.length > 0) flags.push("reused_receipt");
   }
   return flags;
 }
@@ -406,22 +455,25 @@ type GatewayFor = (country: "NZ" | "AU") => PaymentsGateway | null;
  */
 export async function refundMissingReceipts(db: Db, gatewayFor: GatewayFor): Promise<number> {
   const at = now();
+  // A receipt promised at Job done (parts from before 23 Nov 2026), or one our team asked for (a spot check), 7 days on.
   const due = await db.query<{ id: string }>(
     `select p.id from public.job_parts p join public.jobs j on j.id = p.job_id
-      where p.receipt_status = 'to_follow' and p.status = 'active' and j.completed_at <= $1::timestamptz
-      order by j.completed_at limit 50`,
+      where p.status = 'active'
+        and ((p.receipt_status = 'to_follow' and j.completed_at <= $1::timestamptz)
+          or (p.receipt_status = 'requested' and p.receipt_requested_at <= $1::timestamptz))
+      order by coalesce(p.receipt_requested_at, j.completed_at) limit 50`,
     [addHours(at, -24 * RECEIPT_TO_FOLLOW_DAYS).toISOString()],
   );
   let refunded = 0;
   for (const row of due) {
     const claim = await db.tx(async (tx) => {
       const part = await lockPart(tx, row.id);
-      if (!part || part.receiptStatus !== "to_follow" || part.status !== "active") return null;
+      if (!part || (part.receiptStatus !== "to_follow" && part.receiptStatus !== "requested") || part.status !== "active") return null;
       const job = await getJobForStaff(tx, part.jobId);
       if (!job) return null;
       const context = await loadContext(tx, job);
-      const payment = (await tx.query<{ id: string; status: string; amount_cents: number; refunded_cents: number; payment_intent_id: string | null; provider: Provider }>(
-        "select id, status, amount_cents, refunded_cents, payment_intent_id, provider from public.payments where job_id = $1::uuid for update",
+      const payment = (await tx.query<Parameters<typeof refundAcross>[1] & { provider: Provider }>(
+        "select * from public.payments where job_id = $1::uuid for update",
         [job.id],
       ))[0] ?? null;
       await tx.query("update public.job_parts set receipt_status = 'refunding' where id = $1::uuid", [part.id]);
@@ -437,11 +489,11 @@ export async function refundMissingReceipts(db: Db, gatewayFor: GatewayFor): Pro
       try {
         if (!gateway) throw new Error("Payments are not set up for this country.");
         const refundCents = Math.min(part.ownerCents, payment.amount_cents - payment.refunded_cents);
-        refundId = (await gateway.refund({ paymentIntentId: payment.payment_intent_id!, amountCents: refundCents, idempotencyKey: `hostfix-part-${part.id}-refund` })).refundId;
+        refundId = (await refundAcross(gateway, payment, refundCents, `hostfix-part-${part.id}-refund`)).refundId;
       } catch (error) {
         const reason = error instanceof Error ? error.message : String(error);
         await db.tx(async (tx) => {
-          await tx.query("update public.job_parts set receipt_status = 'to_follow' where id = $1::uuid and receipt_status = 'refunding'", [part.id]);
+          await tx.query("update public.job_parts set receipt_status = $2 where id = $1::uuid and receipt_status = 'refunding'", [part.id, part.receiptStatus]);
           await raiseException(tx, {
             kind: "needs_review", market: job.market, jobId: job.id,
             summary: `Job ${job.number}: the receipt for "${part.description}" never came, but the ${formatMoney(part.ownerCents, job.currency)} refund to the owner did not go through (${reason}). It will be tried again; tell the admin if this stays.`,

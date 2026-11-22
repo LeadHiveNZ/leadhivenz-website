@@ -17,7 +17,7 @@ One place for every trade your holiday home needs. A checked local tradie on sit
 1. **Anyone can report it.** You, your cleaner from their own link (one link for every house you give them, signed with their name), or your guest from the QR card in the house. A photo and a minute.
 2. **We find the tradie, not you.** It goes straight to our first-choice tradie for that trade. If they can't take it, it goes to the next one. The tradie who takes it picks a two-hour window to arrive in, and you get a text with it.
 3. **They get in without you.** Your lockbox code and access notes are shown only to the tradie who accepts the job.
-4. **You get before and after photos and a fixed price.** Your card is charged the menu price when the job is done. One statement a month. If the app can't confirm the tradie's visit (where they were, or how long they stayed), we may ask you to check the photos before they're paid.
+4. **You get before and after photos and a fixed price.** When it goes out we hold the price on your card; you're only charged once it's fixed. One statement a month. If the app can't confirm the tradie's visit (where they were, or how long they stayed), we may ask you to check the photos before they're paid.
 
 ## What it costs
 
@@ -27,7 +27,7 @@ A tradie on site within 24 hours, at the fixed menu price. Need someone within 4
 
 ---
 
-Jobs are charged at the fixed price when the job is done, GST included. Small parts up to {{parts_included}} are in the price. Common parts are on the price list at a fixed price. Anything else is charged at the merchant's price plus 20% for sourcing it. Above {{parts_limit}} of parts, nothing is bought without your yes. Not on the menu? {{callout}} for a tradie to come and look, then a quote. Nothing over {{approval_limit}} starts without your yes.
+Jobs are charged at the fixed price when the job is done, GST included. Small parts up to {{parts_included}} are in the price. Other parts are charged at the tradie's price, including GST. Above {{parts_limit}} of parts, nothing is bought without your yes. Cancel free until the tradie arrives; after that, the call-out is charged. Not on the menu? {{callout}} for a tradie to come and look, then a quote. Nothing over {{approval_limit}} starts without your yes.
 
 ## You only pay for what you got
 

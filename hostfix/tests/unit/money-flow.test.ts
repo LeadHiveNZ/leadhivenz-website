@@ -16,7 +16,7 @@ import { addParts } from "@/lib/jobs/parts";
 import { DEMO_CARD_OK } from "@/lib/payments/demo-gateway";
 import type { Property } from "@/lib/properties/service";
 import { testDb } from "./db";
-import { addPlusTier, arrive, auditActions, gatewayFor, HOUSE, liveMarket, logJob, makeOwner, makeProperty, makeTradie, MONDAY_10AM, MONDAY_9PM, offersFor, openExceptions, photo, textsTo, messagesTo } from "./factory";
+import { addPlusTier, arrive, auditActions, cardDeclinesFromNow, gatewayFor, holdRanOut, HOUSE, liveMarket, logJob, makeOwner, makeProperty, makeTradie, MONDAY_10AM, MONDAY_9PM, offersFor, openExceptions, photo, textsTo, messagesTo } from "./factory";
 
 /**
  * THE PRICES THESE TESTS ARE BUILT ON. They come from seed/menu-queenstown.json
@@ -52,10 +52,13 @@ async function setup(options: { tier?: "essential" | "plus"; card?: "ok" | "decl
   // These tests are about the money, and finish a job in the same minute the tradie arrives. The time-on-site
   // check (10 minutes by default) is switched off here; tests/unit/job-checks.test.ts covers it at its default.
   await liveMarket(t.db, { min_minutes_on_site: 0, ...options.market });
-  const owner = await makeOwner(t.db, { card: options.card ?? "ok" });
+  // A card that declines from the start would decline the hold placed when the job goes out, and the job would
+  // never be sent (DECISIONS.md, 2026-11-23). "declines" here is a card that was fine at booking, then declined,
+  // and the hold on it ran out before the job was done: so the whole charge goes to the card, as before holds.
+  const owner = await makeOwner(t.db, { card: "ok" });
   const property = await makeProperty(t.db, owner.ownerId, { tier: options.tier ?? "essential" });
   const tradie = await makeTradie(t.db, { slot: 1, afterHours: true, trades: options.trades ?? ["plumber"], licence: options.trades?.[0] === "handyman" ? "none" : "valid", name: "Wakatipu Plumbing" });
-  return { owner, property, tradie };
+  return { owner, property, tradie, declinesLater: options.card === "declines" };
 }
 
 /** Logs a job and takes it as far as the tradie being on site. */
@@ -63,6 +66,10 @@ async function onSite(s: Setup, overrides: Parameters<typeof logJob>[2] = {}, pr
   const job = await logJob(t.db, property, overrides);
   const [offer] = await offersFor(t.db, job.id);
   await t.db.tx((tx) => acceptOffer(tx, offer!.id, "link"));
+  if (s.declinesLater) {
+    await cardDeclinesFromNow(t.db, s.owner.ownerId);
+    await holdRanOut(t.db, job.id);
+  }
   await markEnRoute(t.db, job.id, s.tradie.tradieId);
   const arrived = await arrive(t.db, job.id, s.tradie.tradieId, HOUSE);
   if (!arrived.ok) throw new Error(arrived.message);
@@ -124,7 +131,8 @@ describe("a finished menu job", () => {
     expect(await payout(job.id)).toMatchObject({ status: "sent", amount_cents: 19000 });
     expect((await messagesTo(t.db, s.tradie.phone, "payout_sent"))[0]!.body).toContain("NZ$190 for job");
 
-    expect(await moneyLog(job.id)).toEqual(["job.created:22500", "job.completed:22500", "payment.succeeded:22500", "payout.sent:19000"]);
+    // The NZ$225 was held on the card when the job went out, and the charge was taken from that hold (DECISIONS.md, 2026-11-23).
+    expect(await moneyLog(job.id)).toEqual(["job.created:22500", "hold.placed:22500", "job.completed:22500", "hold.captured:22500", "payment.succeeded:22500", "payout.sent:19000"]);
     // What the platform keeps is the difference. The menu sets each owner price at the tradie's
     // payout divided by 0.85, to the nearest NZ$5: 190 / 0.85 = 223.53, so NZ$225, and we keep NZ$35.
     expect(22500 - 19000).toBe(3500);
@@ -133,6 +141,8 @@ describe("a finished menu job", () => {
   it("a charge cut off half-way is repeated with the same key, so it can never become two charges", async () => {
     const s = await setup();
     const job = await onSite(s);
+    // With no hold left on the card, the whole charge is a separate charge on the saved card, as before holds.
+    await holdRanOut(t.db, job.id);
     await finish(s, job.id);
     const keys: string[] = [];
     const base = gatewayFor(t.db)("NZ")!;
@@ -483,7 +493,7 @@ describe("when the owner says something is wrong", () => {
     expect(await payout(job.id)).toMatchObject({ status: "cancelled" });
     setTestNow(addHours(MONDAY_10AM, 72));
     expect(await releaseDuePayouts(t.db, gatewayFor(t.db))).toBe(0);
-    expect(await moneyLog(job.id)).toEqual(["job.created:22500", "job.completed:22500", "payment.succeeded:22500", "refund.issued:22500", "payout.reduced:19000"]);
+    expect(await moneyLog(job.id)).toEqual(["job.created:22500", "hold.placed:22500", "job.completed:22500", "hold.captured:22500", "payment.succeeded:22500", "refund.issued:22500", "payout.reduced:19000"]);
   });
 
   it("part refund: it comes off the tradie's share and the platform's share in proportion", async () => {
@@ -877,8 +887,7 @@ describe("other money rules", () => {
     const s = await setup({ market: { tax_registered: true } });
     const job = await onSite(s, { urgent: true });
     await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Odd amount", hours: 0.25, uploadIds: [] });
-    const receipt = await photo(t.db, `tradie:${s.tradie.tradieId}`, "receipt");
-    const parts = await addParts(t.db, job.id, s.tradie.tradieId, { list: [], offList: { description: "Odd part", receiptTotalCents: 3333, amountCents: 3333, uploadId: receipt } });
+    const parts = await addParts(t.db, job.id, s.tradie.tradieId, { parts: [{ name: "Odd part", quantity: 3, unitCents: 1111 }] });
     expect(parts).toMatchObject({ ok: true, needsApproval: false });
     await finish(s, job.id);
     await chargeJob(t.db, gatewayFor(t.db), job.id);

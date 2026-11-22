@@ -102,6 +102,12 @@ export type Market = {
   partsIncludedCents: number;
   /** Parts above this need the owner's approval. */
   partsApprovalCents: number;
+  /**
+   * The payout guarantee (DECISIONS.md, 2026-11-23): up to this much of a job's price that the owner's card has not
+   * paid yet, the tradie is paid at the usual time anyway. Above it, their share of what has not been collected
+   * waits until it is. NZ$1,000.
+   */
+  payoutGuaranteeCents: number;
 
   /** Minutes each tradie has to accept an offer before it moves on. */
   offerMinutes: number;
@@ -208,8 +214,10 @@ export function defineMarket(input: MarketInput): Market {
     diagnosisFeeCents: 22500,
     diagnosisPayoutCents: 19000,
     approvalThresholdCents: 60000,
-    partsIncludedCents: 3000,
+    // NZ$20 from 23 Nov 2026 (was NZ$30): DECISIONS.md, 2026-11-23.
+    partsIncludedCents: 2000,
     partsApprovalCents: 15000,
+    payoutGuaranteeCents: 100000,
     offerMinutes: 15,
     // The after-hours rate applies after 4:30pm and on Saturdays (DECISIONS.md). 16.5 is 4:30pm.
     hoursStart: 7,

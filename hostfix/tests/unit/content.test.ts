@@ -166,9 +166,13 @@ describe("placeholders", () => {
       platform_fee: "15%",
       callout: "NZ$225",
       approval_limit: "NZ$600",
-      parts_included: "NZ$30",
+      // NZ$20 from 23 Nov 2026 (DECISIONS.md, 2026-11-23; was NZ$30).
+      parts_included: "NZ$20",
       parts_limit: "NZ$150",
       payout_days: "5 to 6 working days",
+      // DECISIONS.md, 2026-11-23: 500 basis points is 5%; the payout guarantee is 100000 cents, NZ$1,000.
+      own_client_fee: "5%",
+      payout_guarantee: "NZ$1,000",
     });
     const noosa = {
       ...launchMarket,

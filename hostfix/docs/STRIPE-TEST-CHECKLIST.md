@@ -94,8 +94,22 @@ three-digit code work with them.
 - [ ] As the owner: report a problem, choose a handyman job, press **Send a tradie**.
 - [ ] *Should happen:* your mobile gets the offer. Tap the link, **Accept job**, **I have arrived**, add a
       photo, **Job done**.
+- [ ] *Should happen (DECISIONS.md, 2026-11-23):* as soon as you press **Send a tradie**, Stripe > Payments
+      shows an **Uncaptured** payment for the menu price: the hold. Open it: it shows when it expires. When the
+      job is done, the same payment turns **Succeeded**; nothing new is charged on top unless parts or work
+      were approved, which show as a second, separate payment.
 - [ ] *Should happen:* Stripe > Payments shows the owner charged the menu price. The staff job page says
       the card was charged, and the tradie's payment says "Will be sent on" a date 24 hours away.
+
+**B2a. Holds (DECISIONS.md, 2026-11-23).**
+- [ ] Send a job and cancel it as the owner before the tradie taps Arrived. *Should happen:* within a minute
+      the uncaptured payment in Stripe shows **Canceled**, and no fee appears in Balance > Transactions.
+- [ ] Send a job; tradie taps Arrived; the owner cancels. *Should happen:* the payment shows **Succeeded** for
+      the NZ$225 call-out only (a partial capture), and the rest of the hold is let go.
+- [ ] Make the owner's card `4000 0000 0000 0002` (always declined) and send a job. *Should happen:* the job
+      is not sent; the owner is told their card declined the hold.
+- [ ] Note the "expires" time Stripe shows on a hold, and tell Claude: the app renews a hold 12 hours before
+      that, and assumes 4 days 18 hours if Stripe does not say.
 
 **B3. The tradie is paid.**
 - [ ] To avoid waiting a day: More > Markets, prices and the menu > Queenstown, set "Hours a tradie's

@@ -52,6 +52,7 @@ export type MarketPatch = Partial<{
   approvalThresholdCents: number;
   partsIncludedCents: number;
   partsApprovalCents: number;
+  payoutGuaranteeCents: number;
   offerMinutes: number;
   hoursStart: number;
   hoursEnd: number;
@@ -77,7 +78,7 @@ const COLUMNS: Record<keyof MarketPatch, string> = {
   taxNumber: "tax_number", platformFeeBps: "platform_fee_bps", urgentSurchargeCents: "urgent_surcharge_cents",
   afterHoursSurchargeCents: "after_hours_surcharge_cents", diagnosisFeeCents: "diagnosis_fee_cents",
   diagnosisPayoutCents: "diagnosis_payout_cents", approvalThresholdCents: "approval_threshold_cents",
-  partsIncludedCents: "parts_included_cents", partsApprovalCents: "parts_approval_cents", offerMinutes: "offer_minutes",
+  partsIncludedCents: "parts_included_cents", partsApprovalCents: "parts_approval_cents", payoutGuaranteeCents: "payout_guarantee_cents", offerMinutes: "offer_minutes",
   hoursStart: "hours_start", hoursEnd: "hours_end", workDays: "work_days", payoutHoldHours: "payout_hold_hours",
   unacceptedAlertHours: "unaccepted_alert_hours", counterOfferHours: "counter_offer_hours",
   minMinutesOnSite: "min_minutes_on_site", ownerConfirmHours: "owner_confirm_hours",
@@ -94,7 +95,7 @@ function checkMarket(patch: MarketPatch, current: { hoursStart: number; hoursEnd
   if (patch.platformFeeBps !== undefined && (!Number.isInteger(patch.platformFeeBps) || patch.platformFeeBps < 0 || patch.platformFeeBps > 5000)) {
     throw new AdminInputError("The platform fee must be between 0% and 50%.");
   }
-  for (const key of ["urgentSurchargeCents", "afterHoursSurchargeCents", "diagnosisFeeCents", "diagnosisPayoutCents", "approvalThresholdCents", "partsIncludedCents", "partsApprovalCents", "referralRewardCents", "depositCents"] as const) {
+  for (const key of ["urgentSurchargeCents", "afterHoursSurchargeCents", "diagnosisFeeCents", "diagnosisPayoutCents", "approvalThresholdCents", "partsIncludedCents", "partsApprovalCents", "payoutGuaranteeCents", "referralRewardCents", "depositCents"] as const) {
     if (patch[key] !== undefined) cents(patch[key]!, "That amount");
   }
   const fee = patch.diagnosisFeeCents ?? current.diagnosisFeeCents;
@@ -436,17 +437,17 @@ export async function createMarket(db: Db, input: NewMarket, actor: string): Pro
          platform_fee_bps, urgent_surcharge_cents, after_hours_surcharge_cents, diagnosis_fee_cents, diagnosis_payout_cents,
          approval_threshold_cents, parts_included_cents, parts_approval_cents, offer_minutes, hours_start, hours_end, work_days,
          payout_hold_hours, referral_reward_cents, referral_paid_months, unaccepted_alert_hours, counter_offer_hours,
-         min_minutes_on_site, owner_confirm_hours)
-       values ($1, $2::timestamptz, $2::timestamptz, $3, $4, $5, $6, 'draft', $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20::text[], $21, $22, $23, $24, $25, $26, $27)`,
+         min_minutes_on_site, owner_confirm_hours, payout_guarantee_cents)
+       values ($1, $2::timestamptz, $2::timestamptz, $3, $4, $5, $6, 'draft', $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20::text[], $21, $22, $23, $24, $25, $26, $27, $28)`,
       [
         slug, at, input.name.trim(), input.country, defaults.currency, input.timezone, defaults.taxRate, defaults.taxName,
         template?.platformFeeBps ?? 1500, template?.urgentSurchargeCents ?? 5000, template?.afterHoursSurchargeCents ?? 14000,
         template?.diagnosisFeeCents ?? 22500, template?.diagnosisPayoutCents ?? 19000, template?.approvalThresholdCents ?? 60000,
-        template?.partsIncludedCents ?? 3000, template?.partsApprovalCents ?? 15000, template?.offerMinutes ?? 15,
+        template?.partsIncludedCents ?? 2000, template?.partsApprovalCents ?? 15000, template?.offerMinutes ?? 15,
         template?.hoursStart ?? 7, template?.hoursEnd ?? 16.5, template?.workDays ?? ["mon", "tue", "wed", "thu", "fri"],
         template?.payoutHoldHours ?? 24, template?.referralRewardCents ?? 10000, template?.referralPaidMonths ?? 3,
         template?.unacceptedAlertHours ?? 3, template?.counterOfferHours ?? 2,
-        template?.minMinutesOnSite ?? 10, template?.ownerConfirmHours ?? 48,
+        template?.minMinutesOnSite ?? 10, template?.ownerConfirmHours ?? 48, template?.payoutGuaranteeCents ?? 100000,
       ],
     );
     let copiedTiers = 0;

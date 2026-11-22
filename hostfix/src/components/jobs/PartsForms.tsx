@@ -6,67 +6,43 @@ import { SubmitButton } from "@/components/forms/SubmitButton";
 import { Chip } from "@/components/ui/Bits";
 import { Reveal } from "@/components/ui/Reveal";
 import type { Market } from "@config/markets";
-import type { JobPart, PriceListItem } from "@/lib/jobs/parts";
-import { LIST_PART_FEE_BPS, listPartLine, receiptPartLine } from "@/lib/jobs/pricing";
+import { PART_ROWS, type JobPart, type PriceListItem } from "@/lib/jobs/parts";
+import { PART_FEE_BPS } from "@/lib/jobs/pricing";
+import { centsToDollars } from "@/lib/forms";
 import { formatMoney } from "@/lib/money";
+import { PartPicker } from "./PartPicker";
 
 /**
- * PARTS ON A JOB, for the tradie (DECISIONS.md, 2026-11-20): the price list
- * at its fixed prices, anything else from a receipt plus 20%, and the
- * receipts still to come.
+ * PARTS ON A JOB, for the tradie (DECISIONS.md, 2026-11-23): each part's name,
+ * how many, and their own price including GST. The price list is a set of
+ * quick picks that fill the name and price in. No receipt is needed unless
+ * our team asks for one.
  */
 
 type Shared = { which: ReactNode; code?: string; currency: string };
 
-export function AddPartsForm({ which, code, currency, priceList, market, limitCents }: Shared & { priceList: PriceListItem[]; market: Pick<Market, "partsIncludedCents" | "partsApprovalCents" | "platformFeeBps">; limitCents: number }) {
+export function AddPartsForm({ which, currency, priceList, market, limitCents }: Shared & { priceList: PriceListItem[]; market: Pick<Market, "partsIncludedCents" | "partsApprovalCents" | "platformFeeBps">; limitCents: number }) {
   const fmt = (cents: number) => formatMoney(cents, currency);
-  // What the tradie gets on NZ$100 of receipt, worked from the same sums as the job (receipt + 17%).
-  const onHundred = receiptPartLine(market, "example", 10_000).tradieCents;
+  const picks = priceList.map((item) => ({ id: item.id, name: item.name, price: centsToDollars(item.priceCents), label: `${item.name}, ${fmt(item.priceCents)}` }));
   return (
     <Reveal label="Add parts">
       <ActionForm action={addPartsAction} className="space-y-4">
         {which}
         <p className="text-sm text-muted">
-          Small parts up to {fmt(market.partsIncludedCents)} are in the job&rsquo;s price: do not add them. Parts on the list are charged at the list price and you get it
-          less {LIST_PART_FEE_BPS / 100}%. Anything else is charged at what you paid plus 20%, and you get what you paid plus {Math.round((onHundred - 10_000) / 100)}%.
+          Enter each part and your own price for one, including GST: your cost plus your usual markup. The owner pays that price; you get it less {PART_FEE_BPS / 100}%, which covers
+          the card fee. Small parts up to {fmt(market.partsIncludedCents)} are in the job&rsquo;s price: do not add them. No receipt is needed, but keep it: our team sometimes asks for one.
         </p>
-        {priceList.length > 0 && (
-          <fieldset className="space-y-2">
-            <legend className="mb-1 text-sm font-semibold text-ink">From the price list: how many?</legend>
-            <ul className="divide-y divide-line rounded-xl border border-line">
-              {priceList.map((item) => (
-                <li key={item.id} className="flex items-center justify-between gap-3 px-3 py-2">
-                  <label htmlFor={`qty-${item.id}`} className="min-w-0 flex-1 text-ink">
-                    {item.name}
-                    <span className="block text-sm text-muted">
-                      {fmt(item.priceCents)} each · you get {fmt(listPartLine(item.name, item.priceCents, 1).tradieCents)}
-                    </span>
-                  </label>
-                  <input
-                    id={`qty-${item.id}`}
-                    name={`qty-${item.id}`}
-                    type="number"
-                    inputMode="numeric"
-                    min={0}
-                    max={50}
-                    defaultValue={0}
-                    className="w-16 rounded-lg border border-line px-2 py-1.5 text-right"
-                  />
-                </li>
-              ))}
-            </ul>
+        {Array.from({ length: PART_ROWS }, (_, row) => (
+          <fieldset key={row} className="space-y-3 rounded-xl border border-line p-3">
+            <legend className="px-1 text-sm font-semibold text-ink">{row === 0 ? "Part" : `Another part (optional)`}</legend>
+            <PartPicker row={row} items={picks} />
+            <Field id={`part-${row}-name`} label="What is it?" name={`part-${row}-name`} maxLength={160} placeholder="Mixer tap cartridge (40 mm)" />
+            <div className="grid grid-cols-2 gap-3">
+              <Field id={`part-${row}-qty`} label="How many" name={`part-${row}-qty`} inputMode="numeric" maxLength={2} defaultValue="1" />
+              <Field id={`part-${row}-price`} label={`Your price for one, incl. GST (${currency})`} name={`part-${row}-price`} inputMode="decimal" maxLength={10} placeholder="45.00" />
+            </div>
           </fieldset>
-        )}
-        <fieldset className="space-y-3 rounded-xl border border-line p-3">
-          <legend className="px-1 text-sm font-semibold text-ink">A part not on the list (optional)</legend>
-          <Field label="What is it?" name="partDescription" maxLength={160} placeholder="15 mm copper elbows and 2 m of pipe" />
-          <div className="grid gap-3 sm:grid-cols-2">
-            <Field label={`Receipt total, including GST (${currency})`} name="receiptTotal" inputMode="decimal" maxLength={10} placeholder="64.90" />
-            <Field label={`Amount of it for this job (${currency})`} name="partAmount" inputMode="decimal" maxLength={10} placeholder="45" hint="Less than the total if some is left for other jobs, like a pack or van stock." />
-          </div>
-          <Field label="Date on the receipt (optional)" name="receiptDate" type="date" />
-          <PhotoUploader kind="receipt" name="receiptUploadIds" label="The receipt (a photo, a screenshot or the PDF)" offer={code} max={1} documents hint="Only our team sees it. The owner sees the part and its price. No receipt yet? Add it later, or at Job done." />
-        </fieldset>
+        ))}
         <p className="text-sm text-muted">
           Up to {fmt(market.partsApprovalCents)} of parts on this job (and {fmt(limitCents)} of extras in all) are added straight away and the owner is texted. Above that, the owner is
           asked first: do not buy them until they say yes.
@@ -82,6 +58,10 @@ export function AddPartsForm({ which, code, currency, priceList, market, limitCe
 function receiptWords(part: JobPart): { text: string; tone: "done" | "waiting" | "alert" | "quiet" } {
   if (part.kind === "list") return { text: "Price list", tone: "quiet" };
   switch (part.receiptStatus) {
+    case "not_needed":
+      return { text: "Your price", tone: "quiet" };
+    case "requested":
+      return { text: "Receipt asked for", tone: "waiting" };
     case "attached":
       return part.checkStatus === "flagged" || part.checkStatus === "held" ? { text: "Receipt being checked", tone: "alert" } : { text: "Receipt added", tone: "done" };
     case "to_follow":
@@ -103,7 +83,7 @@ export function TradieParts({ which, code, currency, parts, canAddReceipts }: Sh
     <ul className="space-y-3">
       {shown.map((part) => {
         const words = receiptWords(part);
-        const needsReceipt = canAddReceipts && part.kind === "receipt" && part.status === "active" && (part.receiptStatus === "needed" || part.receiptStatus === "to_follow");
+        const needsReceipt = canAddReceipts && part.status === "active" && (part.receiptStatus === "requested" || (part.kind === "receipt" && (part.receiptStatus === "needed" || part.receiptStatus === "to_follow")));
         return (
           <li key={part.id} className="rounded-xl border border-line p-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
@@ -116,7 +96,11 @@ export function TradieParts({ which, code, currency, parts, canAddReceipts }: Sh
                 <Chip tone={words.tone}>{words.text}</Chip>
               </span>
             </div>
-            <p className="mt-1 text-sm text-muted">You get {fmt(part.tradieCents)}{part.kind === "receipt" ? ` (receipt ${fmt(part.amountCents)} plus your share of the 20%)` : ""}.</p>
+            <p className="mt-1 text-sm text-muted">
+              You get {fmt(part.tradieCents)}
+              {part.kind === "receipt" ? ` (receipt ${fmt(part.amountCents)} plus your share of the 20%)` : part.kind === "priced" ? ` (your ${fmt(part.ownerCents)} less ${PART_FEE_BPS / 100}%)` : ""}.
+              {part.receiptStatus === "requested" ? " Our team has asked for the receipt (a spot check). Your payment for this job waits for it; without it in 7 days, the part is refunded to the owner out of your payment." : ""}
+            </p>
             {needsReceipt && (
               <div className="mt-3">
                 <ActionForm action={addReceiptAction} className="space-y-3">

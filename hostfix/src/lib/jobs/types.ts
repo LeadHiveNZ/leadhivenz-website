@@ -88,8 +88,15 @@ export type Job = {
   confirmBy: Date | null;
   confirmDecidedAt: Date | null;
   confirmDecidedBy: string | null;
-  /** Held before going out because the owner's card could not be charged: no_card, expired, unpaid (DECISIONS.md, 2026-11-20). */
-  cardHold: "no_card" | "expired" | "unpaid" | null;
+  /**
+   * Held before going out because the owner's card could not be charged: no_card, expired, unpaid (DECISIONS.md,
+   * 2026-11-20); declined: the hold on the card was declined; placing: the hold is being placed (2026-11-23).
+   */
+  cardHold: "no_card" | "expired" | "unpaid" | "declined" | "placing" | null;
+  /** A far-off visit: when the hold on the owner's card is placed, a day before it (DECISIONS.md, 2026-11-23). */
+  holdDueAt: Date | null;
+  /** The platform fee on this job when it is not the market's: 500 on a job between an own-client pair (DECISIONS.md, 2026-11-23). */
+  platformFeeBps: number | null;
   /** Is a guest staying, and who: their first name and mobile, for this job's texts only. */
   guestStaying: "yes" | "no" | "not_sure" | null;
   guestName: string | null;

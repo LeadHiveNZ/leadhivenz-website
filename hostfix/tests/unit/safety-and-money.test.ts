@@ -14,7 +14,7 @@ import { DEMO_CARD_OK } from "@/lib/payments/demo-gateway";
 import { getProperty, type Property } from "@/lib/properties/service";
 import { agreeToAgreement, getTradie, TRADIE_AGREEMENT_VERSION } from "@/lib/tradies/service";
 import { testDb } from "./db";
-import { arrive, gatewayFor, HOUSE, liveMarket, logJob, makeOwner, makeProperty, makeTradie, menuItem, MONDAY_10AM, offersFor, openExceptions, photo, textsTo, messagesTo } from "./factory";
+import { arrive, cardDeclinesFromNow, gatewayFor, holdRanOut, HOUSE, liveMarket, logJob, makeOwner, makeProperty, makeTradie, menuItem, MONDAY_10AM, offersFor, openExceptions, photo, textsTo, messagesTo } from "./factory";
 
 /**
  * TRADIES PAID WHATEVER THE CARD DOES, CHARGEBACKS BY FAULT, GUESTS IN THE
@@ -32,10 +32,12 @@ afterEach(() => setTestNow(null));
 
 async function setup(options: { card?: "ok" | "declines" | "none" } = {}) {
   await liveMarket(t.db, { min_minutes_on_site: 0 });
-  const owner = await makeOwner(t.db, { card: options.card ?? "ok" });
+  // "declines": a card that was fine when the job went out (so the hold went on), then declined, with the hold
+  // run out before Job done, so the whole charge goes to the card (DECISIONS.md, 2026-11-23).
+  const owner = await makeOwner(t.db, { card: options.card === "declines" ? "ok" : (options.card ?? "ok") });
   const property = await makeProperty(t.db, owner.ownerId, { name: "Lakeview" });
   const tradie = await makeTradie(t.db, { slot: 1, name: "Dave Smith" });
-  return { owner, property, tradie };
+  return { owner, property, tradie, declinesLater: options.card === "declines" };
 }
 type Setup = Awaited<ReturnType<typeof setup>>;
 
@@ -49,6 +51,10 @@ async function doneJob(s: Setup, overrides: Partial<NewJob> & { code?: string } 
   const job = await logJob(t.db, s.property, overrides);
   const [offer] = await offersFor(t.db, job.id);
   await t.db.tx((tx) => acceptOffer(tx, offer!.id, "link"));
+  if (s.declinesLater) {
+    await cardDeclinesFromNow(t.db, s.owner.ownerId);
+    await holdRanOut(t.db, job.id);
+  }
   await markEnRoute(t.db, job.id, s.tradie.tradieId);
   const arrived = await arrive(t.db, job.id, s.tradie.tradieId, HOUSE);
   if (!arrived.ok) throw new Error(arrived.message);
@@ -62,7 +68,7 @@ async function staffJob(property: Property, code = "PL-01") {
   return createJob(t.db, {
     property, reportedBy: "staff", reporterName: null, reporterPhone: null, menuItemId: item.id, description: "", urgent: false,
     uploadIds: [], uploader: "staff:test", actor: "staff:test",
-  });
+  }, gatewayFor(t.db));
 }
 
 describe("a usable card before a job goes out", () => {
@@ -72,7 +78,7 @@ describe("a usable card before a job goes out", () => {
     const result = await createJob(t.db, {
       property: s.property, reportedBy: "owner", reporterName: null, reporterPhone: null, menuItemId: item.id, description: "", urgent: false,
       uploadIds: [], uploader: `owner:${s.owner.ownerId}`, actor: `owner:${s.owner.ownerId}`,
-    });
+    }, gatewayFor(t.db));
     expect(result).toMatchObject({ ok: false, reason: "card", message: "There is no card saved yet. Add one on the Billing page and we send a tradie straight away." });
     expect(await t.db.query("select 1 from public.jobs")).toHaveLength(0);
     const raised = await t.db.query<{ kind: string; property_id: string }>("select kind, property_id from public.exceptions where status = 'open'");
@@ -105,13 +111,13 @@ describe("a usable card before a job goes out", () => {
     expect(asked[0]!.body).toContain("/app/billing");
 
     // Nothing changes until the card is there.
-    expect(await releaseCardHolds(t.db)).toBe(0);
+    expect(await releaseCardHolds(t.db, gatewayFor(t.db))).toBe(0);
     await saveBilling(t.db, { ownerId: s.owner.ownerId, country: "NZ", provider: "demo", customerId: "demo_cus_new", card: DEMO_CARD_OK });
-    expect(await releaseCardHolds(t.db)).toBe(1);
+    expect(await releaseCardHolds(t.db, gatewayFor(t.db))).toBe(1);
     expect(await getJobForStaff(t.db, result.job.id)).toMatchObject({ status: "offering", cardHold: null });
     expect((await offersFor(t.db, result.job.id)).map((offer) => offer.tradie_id)).toEqual([s.tradie.tradieId]);
     expect(await openExceptions(t.db, result.job.id)).toEqual([]);
-    expect(await releaseCardHolds(t.db)).toBe(0);
+    expect(await releaseCardHolds(t.db, gatewayFor(t.db))).toBe(0);
   });
 
   it("checks a guest's report when the owner says yes, not before", async () => {
@@ -120,10 +126,10 @@ describe("a usable card before a job goes out", () => {
     const guest = await createJob(t.db, {
       property: s.property, reportedBy: "guest", reporterName: "Ana", reporterPhone: "+64215550001", menuItemId: item.id, description: "", urgent: false,
       uploadIds: [], uploader: "guest", actor: "guest",
-    });
+    }, gatewayFor(t.db));
     if (!guest.ok) throw new Error(guest.message);
     expect(guest.job).toMatchObject({ status: "awaiting_owner", cardHold: null, guestStaying: "yes" });
-    const answer = await approveGuestReport(t.db, guest.job.id, { urgent: false }, `owner:${s.owner.ownerId}`);
+    const answer = await approveGuestReport(t.db, guest.job.id, { urgent: false }, `owner:${s.owner.ownerId}`, gatewayFor(t.db));
     expect(answer).toEqual({ ok: false, message: "There is no card saved yet. Add one on the Billing page and we send a tradie straight away." });
     expect(await offersFor(t.db, guest.job.id)).toHaveLength(0);
   });
@@ -324,7 +330,7 @@ describe("guests in the house", () => {
     const guest = await createJob(t.db, {
       property, reportedBy: "guest", reporterName: "Ana", reporterPhone: "+64215550001", menuItemId: item.id, description: "", urgent: false,
       uploadIds: [], uploader: "guest", actor: "guest",
-    });
+    }, gatewayFor(t.db));
     if (!guest.ok) throw new Error(guest.message);
     expect(guest.job).toMatchObject({ status: "offering", guestStaying: "yes", mayLetIn: false });
     const [offer] = await offersFor(t.db, guest.job.id);

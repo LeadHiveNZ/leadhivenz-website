@@ -270,7 +270,10 @@ export function ReportForm(props: Props) {
         <div className="on-dark flex items-center justify-between gap-4 rounded-2xl bg-brand px-5 py-4 text-white">
           <span>
             <span className="block text-sm text-white/75">{choice === OFF_MENU ? "To come and look" : "Fixed price"}</span>
-            <span className="block text-sm text-white/75">Charged to the card on file when the job is done.</span>
+            {/* The hold on the card at booking (DECISIONS.md, 2026-11-23). A team member asking the owner first holds nothing yet. */}
+            <span className="block text-sm text-white/75">
+              {props.asksOwner ? "Held on the owner's card once they say yes. Only charged once it's fixed." : audience === "owner" ? `We hold ${formatMoney(total, currency)} on your card now. You're only charged once it's fixed.` : `We hold ${formatMoney(total, currency)} on the owner's card now. They're only charged once it's fixed.`}
+            </span>
           </span>
           <span className="tabular display text-3xl">{formatMoney(total, currency)}</span>
         </div>

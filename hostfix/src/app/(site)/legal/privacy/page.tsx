@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   description: `What ${brand.name} holds about you, why, who sees it, and how to ask for it or have it removed.`,
 };
 
-const UPDATED = "21 November 2026";
+const UPDATED = "23 November 2026";
 
 export default function Page() {
   const n = brand.name;
@@ -73,6 +73,10 @@ export default function Page() {
         <p>
           <strong>Each property&rsquo;s map pin</strong>, looked up from its address and checked by the owner. If an owner presses &ldquo;I&rsquo;m at the property
           now&rdquo;, their phone&rsquo;s location is used once, to place the pin, and nothing else is kept.
+        </p>
+        <p>
+          <strong>If a tradie invites you as their client, or an owner invites their own tradie</strong>, the name and the mobile number or email address
+          they typed. We use it only to send that one invite link, and to show the person who sent it whether it has been used.
         </p>
         <p>
           <strong>Every text and email we send</strong>, with its wording, so we can show what was said and when. Sign-in codes and one-tap links

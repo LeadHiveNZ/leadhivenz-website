@@ -166,7 +166,7 @@ describe("monthly payments", () => {
     const refused = await createJob(t.db, {
       property: held, reportedBy: "owner", reporterName: null, reporterPhone: null, menuItemId: (await menuItem(t.db, "PL-01")).id, description: "",
       urgent: false, uploadIds: [], uploader: `owner:${owner.ownerId}`, actor: `owner:${owner.ownerId}`,
-    });
+    }, gatewayFor(t.db));
     expect(refused).toMatchObject({ ok: false, reason: "not_member" });
 
     await handleProductMessage(t.db, event("invoice.paid", invoice("in_second", "sub_1", 9900, nextMonth)), account);

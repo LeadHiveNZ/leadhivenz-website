@@ -66,7 +66,15 @@ export type ExceptionKind =
    * A tradie paid ahead (the owner's card has not paid) is waiting because the Stripe balance HostFix pays
    * from is too low. Tried again on every timer run (DECISIONS.md, 2026-11-21).
    */
-  | "platform_balance";
+  | "platform_balance"
+  /** The same tradie and owner: 2 or more accepted jobs in 90 days that ended without Job done (DECISIONS.md, 2026-11-23). A look, never a removal. */
+  | "pattern_pair"
+  /** A tradie with 3 or more accepted jobs in 90 days cancelled after On my way (DECISIONS.md, 2026-11-23). A look, never a removal. */
+  | "pattern_cancels"
+  /** A part picked from the price list but priced well over it (more than 1.5 times). A look; nothing is held. */
+  | "part_price"
+  /** The owner's card declined when the hold on an open job was renewed. The job stays booked: ring the owner. */
+  | "hold_failed";
 
 /** The ones worth a text to the founder as well as an email. */
 const URGENT: ExceptionKind[] = ["nobody_accepted", "missed_window", "dispute", "chargeback", "not_taken_yet", "owner_says_absent", "no_show"];
@@ -254,6 +262,10 @@ export const EXCEPTION_LABELS: Record<ExceptionKind, string> = {
   quote_rate: "Tradie quotes a lot of menu jobs",
   sms_opted_out: "Tradie stopped our texts",
   platform_balance: "Top up the Stripe balance",
+  pattern_pair: "Worth a look: the same tradie and owner",
+  pattern_cancels: "Worth a look: cancelled after On my way",
+  part_price: "Worth a look: a part priced over the list",
+  hold_failed: "Owner's card declined renewing a hold",
 };
 
 /** One line on what to do about each kind. The runbook (RUNBOOK.md) has the longer version. */
@@ -288,4 +300,8 @@ export const EXCEPTION_ACTIONS: Record<ExceptionKind, string> = {
   quote_rate: "This tradie turns far more of their menu jobs into quotes, or \"not the job described\", than others in the market. Look at those jobs on their page, then talk to them. Only a person can pause or remove a tradie.",
   sms_opted_out: "This tradie replied STOP, so we cannot text them. Offers reach them only by app notification or email. Ring them and ask them to turn on app notifications, or to reply START.",
   platform_balance: "The owner's card has not paid, so HostFix pays the tradie from its own Stripe balance, and there is not enough there yet (card money takes a few days to arrive). Tell the admin to add money to the HostFix Stripe balance. The payment is tried again every minute and goes by itself once there is enough. Nothing to do on the job page.",
+  pattern_pair: "This tradie and this owner have had 2 or more accepted jobs in 90 days that ended without Job done. It can be ordinary (a guest fixed it, plans changed). Look at the jobs, and if it keeps happening have a friendly word with each: a job booked in the app is finished and paid in the app. Never a removal by itself, and never counted as a decline.",
+  pattern_cancels: "3 or more of this tradie's accepted jobs in 90 days were cancelled after they tapped On my way. Look at who cancelled and why. Talk to them if it keeps happening. Never a removal by itself, and never counted as a decline.",
+  part_price: "A part picked from the price list was priced at more than 1.5 times its list price. Nothing is held. Look at it, and if it seems high, request the receipt on the job page or ring the tradie.",
+  hold_failed: "The owner's card declined when the hold on this open job was renewed. The job is still booked and the tradie is still going. Ring the owner and ask them to update their card on the Billing page: it is tried again by itself.",
 };

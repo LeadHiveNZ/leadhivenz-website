@@ -70,6 +70,26 @@ export const texts = {
 
   jobCancelledTradie: (o: { number: number; suburb: string }) => `${B}: job ${o.number}${o.suburb ? ` in ${clip(o.suburb, 20)}` : ""} is cancelled. No need to go.`,
 
+  /** The owner cancelled after the tradie tapped Arrived (DECISIONS.md, 2026-11-23): paid as for a call-out. */
+  jobCancelledOnSiteTradie: (o: { number: number; payoutCents: number; currency: string }) =>
+    `${B}: job ${o.number} was cancelled after you arrived. You're paid the call-out, ${money(o.payoutCents, o.currency)}, at the usual time.`,
+
+  /** A quote paid on approval whose payment the owner's card declined (DECISIONS.md, 2026-11-23). */
+  quoteCannotStart: (o: { number: number; link: string }) =>
+    `${B} job ${o.number}: the owner's card declined the quote: don't start yet. We'll text you. ${o.link}`,
+
+  /** The team asks for a part's receipt (a spot check, DECISIONS.md, 2026-11-23). Neutral: never says anything is wrong. */
+  receiptRequested: (o: { number: number; what: string; days: number; link: string }) =>
+    `${B} job ${o.number}: spot check. Add the receipt for "${clip(o.what, 16)}" in ${o.days} days. Pay waits: ${o.link}`,
+
+  /** An owner the tradie works for already, invited to book them through the app (DECISIONS.md, 2026-11-23). */
+  clientInvite: (o: { tradie: string; link: string }) =>
+    `${B}: ${clip(o.tradie, 18)} invites you to book them through ${B}: ${o.link}`,
+
+  /** A tradie an owner brought, invited to sign up (DECISIONS.md, 2026-11-23). */
+  ownTradieInvite: (o: { owner: string; link: string }) =>
+    `${B}: ${clip(o.owner, 18)} wants to book you through ${B}. Sign up: ${o.link}`,
+
   quoteApproved: (o: { number: number; amountCents: number; currency: string; link: string }) =>
     `${B} job ${o.number}: the owner approved your ${money(o.amountCents, o.currency)} quote. Go ahead. ${o.link}`,
 
@@ -166,8 +186,27 @@ export const texts = {
     `${B}: ${clip(o.property, 16)} is done. We couldn't confirm ${checkSubject(o.flags)}. Check? ${o.link}`,
 
   /** A job waiting before it goes to tradies, because the owner's card cannot be charged. */
-  cardNeeded: (o: { property: string; title: string; problem: "no_card" | "expired" | "unpaid"; link: string }) =>
-    `${B}: the job at ${clip(o.property, 18)} is waiting: ${o.problem === "unpaid" ? "a card payment failed" : o.problem === "expired" ? "your card expired" : "no card saved"}. Update it: ${o.link}`,
+  cardNeeded: (o: { property: string; title: string; problem: "no_card" | "expired" | "unpaid" | "declined"; link: string }) =>
+    `${B}: the job at ${clip(o.property, 18)} is waiting: ${o.problem === "unpaid" ? "a card payment failed" : o.problem === "expired" ? "your card expired" : o.problem === "declined" ? "your card declined" : "no card saved"}. Update it: ${o.link}`,
+
+  /** The hold on an open job could not be renewed (DECISIONS.md, 2026-11-23). The job stays booked. */
+  holdRenewFailed: (o: { number: number; link: string }) =>
+    `${B}: your card declined renewing the hold for job ${o.number}. It's still booked. Update your card: ${o.link}`,
+
+  /** Cancelled after the tradie arrived: the call-out is charged (DECISIONS.md, 2026-11-23). */
+  jobCancelledCallOut: (o: { title: string; amountCents: number; currency: string }) =>
+    `${B}: "${clip(o.title, 30)}" is cancelled. The tradie had arrived, so the ${money(o.amountCents, o.currency)} call-out is charged.`,
+
+  callOutCharged: (o: { number: number; totalCents: number; currency: string; link: string }) =>
+    `${B}: job ${o.number} was cancelled after the tradie arrived: ${money(o.totalCents, o.currency)} call-out charged. ${o.link}`,
+
+  /** A quote paid on approval declined by the card (DECISIONS.md, 2026-11-23). */
+  quotePaymentFailed: (o: { number: number; amountCents: number; currency: string; link: string }) =>
+    `${B} job ${o.number}: your card declined the ${money(o.amountCents, o.currency)} quote, so it's not approved yet. Update your card: ${o.link}`,
+
+  /** A quote paid on approval whose work did not go ahead, refunded. */
+  quoteRefunded: (o: { number: number; amountCents: number; currency: string }) =>
+    `${B}: job ${o.number}: the ${money(o.amountCents, o.currency)} you paid for the approved work is refunded to your card, as it did not go ahead.`,
 
   /** A tradie found a hazard at the property and added it to the property's safety notes. */
   hazardAdded: (o: { tradie: string; property: string; hazard: string; link: string }) =>

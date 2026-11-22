@@ -100,10 +100,14 @@ test("a tradie takes a job from the link in a text, without signing in, and fini
   await page.waitForURL(/here=1/);
   await ready(page);
 
-  // Parts on a menu job (DECISIONS.md, 2026-11-20): a new tap cartridge from the price list, NZ$31.41, inside the no-ask limit.
+  // Parts on a menu job (DECISIONS.md, 2026-11-23): a tap cartridge picked from the price list, which fills in its name and
+  // NZ$31.41; the tradie changes the price to their own, NZ$45, inside the no-ask limit.
   await page.getByText("Add parts", { exact: true }).filter({ visible: true }).first().click();
   const parts = page.locator("form", { has: page.getByRole("button", { name: "Add parts" }) });
-  await parts.getByLabel(/Mixer tap cartridge \(40 mm\)/).fill("1");
+  await parts.locator("#part-0-item").selectOption({ label: "Mixer tap cartridge (40 mm), NZ$31.41" });
+  await expect(parts.locator("#part-0-name")).toHaveValue("Mixer tap cartridge (40 mm)");
+  await expect(parts.locator("#part-0-price")).toHaveValue("31.41");
+  await parts.locator("#part-0-price").fill("45");
   await parts.getByRole("button", { name: "Add parts" }).click();
   await page.waitForURL(/parts=go/);
   await ready(page);
@@ -122,14 +126,14 @@ test("a tradie takes a job from the link in a text, without signing in, and fini
   await ready(page);
   await expect(shown(page, "Job finished. Thank you.").first()).toBeVisible();
   // Finished a few seconds after arriving: under the 10 minutes expected, so the payment waits for the owner to confirm.
-  // NZ$200 for the job and the cartridge's NZ$31.41 less 3% (NZ$0.94): NZ$230.47.
-  await expect(shown(page, /NZ\$230\.47 is waiting for the owner to confirm the job, because job done came 0 minutes after arrived/).first()).toBeVisible();
+  // NZ$200 for the job and the cartridge's NZ$45 less 3% (NZ$1.35): NZ$243.65.
+  await expect(shown(page, /NZ\$243\.65 is waiting for the owner to confirm the job, because job done came 0 minutes after arrived/).first()).toBeVisible();
 
   // The owner was texted at each step, charged the fixed price, and asked to check the job, neutrally.
   const owner = await phone(page, "sam");
   await expect(owner.filter({ hasText: /booked for Lakeview Ap\.\.\., between/ }).last()).toBeVisible();
   await expect(owner.filter({ hasText: "has arrived at Lakeview Apartment. Not there? Tell us:" }).last()).toBeVisible();
-  await expect(owner.filter({ hasText: "needs Mixer tap cartridge..., NZ$31.41, within your NZ$150 limit." })).toHaveCount(1);
+  await expect(owner.filter({ hasText: "needs Mixer tap cartridge..., NZ$45, within your NZ$150 limit." })).toHaveCount(1);
   // Job done (with a question) now goes by email to an owner with an email address; the demo phone shows it too.
   const check = owner.filter({ hasText: "is done. We couldn't confirm how long the job took. Check?" });
   await expect(check).toHaveCount(1);

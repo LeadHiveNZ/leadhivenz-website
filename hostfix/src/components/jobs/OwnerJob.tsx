@@ -36,6 +36,7 @@ function explain(view: JobView): string {
   const { job, tradie } = view;
   switch (job.status) {
     case "awaiting_owner":
+      if (job.cardHold === "placing") return "We are holding the price on your card, then it goes straight to a tradie.";
       if (job.cardHold) return "This is ready to go to a tradie as soon as your card can be charged.";
       return job.reportedBy === "team" ? `${job.reporterName ?? "Your team"} reported this. Nobody has been sent yet.` : "A guest reported this. Nobody has been sent yet.";
     case "offering":
@@ -55,7 +56,7 @@ function explain(view: JobView): string {
       if (job.outcome === "diagnosis_only") return "The tradie came and looked. The extra work did not go ahead, so only the call-out is charged.";
       return "Finished.";
     case "cancelled":
-      return "This job was cancelled.";
+      return job.arrivedAt && view.money.payment ? "This job was cancelled after the tradie arrived, so only the call-out is charged." : "This job was cancelled. Nothing is charged, and any hold on your card is let go.";
   }
 }
 
@@ -64,6 +65,8 @@ function ownerPartWords(part: JobPart): string {
   if (part.receiptStatus === "refunded") return "Refunded: we did not get the receipt";
   if (part.status === "pending") return "Waiting for your yes";
   if (part.kind === "list") return "Price list";
+  if (part.receiptStatus === "requested") return "HostFix has asked for the receipt";
+  if (part.kind === "priced") return part.receiptStatus === "attached" ? "The tradie's price, including GST. Receipt checked by HostFix" : "The tradie's price, including GST";
   if (part.receiptStatus === "attached") return part.checkStatus === "flagged" || part.checkStatus === "held" ? "Receipt received: HostFix is checking it" : "Receipt checked by HostFix";
   if (part.receiptStatus === "to_follow") return "Receipt to follow";
   return "Merchant's price plus 20%";
@@ -76,7 +79,9 @@ export function OwnerJob({ view, now, code, flash = {}, prices }: Props) {
   const photoQuery = code ? `?j=${encodeURIComponent(code)}` : "";
   const fmt = (cents: number) => formatMoney(cents, job.currency);
   const pendingQuote = view.quotes.find((quote) => quote.status === "pending") ?? null;
-  const canCancel = ["awaiting_owner", "offering", "unfilled", "accepted"].includes(job.status);
+  const canCancel = ["awaiting_owner", "offering", "unfilled", "accepted", "on_site", "awaiting_approval"].includes(job.status) && job.cardHold !== "placing";
+  // After the tradie has arrived, cancelling charges the call-out (DECISIONS.md, 2026-11-23).
+  const cancelAfterArrived = job.status === "on_site" || job.status === "awaiting_approval";
   const billingHref = code ? `/sign-in?next=${encodeURIComponent("/app/billing")}` : "/app/billing";
   const activeTotal = view.lines.filter((line) => line.status === "active").reduce((sum, line) => sum + line.ownerCents, 0);
   const quotePhotos = view.workPhotos.filter((photo) => photo.kind === "quote");
@@ -176,7 +181,7 @@ export function OwnerJob({ view, now, code, flash = {}, prices }: Props) {
         </Card>
       )}
 
-      {job.status === "awaiting_owner" && job.cardHold && (
+      {job.status === "awaiting_owner" && job.cardHold && job.cardHold !== "placing" && (
         <Card className="border-alert/40 sm:p-6">
           <SectionTitle>Update your card and we send a tradie</SectionTitle>
           <p className="text-muted">{cardProblemWords(job.cardHold)}</p>
@@ -380,7 +385,7 @@ export function OwnerJob({ view, now, code, flash = {}, prices }: Props) {
         </Panel>
       )}
 
-      {job.status !== "cancelled" && view.lines.length > 0 && (
+      {(job.status !== "cancelled" || money.payment) && view.lines.length > 0 && (
         <Panel title="The cost">
           <CostLines lines={view.lines} currency={job.currency} side="owner" totalLabel={job.status === "completed" ? "Total" : "Total so far"} />
           <p className="mt-3 text-sm text-muted">
@@ -391,7 +396,11 @@ export function OwnerJob({ view, now, code, flash = {}, prices }: Props) {
                 : money.payment?.status === "failed"
                   ? ""
                   : "Your card will be charged shortly."
-              : "Charged to your card when the job is done. Nothing before."}
+              : job.status === "cancelled"
+                ? "The call-out, charged because the tradie had arrived."
+                : money.hold
+                  ? `We hold ${fmt(money.hold.amountCents)} on your card now. You're only charged once it's fixed, and anything approved beyond that is charged then too.`
+                  : "Charged to your card when the job is done. Nothing before."}
           </p>
           {job.status === "completed" && money.payment?.status === "failed" && (
             <div className="mt-3">
@@ -454,9 +463,15 @@ export function OwnerJob({ view, now, code, flash = {}, prices }: Props) {
         <Reveal label={job.status === "awaiting_owner" ? "No, do not send anyone" : "Cancel this job"} tone="alert">
           <ActionForm action={cancelOwnerJob} className="space-y-3">
             {which}
-            <p className="text-muted">{job.status === "awaiting_owner" ? "The report is closed and nothing is charged." : "Free to cancel until the tradie arrives. Nothing is charged."}</p>
+            <p className="text-muted">
+              {job.status === "awaiting_owner"
+                ? "The report is closed and nothing is charged."
+                : cancelAfterArrived
+                  ? `The tradie has arrived, so cancelling now charges the call-out (${fmt(Math.min(market.diagnosisFeeCents, activeTotal))} for the visit, plus any urgent or after-hours charge) instead of the job.`
+                  : "Free to cancel until the tradie arrives, even if they are on the way. Nothing is charged, and the hold on your card is let go."}
+            </p>
             <SubmitButton variant="danger" pendingLabel="Cancelling...">
-              {job.status === "awaiting_owner" ? "Close this report" : "Yes, cancel the job"}
+              {job.status === "awaiting_owner" ? "Close this report" : cancelAfterArrived ? "Yes, cancel and pay the call-out" : "Yes, cancel the job"}
             </SubmitButton>
           </ActionForm>
         </Reveal>

@@ -5,7 +5,7 @@ import { Lexer, type Token } from "marked";
 import { brand } from "@config/brand";
 import { payoutArrival, type Market } from "@config/markets";
 import { lowestBand } from "@/lib/markets/bands";
-import { surchargeShare } from "@/lib/jobs/pricing";
+import { OWN_CLIENT_FEE_BPS, surchargeShare } from "@/lib/jobs/pricing";
 import { formatMoney } from "@/lib/money";
 
 /**
@@ -110,6 +110,9 @@ export function contentTokens(market: Market): Record<string, string> {
     approval_limit: money(market.approvalThresholdCents),
     parts_included: money(market.partsIncludedCents),
     parts_limit: money(market.partsApprovalCents),
+    // DECISIONS.md, 2026-11-23: the own-client rate and the payout guarantee.
+    own_client_fee: `${OWN_CLIENT_FEE_BPS / 100}%`,
+    payout_guarantee: money(market.payoutGuaranteeCents),
     payout_days: payoutArrival(market.country),
   };
 }

@@ -6,12 +6,13 @@ import TermsPage from "@/app/(site)/legal/terms/page";
 import TradieAgreementPage from "@/app/(site)/legal/tradie-agreement/page";
 import PrivacyPage from "@/app/(site)/legal/privacy/page";
 import { FEE_NOTICE_DAYS } from "@/lib/markets/admin";
-import { DIRECT_DEALING_MONTHS, DIRECT_RELEASE_CENTS, TRADIE_AGREEMENT_VERSION } from "@/lib/tradies/service";
+import { TRADIE_AGREEMENT_VERSION } from "@/lib/tradies/service";
 import { HOURLY_LIMIT_CENTS } from "@/lib/jobs/rates";
 import { FAR_METRES } from "@/lib/jobs/arrival";
 import { FLAG_DAYS, FLAG_REVIEW, TRUSTED_FINISHED_JOBS } from "@/lib/tradies/reliability";
-import { OLD_RECEIPT_DAYS, RECEIPT_TO_FOLLOW_DAYS } from "@/lib/jobs/parts";
-import { LIST_PART_FEE_BPS } from "@/lib/jobs/pricing";
+import { OLD_RECEIPT_DAYS, PART_PRICE_FLAG_MULTIPLE, RECEIPT_TO_FOLLOW_DAYS } from "@/lib/jobs/parts";
+import { OWN_CLIENT_FEE_BPS, PART_FEE_BPS, PAYOUT_GUARANTEE_CENTS } from "@/lib/jobs/pricing";
+import { PATTERN_DAYS, PATTERN_PAIR_JOBS, PATTERN_TRADIE_CANCELS } from "@/lib/ops/patterns";
 import { testDb } from "./db";
 
 /**
@@ -71,28 +72,32 @@ describe("the owner terms", () => {
   });
 });
 
-describe("parts (DECISIONS.md, 2026-11-20)", () => {
-  it("the owner terms say the parts rule in the agreed words, with the market's NZ$30 and NZ$150, and never 'at cost' or 'retail'", () => {
-    expect(launchMarket.partsIncludedCents).toBe(3000);
+describe("parts (DECISIONS.md, 2026-11-23)", () => {
+  it("the owner terms say the parts rule in the agreed words, with the market's NZ$20 and NZ$150, and never 'at cost' or 'retail'", () => {
+    expect(launchMarket.partsIncludedCents).toBe(2000);
     expect(launchMarket.partsApprovalCents).toBe(15000);
     const terms = text(TermsPage);
-    expect(terms).toContain("Small parts up to NZ$30 are in the price. Common parts are on the price list at a fixed price. Anything else is charged at the merchant's price plus 20% for sourcing it. Prices include GST.");
+    expect(terms).toContain("Small parts up to NZ$20 are in the price. Other parts are charged at the tradie's price, including GST, and above NZ$150 of parts on a job you say yes first.");
     expect(terms).toContain("Up to NZ$150 of parts on a job");
+    expect(terms).toContain("Our team can ask the tradie for the receipt for any part, and checks it.");
     expect(terms).toContain("If you supply a part yourself there is no parts charge, but a fault in a part you supplied is not covered by the tradie's 30-day callback.");
     expect(terms).toContain("parts already bought for it that cannot be returned are charged at what they cost, with nothing added");
-    expect(terms).not.toMatch(/retail|charged at cost/i);
+    expect(terms).not.toMatch(/retail|charged at cost|plus 20%/i);
   });
 
-  it("the tradie agreement says what the tradie gets: the list price less 3%, or what they paid plus 17%, and the 7 days for a receipt", () => {
-    expect(LIST_PART_FEE_BPS).toBe(300);
+  it("the tradie agreement says what the tradie gets: their own price less 3%, no receipt unless asked, the 7 days, and the 1.5 times look", () => {
+    expect(PART_FEE_BPS).toBe(300);
     expect(RECEIPT_TO_FOLLOW_DAYS).toBe(7);
     expect(OLD_RECEIPT_DAYS).toBe(90);
+    expect(PART_PRICE_FLAG_MULTIPLE).toBe(1.5);
     const agreement = text(TradieAgreementPage);
-    expect(agreement).toContain("you get it less 3% (which covers the card fee); no receipt is needed");
-    expect(agreement).toContain("you get what you paid plus 17% (the 15% platform fee comes off the 20% only)");
+    expect(agreement).toContain("Small parts up to NZ$20 are in the job's price");
+    expect(agreement).toContain("your own price for one, including GST: your cost plus your own usual markup. The owner pays that price, and you get it less 3%, which covers the card fee. No receipt is needed.");
+    expect(agreement).toContain("A part you pick from the list and price at more than 1.5 times its list price is looked at by our team; nothing is held for that.");
     expect(agreement).toContain("if it has not come within 7 days the part is refunded to the owner out of your payment");
-    expect(agreement).toContain("Only our team sees the receipt.");
-    expect(agreement).not.toMatch(/at cost|paid back to you in full/i);
+    expect(agreement).toContain("Only our team sees a receipt.");
+    expect(agreement).toContain("Parts you added before 23 November 2026 stay on the terms you agreed then.");
+    expect(agreement).not.toMatch(/at cost|paid back to you in full|what you paid plus 20%/i);
   });
 });
 
@@ -124,7 +129,8 @@ describe("the tradie agreement", () => {
   it("says a finished job is paid whatever the card does, the chargeback rule word for word, the knock, safety, and the 30 days (DECISIONS.md, 2026-11-20, second entry)", () => {
     expect(FEE_NOTICE_DAYS).toBe(30);
     const agreement = text(TradieAgreementPage);
-    expect(agreement).toContain("Once you finish a job the owner approved, you're paid even if their card fails. Chasing is our job.");
+    // Capped at NZ$1,000 of the job's price since 23 Nov 2026 (DECISIONS.md, 2026-11-23).
+    expect(agreement).toContain("Once you finish a job the owner approved, you're paid even if their card fails, for up to NZ$1,000 of the job's price. Chasing is our job.");
     expect(agreement).not.toMatch(/once the owner's card has been charged|when the charge succeeds/i);
     expect(agreement).toContain(
       "If we lose, our team decides whether it was your fault (bad work or a no-show). If it was, a payment not yet sent for that job is cancelled, and a payment already sent becomes a balance you owe us, taken back from your later payments, never more than 50% of any one payment; we text you when this happens, and your Pay page shows what is left. If it was not your fault, HostFix carries the loss and you are paid as normal. Any balance left when you leave HostFix must be repaid.",
@@ -141,11 +147,9 @@ describe("the tradie agreement", () => {
   });
 });
 
-describe("quotes, the 12-month rule and texts (DECISIONS.md, 2026-11-20, third entry)", () => {
-  it("the tradie agreement says the quote rules, the call-out credit worked by hand, and the 12-month rule from the constants", () => {
+describe("quotes and texts (DECISIONS.md, 2026-11-20, third entry)", () => {
+  it("the tradie agreement says the quote rules and the call-out credit worked by hand", () => {
     expect(HOURLY_LIMIT_CENTS).toBe(100000);
-    expect(DIRECT_DEALING_MONTHS).toBe(12);
-    expect(DIRECT_RELEASE_CENTS).toBe(25000);
     expect(launchMarket.notDescribedHours).toBe(24);
     const agreement = text(TradieAgreementPage);
     expect(agreement).toContain("That quote is only for work beyond the job described: you still do the job described, at its price.");
@@ -154,11 +158,6 @@ describe("quotes, the 12-month rule and texts (DECISIONS.md, 2026-11-20, third e
     expect(agreement).toContain("If you need to come back, include the extra visit in your quote. There is no second call-out on the same job.");
     // 50000 quote, 22500 credit: owner 22500 + 50000 - 22500 = 50000; tradie 19000 + (27500 - 4125) = 42375.
     expect(agreement).toContain("A NZ$500 quote: the owner pays NZ$500 in all, and you get NZ$190 plus 85% of NZ$275 (NZ$233.75), NZ$423.75.");
-    expect(agreement).toContain("For 12 months from your first job for that owner");
-    expect(agreement).toContain("you agree not to do their maintenance work directly, outside HostFix");
-    expect(agreement).toContain("paying HostFix NZ$250 for that property");
-    expect(agreement).toContain("Any job for them that still comes through HostFix is at the normal fee");
-    expect(agreement).not.toContain("12 months after your last job");
     expect(agreement).not.toContain("This needs a quote");
   });
 
@@ -190,5 +189,56 @@ describe("the owner terms and privacy page (DECISIONS.md, 2026-11-20, second ent
     const privacy = text(PrivacyPage);
     expect(privacy).toContain("We use that number only for that job's texts");
     expect(privacy).toContain("the tradie sees only your first name");
+  });
+});
+
+describe("the hold on the card, cancelling, the payout guarantee, own clients and the one in-app rule (DECISIONS.md, 2026-11-23)", () => {
+  it("the agreement's numbers come from the constants and the market: NZ$1,000, 5%, 15%, the call-out pay, 2 and 3 in 90 days", () => {
+    expect(PAYOUT_GUARANTEE_CENTS).toBe(100000);
+    expect(launchMarket.payoutGuaranteeCents).toBe(PAYOUT_GUARANTEE_CENTS);
+    expect(OWN_CLIENT_FEE_BPS).toBe(500);
+    expect(launchMarket.platformFeeBps).toBe(1500);
+    expect(launchMarket.diagnosisPayoutCents).toBe(19000);
+    expect([PATTERN_PAIR_JOBS, PATTERN_TRADIE_CANCELS, PATTERN_DAYS]).toEqual([2, 3, 90]);
+    expect(TRADIE_AGREEMENT_VERSION).toBe("23 November 2026");
+  });
+
+  it("the tradie agreement says the hold, the free cancel before Arrived (the travel is theirs), and the call-out after it", () => {
+    const agreement = text(TradieAgreementPage);
+    expect(agreement).toContain("The job's price is held on the owner's card when the job is sent out");
+    expect(agreement).toContain("If the owner cancels before you tap I have arrived , even after you tapped On my way, they pay nothing and you are not paid: the travel is yours.");
+    expect(agreement).toContain("If they cancel after you tap I have arrived , they are charged the call-out and you are paid your share of it, as for a call-out (NZ$190, plus your share of any urgent or after-hours surcharge).");
+  });
+
+  it("the tradie agreement says the guarantee up to NZ$1,000, the rest waiting for the card, and over NZ$1,000 charged on approval", () => {
+    const agreement = text(TradieAgreementPage);
+    expect(agreement).toContain("you're paid even if their card fails, for up to NZ$1,000 of the job's price");
+    expect(agreement).toContain("your share of the part above NZ$1,000 waits, and is sent to you as soon as the card pays");
+    expect(agreement).toContain("Work you price yourself over NZ$1,000 always waits for the owner's yes, and is charged to their card in full when they approve it, before you start.");
+    expect(agreement).toContain("If the work then does not go ahead, the owner is refunded.");
+  });
+
+  it("the tradie agreement says the 5% own-client rate in the agreed words, and the one rule in place of the 12 months", () => {
+    const agreement = text(TradieAgreementPage);
+    expect(agreement).toContain("jobs between you and that property take a 5% platform fee instead of 15%");
+    expect(agreement).toContain("5% covers the card fees (about 3%), the automatic texts and payment, and chasing late payers.");
+    expect(agreement).toContain("we check that by the property's address and map pin, not by the owner's account");
+    expect(agreement).toContain("Owners HostFix introduces stay at the normal 15% fee for every job through the app, however long you have known them. There is no time limit and no buyout.");
+    expect(agreement).toContain("One rule: a job booked in the app is finished and paid through the app.");
+    expect(agreement).toContain("can lead to removal from the network. A person decides");
+    expect(agreement).toContain("our team may look at them and talk to you. That is never a removal by itself, and it is never counted as declining.");
+    expect(agreement).not.toMatch(/12 months|NZ\$250|buy (an owner )?out|released for one of their properties/i);
+  });
+
+  it("the owner terms say the hold at booking, 'You're only charged once it's fixed', the free cancel before Arrived and the call-out after", () => {
+    const terms = text(TermsPage);
+    expect(terms).toContain("When the job is sent out we hold its price on your saved card. You're only charged once it's fixed.");
+    expect(terms).toContain("When a job is sent out, we hold the price you saw on your card: the menu price with GST and any urgent or after-hours charge, or for a job not on the menu the NZ$225 call-out.");
+    expect(terms).toContain("If your card declines the hold, the job is not sent");
+    expect(terms).toContain("Until the tradie taps “I have arrived”, even when they are on the way, it is free: the hold is let go and you pay nothing.");
+    expect(terms).toContain("After they have arrived, cancelling charges the call-out");
+    expect(terms).toContain("Work a tradie prices themselves over NZ$1,000 is different: it is charged in full when you approve it, before the work starts");
+    const privacy = text(PrivacyPage);
+    expect(privacy).toContain("If a tradie invites you as their client, or an owner invites their own tradie");
   });
 });

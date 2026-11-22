@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { gatewayFor, sendQueued, settleNow } from "@/lib/after";
+import { gatewayFor, sendQueued, settleCancel, settleNow } from "@/lib/after";
 import { audit } from "@/lib/audit";
 import { requireStaff } from "@/lib/auth/current";
 import { AccountExistsError } from "@/lib/auth/users";
@@ -15,10 +15,10 @@ import { baseUrl } from "@/lib/env";
 import { dollarsToCents, list, problem, text, ticked, type FormState } from "@/lib/forms";
 import { approveGuestReport, cancelJob, createJob } from "@/lib/jobs/create";
 import { getQuote } from "@/lib/jobs/store";
-import { decideQuote } from "@/lib/jobs/work";
+import { answerQuote } from "@/lib/jobs/work";
 import { staffDecideCheck } from "@/lib/jobs/confirm";
 import { guestFromForm } from "@/lib/jobs/guest-form";
-import { chargeBoughtParts, staffDecideReceipts } from "@/lib/jobs/parts";
+import { chargeBoughtParts, requestReceipt, staffDecideReceipts } from "@/lib/jobs/parts";
 import { getMarket } from "@/lib/markets/store";
 import { setOwnerAccess } from "@/lib/owners/service";
 import { texts } from "@/lib/notify/messages";
@@ -84,6 +84,18 @@ export async function staffCheckReceipt(_previous: FormState, formData: FormData
   return { done: approve ? "Receipt approved. The tradie's payment goes as soon as nothing else holds it." : "Held. The tradie has been told their payment is on hold while we check." };
 }
 
+/** A spot check (DECISIONS.md, 2026-11-23): ask the tradie for a part's receipt. Their payment waits for it; 7 days without it refunds the part. */
+export async function staffRequestReceipt(_previous: FormState, formData: FormData): Promise<FormState> {
+  const staff = await requireStaff();
+  const jobId = text(formData, "jobId");
+  const db = await getDb();
+  const result = await requestReceipt(db, text(formData, "partId"), staff.actor);
+  await sendQueued(db);
+  if (!result.ok) return { message: result.message };
+  revalidatePath(jobPath(jobId));
+  return { done: "Asked. The tradie has been texted, and their payment for this job waits for the receipt. No receipt in 7 days and the part is refunded to the owner out of it." };
+}
+
 /**
  * A job cancelled after the owner approved work: parts already bought that
  * cannot go back are charged at the receipt's cost, nothing added, all to the
@@ -132,7 +144,7 @@ export async function staffGoAhead(_previous: FormState, formData: FormData): Pr
   const staff = await requireStaff();
   const jobId = text(formData, "jobId");
   const db = await getDb();
-  const approved = await approveGuestReport(db, jobId, { urgent: text(formData, "how") === "urgent" }, `${staff.actor} for the owner`);
+  const approved = await approveGuestReport(db, jobId, { urgent: text(formData, "how") === "urgent" }, `${staff.actor} for the owner`, gatewayFor(db));
   await sendQueued(db);
   if (!approved.ok) return { message: approved.message };
   redirect(`${jobPath(jobId)}?did=sent_out`);
@@ -155,8 +167,10 @@ export async function staffCancel(_previous: FormState, formData: FormData): Pro
   const reason = text(formData, "cancelReason");
   if (reason.length < 3) return problem(formData, "Say why it is being cancelled.", { cancelReason: "A few words for the record." });
   const db = await getDb();
-  const result = await cancelJob(db, jobId, { actor: staff.actor, staff: true }, reason);
-  await sendQueued(db);
+  // After the tradie arrived, the team chooses: charge the owner the call-out (as an owner's own cancel would), or nothing.
+  const result = await cancelJob(db, jobId, { actor: staff.actor, staff: true, callOut: ticked(formData, "chargeCallOut") }, reason);
+  if (result.ok) await settleCancel(db, jobId);
+  else await sendQueued(db);
   if (!result.ok) return { message: result.message };
   redirect(`${jobPath(jobId)}?did=cancelled`);
 }
@@ -167,7 +181,7 @@ export async function staffQuote(_previous: FormState, formData: FormData): Prom
   const db = await getDb();
   const quote = await getQuote(db, text(formData, "quoteId"));
   if (!quote) return { message: "We could not find that quote." };
-  const result = await decideQuote(db, quote.id, text(formData, "answer") === "yes", `${staff.actor} for the owner`);
+  const result = await answerQuote(db, gatewayFor(db), quote.id, text(formData, "answer") === "yes", `${staff.actor} for the owner`);
   await sendQueued(db);
   if (!result.ok) return { message: result.message };
   redirect(`${jobPath(quote.jobId)}?did=quote_answered`);
@@ -285,7 +299,7 @@ export async function staffLogJob(_previous: FormState, formData: FormData): Pro
     menuItemId: choice === "off-menu" ? null : choice, offMenuTrade: text(formData, "offMenuTrade"), offMenuTitle: text(formData, "offMenuTitle"),
     description: text(formData, "description"), urgent: ticked(formData, "urgent"), uploadIds: list(formData, "uploadIds"),
     uploader: staff.actor, actor: staff.actor,
-  });
+  }, gatewayFor(db));
   await sendQueued(db);
   if (!result.ok) {
     if (result.reason === "duplicate" && result.existingJobId) redirect(jobPath(result.existingJobId));

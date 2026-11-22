@@ -70,6 +70,18 @@ const samples: Record<string, string> = {
   reporterBooked: texts.reporterBooked({ property: longProperty, when, knock: true }),
   reporterDone: texts.reporterDone({ property: longProperty }),
   referralThanks: texts.referralThanks({ name: "Christopher Fitzgerald", link: "https://hostfix.co.nz/refer/Ab3xK9mQ2LpR" }),
+  // DECISIONS.md, 2026-11-23: the hold on the card, cancelling after Arrived, quotes paid on approval, spot checks, own clients.
+  cardNeededOne: texts.cardNeeded({ property: longProperty, title: longTitle, problem: "declined", link: billing }),
+  holdRenewFailed: texts.holdRenewFailed({ number: 104237, link: billing }),
+  jobCancelledCallOut: texts.jobCancelledCallOut({ title: longTitle, amountCents: big, currency: "NZD" }),
+  callOutCharged: texts.callOutCharged({ number: 104237, totalCents: big, currency: "NZD", link: jobLink }),
+  jobCancelledOnSiteTradie: texts.jobCancelledOnSiteTradie({ number: 104237, payoutCents: big, currency: "NZD" }),
+  quotePaymentFailed: texts.quotePaymentFailed({ number: 104237, amountCents: 1234500, currency: "NZD", link: billing }),
+  quoteCannotStart: texts.quoteCannotStart({ number: 104237, link }),
+  quoteRefunded: texts.quoteRefunded({ number: 104237, amountCents: 1234500, currency: "NZD" }),
+  receiptRequested: texts.receiptRequested({ number: 104237, what: "15 mm copper elbows and two metres of pipe", days: 7, link }),
+  clientInvite: texts.clientInvite({ tradie: business, link: "https://hostfix.co.nz/i/Ab3xK9mQ2LpRAb3xK9mQ2LpR" }),
+  ownTradieInvite: texts.ownTradieInvite({ owner: "Samantha Fitzgerald-Longname", link: "https://hostfix.co.nz/i/Ab3xK9mQ2LpRAb3xK9mQ2LpR" }),
 };
 
 describe("every text the product sends", () => {

@@ -22,6 +22,8 @@ import { workingHours } from "@/lib/leads/price-list";
 import { formatMoney } from "@/lib/money";
 import { surchargeShare } from "@/lib/jobs/pricing";
 import { AgreementCard } from "@/components/jobs/AgreementCard";
+import { TradieOwnClients } from "@/components/jobs/OwnClients";
+import { invitesFromTradie, pairsForTradie } from "@/lib/clients/own-clients";
 
 export const metadata: Metadata = { title: "Profile" };
 
@@ -186,6 +188,10 @@ export default async function TradieProfilePage({ searchParams }: { searchParams
           </ActionForm>
         </Card>
       )}
+
+      {/* Own clients at 5% (DECISIONS.md, 2026-11-23). */}
+      {query.own === "1" && <Notice tone="good" title="Done">You are now this owner&apos;s first choice there. Their jobs with you are 5%.</Notice>}
+      <TradieOwnClients pairs={await pairsForTradie(db, tradie.id)} invites={await invitesFromTradie(db, tradie.id)} timeZone={market.timezone} marketFeePct={`${market.platformFeeBps / 100}%`} />
 
       <div className="md:hidden">
         <SignOut full />

@@ -1,5 +1,8 @@
 import { findTrade } from "@config/trades";
 import { audit } from "@/lib/audit";
+import { placeHold, releaseJobHolds } from "@/lib/billing/card-holds";
+import { openSettlement, type GatewayFor } from "@/lib/billing/settle";
+import { notePatterns } from "@/lib/ops/patterns";
 import { addHours, now } from "@/lib/clock";
 import type { Db } from "@/lib/db/types";
 import { advanceCascade, startDispatch } from "@/lib/dispatch/cascade";
@@ -13,8 +16,8 @@ import { baseUrl } from "@/lib/env";
 import type { Property } from "@/lib/properties/service";
 import { isAfterHours, monthBounds, monthKey } from "@/lib/time";
 import { loadContext, ownerJobUrl } from "./context";
-import { initialLines, type Line } from "./pricing";
-import { insertLines, lockJob, recalcTotals, rowToJob, type JobRow } from "./store";
+import { cancelledOnSiteLines, initialLines, type Line } from "./pricing";
+import { insertLines, listLines, lockJob, recalcTotals, rowToJob, type JobRow } from "./store";
 import type { Job, ReportedBy } from "./types";
 
 /**
@@ -113,12 +116,78 @@ export async function previewPrice(
   };
 }
 
+export type SendOutResult = "sent" | "declined" | "pending";
+
 /**
- * Logs a job. A report from the owner or their team goes straight to tradies.
- * A report from a guest waits for the owner's go-ahead, unless the owner has
- * switched that off for the property.
+ * Sends a job out once the hold on the owner's card is in place (DECISIONS.md, 2026-11-23). The job waits as
+ * `awaiting_owner` with `card_hold = 'placing'` while the hold is asked for (outside any database step, as every
+ * call to the payment company is). Held, or nothing to hold: it goes to tradies. Declined: it is a card problem,
+ * like a card that has expired. The owner logging it themselves (`ownerLogging`) is refused and the job is
+ * cancelled at no cost; anyone else's report waits (`card_hold = 'declined'`), the owner is texted, the team sees
+ * it, and it goes out by itself once a new card is saved. An unclear answer leaves it waiting for the timer, which
+ * asks again with the same key.
  */
-export async function createJob(db: Db, input: NewJob): Promise<NewJobResult> {
+export async function sendOut(db: Db, gatewayFor: GatewayFor, jobId: string, actor: string, options: { ownerLogging?: boolean } = {}): Promise<{ result: SendOutResult; reason?: string }> {
+  const placed = await placeHold(db, gatewayFor, jobId, "booking");
+  return db.tx(async (tx) => {
+    const job = await lockJob(tx, jobId);
+    if (!job || job.status !== "awaiting_owner" || job.cardHold !== "placing") return { result: "pending" as const };
+    if (placed.outcome === "pending") return { result: "pending" as const, reason: placed.reason };
+    const context = await loadContext(tx, job);
+    const { property } = context;
+    const at = now();
+    if (placed.outcome === "declined") {
+      await audit(tx, { actor: "system", action: "job.hold_declined", entity: "job", entityId: job.id, amount: job.ownerTotalCents, currency: job.currency, detail: { reason: placed.reason, owner_logging: Boolean(options.ownerLogging) } });
+      if (options.ownerLogging) {
+        // The owner is on the screen: they are told to update the card, and nothing is left waiting.
+        await tx.query(
+          "update public.jobs set status = 'cancelled', card_hold = null, cancelled_at = $2::timestamptz, cancelled_by = 'system', cancel_reason = $3 where id = $1::uuid",
+          [job.id, at.toISOString(), "The owner's card declined the hold, so the job was not sent"],
+        );
+        await raiseException(tx, {
+          kind: "card_needed", market: job.market, propertyId: property.id,
+          summary: `The owner of ${property.name} tried to log a job but their card declined the hold on its price (${placed.reason}). They have been asked to update it on the Billing page.`,
+          dedupeKey: `card_needed:owner:${job.ownerId}:declined`,
+        });
+        return { result: "declined" as const, reason: placed.reason };
+      }
+      await tx.query("update public.jobs set card_hold = 'declined' where id = $1::uuid", [job.id]);
+      await raiseException(tx, {
+        kind: "card_needed", market: job.market, jobId: job.id,
+        summary: `Job ${job.number} at ${property.name} is waiting before it goes to tradies: the owner's card declined the hold on its price (${placed.reason}). The owner has been texted to update it.`,
+        dedupeKey: `card_needed:${job.id}`,
+      });
+      if (context.owner.phone) {
+        await enqueue(tx, {
+          channel: "sms", to: context.owner.phone, template: "card_needed", audience: "owner", jobId: job.id, userId: context.owner.userId,
+          body: texts.cardNeeded({ property: property.name, title: job.title, problem: "declined", link: `${baseUrl()}/app/billing` }), dedupeKey: `card_needed:${job.id}:declined`,
+        });
+      }
+      return { result: "declined" as const, reason: placed.reason };
+    }
+    await tx.query("update public.jobs set card_hold = null where id = $1::uuid", [job.id]);
+    await resolveExceptionsFor(tx, job.id, ["card_needed"], "Sent out");
+    await startDispatch(tx, job.id, actor);
+    return { result: "sent" as const };
+  });
+}
+
+/**
+ * Logs a job. A report from the owner or their team goes straight to tradies,
+ * once the hold on the owner's card is in place (sendOut). A report from a
+ * guest waits for the owner's go-ahead, unless the owner has switched that off
+ * for the property.
+ */
+export async function createJob(db: Db, input: NewJob, gatewayFor: GatewayFor): Promise<NewJobResult> {
+  const created = await createJobRecord(db, input);
+  if (!created.ok || !created.goesOut) return created;
+  const sent = await sendOut(db, gatewayFor, created.job.id, input.actor, { ownerLogging: input.reportedBy === "owner" });
+  if (sent.result === "declined" && input.reportedBy === "owner") return { ok: false, reason: "card", message: cardProblemWords("declined") };
+  const job = (await lockJob(db, created.job.id))!;
+  return { ok: true, job, needsOwner: job.status === "awaiting_owner" && job.cardHold !== "placing" };
+}
+
+async function createJobRecord(db: Db, input: NewJob): Promise<(NewJobResult & { goesOut?: boolean })> {
   return db.tx(async (tx) => {
     const { property } = input;
     const market = await getMarket(tx, property.market);
@@ -220,9 +289,10 @@ export async function createJob(db: Db, input: NewJob): Promise<NewJobResult> {
       [
         at.toISOString(), property.id, property.ownerId, market.slug, input.menuItemId, !input.menuItemId, trade, licenceRequired, title,
         description, urgent ? "urgent" : "standard", afterHours, input.reportedBy, input.reporterName?.trim().slice(0, 80) || null,
-        input.reporterPhone, needsOwner ? "awaiting_owner" : "offering", tier?.key ?? null, responseHours, market.currency,
+        // Every job waits here first: for the owner, for their card, or (going straight out) for the hold on the card.
+        input.reporterPhone, "awaiting_owner", tier?.key ?? null, responseHours, market.currency,
         input.reportedBy === "team" ? (input.teamMemberId ?? null) : null,
-        problem, guestStaying, guestName, guestPhone, mayLetIn,
+        problem ?? (needsOwner ? null : "placing"), guestStaying, guestName, guestPhone, mayLetIn,
       ],
     );
     const job = rowToJob(rows[0]!);
@@ -272,17 +342,27 @@ export async function createJob(db: Db, input: NewJob): Promise<NewJobResult> {
       }
     }
 
-    if (!needsOwner) await startDispatch(tx, job.id, input.actor);
     const saved = (await lockJob(tx, job.id))!;
-    return { ok: true, job: saved, needsOwner };
+    return { ok: true, job: saved, needsOwner, goesOut: !needsOwner };
   });
 }
 
-/** The owner says yes to a guest's report, choosing standard or urgent. The job then goes to tradies. */
-export async function approveGuestReport(db: Db, jobId: string, choice: { urgent: boolean }, actor: string): Promise<{ ok: true; job: Job } | { ok: false; message: string }> {
+/**
+ * The owner says yes to a guest's report, choosing standard or urgent. The job then goes to tradies, once the hold
+ * on the owner's card is in place (sendOut). A declined hold: the owner is told, and the job waits for their card.
+ */
+export async function approveGuestReport(db: Db, jobId: string, choice: { urgent: boolean }, actor: string, gatewayFor: GatewayFor): Promise<{ ok: true; job: Job } | { ok: false; message: string }> {
+  const approved = await approveGuestReportRecord(db, jobId, choice, actor);
+  if (!approved.ok) return approved;
+  const sent = await sendOut(db, gatewayFor, jobId, actor);
+  if (sent.result === "declined") return { ok: false, message: cardProblemWords("declined") };
+  return { ok: true, job: (await lockJob(db, jobId))! };
+}
+
+async function approveGuestReportRecord(db: Db, jobId: string, choice: { urgent: boolean }, actor: string): Promise<{ ok: true; job: Job } | { ok: false; message: string }> {
   return db.tx(async (tx) => {
     const job = await lockJob(tx, jobId);
-    if (!job || job.status !== "awaiting_owner") return { ok: false, message: "This job has already been dealt with." };
+    if (!job || job.status !== "awaiting_owner" || job.cardHold) return { ok: false, message: "This job has already been dealt with." };
     const context = await loadContext(tx, job);
     const { market, property, tier } = context;
     const at = now();
@@ -303,78 +383,126 @@ export async function approveGuestReport(db: Db, jobId: string, choice: { urgent
     ]);
     const sum = await recalcTotals(tx, jobId, market.taxRate, market.taxRegistered);
     await audit(tx, { actor, action: "job.approved_by_owner", entity: "job", entityId: jobId, amount: sum.ownerCents, currency: market.currency, detail: { urgent: choice.urgent, after_hours: afterHours } });
-    await tx.query("update public.jobs set card_hold = null where id = $1::uuid", [jobId]);
-    await resolveExceptionsFor(tx, jobId, ["card_needed"], "Sent out");
-    await startDispatch(tx, jobId, actor);
+    // Next: the hold on the card, then out to tradies (sendOut).
+    await tx.query("update public.jobs set card_hold = 'placing' where id = $1::uuid", [jobId]);
     return { ok: true, job: (await lockJob(tx, jobId))! };
   });
 }
 
 /**
  * Run by the timer: jobs held because the owner's card could not be charged,
- * sent out once it can (a new card saved, or the unpaid charge paid).
+ * sent out once it can (a new card saved, or the unpaid charge paid), with the
+ * hold on the card placed first. A declined hold is tried again only once the
+ * owner has saved a card since. A hold whose placing was cut off (a server
+ * stopped, or the payment company's answer was unclear) is asked for again.
  */
-export async function releaseCardHolds(db: Db): Promise<number> {
+export async function releaseCardHolds(db: Db, gatewayFor: GatewayFor): Promise<number> {
   const held = await db.query<{ id: string }>("select id from public.jobs where status = 'awaiting_owner' and card_hold is not null order by created_at limit 50");
   let sent = 0;
   for (const row of held) {
-    const done = await db.tx(async (tx) => {
+    const ready = await db.tx(async (tx) => {
       const job = await lockJob(tx, row.id);
       if (!job || job.status !== "awaiting_owner" || !job.cardHold) return false;
       const market = await getMarket(tx, job.market);
-      if (!market || (await cardProblem(tx, job.ownerId, market.country, now(), market.timezone))) return false;
-      await tx.query("update public.jobs set card_hold = null, status = 'offering' where id = $1::uuid", [job.id]);
+      if (!market) return false;
+      const at = now();
+      if (job.cardHold === "placing") {
+        // Only one that is not being placed right now.
+        const busy = await tx.query("select 1 from public.card_holds where job_id = $1::uuid and status = 'placing' and claimed_until > $2::timestamptz", [job.id, at.toISOString()]);
+        const fresh = job.createdAt.getTime() > at.getTime() - 2 * 60_000;
+        return busy.length === 0 && !fresh;
+      }
+      if (await cardProblem(tx, job.ownerId, market.country, at, market.timezone)) return false;
+      if (job.cardHold === "declined") {
+        const since = await tx.query(
+          `select 1 from public.owner_billing b
+            where b.owner_id = $1::uuid and b.country = $2
+              and b.updated_at > coalesce((select max(h.created_at) from public.card_holds h where h.job_id = $3::uuid and h.status = 'declined'), '-infinity'::timestamptz)`,
+          [job.ownerId, market.country, job.id],
+        );
+        if (since.length === 0) return false;
+      }
+      await tx.query("update public.jobs set card_hold = 'placing' where id = $1::uuid", [job.id]);
       await audit(tx, { actor: "system", action: "job.card_cleared", entity: "job", entityId: job.id, detail: { was: job.cardHold } });
-      await resolveExceptionsFor(tx, job.id, ["card_needed"], "The owner's card is sorted: sent out");
-      await startDispatch(tx, job.id, "system");
       return true;
     });
-    if (done) sent += 1;
+    if (!ready) continue;
+    const outcome = await sendOut(db, gatewayFor, row.id, "system");
+    if (outcome.result === "sent") sent += 1;
   }
   return sent;
 }
 
-export type CancelResult = { ok: true; job: Job } | { ok: false; message: string };
+export type CancelResult = { ok: true; job: Job; callOutCents?: number } | { ok: false; message: string };
 
 /**
- * Cancels a job. Owners and reporters can cancel until the tradie has
- * arrived. After that it takes a person on the team, because someone has
- * turned up and money may be owed.
+ * Cancels a job (DECISIONS.md, 2026-11-23).
+ *   - Before the tradie taps Arrived (even after "On my way"): free for the owner. The hold on their card is let go
+ *     and nothing is charged. The tradie bears their travel (the tradie agreement says so).
+ *   - After Arrived: the owner (or our team, on their behalf, with `callOut`) can still cancel, and the call-out is
+ *     charged instead of the job, taken from the hold; the tradie is paid their share of it as for a call-out.
+ *   - Our team can also cancel after Arrived without a charge (for example to charge only parts already bought).
+ * A cancel after "On my way" or Arrived is looked at for patterns (src/lib/ops/patterns.ts), never counted as a decline.
  */
-export async function cancelJob(db: Db, jobId: string, by: { actor: string; staff?: boolean }, reason: string): Promise<CancelResult> {
+export async function cancelJob(db: Db, jobId: string, by: { actor: string; staff?: boolean; callOut?: boolean }, reason: string): Promise<CancelResult> {
   return db.tx(async (tx) => {
     const job = await lockJob(tx, jobId);
     if (!job) return { ok: false, message: "We could not find that job." };
     if (job.status === "cancelled") return { ok: true, job };
     if (job.status === "completed") return { ok: false, message: "That job is already done. If something is wrong, use the button to tell us." };
-    if ((job.status === "on_site" || job.status === "awaiting_approval") && !by.staff) {
-      return { ok: false, message: "The tradie is already there, so this cannot be cancelled here. Reply to our text or contact us and we will sort it out." };
-    }
+    const onSite = job.status === "on_site" || job.status === "awaiting_approval";
+    // After Arrived the owner pays the call-out. Our team chooses: the call-out, or no charge (callOut false).
+    const chargeCallOut = onSite && (!by.staff || Boolean(by.callOut));
     const context = await loadContext(tx, job);
     const at = now();
     await tx.query("update public.offers set status = 'superseded' where job_id = $1::uuid and status = 'pending'", [jobId]);
     await tx.query("update public.quotes set status = 'withdrawn' where job_id = $1::uuid and status = 'pending'", [jobId]);
     await tx.query("update public.job_parts set status = 'void' where job_id = $1::uuid and status = 'pending'", [jobId]);
+    let callOutCents: number | undefined;
+    if (chargeCallOut) {
+      const active = (await listLines(tx, jobId)).filter((line) => line.status === "active");
+      await tx.query("update public.job_lines set status = 'void' where job_id = $1::uuid and status in ('active', 'pending')", [jobId]);
+      await tx.query("update public.job_parts set status = 'void' where job_id = $1::uuid and status = 'active'", [jobId]);
+      await insertLines(tx, jobId, cancelledOnSiteLines(context.market, active, job.platformFeeBps), { at });
+      const sum = await recalcTotals(tx, jobId, context.market.taxRate, context.market.taxRegistered);
+      callOutCents = sum.ownerCents;
+    }
     await tx.query(
-      "update public.jobs set status = 'cancelled', cancelled_at = $2::timestamptz, cancelled_by = $3, cancel_reason = $4 where id = $1::uuid",
+      "update public.jobs set status = 'cancelled', cancelled_at = $2::timestamptz, cancelled_by = $3, cancel_reason = $4, card_hold = null where id = $1::uuid",
       [jobId, at.toISOString(), by.actor, reason.slice(0, 300)],
     );
-    await resolveExceptionsFor(tx, jobId, ["nobody_accepted", "at_risk", "quote_waiting"], "Job cancelled");
-    await audit(tx, { actor: by.actor, action: "job.cancelled", entity: "job", entityId: jobId, detail: { reason, was: job.status } });
+    await resolveExceptionsFor(tx, jobId, ["nobody_accepted", "at_risk", "quote_waiting", "card_needed", "hold_failed"], "Job cancelled");
+    await audit(tx, { actor: by.actor, action: "job.cancelled", entity: "job", entityId: jobId, amount: callOutCents ?? null, currency: callOutCents ? job.currency : null, detail: { reason, was: job.status, call_out: callOutCents ?? null } });
+    // A quote paid when it was approved, for work that now will not happen, is refunded (the timer does it).
+    await tx.query("update public.job_prepayments set status = 'refund_due' where job_id = $1::uuid and status = 'succeeded'", [jobId]);
+    const cancelled = (await lockJob(tx, jobId))!;
+    if (chargeCallOut) {
+      // Charged like a finished job: from the hold, at once; the tradie is paid at the usual time.
+      await openSettlement(tx, { ...cancelled, completedAt: at }, context.market);
+    } else {
+      await releaseJobHolds(tx, jobId, "Cancelled before the tradie arrived: the owner pays nothing.", by.actor);
+    }
+    if (job.tradieId && (job.enRouteAt || job.arrivedAt)) await notePatterns(tx, cancelled, at);
 
     if (context.tradie?.phone) {
       await enqueue(tx, {
         channel: "sms", to: context.tradie.phone, template: "job_cancelled", audience: "tradie", jobId, userId: context.tradie.userId,
-        body: texts.jobCancelledTradie({ number: job.number, suburb: context.property.suburb }), dedupeKey: `job_cancelled_tradie:${jobId}`,
+        body: chargeCallOut && callOutCents
+          ? texts.jobCancelledOnSiteTradie({ number: job.number, payoutCents: cancelled.tradieTotalCents, currency: job.currency })
+          : texts.jobCancelledTradie({ number: job.number, suburb: context.property.suburb }),
+        dedupeKey: `job_cancelled_tradie:${jobId}`,
       });
     }
     if (context.owner.phone && !by.actor.startsWith("owner:")) {
       await enqueue(tx, {
         channel: "sms", to: context.owner.phone, template: "job_cancelled", audience: "owner", jobId, userId: context.owner.userId,
-        body: texts.jobCancelledOwner({ title: job.title, property: context.property.name }), dedupeKey: `job_cancelled_owner:${jobId}`,
+        body: chargeCallOut && callOutCents
+          ? texts.jobCancelledCallOut({ title: job.title, amountCents: callOutCents, currency: job.currency })
+          : texts.jobCancelledOwner({ title: job.title, property: context.property.name }),
+        dedupeKey: `job_cancelled_owner:${jobId}`,
       });
     }
-    return { ok: true, job: (await lockJob(tx, jobId))! };
+    return { ok: true, job: cancelled, callOutCents };
   });
 }
 
@@ -393,7 +521,8 @@ export async function chaseGuestReports(db: Db): Promise<{ reminded: number; exp
   }
 
   const waiting = await db.query<JobRow>(
-    "select * from public.jobs where status = 'awaiting_owner' and owner_reminded_at is null and created_at <= $1::timestamptz limit 100",
+    // A job waiting for the owner's card has its own text (card_needed): no "needs your yes" reminder for it.
+    "select * from public.jobs where status = 'awaiting_owner' and card_hold is null and owner_reminded_at is null and created_at <= $1::timestamptz limit 100",
     [addHours(at, -1).toISOString()],
   );
   for (const row of waiting) {

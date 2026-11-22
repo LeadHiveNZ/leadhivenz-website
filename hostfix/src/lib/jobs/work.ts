@@ -7,13 +7,16 @@ import { enqueue } from "@/lib/notify/outbox";
 import { raiseException, resolveExceptionsFor } from "@/lib/ops/exceptions";
 import { FLAG_DAYS, flagsNeedReview, recentFlags } from "@/lib/tradies/reliability";
 import { formatClock, formatDate } from "@/lib/time";
-import { openSettlement } from "@/lib/billing/settle";
+import { openSettlement, type GatewayFor } from "@/lib/billing/settle";
+import { getBilling } from "@/lib/owners/service";
+import { baseUrl } from "@/lib/env";
+import { addMinutes } from "@/lib/clock";
 import { releaseIfClear } from "@/lib/billing/holds";
 import { loadContext, offerUrl, ownerJobUrl } from "./context";
 import { arrivedOnTime, linesToDrop, surchargeVerdict } from "./arrival";
 import { receiptsAtJobDone } from "./parts";
 import { checkTap, chooseReference, jobFlags, minutesOnSite, photoIsStale, pointFrom, tooQuick } from "./checks";
-import { hourlyLabour, noAccessLines, quoteAmounts } from "./pricing";
+import { callOutPayout, hourlyLabour, noAccessLines, quoteAmounts, withFee } from "./pricing";
 import { HOURLY_LIMIT_CENTS, hourlyRate } from "./rates";
 import { noteQuoteRate } from "@/lib/tradies/quote-rate";
 import { formatMoney } from "@/lib/money";
@@ -319,12 +322,14 @@ export async function submitQuote(db: Db, jobId: string, tradieId: string, input
     const diagnosis = lines.find((line) => line.kind === "diagnosis" && line.status === "active");
     const credited = await tx.query("select 1 from public.quotes where job_id = $1::uuid and credit_cents > 0 and status in ('pending', 'approved', 'auto_approved')", [jobId]);
     const creditCents = job.offMenu && !job.notDescribedAt && diagnosis && credited.length === 0 ? diagnosis.ownerCents : 0;
-    const amounts = quoteAmounts(market, {
+    // At the job's own fee: 5% on a job between an own-client pair (DECISIONS.md, 2026-11-23), otherwise the market's.
+    const amounts = quoteAmounts(withFee(market, job.platformFeeBps), {
       description, labourCents, creditCents,
       limitCents: property.spendLimitCents, alreadyApprovedCents: Number(approved[0]?.total ?? 0),
     });
-    // A quote sent with "Not the job described" always waits for the owner.
-    const needsApproval = amounts.needsApproval || notDescribed !== null;
+    // A quote sent with "Not the job described" always waits for the owner. So does work the tradie priced
+    // themselves over NZ$1,000: it is charged in full when the owner approves it (DECISIONS.md, 2026-11-23).
+    const needsApproval = amounts.needsApproval || notDescribed !== null || (hours === null && labourCents > HOURLY_LIMIT_CENTS);
     const at = now();
     const rows = await tx.query<Parameters<typeof rowToQuote>[0]>(
       `insert into public.quotes
@@ -343,14 +348,14 @@ export async function submitQuote(db: Db, jobId: string, tradieId: string, input
     if (notDescribed) {
       // The menu price comes off; the call-out goes on. Paid once the owner approves the quote, or does not object in time.
       await tx.query("update public.job_lines set status = 'void' where job_id = $1::uuid and kind = 'menu' and status = 'active'", [jobId]);
-      await insertLines(tx, jobId, [{ kind: "diagnosis", label: "Call-out (not the job described)", ownerCents: market.diagnosisFeeCents, tradieCents: market.diagnosisPayoutCents }], { at });
+      await insertLines(tx, jobId, [{ kind: "diagnosis", label: "Call-out (not the job described)", ownerCents: market.diagnosisFeeCents, tradieCents: callOutPayout(market, job.platformFeeBps) }], { at });
       await tx.query(
         "update public.jobs set not_described_at = $2::timestamptz, not_described_reason = $3, not_described_status = 'waiting', not_described_by = $4::timestamptz where id = $1::uuid",
         [jobId, at.toISOString(), reason, addHours(at, market.notDescribedHours).toISOString()],
       );
       await audit(tx, {
         actor: `tradie:${tradieId}`, action: "job.not_described", entity: "job", entityId: jobId, amount: market.diagnosisFeeCents, currency: job.currency,
-        detail: { reason, callout_payout: market.diagnosisPayoutCents, owner_can_object_until: addHours(at, market.notDescribedHours).toISOString() },
+        detail: { reason, callout_payout: callOutPayout(market, job.platformFeeBps), owner_can_object_until: addHours(at, market.notDescribedHours).toISOString() },
       });
     }
     await insertLines(tx, jobId, amounts.lines, { at: new Date(at.getTime() + 10), status: needsApproval ? "pending" : "active", quoteId: quote.id });
@@ -380,7 +385,114 @@ export async function submitQuote(db: Db, jobId: string, tradieId: string, input
   });
 }
 
-/** The owner (or the team, on their behalf) answers a quote. */
+/**
+ * Work the tradie priced themselves over NZ$1,000 (the existing "over NZ$1,000, their own price" path) is charged in
+ * full when the owner approves it, before the work starts (DECISIONS.md, 2026-11-23).
+ */
+export function paidOnApproval(quote: Pick<Quote, "hours" | "labourCents">): boolean {
+  return quote.hours === null && quote.labourCents > HOURLY_LIMIT_CENTS;
+}
+
+/**
+ * The owner (or the team, on their behalf) answers a quote. A quote paid on approval is charged first: if the card
+ * declines, the quote is not approved, the owner is asked to update the card, and the tradie is told the work
+ * cannot start yet. Claimed first, then charged with a key that makes a repeat harmless, then written down.
+ */
+export async function answerQuote(db: Db, gatewayFor: GatewayFor, quoteId: string, approve: boolean, actor: string): Promise<QuoteResult> {
+  const quote = await getQuote(db, quoteId);
+  if (!quote) return { ok: false, message: "We could not find that quote." };
+  if (!approve || !paidOnApproval(quote) || quote.status !== "pending") return decideQuote(db, quoteId, approve, actor);
+
+  const claim = await db.tx(async (tx) => {
+    const job = await lockJob(tx, quote.jobId);
+    if (!job) return { error: "We could not find that job." };
+    const fresh = (await getQuote(tx, quoteId))!;
+    if (fresh.status !== "pending") return { done: true as const };
+    const at = now();
+    const rows = await tx.query<{ id: string; status: string; attempts: number; claimed_until: Date | null }>(
+      "select id, status, attempts, claimed_until from public.job_prepayments where quote_id = $1::uuid for update",
+      [quoteId],
+    );
+    const existing = rows[0];
+    if (existing?.status === "succeeded") return { paid: true as const };
+    if (existing?.status === "charging" && existing.claimed_until && new Date(existing.claimed_until).getTime() > at.getTime()) return { error: "The payment for this quote is going through now. Refresh in a minute." };
+    let id = existing?.id;
+    let attempt = 1;
+    if (!existing) {
+      const inserted = await tx.query<{ id: string }>(
+        `insert into public.job_prepayments (created_at, job_id, quote_id, owner_id, amount_cents, currency, status, attempts, claimed_until)
+         values ($1::timestamptz, $2::uuid, $3::uuid, $4::uuid, $5, $6, 'charging', 1, $7::timestamptz) returning id`,
+        [at.toISOString(), job.id, quoteId, job.ownerId, fresh.ownerTotalCents, job.currency, addMinutes(at, 2).toISOString()],
+      );
+      id = inserted[0]!.id;
+    } else {
+      // A try that ended in a definite "no" moves to the next key; one that was cut off keeps its key.
+      attempt = existing.status === "failed" ? Number(existing.attempts) + 1 : Number(existing.attempts);
+      await tx.query("update public.job_prepayments set status = 'charging', attempts = $2, claimed_until = $3::timestamptz where id = $1::uuid", [existing.id, attempt, addMinutes(at, 2).toISOString()]);
+    }
+    const context = await loadContext(tx, job);
+    const billing = await getBilling(tx, job.ownerId, context.market.country);
+    return { id: id!, attempt, job, context, billing, amount: fresh.ownerTotalCents };
+  });
+  if ("error" in claim) return { ok: false, message: claim.error! };
+  if ("done" in claim) return decideQuote(db, quoteId, approve, actor);
+  if ("paid" in claim) return decideQuote(db, quoteId, true, actor);
+
+  const { id, attempt, job, context, billing, amount } = claim;
+  const gateway = gatewayFor(context.market.country);
+  let result: Awaited<ReturnType<NonNullable<ReturnType<GatewayFor>>["chargeJob"]>>;
+  if (!gateway) result = { status: "failed", reason: "Card payments are not set up for this country.", code: "not_configured", paymentIntentId: null };
+  else if (!billing || billing.provider !== gateway.provider) result = { status: "failed", reason: "The owner has no card on file.", code: "no_card", paymentIntentId: null };
+  else {
+    try {
+      result = await gateway.chargeJob({
+        customerId: billing.customerId, paymentMethodId: billing.paymentMethodId, amountCents: amount, currency: job.currency,
+        description: `Job ${job.number}: approved quote at ${context.property.name}`.slice(0, 200), jobNumber: job.number, receiptEmail: context.owner.email,
+        idempotencyKey: `hostfix-quote-${quoteId}-prepay-${attempt}`,
+      });
+    } catch (error) {
+      result = { status: "failed", reason: error instanceof Error ? error.message : String(error), code: "error", paymentIntentId: null };
+    }
+  }
+
+  if (result.status === "succeeded") {
+    await db.tx(async (tx) => {
+      await tx.query(
+        "update public.job_prepayments set status = 'succeeded', payment_intent_id = $2, charge_id = $3, provider = $4, paid_at = $5::timestamptz, claimed_until = null, last_error = null where id = $1::uuid",
+        [id, result.paymentIntentId, result.status === "succeeded" ? result.chargeId : null, gateway!.provider, now().toISOString()],
+      );
+      await audit(tx, {
+        actor: gateway!.provider, action: "quote.paid", entity: "job", entityId: job.id, amount, currency: job.currency,
+        detail: { quote: quoteId, payment_intent: result.paymentIntentId, attempt }, dedupeKey: `quote.paid:${quoteId}`,
+      });
+    });
+    return decideQuote(db, quoteId, true, actor);
+  }
+
+  const reason = result.reason;
+  await db.tx(async (tx) => {
+    await tx.query("update public.job_prepayments set status = 'failed', payment_intent_id = coalesce($2, payment_intent_id), claimed_until = null, last_error = $3 where id = $1::uuid", [
+      id, result.paymentIntentId, reason.slice(0, 500),
+    ]);
+    await audit(tx, { actor: gateway?.provider ?? "system", action: "quote.payment_failed", entity: "job", entityId: job.id, amount, currency: job.currency, detail: { quote: quoteId, reason, attempt }, dedupeKey: `quote.payment_failed:${quoteId}:${attempt}` });
+    const offer = await acceptedOfferFor(tx, job);
+    if (context.tradie?.phone && offer) {
+      await enqueue(tx, {
+        channel: "sms", to: context.tradie.phone, template: "quote_cannot_start", audience: "tradie", jobId: job.id, userId: context.tradie.userId,
+        body: texts.quoteCannotStart({ number: job.number, link: offerUrl(offer) }), dedupeKey: `quote_cannot_start:${quoteId}:${attempt}`,
+      });
+    }
+    if (context.owner.phone && !actor.startsWith("owner:")) {
+      await enqueue(tx, {
+        channel: "sms", to: context.owner.phone, template: "quote_payment_failed", audience: "owner", jobId: job.id, userId: context.owner.userId,
+        body: texts.quotePaymentFailed({ number: job.number, amountCents: amount, currency: job.currency, link: `${baseUrl()}/app/billing` }), dedupeKey: `quote_payment_failed:${quoteId}:${attempt}`,
+      });
+    }
+  });
+  return { ok: false, message: `Your card was declined for the ${formatMoney(amount, job.currency)} quote, so it is not approved yet and the work cannot start. Update your card on the Billing page, then approve it again.` };
+}
+
+/** The owner (or the team, on their behalf) answers a quote. A quote paid on approval needs its payment first (answerQuote). */
 export async function decideQuote(db: Db, quoteId: string, approve: boolean, actor: string): Promise<QuoteResult> {
   return db.tx(async (tx) => {
     const found = await getQuote(tx, quoteId);
@@ -389,6 +501,10 @@ export async function decideQuote(db: Db, quoteId: string, approve: boolean, act
     if (!job) return { ok: false, message: "We could not find that job." };
     const quote = (await getQuote(tx, quoteId))!;
     if (quote.status !== "pending") return { ok: true, job, quote };
+    if (approve && paidOnApproval(quote)) {
+      const paid = await tx.query("select 1 from public.job_prepayments where quote_id = $1::uuid and status = 'succeeded'", [quoteId]);
+      if (paid.length === 0) return { ok: false, message: "This quote is paid when it is approved. Approve it from the job page so the card can be charged." };
+    }
     const context = await loadContext(tx, job);
     const at = now();
 
@@ -559,7 +675,7 @@ export async function reportNoAccess(db: Db, jobId: string, tradieId: string, in
     await tx.query("update public.quotes set status = 'withdrawn' where job_id = $1::uuid and status = 'pending'", [jobId]);
     await tx.query("update public.job_lines set status = 'void' where job_id = $1::uuid and status in ('active', 'pending')", [jobId]);
     await tx.query("update public.job_parts set status = 'void' where job_id = $1::uuid and status in ('active', 'pending')", [jobId]);
-    await insertLines(tx, jobId, noAccessLines(context.market, active), { at });
+    await insertLines(tx, jobId, noAccessLines(context.market, active, job.platformFeeBps), { at });
     return finish(tx, job, tradieId, "no_access", input);
   });
 }

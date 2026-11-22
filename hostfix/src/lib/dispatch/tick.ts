@@ -1,6 +1,7 @@
 import { purgeOldCodes } from "@/lib/auth/codes";
 import { purgeExpiredSessions } from "@/lib/auth/sessions";
-import { applyPendingCredits, chargeDuePayments, flagAtRisk, markMissedWindows, releaseDuePayouts, type GatewayFor } from "@/lib/billing/settle";
+import { applyPendingCredits, chargeDuePayments, flagAtRisk, markMissedWindows, refundDuePrepayments, releaseDuePayouts, releaseDueRests, type GatewayFor } from "@/lib/billing/settle";
+import { keepHoldsAlive } from "@/lib/billing/card-holds";
 import { addHours, now } from "@/lib/clock";
 import type { Db } from "@/lib/db/types";
 import { purgeUnattached } from "@/lib/files/uploads";
@@ -34,12 +35,20 @@ import { fillMissingPins } from "@/lib/properties/pin";
  *   a normal job nobody has taken     the owner told, the team asked to ring round
  *     in 3 hours
  *   guest reports nobody answered     a reminder, then cancelled after a day
- *   jobs held for the owner's card    sent out once the card is sorted
+ *   jobs held for the owner's card    sent out once the card is sorted, with
+ *                                     the hold on the card placed first
+ *   holds on owners' cards            renewed before they run out on an open
+ *                                     job (or placed a day before a far-off
+ *                                     visit), and let go once not needed
  *   a new platform fee, 30 days on    starts
  *   jobs close to their promised time into the dispatcher's queue
  *   promises missed                   marked, and the dispatcher told; an
  *                                     accepted job with nobody there is a no-show
- *   cards to try again, payouts due   charged and paid
+ *   cards to try again, payouts due   charged and paid (the part of a big
+ *                                     payout that waited for the card, once
+ *                                     the card pays)
+ *   a quote paid on approval whose    refunded
+ *     work did not go ahead
  *   "not the job described", no       the call-out paid (the owner did not object in time)
  *     objection in 24 hours
  *   a flagged job the owner has not   paid if the tradie is trusted, otherwise
@@ -316,7 +325,8 @@ export async function runTick(db: Db, deps: TickDeps): Promise<TickReport> {
   await step("later_times_sent_on", () => expireLaterTimes(db));
   await step("not_taken_yet", () => alertNotTakenYet(db));
   await step("guest_reports", () => chaseGuestReports(db));
-  await step("card_holds_released", () => releaseCardHolds(db));
+  await step("card_holds_released", () => releaseCardHolds(db, deps.gatewayFor));
+  await step("holds", () => keepHoldsAlive(db, deps.gatewayFor));
   await step("fees_changed", () => applyScheduledFees(db));
   await step("at_risk", () => flagAtRisk(db));
   await step("windows", () => markMissedWindows(db));
@@ -326,6 +336,8 @@ export async function runTick(db: Db, deps: TickDeps): Promise<TickReport> {
   await step("credits_applied", () => applyPendingCredits(db, deps.gatewayFor));
   await step("cards_charged", () => chargeDuePayments(db, deps.gatewayFor));
   await step("payouts_sent", () => releaseDuePayouts(db, deps.gatewayFor));
+  await step("payout_rests_sent", () => releaseDueRests(db, deps.gatewayFor));
+  await step("quotes_refunded", () => refundDuePrepayments(db, deps.gatewayFor));
   await step("quotes_chased", () => chaseQuotes(db));
   await step("licences_warned", () => warnExpiringLicences(db));
   await step("insurance_warned", () => warnExpiringInsurance(db));

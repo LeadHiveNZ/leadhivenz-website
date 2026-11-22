@@ -14,7 +14,7 @@ import { handleProductMessage } from "@/lib/payments/product-events";
 import type { StripeAccount } from "@/lib/payments/stripe";
 import { createStripeGateway, payoutAccountProfile } from "@/lib/payments/stripe-gateway";
 import { testDb } from "./db";
-import { arrive, gatewayFor, HOUSE, liveMarket, logJob, makeOwner, makeProperty, makeTradie, MONDAY_10AM, offersFor, openExceptions, photo } from "./factory";
+import { arrive, cardDeclinesFromNow, gatewayFor, holdRanOut, HOUSE, liveMarket, logJob, makeOwner, makeProperty, makeTradie, MONDAY_10AM, offersFor, openExceptions, photo } from "./factory";
 
 /**
  * WHAT THE FIRST REAL STRIPE SANDBOX RUN FOUND (NZ platform, test mode, 21 Nov 2026), and the fixes
@@ -40,12 +40,18 @@ afterEach(() => setTestNow(null));
 
 async function finishedJob(options: { card?: "ok" | "declines" } = {}) {
   await liveMarket(t.db, { min_minutes_on_site: 0 });
-  const owner = await makeOwner(t.db, { card: options.card ?? "ok" });
+  // "declines": fine when the job went out (the hold went on), declined later, and the hold ran out before Job
+  // done, so the whole charge goes to the card the usual way (DECISIONS.md, 2026-11-23).
+  const owner = await makeOwner(t.db, { card: "ok" });
   const property = await makeProperty(t.db, owner.ownerId);
   const tradie = await makeTradie(t.db, { slot: 1, trades: ["plumber"], name: "Wakatipu Plumbing" });
   const job = await logJob(t.db, property, { code: "PL-03" });
   const [offer] = await offersFor(t.db, job.id);
   await t.db.tx((tx) => acceptOffer(tx, offer!.id, "link"));
+  if (options.card === "declines") {
+    await cardDeclinesFromNow(t.db, owner.ownerId);
+    await holdRanOut(t.db, job.id);
+  }
   const arrived = await arrive(t.db, job.id, tradie.tradieId, HOUSE);
   if (!arrived.ok) throw new Error(arrived.message);
   const done = await completeJob(t.db, job.id, tradie.tradieId, { note: "All sorted.", uploadIds: [await photo(t.db, `tradie:${tradie.tradieId}`)], ...HOUSE });
@@ -324,6 +330,87 @@ describe("a payout Stripe refuses for another reason (DECISIONS.md, 2026-11-21, 
       } finally {
         await stripe.close();
       }
+    }
+  });
+});
+
+/**
+ * A HOLD ON THE OWNER'S CARD (DECISIONS.md, 2026-11-23), against the stand-in Stripe. What Stripe's documentation
+ * says (docs.stripe.com/payments/place-a-hold-on-a-payment-method, read 23 Nov 2026), and our sandbox run of 22 Nov:
+ * a PaymentIntent with capture_method "manual", confirmed off-session on the saved card, waits at "requires_capture";
+ * its charge's payment_method_details.card.capture_before says when the hold runs out; a capture can take less than
+ * the hold (amount_to_capture), never more; cancelling an uncaptured PaymentIntent costs nothing.
+ */
+describe("a hold on the card, sent to Stripe (DECISIONS.md, 2026-11-23)", () => {
+  it("asks for a manual-capture, off-session hold on the saved card with the key, and reads when it runs out", async () => {
+    // Fri 20 Nov 2026, 4:30am UTC: 4 days 18 hours after Mon 16 Nov, 10:30am UTC.
+    const before = Math.floor(new Date("2026-11-20T04:30:00Z").getTime() / 1000);
+    const stripe = await standInStripe(() => ({
+      status: 200,
+      body: { id: "pi_hold", object: "payment_intent", status: "requires_capture", latest_charge: { id: "ch_hold", object: "charge", payment_method_details: { card: { capture_before: before } } } },
+    }));
+    try {
+      const gateway = createStripeGateway(stripe.account);
+      const held = await gateway.placeHold({ customerId: "cus_1", paymentMethodId: "pm_1", amountCents: 23500, currency: "NZD", description: "Hold for job 7", jobNumber: 7, idempotencyKey: "hostfix-job-x-hold-1" });
+      expect(held).toEqual({ status: "held", paymentIntentId: "pi_hold", chargeId: "ch_hold", captureBefore: new Date("2026-11-20T04:30:00Z") });
+      const sent = stripe.requests.find((request) => request.path === "/v1/payment_intents")!.body;
+      expect(sent.get("amount")).toBe("23500");
+      expect(sent.get("currency")).toBe("nzd");
+      expect(sent.get("capture_method")).toBe("manual");
+      expect(sent.get("off_session")).toBe("true");
+      expect(sent.get("confirm")).toBe("true");
+      expect(sent.get("payment_method")).toBe("pm_1");
+      expect(sent.get("customer")).toBe("cus_1");
+      expect(sent.getAll("expand[]").concat(sent.getAll("expand[0]"))).toContain("latest_charge");
+    } finally {
+      await stripe.close();
+    }
+  });
+
+  it("a card Stripe declines is a declined hold, never a crash; a Stripe server error is thrown (the hold may exist: asked again with the same key)", async () => {
+    const declined = await standInStripe(() => ({ status: 402, body: { error: { type: "card_error", code: "card_declined", message: "Your card was declined.", payment_intent: { id: "pi_no" } } } }));
+    try {
+      const gateway = createStripeGateway(declined.account);
+      expect(await gateway.placeHold({ customerId: "cus_1", paymentMethodId: "pm_1", amountCents: 23500, currency: "NZD", description: "x", jobNumber: 7, idempotencyKey: "k" })).toMatchObject({ status: "declined", code: "card_declined", paymentIntentId: "pi_no" });
+    } finally {
+      await declined.close();
+    }
+    const broken = await standInStripe(() => ({ status: 500, body: { error: { type: "api_error", message: "Something went wrong on Stripe's end." } } }));
+    try {
+      const gateway = createStripeGateway(broken.account);
+      await expect(gateway.placeHold({ customerId: "cus_1", paymentMethodId: "pm_1", amountCents: 23500, currency: "NZD", description: "x", jobNumber: 7, idempotencyKey: "k" })).rejects.toBeInstanceOf(Error);
+    } finally {
+      await broken.close();
+    }
+  });
+
+  it("captures only what is asked (less than the hold is fine), and cancels with the PaymentIntent's cancel call", async () => {
+    const stripe = await standInStripe((path) => ({
+      status: 200,
+      body: path.endsWith("/capture")
+        ? { id: "pi_hold", object: "payment_intent", status: "succeeded", amount_received: 22500, latest_charge: "ch_hold" }
+        : { id: "pi_hold", object: "payment_intent", status: "canceled" },
+    }));
+    try {
+      const gateway = createStripeGateway(stripe.account);
+      expect(await gateway.captureHold({ paymentIntentId: "pi_hold", amountCents: 22500, idempotencyKey: "hostfix-hold-h-capture" })).toEqual({ status: "captured", amountCents: 22500, chargeId: "ch_hold" });
+      expect(stripe.requests.find((request) => request.path === "/v1/payment_intents/pi_hold/capture")!.body.get("amount_to_capture")).toBe("22500");
+      await gateway.cancelHold({ paymentIntentId: "pi_hold", idempotencyKey: "hostfix-hold-h-cancel" });
+      expect(stripe.requests.some((request) => request.path === "/v1/payment_intents/pi_hold/cancel")).toBe(true);
+    } finally {
+      await stripe.close();
+    }
+  });
+
+  it("a hold Stripe has already let go cannot be captured: 'gone', so the charge goes to the card the usual way", async () => {
+    const stripe = await standInStripe((path) => (path.endsWith("/capture")
+      ? { status: 400, body: { error: { type: "invalid_request_error", code: "payment_intent_unexpected_state", message: "This PaymentIntent could not be captured because it has a status of canceled." } } }
+      : { status: 200, body: { id: "pi_hold", object: "payment_intent", status: "canceled" } }));
+    try {
+      const gateway = createStripeGateway(stripe.account);
+      expect(await gateway.captureHold({ paymentIntentId: "pi_hold", amountCents: 22500, idempotencyKey: "k" })).toMatchObject({ status: "gone" });
+    } finally {
+      await stripe.close();
     }
   });
 });

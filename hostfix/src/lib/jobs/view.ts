@@ -12,6 +12,7 @@ import { flagWords, ownerCheckWords, type CheckFlag } from "./checks";
 import { loadContext } from "./context";
 import { listLines, listOffers, listQuotes, type OfferWithTradie } from "./store";
 import { listParts, type JobPart } from "./parts";
+import { liveHold } from "@/lib/billing/card-holds";
 import type { Job, JobLine, Quote, StatusTone } from "./types";
 
 /**
@@ -35,6 +36,10 @@ export type JobMoney = {
   payout: { status: string; amountCents: number; releaseAt: Date; sentAt: Date | null; lastError: string | null } | null;
   dispute: { id: string; status: string; reason: string; createdAt: Date; refundCents: number | null; resolutionNote: string | null } | null;
   credit: { amountCents: number; status: string } | null;
+  /** The hold on the owner's card for this job now, if there is one (DECISIONS.md, 2026-11-23). */
+  hold: { amountCents: number; captureBefore: Date | null } | null;
+  /** The part of the tradie's payment waiting for the owner's card, above the payout guarantee. */
+  payoutWaitsCents: number;
 };
 
 export type JobView = {
@@ -216,8 +221,8 @@ export async function loadJobView(db: Db, job: Job, audience: Audience): Promise
     "select status, amount_cents, refunded_cents, paid_at, last_error, attempts from public.payments where job_id = $1::uuid",
     [job.id],
   );
-  const payouts = await db.query<{ status: string; amount_cents: number; release_at: Date; sent_at: Date | null; last_error: string | null }>(
-    "select status, amount_cents, release_at, sent_at, last_error from public.payouts where job_id = $1::uuid",
+  const payouts = await db.query<{ status: string; amount_cents: number; release_at: Date; sent_at: Date | null; last_error: string | null; rest_status: string | null; waits_cents: number }>(
+    "select status, amount_cents, release_at, sent_at, last_error, rest_status, waits_cents from public.payouts where job_id = $1::uuid",
     [job.id],
   );
   const disputes = await db.query<{ id: string; status: string; reason: string; created_at: Date; refund_cents: number | null; resolution_note: string | null }>(
@@ -250,6 +255,8 @@ export async function loadJobView(db: Db, job: Job, audience: Audience): Promise
       payout: o ? { status: o.status, amountCents: o.amount_cents, releaseAt: new Date(o.release_at), sentAt: o.sent_at ? new Date(o.sent_at) : null, lastError: o.last_error } : null,
       dispute: dsp ? { id: dsp.id, status: dsp.status, reason: dsp.reason, createdAt: new Date(dsp.created_at), refundCents: dsp.refund_cents, resolutionNote: dsp.resolution_note } : null,
       credit: credits[0] ? { amountCents: credits[0].amount_cents, status: credits[0].status } : null,
+      hold: await liveHold(db, job.id).then((hold) => (hold ? { amountCents: hold.amountCents, captureBefore: hold.captureBefore } : null)),
+      payoutWaitsCents: o && ["waiting", "due"].includes(o.rest_status ?? "") ? Number(o.waits_cents ?? 0) : 0,
     },
     laterTime: audience === "tradie" ? null : await waitingLaterTime(db, job.id),
     parts: (await listParts(db, job.id)).map((part) => (audience === "owner" ? { ...part, receiptUploadId: null, receiptTotalCents: null, amountCents: 0, tradieCents: 0 } : part)),

@@ -10,7 +10,8 @@ import type { Db } from "@/lib/db/types";
  *                    timer or the team has not decided yet (DECISIONS.md,
  *                    2026-11-19, src/lib/jobs/confirm.ts)
  *   receipt_missing  an off-list part's receipt is still to come
- *                    (DECISIONS.md, 2026-11-20, src/lib/jobs/parts.ts)
+ *                    (DECISIONS.md, 2026-11-20, src/lib/jobs/parts.ts), or one
+ *                    our team asked for as a spot check (2026-11-23)
  *   receipt_check    a receipt the checks flagged, waiting for the team
  *   not_described    the tradie said "not the job described" and the owner
  *                    may still object, or the team has not decided yet
@@ -30,7 +31,7 @@ export async function holdReasons(db: Db, jobId: string): Promise<HoldReason[]> 
   if (["waiting", "staff_queue", "staff_held"].includes(job[0]?.confirm_status ?? "")) reasons.push("job_check");
   if (["waiting", "owner_objects"].includes(job[0]?.not_described_status ?? "")) reasons.push("not_described");
   const parts = await db.query<{ missing: boolean; checking: boolean }>(
-    `select bool_or(receipt_status in ('needed', 'to_follow', 'refunding')) as missing,
+    `select bool_or(receipt_status in ('needed', 'to_follow', 'requested', 'refunding')) as missing,
             bool_or(check_status in ('flagged', 'held')) as checking
        from public.job_parts where job_id = $1::uuid and status = 'active'`,
     [jobId],

@@ -157,7 +157,7 @@ function PartForm({ slug, currency, item }: { slug: string; currency: string; it
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Name the owner sees" name={`partName-${key}`} required maxLength={80} defaultValue={item?.name ?? ""} placeholder="Mixer tap cartridge (40 mm)" />
         <Field label="Code" name={`partCode-${key}`} required maxLength={8} defaultValue={item?.code ?? ""} placeholder="PTP-02" hint="Two to four letters, a dash, a number." />
-        <Field label={`Owner pays for one, including GST (${currency})`} name={`partPrice-${key}`} required inputMode="decimal" maxLength={8} defaultValue={item ? centsToDollars(item.priceCents) : ""} hint={`The tradie gets it less ${LIST_PART_FEE_BPS / 100}%, which covers the card fee.`} />
+        <Field label={`Owner pays for one, including GST (${currency})`} name={`partPrice-${key}`} required inputMode="decimal" maxLength={8} defaultValue={item ? centsToDollars(item.priceCents) : ""} hint={`A suggestion: picking it fills in this name and price, which the tradie can change. Priced over 1.5 times this, the part comes to your queue for a look. The tradie gets their price less ${LIST_PART_FEE_BPS / 100}%.`} />
       </div>
       <Area label="Where the price came from" name={`partSource-${key}`} rows={2} maxLength={400} defaultValue={item?.source ?? ""} hint="The shop, the product, the web address and the date, for whoever checks it next." />
       <Tick name="partActive" label="On the price list" defaultChecked={item?.active ?? true} />
@@ -259,8 +259,9 @@ export default async function MarketPage({ params, searchParams }: { params: Pro
             <Field label="Call-out fee for off-menu work" name="diagnosisFee" required inputMode="decimal" maxLength={8} defaultValue={centsToDollars(market.diagnosisFeeCents)} hint="What the owner pays for a tradie to come and look." />
             <Field label="What the tradie gets of that call-out" name="diagnosisPayout" required inputMode="decimal" maxLength={8} defaultValue={centsToDollars(market.diagnosisPayoutCents)} />
             <Field label="Quotes above this need the owner's yes" name="approvalThreshold" required inputMode="decimal" maxLength={8} defaultValue={centsToDollars(market.approvalThresholdCents)} />
-            <Field label="Small parts included in every job's price, up to" hint="Shown to owners. A part off the price list costing this or less is never added to a job." name="partsIncluded" required inputMode="decimal" maxLength={8} defaultValue={centsToDollars(market.partsIncludedCents)} />
+            <Field label="Small parts included in every job's price, up to" hint="Shown to owners. A part costing this or less (its price times how many) is never added to a job." name="partsIncluded" required inputMode="decimal" maxLength={8} defaultValue={centsToDollars(market.partsIncludedCents)} />
             <Field label="Parts on one job above this need the owner's yes" hint="Below it, parts are added and the owner is texted at once. The property's overall limit applies too." name="partsApproval" required inputMode="decimal" maxLength={8} defaultValue={centsToDollars(market.partsApprovalCents)} />
+            <Field label="Tradies are paid ahead of the owner's card for up to" hint="Of a job's price the owner's card has not paid yet. Above it, the tradie's share of what is not collected waits until it is. Shown in the tradie agreement." name="payoutGuarantee" required inputMode="decimal" maxLength={9} defaultValue={centsToDollars(market.payoutGuaranteeCents)} />
           </div>
 
           <p className="border-t border-line pt-4 text-sm font-bold tracking-wide text-muted uppercase">Offers, hours and paying tradies</p>
@@ -353,7 +354,7 @@ export default async function MarketPage({ params, searchParams }: { params: Pro
       <section>
         <SectionTitle>Parts price list ({priceList.filter((item) => item.active).length} parts)</SectionTitle>
         <p className="mb-3 text-sm text-muted">
-          A part on this list is charged at its fixed price, as many as are fitted, with no receipt. Anything else is the receipt plus 20%. Small parts up to {money(market.partsIncludedCents)} are in the job&apos;s price.
+          Quick picks for tradies (DECISIONS.md, 2026-11-23): picking one fills in its name and price, and the tradie can change both. Every part is charged at the tradie&apos;s own price, and they get it less 3%. A part picked from this list and priced over 1.5 times its price here comes to your queue for a look. Small parts up to {money(market.partsIncludedCents)} are in the job&apos;s price.
           Check new prices with the first tradies.
         </p>
         <div className="space-y-2">

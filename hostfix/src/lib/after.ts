@@ -1,5 +1,6 @@
 import "server-only";
 import { chargeJob } from "@/lib/billing/settle";
+import { cancelDueHolds } from "@/lib/billing/card-holds";
 import type { Db } from "@/lib/db/types";
 import { runTick, type TickReport } from "@/lib/dispatch/tick";
 import { getFileStore } from "@/lib/files/store";
@@ -45,6 +46,20 @@ export async function settleNow(db: Db, jobId: string): Promise<void> {
     await chargeJob(db, gatewayFor(db), jobId);
   } catch (error) {
     console.error("[after] charging a job failed:", error instanceof Error ? error.message : error);
+  }
+  await sendQueued(db);
+}
+
+/**
+ * After a cancel (DECISIONS.md, 2026-11-23): the hold on the owner's card is let go at once, or, cancelled after the
+ * tradie arrived, the call-out is taken from it. If either fails here, the timer does it within a minute.
+ */
+export async function settleCancel(db: Db, jobId: string): Promise<void> {
+  try {
+    await cancelDueHolds(db, gatewayFor(db), jobId);
+    await chargeJob(db, gatewayFor(db), jobId);
+  } catch (error) {
+    console.error("[after] settling a cancelled job failed:", error instanceof Error ? error.message : error);
   }
   await sendQueued(db);
 }

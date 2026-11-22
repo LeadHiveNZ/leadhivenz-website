@@ -70,6 +70,9 @@ export const EMAIL_INSTEAD: Record<string, string> = {
   payout_check_held: "Your payment is on hold",
   receipt_check_held: "Your payment is on hold",
   balance_owed: "What you owe after a chargeback",
+  call_out_charged: "The call-out for a cancelled job",
+  quote_refunded: "A refund for work that did not go ahead",
+  receipt_requested: "Please add a receipt",
 };
 
 /** Templates that are never held back by STOP: a person signing in asked for the code. */

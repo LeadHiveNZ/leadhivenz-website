@@ -8,7 +8,7 @@ import { newStorageKey, recordUpload, type UploadKind } from "@/lib/files/upload
 import { createJob, type NewJob } from "@/lib/jobs/create";
 import type { Job } from "@/lib/jobs/types";
 import { completeJob, markArrived, markEnRoute, submitQuote } from "@/lib/jobs/work";
-import { addParts, listPriceList } from "@/lib/jobs/parts";
+import { addParts, attachReceipt, listPriceList, requestReceipt } from "@/lib/jobs/parts";
 import { updateMarket } from "@/lib/markets/admin";
 import { listMenu, listTiers } from "@/lib/markets/store";
 import { flushOutbox } from "@/lib/notify/outbox";
@@ -146,7 +146,7 @@ async function log(ctx: Ctx, place: Property, input: Partial<NewJob> & { code?: 
   const result = await createJob(ctx.db, {
     property: place, reportedBy, reporterName: null, reporterPhone: null, menuItemId: code ? ctx.menu.get(code)! : null, description: "", urgent: false,
     uploadIds, uploader, actor: reportedBy === "owner" ? `owner:${place.ownerId}` : `${reportedBy}:${rest.reporterName ?? "someone"}`, ...rest,
-  });
+  }, ctx.gatewayFor);
   if (!result.ok) throw new Error(`Sample job was not created: ${result.message}`);
   return result.job;
 }
@@ -236,7 +236,8 @@ export async function buildSampleData(db: Db, files: FileStore | null, real: Dat
   // ---- owners and properties ----------------------------------------------
   const cleaner = await registerReferrer(db, { name: "Mele Fifita", phone: "+64211234521", email: "mele@example.com" });
   const sam = await owner(ctx, { name: "Sam Taylor", email: "sam@example.com", phone: "+64211234511", home: "Auckland", card: "ok" });
-  const priya = await owner(ctx, { name: "Priya Patel", email: "priya@example.com", phone: "+64211234512", home: "Sydney", card: "declines" });
+  // Her card is fine when her job goes out, and declines later (job 4).
+  const priya = await owner(ctx, { name: "Priya Patel", email: "priya@example.com", phone: "+64211234512", home: "Sydney", card: "ok" });
   const tane = await owner(ctx, { name: "Tane Rangi", email: "tane@example.com", phone: "+64211234513", home: "Queenstown", card: "ok" });
 
   const lakeview = await property(ctx, sam.ownerId, {
@@ -300,15 +301,20 @@ export async function buildSampleData(db: Db, files: FileStore | null, real: Dat
   await markEnRoute(db, one.id, dave.tradieId);
   ago(ctx, 6 * DAY - 2.5 * HOUR);
   await arrive(ctx, one.id, dave.tradieId, door(PINS.lakeview));
-  // A part off the price list, with its receipt (DECISIONS.md, 2026-11-20): NZ$45.50 plus 20% is NZ$54.60 to the owner.
+  // A part at Dave's own price, including GST (DECISIONS.md, 2026-11-23): NZ$52 to the owner, Dave gets it less 3% (NZ$50.44).
   ago(ctx, 6 * DAY - 2.75 * HOUR);
-  const trapReceipt = await picture(ctx, `tradie:${dave.tradieId}`, "receipt", "found");
-  const trap = await addParts(db, one.id, dave.tradieId, {
-    list: [], offList: { description: "Kitchen waste trap, 40 mm", receiptTotalCents: 4550, amountCents: 4550, receiptDate: null, uploadId: trapReceipt },
-  });
+  const trap = await addParts(db, one.id, dave.tradieId, { parts: [{ name: "Kitchen waste trap, 40 mm", quantity: 1, unitCents: 5200 }] });
   if (!trap.ok) throw new Error(`Sample data: adding parts gave "${trap.message}".`);
   ago(ctx, 6 * DAY - 3.25 * HOUR);
   await finish(ctx, one.id, dave.tradieId, "Cleared a fat blockage in the kitchen waste and flushed the trap. Ran hot water for five minutes: draining well.", door(PINS.lakeview));
+  // A spot check (DECISIONS.md, 2026-11-23): Maria asks for the trap's receipt, Dave sends it, and his payment goes on.
+  ago(ctx, 6 * DAY - 4 * HOUR);
+  const trapPart = trap.parts[0]!;
+  await requestReceipt(db, trapPart.id, `staff:${mariaId}`);
+  ago(ctx, 6 * DAY - 5 * HOUR);
+  const trapReceipt = await picture(ctx, `tradie:${dave.tradieId}`, "receipt", "found");
+  const sent = await attachReceipt(db, one.id, dave.tradieId, trapPart.id, { uploadId: trapReceipt, receiptDate: null });
+  if (!sent.ok) throw new Error(`Sample data: the receipt gave "${sent.message}".`);
   ago(ctx, 6 * DAY - 28 * HOUR);
   await releaseDuePayouts(db, gatewayFor);
 
@@ -345,20 +351,21 @@ export async function buildSampleData(db: Db, files: FileStore | null, real: Dat
   ago(ctx, 2 * DAY - 22 * HOUR);
   await raiseDispute(db, three.id, `owner:${sam.ownerId}`, "The new silicone is already lifting at the left corner and the cleaner says water is getting behind it.");
 
-  // ---- 4. Done, but the owner's card was declined -------------------------
+  // ---- 4. Done: the hold paid the job, but the card declined the part beyond it -------------------------
+  // (DECISIONS.md, 2026-11-23.) Priya's card was fine when the job went out, so the NZ$225 price was held on it. It was
+  // declined later, so the part, charged beyond the hold, failed: she owes that, and Tom is paid at the usual time anyway.
   ago(ctx, 27 * HOUR);
   const four = await log(ctx, studio, { code: "EL-01", description: "Power point by the bed has stopped working. Others in the room are fine." });
   ago(ctx, 27 * HOUR - 3 * MINUTE);
   await accept(ctx, four.id, tom.tradieId);
+  await saveBilling(db, { ownerId: priya.ownerId, country: "NZ", provider: "demo", customerId: `demo_cus_${priya.ownerId.replace(/-/g, "").slice(0, 16)}`, card: DEMO_CARD_DECLINES });
   ago(ctx, 25 * HOUR);
   await arrive(ctx, four.id, tom.tradieId, door(PINS.studio));
-  // The new power point is on the parts price list (DECISIONS.md, 2026-11-20): added at its fixed price, inside the no-ask limit.
+  // The new power point, picked from the price list (NZ$15.13) and priced by Tom at NZ$22, inside the no-ask limit.
   ago(ctx, 24.75 * HOUR);
   const powerPoint = (await listPriceList(db, MARKET)).find((item) => item.code === "PEL-01");
-  if (powerPoint) {
-    const parts = await addParts(db, four.id, tom.tradieId, { list: [{ itemId: powerPoint.id, quantity: 1 }] });
-    if (!parts.ok) throw new Error(`Sample data: adding parts gave "${parts.message}".`);
-  }
+  const parts = await addParts(db, four.id, tom.tradieId, { parts: [{ name: powerPoint?.name ?? "Double power point", quantity: 1, unitCents: 2200, priceListItemId: powerPoint?.id ?? null }] });
+  if (!parts.ok) throw new Error(`Sample data: adding parts gave "${parts.message}".`);
   ago(ctx, 24.25 * HOUR);
   await finish(ctx, four.id, tom.tradieId, "Replaced the power point. The old one had a burnt terminal. Tested and safe.", door(PINS.studio), 1);
 
@@ -421,7 +428,7 @@ export async function buildSampleData(db: Db, files: FileStore | null, real: Dat
 
   return [
     { key: "sam", label: "Sam Taylor", role: "owner", userId: sam.user.id, phone: sam.user.phone, note: "Owns Lakeview Apartment and Arthurs Point Cabin. Has a quote and a guest report waiting for an answer." },
-    { key: "priya", label: "Priya Patel", role: "owner", userId: priya.user.id, phone: priya.user.phone, note: "Owns Fernhill Studio. Her card is declining." },
+    { key: "priya", label: "Priya Patel", role: "owner", userId: priya.user.id, phone: priya.user.phone, note: "Owns Fernhill Studio. Her card is declining: the hold paid her job, the part beyond it failed." },
     { key: "hana", label: "Hana Moore (manager)", role: "owner", userId: hana.user.id, phone: hana.user.phone, note: "Manages ten properties on Portfolio: one NZ$600 retainer a month for all of them." },
     { key: "tane", label: "Tane Rangi", role: "owner", userId: tane.user.id, phone: tane.user.phone, note: "Owns Kelvin Heights House. A plumber is on the way to an urgent job." },
     { key: "dave", label: "Dave (plumber and gasfitter)", role: "tradie", userId: dave.user.id, phone: dave.phone, note: "Has a job offer waiting right now, and is on the way to an urgent one." },

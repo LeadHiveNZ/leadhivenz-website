@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import { brand } from "@config/brand";
 import { LegalPage, Section } from "@/components/LegalPage";
 import { launchMarket } from "@config/markets";
-import { OLD_RECEIPT_DAYS, RECEIPT_TO_FOLLOW_DAYS } from "@/lib/jobs/parts";
-import { LIST_PART_FEE_BPS } from "@/lib/jobs/pricing";
+import { OLD_RECEIPT_DAYS, PART_PRICE_FLAG_MULTIPLE, RECEIPT_TO_FOLLOW_DAYS } from "@/lib/jobs/parts";
+import { OWN_CLIENT_FEE_BPS, PART_FEE_BPS } from "@/lib/jobs/pricing";
+import { PATTERN_DAYS, PATTERN_PAIR_JOBS, PATTERN_TRADIE_CANCELS } from "@/lib/ops/patterns";
 import { formatMoney } from "@/lib/money";
 import { FEE_NOTICE_DAYS } from "@/lib/markets/admin";
-import { DIRECT_DEALING_MONTHS, DIRECT_RELEASE_CENTS, TRADIE_AGREEMENT_VERSION } from "@/lib/tradies/service";
+import { TRADIE_AGREEMENT_VERSION } from "@/lib/tradies/service";
 import { HOURLY_LIMIT_CENTS } from "@/lib/jobs/rates";
 import { FAR_METRES, PROPOSAL_DAYS, WINDOW_HOURS } from "@/lib/jobs/arrival";
 import {
@@ -29,6 +30,9 @@ const UPDATED = TRADIE_AGREEMENT_VERSION;
 export default function Page() {
   const n = brand.name;
   const money = (cents: number) => formatMoney(cents, launchMarket.currency);
+  const fee = `${launchMarket.platformFeeBps / 100}%`;
+  const ownFee = `${OWN_CLIENT_FEE_BPS / 100}%`;
+  const guarantee = money(launchMarket.payoutGuaranteeCents);
   return (
     <LegalPage
       title="Tradie agreement"
@@ -140,8 +144,13 @@ export default function Page() {
         <p>
           <strong>How quotes are priced.</strong> Work up to {money(HOURLY_LIMIT_CENTS)} is quoted in hours, in quarter hours, at {n}&rsquo;s fixed hourly
           rate for your trade (shown on the quote screen; it is what the owner pays, GST included). You cannot use a different rate. Above{" "}
-          {money(HOURLY_LIMIT_CENTS)} you price the work your own way. The 15% platform fee comes off the work, as on every job. Parts are added on their own,
-          below. <strong>If you need to come back, include the extra visit in your quote.</strong> There is no second call-out on the same job.
+          {money(HOURLY_LIMIT_CENTS)} you price the work your own way. The {fee} platform fee comes off the work, as on every job ({ownFee} for your own clients, section
+          10). Parts are added on their own, below. <strong>If you need to come back, include the extra visit in your quote.</strong> There is no second call-out on the same job.
+        </p>
+        <p>
+          <strong>Work you price yourself over {money(HOURLY_LIMIT_CENTS)}</strong> always waits for the owner&rsquo;s yes, and is charged to their card in full when
+          they approve it, before you start. If their card declines, the quote is not approved yet: we text you that the work cannot start, and ask the owner to
+          update their card. If the work then does not go ahead, the owner is refunded.
         </p>
         <p>
           <strong>The call-out credit.</strong> On a look-and-price job, if the owner approves your quote, the {money(launchMarket.diagnosisFeeCents)} call-out
@@ -150,17 +159,18 @@ export default function Page() {
           NZ$423.75. If the owner says no, the call-out stands and you are paid it.
         </p>
         <p>
-          <strong>Parts</strong> can be added on any job, with <strong>Add parts</strong>. Small parts up to {money(launchMarket.partsIncludedCents)} are in the job&rsquo;s price.
-          A part on the price list is charged to the owner at its list price, and you get it less {LIST_PART_FEE_BPS / 100}% (which covers the card fee); no receipt is needed. Anything
-          else is charged at what you paid plus 20% for sourcing it, and you get what you paid plus 17% (the 15% platform fee comes off the 20% only): you enter the receipt&rsquo;s
-          total including GST, the amount of it used on this job, and upload the receipt (a photo, a screenshot or the PDF). Only our team sees the receipt.
+          <strong>Parts</strong> can be added on any job, with <strong>Add parts</strong>. Small parts up to {money(launchMarket.partsIncludedCents)} are in the job&rsquo;s price
+          (a part, times how many, that comes to that or less is not added). For anything else, enter what it is, how many, and your own price for one, including
+          GST: your cost plus your own usual markup. The owner pays that price, and you get it less {PART_FEE_BPS / 100}%, which covers the card fee. No receipt is needed.
+          The price list in the app is only a quick way to fill in a name and a price; you can change both. A part you pick from the list and price at more than{" "}
+          {PART_PRICE_FLAG_MULTIPLE} times its list price is looked at by our team; nothing is held for that.
         </p>
         <p>
           Up to {money(launchMarket.partsApprovalCents)} of parts on a job (and within the property&rsquo;s overall limit) are added straight away and the owner is told. Above
-          that the owner is asked in the app: do not buy them until they say yes. If you do not have the receipt yet at Job done, tick that it will follow: your payment for the
-          job waits for it, and if it has not come within {RECEIPT_TO_FOLLOW_DAYS} days the part is refunded to the owner out of your payment and we text you. A receipt dated more
-          than {OLD_RECEIPT_DAYS} days before the job, an amount bigger than the receipt, or the same receipt used for more than its total on several jobs, holds your payment until our
-          team has looked at it.
+          that the owner is asked in the app: do not buy them until they say yes. <strong>Keep your receipts.</strong> Our team can ask for the receipt for any part, as a spot
+          check: your payment for that job waits for it, and if it has not come within {RECEIPT_TO_FOLLOW_DAYS} days the part is refunded to the owner out of your payment and we
+          text you. Only our team sees a receipt. A receipt dated more than {OLD_RECEIPT_DAYS} days before the job, or one already sent for a part on another job, holds your
+          payment until our team has looked at it. Parts you added before 23 November 2026 stay on the terms you agreed then.
         </p>
         <p>
           If a part you fitted is faulty, you deal with the supplier&rsquo;s warranty; your labour is covered by the 30-day callback as usual. A part the owner supplied is not yours
@@ -170,7 +180,16 @@ export default function Page() {
 
       <Section n={6} title="Pay">
         <ul>
-          <li>Your share is the amount in the offer. On an urgent or after-hours job, your share of the surcharge is in that amount, like the rest of the price: the surcharge less the 15% platform fee. Parts are paid as in section 5: the list price less 3%, or what you paid plus 17%.</li>
+          <li>Your share is the amount in the offer. On an urgent or after-hours job, your share of the surcharge is in that amount, like the rest of the price: the surcharge less the {fee} platform fee ({ownFee} for your own clients). Parts are paid as in section 5: your price less {PART_FEE_BPS / 100}% (parts added before 23 November 2026: the list price less 3%, or what you paid plus 17%).</li>
+          <li>
+            <strong>The job&rsquo;s price is held on the owner&rsquo;s card when the job is sent out</strong>, and the charge is taken from that hold when you finish. Anything
+            approved on top (parts, more work) is charged then too.
+          </li>
+          <li>
+            <strong>If the owner cancels before you tap I have arrived</strong>, even after you tapped On my way, they pay nothing and you are not paid: the travel is yours.
+            <strong> If they cancel after you tap I have arrived</strong>, they are charged the call-out and you are paid your share of it, as for a call-out
+            ({money(launchMarket.diagnosisPayoutCents)}, plus your share of any urgent or after-hours surcharge).
+          </li>
           <li>
             <strong>The urgent share is paid only if you tap I have arrived by the urgent deadline</strong> shown in the offer. After the deadline the
             urgent surcharge is not charged to the owner at all, so there is no share of it to pay. The rest of the job is paid as normal.
@@ -185,8 +204,9 @@ export default function Page() {
           </li>
           <li>Your Pay page in the app lists every job and every payment. Statements are there for your accountant.</li>
           <li>
-            <strong>Once you finish a job the owner approved, you&rsquo;re paid even if their card fails. Chasing is our job.</strong> Your payment goes
-            out at the usual time whatever the card does; the owner owes the money to {n}, not to you.
+            <strong>Once you finish a job the owner approved, you&rsquo;re paid even if their card fails, for up to {guarantee} of the job&rsquo;s price. Chasing is our job.</strong>{" "}
+            Your payment goes out at the usual time whatever the card does; the owner owes the money to {n}, not to you. On a bigger job, if more than {guarantee} of its
+            price has not been paid by the owner&rsquo;s card when your payment is due, your share of the part above {guarantee} waits, and is sent to you as soon as the card pays.
           </li>
           <li>If you could not get in through no fault of yours, tap <strong>Could not get in</strong> with a photo, and you are paid the call-out.</li>
           <li>
@@ -240,6 +260,11 @@ export default function Page() {
             this either, and declining a job can never flag anything: only jobs you accepted and finished are checked.
           </li>
         </ul>
+        <p>
+          If {PATTERN_PAIR_JOBS} or more jobs you accepted for the same owner in {PATTERN_DAYS} days end without Job done (cancelled after On my way, or nobody there by the promised
+          time), or {PATTERN_TRADIE_CANCELS} or more jobs you accepted in {PATTERN_DAYS} days are cancelled after On my way, our team may look at them and talk to you. That is never a
+          removal by itself, and it is never counted as declining.
+        </p>
         <p>You can pause offers yourself at any time with the Pause switch in your profile, for a holiday or a busy week, with no penalty.</p>
       </Section>
 
@@ -261,13 +286,23 @@ export default function Page() {
         </p>
       </Section>
 
-      <Section n={10} title="Owners' work">
+      <Section n={10} title="Your own clients, and app jobs stay in the app">
         <p>
-          An owner {n} introduced to you came to you through us; that is what pays for the offers you receive. For{" "}
-          <strong>{DIRECT_DEALING_MONTHS} months from your first job for that owner</strong>, you agree not to do their maintenance work directly, outside
-          {" "}{n}. Before then you can be released for one of their properties by paying {n} {money(DIRECT_RELEASE_CENTS)} for that property. After the{" "}
-          {DIRECT_DEALING_MONTHS} months you may work for them directly. Any job for them that still comes through {n} is at the normal fee, however long you
-          have known them.
+          <strong>Your own clients.</strong> You can bring owners you already work for to {n}: send them an invite from the app, or they can add you from their
+          property page with &ldquo;Bring your own tradie&rdquo; (you still sign up and are approved as normal). Once they accept for a property, jobs between you and
+          that property take a <strong>{ownFee} platform fee</strong> instead of {fee}, on everything the {fee} applies to: the menu price, the surcharges, the call-out,
+          quotes and hourly work. Parts are as in section 5. {ownFee} covers the card fees (about 3%), the automatic texts and payment, and chasing late payers. You are
+          also the first choice for that property in your trade. Every other tradie and trade at that property stays at {fee}. This does not apply to a property where{" "}
+          {n} has already offered you a job, or you have done one: we check that by the property&rsquo;s address and map pin, not by the owner&rsquo;s account.
+        </p>
+        <p>
+          <strong>Owners {n} introduces</strong> stay at the normal {fee} fee for every job through the app, however long you have known them. There is no time limit and
+          no buyout.
+        </p>
+        <p>
+          <strong>One rule: a job booked in the app is finished and paid through the app.</strong> Finishing an app job outside the app (taking the owner&rsquo;s payment
+          for it directly, or agreeing to do it off the app once it is booked) can lead to removal from the network. A person decides, after talking to you, as with
+          everything else here.
         </p>
       </Section>
 

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { jobFromOwnerLink } from "@/lib/access/links";
-import { sendQueued } from "@/lib/after";
+import { gatewayFor, sendQueued, settleCancel } from "@/lib/after";
 import { raiseDispute } from "@/lib/billing/settle";
 import { currentViewer, requireOwner } from "@/lib/auth/current";
 import { getDb } from "@/lib/db";
@@ -16,7 +16,7 @@ import { getJobForOwner, getQuote } from "@/lib/jobs/store";
 import type { Job } from "@/lib/jobs/types";
 import { answerLaterTime } from "@/lib/dispatch/cascade";
 import { ownerObjects } from "@/lib/jobs/not-described";
-import { decideQuote, reportTradieAbsent } from "@/lib/jobs/work";
+import { answerQuote as answerQuoteWithCharge, reportTradieAbsent } from "@/lib/jobs/work";
 import { confirmFixed } from "@/lib/jobs/confirm";
 import { guestFromForm } from "@/lib/jobs/guest-form";
 import { getMarket } from "@/lib/markets/store";
@@ -269,7 +269,7 @@ export async function logOwnerJob(_previous: FormState, formData: FormData): Pro
     menuItemId: choice === OFF_MENU ? null : choice, offMenuTrade: text(formData, "offMenuTrade"), offMenuTitle: text(formData, "offMenuTitle"),
     description: text(formData, "description"), urgent: ticked(formData, "urgent"), uploadIds: list(formData, "uploadIds"),
     uploader: `owner:${viewer.ownerId}`, actor: `owner:${viewer.ownerId}`,
-  });
+  }, gatewayFor(db));
   await sendQueued(db);
   if (!result.ok) {
     if (result.reason === "duplicate" && result.existingJobId) redirect(`/app/jobs/${result.existingJobId}?already=1`);
@@ -301,7 +301,7 @@ export async function goAhead(_previous: FormState, formData: FormData): Promise
   const db = await getDb();
   const found = await ownersJob(db, formData);
   if (!found) return { message: NOT_FOUND };
-  const approved = await approveGuestReport(db, found.job.id, { urgent: text(formData, "how") === "urgent" }, found.actor);
+  const approved = await approveGuestReport(db, found.job.id, { urgent: text(formData, "how") === "urgent" }, found.actor, gatewayFor(db));
   await sendQueued(db);
   if (!approved.ok) return { message: approved.message };
   redirect(`${found.back}?sent=1`);
@@ -312,7 +312,8 @@ export async function cancelOwnerJob(_previous: FormState, formData: FormData): 
   const found = await ownersJob(db, formData);
   if (!found) return { message: NOT_FOUND };
   const result = await cancelJob(db, found.job.id, { actor: found.actor }, text(formData, "reason") || "Cancelled by the owner");
-  await sendQueued(db);
+  if (result.ok) await settleCancel(db, found.job.id);
+  else await sendQueued(db);
   if (!result.ok) return { message: result.message };
   redirect(`${found.back}?cancelled=1`);
 }
@@ -323,7 +324,8 @@ export async function answerQuote(_previous: FormState, formData: FormData): Pro
   if (!found) return { message: NOT_FOUND };
   const quote = await getQuote(db, text(formData, "quoteId"));
   if (!quote || quote.jobId !== found.job.id) return { message: "We could not find that quote." };
-  const result = await decideQuote(db, quote.id, text(formData, "answer") === "yes", found.actor);
+  // A quote over NZ$1,000 priced by the tradie is charged when it is approved (DECISIONS.md, 2026-11-23).
+  const result = await answerQuoteWithCharge(db, gatewayFor(db), quote.id, text(formData, "answer") === "yes", found.actor);
   await sendQueued(db);
   if (!result.ok) return { message: result.message };
   redirect(`${found.back}?answered=1`);

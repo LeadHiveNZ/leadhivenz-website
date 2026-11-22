@@ -2,7 +2,7 @@
 
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { sendQueued } from "@/lib/after";
+import { gatewayFor, sendQueued } from "@/lib/after";
 import { audit } from "@/lib/audit";
 import { checkCode, issueCode } from "@/lib/auth/codes";
 import { getDb } from "@/lib/db";
@@ -93,7 +93,7 @@ export async function sendReport(_previous: FormState, formData: FormData): Prom
     uploadIds: list(formData, "uploadIds"),
     uploader: `report:${property.id}`,
     actor: `${via}:${name.slice(0, 40)}`,
-  });
+  }, gatewayFor(db));
   await sendQueued(db);
   if (!result.ok) {
     if (result.reason === "duplicate") redirect(`/r/${token}/sent?w=dup`);
@@ -136,7 +136,7 @@ async function sendTeamReport(formData: FormData, token: string): Promise<FormSt
     actor: `team:${house.memberId}`,
     teamMemberId: house.memberId,
     askOwnerFirst: house.dispatch === "ask",
-  });
+  }, gatewayFor(db));
   await sendQueued(db);
   if (!result.ok) {
     if (result.reason === "duplicate") redirect(`/r/${token}/sent?w=dup&p=${house.property.id}`);

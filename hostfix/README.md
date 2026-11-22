@@ -2,8 +2,9 @@
 
 A maintenance network for short-stay rentals. Owners join free: a property is covered once a card is on file. When
 something breaks, the owner, their cleaner or a guest reports it from a fixed-price menu. The job is
-offered by text to a local tradie, who has 15 minutes to take it before it moves to the next one. When
-it is done the owner's card is charged, the tradie is paid, and the business keeps the difference.
+offered by text to a local tradie, who has 15 minutes to take it before it moves to the next one. The
+job's price is held on the owner's card when it goes out; when it is done the charge is taken, the tradie is
+paid, and the business keeps the difference.
 Nobody takes a call, writes a quote or sends an invoice.
 
 Property managers with 10 or more properties can pick Portfolio instead: one monthly retainer for the
