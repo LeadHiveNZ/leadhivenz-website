@@ -847,6 +847,9 @@ a.row:hover, button.row:hover { background: var(--surface-hover); }
 .welcome-card .card-footer a { color: var(--link); }
 .line-item.tpl-task .li-lead { grid-column: 1 / 4; }
 .line-item.tpl-task .li-desc { grid-column: 1 / 3; }
+.imp-tab { margin: 8px 0; border: 1px solid var(--border); border-radius: var(--r-control); }
+.imp-tab > summary { cursor: pointer; padding: 8px 12px; }
+.imp-tab .itable-wrap { border-top: 1px solid var(--border-secondary); max-height: 420px; overflow: auto; }
 
 
 @media (prefers-reduced-motion: reduce) {
@@ -1152,7 +1155,7 @@ function buildState(R) {
   const linksBy = groupBy(R.contact_role_links, 'contact_id'); const extraBy = groupBy(R.contact_extra_categories, 'contact_id');
   S.contacts = (R.contacts || []).map(c => ({ id: c.id, name: c.name, company: c.company || c.name, _noCompany: !c.company, roles: (linksBy.get(c.id) || []).map(l => roleById.get(l.role_id)).filter(Boolean).sort((a, b) => roles.indexOf(a) - roles.indexOf(b)).map(r => r.name),
     categories: (extraBy.get(c.id) || []).map(x => (catById.get(x.category_id) || {}).name).filter(Boolean), abn: c.abn || '', email: c.email || '', phone: c.phone || '', mobile: c.mobile || '', licenceNumber: c.licence_number || '', licenceExpiry: c.licence_expiry, insuranceExpiry: c.insurance_expiry, rating: c.rating || 4, notes: c.notes || '' }));
-  S.companies = (R.companies || []).map(c => ({ id: c.id, name: c.legal_name, short: c.short_name || '', abn: c.abn || (c.is_project_manager ? '' : 'Applied for'), acn: c.acn || '', address: c.registered_address || '', gst: !!c.gst_registered, gstFrom: c.gst_registered_from, basCycle: c.bas_cycle === 'quarterly' ? 'quarterly' : 'none', bank: c.bank_name || '', bsb: c.bank_bsb || '', acc: c.bank_account || '', status: CO_STATUS_FROM[c.status] || 'Active', formed: c.formed_on, closed: c.closed_on, manager: !!c.is_project_manager, notes: c.notes || '', trust: c.trust_name || '' }));
+  S.companies = (R.companies || []).map(c => ({ id: c.id, name: c.legal_name, short: c.short_name || '', abn: c.abn || (c.is_project_manager ? '' : 'Applied for'), acn: c.acn || '', address: c.registered_address || '', addrRaw: { s: c.registered_street, su: c.registered_suburb, st: c.registered_state, pc: c.registered_postcode, full: c.registered_address || '' }, gst: !!c.gst_registered, gstFrom: c.gst_registered_from, basCycle: c.bas_cycle === 'quarterly' ? 'quarterly' : 'none', bank: c.bank_name || '', bsb: c.bank_bsb || '', acc: c.bank_account || '', status: CO_STATUS_FROM[c.status] || 'Active', formed: c.formed_on, closed: c.closed_on, manager: !!c.is_project_manager, notes: c.notes || '', trust: c.trust_name || '' }));
   // stage templates
   const ttBy = groupBy(R.stage_template_tasks, 'stage_template_id');
   PROJECT_TYPES.forEach(name => { S.templates[name] = []; });
@@ -1236,7 +1239,7 @@ function toDb(S, snapMode) {
   Object.keys(TERM_FIELDS).forEach(f => (S.termBank[f] || []).forEach((w, i) => { S.termIds[f] = S.termIds[f] || []; if (!S.termIds[f][i] && snapMode) return; if (!S.termIds[f][i]) S.termIds[f][i] = newId(); put('offer_terms', S.termIds[f][i], { id: S.termIds[f][i], field: TERM_TO[f], wording: w, sort_order: i + 1 }); }));
   S.categories.forEach((name, i) => { if (!S.catIds[name] && snapMode) return; if (!S.catIds[name]) S.catIds[name] = newId(); put('contact_categories', S.catIds[name], { id: S.catIds[name], name, sort_order: i + 1 }); });
   const roleOrder = {}; Object.keys(S.roles).forEach(r => { const c = S.roles[r]; roleOrder[c] = (roleOrder[c] || 0) + 1; if (!S.roleIds[r] && snapMode) return; if (!S.roleIds[r]) S.roleIds[r] = newId(); if (!S.catIds[c]) return; put('contact_roles', S.roleIds[r], { id: S.roleIds[r], category_id: S.catIds[c], name: r, sort_order: roleOrder[c] }); });
-  S.companies.forEach(c => { const id = idOf(c); if (!id) return; put('companies', id, { id, legal_name: c.name, short_name: c.short || null, abn: abnOrNull(c.abn), acn: abnOrNull(c.acn), registered_street: c.address || null, gst_registered: !!c.gst, gst_registered_from: c.gst ? c.gstFrom || null : null, bas_cycle: c.basCycle === 'quarterly' ? 'quarterly' : 'not_lodging', bank_name: c.bank || null, bank_bsb: c.bsb || null, bank_account: c.acc || null, status: CO_STATUS[c.status] || 'active', formed_on: c.formed || null, closed_on: c.status === 'Closed' ? (c.closed || TODAY) : (c.closed || null), is_project_manager: !!c.manager, notes: c.notes || null }); });
+  S.companies.forEach(c => { const id = idOf(c); if (!id) return; put('companies', id, { id, legal_name: c.name, short_name: c.short || null, abn: abnOrNull(c.abn), acn: abnOrNull(c.acn), ...(c.addrRaw && c.addrRaw.full === (c.address || '') ? { registered_street: c.addrRaw.s || null, registered_suburb: c.addrRaw.su || null, registered_state: c.addrRaw.st || null, registered_postcode: c.addrRaw.pc || null } : { registered_street: c.address || null, registered_suburb: null, registered_state: null, registered_postcode: null }), gst_registered: !!c.gst, gst_registered_from: c.gst ? c.gstFrom || null : null, bas_cycle: c.basCycle === 'quarterly' ? 'quarterly' : 'not_lodging', bank_name: c.bank || null, bank_bsb: c.bsb || null, bank_account: c.acc || null, status: CO_STATUS[c.status] || 'active', formed_on: c.formed || null, closed_on: c.status === 'Closed' ? (c.closed || TODAY) : (c.closed || null), is_project_manager: !!c.manager, notes: c.notes || null }); });
   S.contacts.forEach(c => {
     const id = idOf(c); if (!id) return;
     put('contacts', id, { id, name: c.name, company: c._noCompany && (!c.company || c.company === c.name) ? null : (c.company || null), email: c.email || null, phone: c.phone || null, mobile: c.mobile || null, abn: c.abn || null, licence_expiry: c.licenceExpiry || null, insurance_expiry: c.insuranceExpiry || null, rating: c.rating || null, notes: c.notes || null });
@@ -2339,7 +2342,8 @@ function tabLog(p) {
 // Categories and the roles in them live in state (state.categories, state.roles), so Dan can change them himself.
 // "Our companies" (the companies Dan owns, one per project) is listed first; they come from state.companies.
 const OUR = 'Our companies';
-function contactTabs(groups, group) { return groups.map(g => ptab({ label: g, n: g === 'All' ? state.contacts.length : g === OUR ? state.companies.length : state.contacts.filter(c => contactCategories(c).includes(g)).length, current: g === group, k: 'contactRole', v: g })).join(''); }
+const NO_ROLE = 'No role yet';
+function contactTabs(groups, group) { return groups.map(g => ptab({ label: g, n: g === 'All' ? state.contacts.length : g === OUR ? state.companies.length : g === NO_ROLE ? state.contacts.filter(c => !cRoles(c).length).length : state.contacts.filter(c => contactCategories(c).includes(g)).length, current: g === group, k: 'contactRole', v: g })).join(''); }
 function viewCompanies(groups, q) {
   const list = state.companies.slice().sort((a, b) => a.name.localeCompare(b.name)).filter(c => !q || [c.name, c.short, c.abn, c.acn, c.status, companyProjects(c).map(p => p.id + ' ' + p.name).join(' ')].join(' ').toLowerCase().includes(q));
   const rows = list.map(c => { const ps = companyProjects(c); return `<tr class="company clickable" data-action="company-detail" data-id="${c.id}">
@@ -2363,9 +2367,10 @@ function viewCompanies(groups, q) {
 }
 function viewContacts() {
   const q = ui.contactQ.trim().toLowerCase();
-  const inCat = (c, g) => contactCategories(c).includes(g);
+  const inCat = (c, g) => g === NO_ROLE ? !cRoles(c).length : contactCategories(c).includes(g);
   const hasOther = state.contacts.some(c => inCat(c, 'Other'));
-  const groups = ['All', OUR, ...state.categories, ...(hasOther ? ['Other'] : [])];
+  const noRole = state.contacts.some(c => !cRoles(c).length);
+  const groups = ['All', OUR, ...(noRole ? [NO_ROLE] : []), ...state.categories, ...(hasOther ? ['Other'] : [])];
   const group = groups.includes(ui.contactRole) ? ui.contactRole : 'All';
   if (group === OUR) return viewCompanies(groups, q);
   const list = sortContacts(state.contacts).filter(c => (group === 'All' || inCat(c, group)) && (!q || [c.name, c.company, roleText(c), contactCategories(c).join(' '), c.abn, c.notes].join(' ').toLowerCase().includes(q)));
@@ -2934,6 +2939,7 @@ function viewSettings() {
       <div class="form-actions"><button class="btn btn-primary" type="submit">Save</button></div>
     </form>
     ${sectionRaw('Lists', 'The zonings you pick from when logging a site, your document types, and the term bank your letters of offer draw on. Add, rename or remove as you go.', listsCard())}
+    ${sectionRaw('Import from spreadsheet', 'Load the setup spreadsheet (projects, companies and contacts) in one go. Rows that already exist are skipped, so it is safe to run again. Undo removes what the last import added.', importCard())}
     ${sectionRaw('Stage templates', 'New projects start from these stages and default tasks. Rename, add or reorder them here. Projects already set up keep their own stages: change those with Edit stages on the project.', templatesCard())}
     ${sectionRaw('Change history', 'Changes to stage templates, roles, categories, companies and lists. Project changes are in each project\'s Log.', changeHistoryCard())}
     ${section('Account and database', 'Where your data lives. Files are opened with short-lived private links.', `<div class="status-list">
@@ -4357,6 +4363,7 @@ document.addEventListener('change', (e) => {
   if (k === 'upload-preview') updateUploadPreview();
   if (k === 'dealdoc-preview') updateDealDocPreview();
   if (k === 'contact-roles') refreshContactCats();
+  if (k === 'imp-file') importRead(el);
   if (k === 'feaso' && el.tagName === 'SELECT') feasoLiveUpdate(el);
   if (k === 'site-type') { const lb = $('#st-lots-label'); if (lb) lb.textContent = lotsLabel(el.value); }
   if (k === 'term-pick' && el.value !== '') { const fld = el.id.replace('tp-', ''); const ta = $('#' + el.dataset.target); if (ta) ta.value = state.termBank[fld][+el.value]; }
@@ -4412,6 +4419,196 @@ document.addEventListener('mouseover', (e) => { const t = e.target.closest('[dat
 document.addEventListener('focusin', (e) => { const t = e.target.closest && e.target.closest('[data-tip]'); if (t) showTip(t); else hideTip(); });
 window.addEventListener('scroll', hideTip, { passive: true });
 window.addEventListener('hashchange', () => { if (!appOpen) return; if (!sheetEl.hidden) closeSheet(); render(true); });
+
+/* ===== Import from spreadsheet (Settings) =====
+   Reads Dan's setup workbook (tabs Projects, Companies, Contacts; headers on row 2), previews it, then writes
+   Companies -> Projects -> Contacts. Rows whose name already exists are skipped, so it can run again.
+   Projects go through create_project_from_template(), so stages and tasks come from his templates.
+   Undo deletes exactly the rows the last import created (ids kept in this browser), unless they have
+   been used since. */
+let imp = null; // { file, companies: [...], projects: [...], contacts: [...] } after reading a workbook
+const IMP_KEY = 'wellco_import_batches';
+function impBatches() { try { return JSON.parse(localStorage.getItem(IMP_KEY) || '[]'); } catch (e) { return impMem; } }
+let impMem = [];
+function impSaveBatches(list) { impMem = list; try { localStorage.setItem(IMP_KEY, JSON.stringify(list)); } catch (e) { /* private window: kept in memory only */ } }
+const impKey = (x) => String(x || '').trim().toLowerCase().replace(/\s+/g, ' ');
+const impTxt = (v) => (v == null ? '' : String(v instanceof Date ? '' : v).trim());
+function impDate(v) {
+  if (v instanceof Date && !isNaN(v)) return `${v.getFullYear()}-${String(v.getMonth() + 1).padStart(2, '0')}-${String(v.getDate()).padStart(2, '0')}`;
+  const s0 = impTxt(v); if (!s0) return null;
+  let m = s0.match(/^(\d{4})-(\d{2})-(\d{2})/); if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  m = s0.match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})$/); if (m) { const y = m[3].length === 2 ? '20' + m[3] : m[3]; return `${y}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`; }
+  return 'bad';
+}
+const impDigits = (v) => impTxt(v).replace(/\s+/g, '');
+function impPhone(v) { let d = impTxt(v).replace(/[\s()\-.]/g, ''); if (d.startsWith('+61')) d = '0' + d.slice(3); else if (/^61\d{9}$/.test(d)) d = '0' + d.slice(2); return d; }
+function impAddress(a) {
+  const t = impTxt(a); const m = t.match(/^(.*?),?\s+(NSW|QLD|VIC|SA|WA|TAS|ACT|NT)\s+(\d{4})$/i);
+  if (!m || !AU_STATES.includes(m[2].toUpperCase())) return { street: t || null, suburb: null, state: null, postcode: null };
+  const head = m[1].trim(); const ci = head.lastIndexOf(',');
+  let street, suburb; if (ci > 0) { street = head.slice(0, ci).trim(); suburb = head.slice(ci + 1).trim(); } else { const w = head.split(/\s+/); suburb = w.pop(); street = w.join(' '); }
+  return street && suburb ? { street, suburb, state: m[2].toUpperCase(), postcode: m[3] } : { street: t, suburb: null, state: null, postcode: null };
+}
+const impLotPlan = (v) => impTxt(v).replace(/^lot\s*(\S+?)\s*(DP|SP|RP)\s*(\d+)$/i, (x, a, b, c) => `Lot ${a} ${b.toUpperCase()} ${c}`);
+function impRows(ws) { // header on row 2, data from row 3
+  const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null, raw: true });
+  const head = (rows[1] || []).map(x => impTxt(x).toLowerCase());
+  return rows.slice(2).map((r, i) => ({ row: i + 3, get: (prefix) => { const k = head.findIndex(x => x.startsWith(prefix)); return k < 0 ? null : r[k]; }, empty: !r.some(x => impTxt(x) !== '' || x instanceof Date) })).filter(r => !r.empty);
+}
+async function importRead(el) {
+  const file = el.files && el.files[0]; if (!file) return;
+  if (typeof XLSX === 'undefined') { toast("The Excel reader hasn't loaded yet (offline?). Try again in a moment.", 'warning'); return; }
+  try {
+    const wb = XLSX.read(await file.arrayBuffer(), { type: 'array', cellDates: true });
+    const tab = (n) => wb.Sheets[wb.SheetNames.find(x => x.toLowerCase() === n.toLowerCase())];
+    if (!tab('Projects') && !tab('Companies') && !tab('Contacts')) { toast('That workbook has no Projects, Companies or Contacts tab.', 'warning'); return; }
+    imp = { file: file.name, companies: [], projects: [], contacts: [] };
+    const haveCo = new Map(state.companies.map(c => [impKey(c.name), c])); const pm = state.companies.find(c => c.manager);
+    const seenCo = new Set();
+    (tab('Companies') ? impRows(tab('Companies')) : []).forEach(r => {
+      const name = impTxt(r.get('company name')); const w = []; if (!name) return;
+      const abn = impDigits(r.get('abn')), acn = impDigits(r.get('acn'));
+      if (abn && !/^\d{11}$/.test(abn)) w.push(`ABN "${abn}" isn't 11 digits: left blank`);
+      if (acn && !/^\d{9}$/.test(acn)) w.push(`ACN "${acn}" isn't 9 digits: left blank`);
+      const statusTxt = impTxt(r.get('status')) || 'Active'; const status = COMPANY_STATUSES.find(x => x.toLowerCase() === statusTxt.toLowerCase());
+      if (!status) w.push(`Status "${statusTxt}" not recognised: set to Active`);
+      const gstFrom = impDate(r.get('gst from')); if (gstFrom === 'bad') w.push('GST from date not recognised: left blank');
+      const addr = impAddress(r.get('registered address'));
+      let match = haveCo.get(impKey(name)); let note = '';
+      if (!match && pm && /^wellco developments\b/i.test(name)) { match = pm; note = `Matched to ${pm.name} (project manager)`; }
+      if (seenCo.has(impKey(name))) { w.push('Listed twice: second one skipped'); }
+      const skip = !!match || seenCo.has(impKey(name)); seenCo.add(impKey(name));
+      imp.companies.push({ row: r.row, name, skip, matchId: match ? match.id : null, note: note || (match ? 'Skipped, already exists' : ''), warn: w,
+        rec: { legal_name: name, abn: /^\d{11}$/.test(abn) ? abn : null, acn: /^\d{9}$/.test(acn) ? acn : null, registered_street: addr.street, registered_suburb: addr.suburb, registered_state: addr.state, registered_postcode: addr.postcode,
+          status: CO_STATUS[status || 'Active'], closed_on: status === 'Closed' ? TODAY : null, gst_registered: /^y/i.test(impTxt(r.get('gst registered'))), gst_registered_from: /^y/i.test(impTxt(r.get('gst registered'))) && gstFrom && gstFrom !== 'bad' ? gstFrom : null,
+          bas_cycle: /^y/i.test(impTxt(r.get('gst registered'))) ? 'quarterly' : 'not_lodging', bank_name: impTxt(r.get('bank')) || null, bank_bsb: impTxt(r.get('bsb')) || null, bank_account: impTxt(r.get('account')) || null, notes: impTxt(r.get('notes')) || null } });
+    });
+    const coNames = new Set([...state.companies.map(c => impKey(c.name)), ...imp.companies.map(c => impKey(c.name))]);
+    const haveP = new Set(state.projects.map(p => impKey(p.name))); const ids = new Set(state.projects.map(p => p.id));
+    (tab('Projects') ? impRows(tab('Projects')) : []).forEach(r => {
+      const street = impTxt(r.get('street')), suburb = impTxt(r.get('suburb')); if (!street) return; const w = []; const fix = [];
+      const typeTxt = impTxt(r.get('project type')) || PROJECT_TYPES[0]; const type = PROJECT_TYPES.find(t => t.toLowerCase() === typeTxt.toLowerCase());
+      if (!type) w.push(`Project type "${typeTxt}" not recognised: Land subdivision used`);
+      const tpl = tplFor(type || PROJECT_TYPES[0]); const stTxt = impTxt(r.get('current stage')); const sm = stTxt.match(/^(\d+)/);
+      // match the stage by name in this type's template; the number in the sheet is the fallback
+      const stName = stTxt.replace(/^\d+\s*/, '').trim().toLowerCase(); const byName = stName ? tpl.findIndex(t => t.name.toLowerCase() === stName) : -1;
+      let stage = byName >= 0 ? byName + 1 : sm ? +sm[1] : 1;
+      if (byName >= 0 && sm && +sm[1] !== stage) w.push(`"${tpl[byName].name}" is stage ${stage} in your ${type || PROJECT_TYPES[0]} template (the sheet said ${sm[1]})`);
+      if (byName < 0 && stTxt) { if (!sm) { w.push(`Stage "${stTxt}" not recognised: starts at stage 1`); stage = 1; } else if (stage > tpl.length) { w.push(`Stage ${stage} doesn't exist for ${type || PROJECT_TYPES[0]}: starts at stage 1`); stage = 1; } else w.push(`"${stTxt}" isn't in your template: stage ${stage} (${tpl[stage - 1].name}) used`); }
+      const owner = impTxt(r.get('owning company')); if (owner && !coNames.has(impKey(owner))) w.push(`Owner "${owner}" isn't on the Companies tab: owner left as Dan Wellman and/or nominee`);
+      const dates = {}; [['exchange', 'exchange'], ['dd expiry', 'ddExpiry'], ['da approval', 'daApproval'], ['settlement', 'settlement']].forEach(([h0, k]) => { const d = impDate(r.get(h0)); if (d === 'bad') w.push(`${MILESTONES[k]} date not recognised: left blank`); else if (d) dates[k] = d; });
+      const pc = impDigits(r.get('postcode')); if (pc && !/^\d{4}$/.test(pc)) w.push(`Postcode "${pc}" isn't 4 digits: left blank`);
+      if (/^wandandina$/i.test(suburb)) fix.push({ field: 'suburb', to: 'Wandandian', text: 'Did you mean Wandandian?' });
+      const stateTxt = (impTxt(r.get('state')) || 'NSW').toUpperCase(); if (!AU_STATES.includes(stateTxt)) w.push(`State "${stateTxt}" isn't available yet: NSW used`);
+      const price = num(impDigits(r.get('purchase price')).replace(/[$,]/g, '')); const lots = parseInt(impDigits(r.get('lots')), 10);
+      const name = `${street}, ${suburb}`; const skip = haveP.has(impKey(name));
+      let id = (suburb.toUpperCase().replace(/[^A-Z]/g, '') + '-' + (street.match(/^\S+/) || [''])[0].toUpperCase().replace(/[^A-Z0-9]/g, '')).replace(/-$/, '').slice(0, 40) || 'PROJECT'; let n = 2; const base = id; while (ids.has(id)) id = base + '-' + n++; ids.add(id);
+      imp.projects.push({ row: r.row, name, skip, note: skip ? 'Skipped, already exists' : '', warn: w, fix, id, street, suburb, state: AU_STATES.includes(stateTxt) ? stateTxt : 'NSW', postcode: /^\d{4}$/.test(pc) ? pc : null, lotPlan: impLotPlan(r.get('lot')) || 'TBC', type: type || PROJECT_TYPES[0], stage, stageName: (tpl[stage - 1] || {}).name || '', owner, lots: isNaN(lots) ? null : lots, price: price == null || isNaN(price) ? null : price, dates, notes: impTxt(r.get('notes')) });
+    });
+    const haveC = new Set(state.contacts.map(c => impKey(c.company || c.name))); const seenC = new Set();
+    (tab('Contacts') ? impRows(tab('Contacts')) : []).forEach(r => {
+      const company = impTxt(r.get('company')), person = impTxt(r.get('contact name')); const label = company || person; if (!label) return;
+      if (/^example planning co$/i.test(company) || /delete this example row/i.test(impTxt(r.get('notes')))) { imp.contacts.push({ row: r.row, name: label, skip: true, note: 'Skipped, example row', warn: [] }); return; }
+      const w = []; const notes = []; const roleTxt = impTxt(r.get('role'));
+      const role = roleTxt ? allRoles().find(x => x.toLowerCase() === roleTxt.toLowerCase()) : null; if (roleTxt && !role) w.push(`Role "${roleTxt}" isn't on your list: imported with no role`);
+      let phone = impTxt(r.get('phone')); const mobRaw = impTxt(r.get('mobile')); let mobile = '';
+      if (mobRaw) { const mm = impPhone(mobRaw); if (/^04\d{8}$/.test(mm)) mobile = mobRaw; else if (!phone) { phone = mobRaw; w.push(`"${mobRaw}" isn't a mobile: saved as the phone number`); } else { notes.push('Other number: ' + mobRaw); w.push(`"${mobRaw}" isn't a mobile: added to notes`); } }
+      const abn = impDigits(r.get('abn')); if (abn && !/^\d{11}$/.test(abn)) { notes.push('ABN as given: ' + abn); w.push(`ABN "${abn}" isn't 11 digits: kept in notes`); }
+      const addr = impTxt(r.get('notes')); if (addr) notes.unshift('Address: ' + addr);
+      const projs = impTxt(r.get('projects')); if (projs) notes.push('Projects: ' + projs);
+      const k = impKey(label); const skip = haveC.has(k) || seenC.has(k); if (seenC.has(k) && !haveC.has(k)) w.push('Listed twice: second one skipped'); seenC.add(k);
+      imp.contacts.push({ row: r.row, name: label, skip, note: skip ? (haveC.has(k) ? 'Skipped, already exists' : '') : '', warn: w, roleId: role ? state.roleIds[role] : null,
+        rec: { name: person || company, company: company || null, phone: phone || null, mobile: mobile || null, email: impTxt(r.get('email')) || null, abn: /^\d{11}$/.test(abn) ? abn : null, notes: notes.join('\n') || null, rating: null } });
+    });
+    render(); toast(`Read ${file.name}: check the preview, then Import`, 'info');
+  } catch (e) { console.warn(e); toast("Couldn't read that file: " + friendlyError(e), 'warning'); }
+  el.value = '';
+}
+function importCard() {
+  const last = impBatches().slice(-1)[0];
+  const lastText = last ? `Last import ${fmtDateTime(last.ts)} (${last.file}): ${plural(last.companies.length, 'company', 'companies')}, ${plural(last.projects.length, 'project')}, ${plural(last.contacts.length, 'contact')}.` : '';
+  const head = `<div class="card-section"><div class="field"><label for="imp-file">Setup spreadsheet (.xlsx)</label><input class="input" id="imp-file" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" data-input="imp-file"><span class="hint">Tabs Projects, Companies and Contacts, headings on row 2. Nothing is saved until you press Import.</span></div>
+    ${last ? `<div class="hstack" style="margin-top:12px"><span class="small muted grow">${h(lastText)}</span><button type="button" class="btn btn-micro btn-danger" data-action="imp-undo">Undo last import</button></div>` : ''}</div>`;
+  if (!imp) return `<div class="card" id="imp-card">${head}</div>`;
+  const tabRows = (list, kind) => list.map((x, i) => `<tr><td class="m-title"><span style="font-weight:var(--fw-medium)">${h(x.name)}</span>${kind === 'projects' && !x.skip ? `<div class="sub">${h(x.id)} · ${h(x.type)} · stage ${x.stage}${x.stageName ? ': ' + h(x.stageName) : ''}${x.owner ? ' · ' + h(x.owner) : ''}</div>` : ''}${(x.fix || []).map((f, j) => `<div class="sub"><span class="crit">${h(f.text)}</span> <button type="button" class="link-btn" data-action="imp-fix" data-i="${i}" data-j="${j}">Use ${h(f.to)}</button></div>`).join('')}${x.warn.map(t => `<div class="sub">${icon('warning', 'icon-sm')} ${h(t)}</div>`).join('')}</td><td class="m-meta m-lead nowrap">${x.skip ? badge(x.note || 'Skipped', 'neutral') : x.note ? badge(x.note, 'info') : badge('New', 'success')}</td><td class="m-meta nowrap">Row ${x.row}</td></tr>`).join('');
+  const sect = (title, list, kind) => { const nNew = list.filter(x => !x.skip).length; const nW = list.filter(x => x.warn.length || (x.fix || []).length).length;
+    return `<details class="imp-tab" ${nW ? 'open' : ''}><summary><b>${title}</b> · ${nNew} new, ${list.length - nNew} skipped${nW ? `, ${plural(nW, 'row')} with notes` : ''}</summary><div class="itable-wrap stack"><table class="itable"><tbody>${tabRows(list, kind) || emptyRow(3, 'Nothing on this tab', '')}</tbody></table></div></details>`; };
+  const noRole = imp.contacts.filter(x => !x.skip && !x.roleId).length;
+  const total = ['companies', 'projects', 'contacts'].reduce((a, k) => a + imp[k].filter(x => !x.skip).length, 0);
+  return `<div class="card" id="imp-card">${head}<div class="card-section" style="border-top:1px solid var(--border-secondary)"><p><b>${h(imp.file)}</b></p>
+    ${sect('Companies', imp.companies, 'companies')}${sect('Projects', imp.projects, 'projects')}${sect('Contacts', imp.contacts, 'contacts')}
+    ${noRole ? `<p class="help help-below">${plural(noRole, 'contact')} will come in with no role. Find them later under Contacts › ${NO_ROLE} and give each a role.</p>` : ''}</div>
+    <div class="card-footer" style="display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap"><button type="button" class="btn" data-action="imp-cancel">Cancel</button><button type="button" class="btn btn-primary" data-action="imp-run" ${total ? '' : 'disabled'}>Import ${plural(total, 'row')}</button></div></div>`;
+}
+Object.assign(ACTIONS, {
+  'imp-cancel': () => { imp = null; render(); },
+  'imp-fix': (el) => { const x = imp.projects[+el.dataset.i]; const f = x.fix[+el.dataset.j]; x[f.field] = f.to; x.name = `${x.street}, ${x.suburb}`; x.id = x.id.replace(/^[A-Z]+/, f.to.toUpperCase().replace(/[^A-Z]/g, '')); x.fix.splice(+el.dataset.j, 1); x.skip = state.projects.some(p => impKey(p.name) === impKey(x.name)); x.note = x.skip ? 'Skipped, already exists' : `Suburb changed to ${f.to}`; render(); },
+  'imp-run': (el) => importRun(el),
+  'imp-undo': (el) => importUndo(el),
+});
+async function importRun(el) {
+  if (!imp) return; if (!online) { toast("You're offline. Try again when the connection is back.", 'warning'); return; }
+  el.disabled = true; el.textContent = 'Importing…';
+  const batch = { ts: nowTs(), file: imp.file, companies: [], projects: [], contacts: [] };
+  const saveBatch = () => { const all = impBatches(); const i = all.findIndex(b => b.ts === batch.ts && b.file === batch.file); if (i >= 0) all[i] = batch; else all.push(batch); impSaveBatches(all); };
+  const ok = await dbJob(async () => {
+    // 1. companies
+    const coId = new Map(state.companies.map(c => [impKey(c.name), c.id]));
+    const newCos = imp.companies.filter(x => !x.skip).map(x => ({ id: newId(), ...x.rec }));
+    if (newCos.length) { await must(sb.from('companies').insert(newCos), 'import companies'); newCos.forEach(c => { coId.set(impKey(c.legal_name), c.id); batch.companies.push(c.id); }); saveBatch(); }
+    const pmRow = imp.companies.find(x => x.matchId && /project manager/.test(x.note));
+    if (pmRow) { const pm = state.companies.find(c => c.id === pmRow.matchId); const fill = {}; if (pm && !abnOrNull(pm.abn) && pmRow.rec.abn) fill.abn = pmRow.rec.abn; if (pm && !pm.acn && pmRow.rec.acn) fill.acn = pmRow.rec.acn; if (Object.keys(fill).length) await must(sb.from('companies').update(fill).eq('id', pm.id), 'update Wellco'); }
+    // 2. projects, from the template (stages and tasks), then where each one is up to
+    for (const x of imp.projects.filter(y => !y.skip)) {
+      await must(sb.rpc('create_project_from_template', { p_project_id: x.id, p_name: x.name, p_lot_plan: x.lotPlan, p_project_type: TYPE_CODE[x.type] || 'land_subdivision', p_state: x.state, p_street: x.street, p_suburb: x.suburb, p_postcode: x.postcode, p_owner_company_id: (x.owner && coId.get(impKey(x.owner))) || null }), 'create project ' + x.id);
+      batch.projects.push(x.id); saveBatch();
+      const st = (await must(sb.from('project_stages').select('id,position').eq('project_id', x.id), 'read stages')).sort((a, b) => a.position - b.position);
+      const upd = { current_stage_id: (st[x.stage - 1] || st[0]).id, yield_count: x.lots, yield_unit: YIELD_UNIT[TYPE_CODE[x.type]] || 'lots', purchase_price: x.price, notes: x.notes || null };
+      Object.entries(x.dates).forEach(([k, d]) => { upd[MS_COL[k]] = d; });
+      await must(sb.from('projects').update(upd).eq('project_id', x.id), 'set up project ' + x.id);
+      const earlier = st.filter(s0 => s0.position < x.stage).map(s0 => s0.id);
+      if (earlier.length) await must(sb.from('tasks').update({ done: true }).eq('project_id', x.id).in('stage_id', earlier), 'tick earlier tasks');
+      await must(sb.from('activity_log').insert({ project_id: x.id, action: 'app.note', entity_type: 'projects', entity_id: x.id, summary: `Project imported from ${imp.file} at stage ${x.stage}${x.stageName ? ': ' + x.stageName : ''}`, source: 'app' }), 'log');
+    }
+    // 3. contacts (no role unless the sheet named one on his list)
+    const newCs = imp.contacts.filter(x => !x.skip).map(x => ({ id: newId(), ...x.rec, _role: x.roleId }));
+    for (let i = 0; i < newCs.length; i += 200) {
+      const part = newCs.slice(i, i + 200); await must(sb.from('contacts').insert(part.map(({ _role, ...c }) => c)), 'import contacts'); part.forEach(c => batch.contacts.push(c.id)); saveBatch();
+      const links = part.filter(c => c._role).map(c => ({ contact_id: c.id, role_id: c._role })); if (links.length) await must(sb.from('contact_role_links').insert(links), 'contact roles');
+    }
+    await must(sb.from('activity_log').insert({ action: 'app.note', entity_type: 'global', summary: `Imported from ${imp.file}: ${plural(batch.companies.length, 'company', 'companies')}, ${plural(batch.projects.length, 'project')}, ${plural(batch.contacts.length, 'contact')}`, source: 'app' }), 'log');
+  }, ['companies', 'projects', 'project_stages', 'tasks', 'contacts', 'contact_role_links']);
+  saveBatch();
+  if (ok) { imp = null; render(); toast(`Imported ${plural(batch.companies.length, 'company', 'companies')}, ${plural(batch.projects.length, 'project')} and ${plural(batch.contacts.length, 'contact')}`); }
+  else { el.disabled = false; el.textContent = 'Import'; toast('Part of the import may have been saved. Read the file again: rows already saved show as skipped. Undo removes what was saved.', 'warning'); }
+}
+async function importUndo(el) {
+  const all = impBatches(); const b = all[all.length - 1]; if (!b) return;
+  if (!online) { toast("You're offline. Try again when the connection is back.", 'warning'); return; }
+  // refuse if anything has been built on the imported rows since
+  const used = [];
+  const cnt = async (t, col, ids) => { if (!ids.length) return 0; let n = 0; for (let i = 0; i < ids.length; i += 100) { const { data, error } = await sb.from(t).select(col).in(col, ids.slice(i, i + 100)).limit(1); if (error) throw error; n += data.length; } return n; };
+  try {
+    for (const t of ['invoices_in', 'invoices_out', 'engagements', 'rfq_scopes', 'funds_needed', 'documents']) if (await cnt(t, 'project_id', b.projects)) used.push(`a project has ${t.replace(/_/g, ' ')}`);
+    const otherProj = state.projects.filter(p => !b.projects.includes(p.id) && b.companies.includes(p.companyId)); if (otherProj.length) used.push(`a company now owns ${otherProj.map(p => p.id).join(', ')}`);
+    if (await cnt('deals', 'source_contact_id', b.contacts)) used.push('a contact is the source of a deal');
+    for (const t of ['quotes', 'engagements', 'invoices_in', 'invoices_out', 'documents', 'funds_needed']) if (await cnt(t, 'contact_id', b.contacts)) used.push(`a contact is used on ${t.replace(/_/g, ' ')}`);
+  } catch (e) { toast("Couldn't check the import: " + friendlyError(e), 'warning'); return; }
+  if (used.length) { toast(`Can't undo: ${[...new Set(used)].join('; ')}. Remove those first.`, 'warning'); return; }
+  openSheet({ title: 'Undo the last import?', sub: h(b.file),
+    body: `<div class="is-modal"><p>This deletes the ${plural(b.projects.length, 'project')} (with their stages and tasks), ${plural(b.companies.length, 'company', 'companies')} and ${plural(b.contacts.length, 'contact')} that import added. Nothing else changes.</p></div>`,
+    foot: `<button type="button" class="btn btn-ghost" data-action="close-sheet">Cancel</button><button type="button" class="btn btn-critical" data-action="sheet-approve">Undo import</button>`,
+    ctx: { onApprove: () => importUndoRun(b, all) } });
+}
+async function importUndoRun(b, all) {
+  const ok = await dbJob(async () => {
+    for (const id of b.projects) await must(sb.from('projects').delete().eq('project_id', id), 'remove project ' + id);
+    for (let i = 0; i < b.companies.length; i += 100) await must(sb.from('companies').delete().in('id', b.companies.slice(i, i + 100)), 'remove companies');
+    for (let i = 0; i < b.contacts.length; i += 100) await must(sb.from('contacts').delete().in('id', b.contacts.slice(i, i + 100)), 'remove contacts');
+    await must(sb.from('activity_log').insert({ action: 'app.note', entity_type: 'global', summary: `Import of ${b.file} undone`, source: 'app' }), 'log');
+  }, ['companies', 'projects', 'project_stages', 'tasks', 'contacts', 'contact_role_links']);
+  if (ok) { impSaveBatches(all.slice(0, -1)); render(); toast('Import undone'); }
+}
 
 /* ===== Login, password reset and boot ===== */
 const gateEl = document.getElementById('gate');
