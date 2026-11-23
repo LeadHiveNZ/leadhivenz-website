@@ -1823,7 +1823,7 @@ function viewHome() {
     ${pageHeader({ title: 'Home', actions: `<a class="btn btn-primary" href="#/new">New project</a>` })}
     <div class="stack-cards">
       <section class="card" aria-labelledby="h-needs">
-        <div class="card-head"><div class="ch-titles"><h2 class="card-title" id="h-needs">Needs attention</h2></div></div>
+        <div class="card-head"><div class="ch-titles"><h2 class="card-title" id="h-needs">Today</h2></div></div>
         <nav class="ptabs" aria-label="Filter items">${tabs.map(([k, l]) => ptab({ label: l, n: k === 'all' ? items.length : items.filter(i => i.type === k).length, current: k === tab, k: 'homeTab', v: k })).join('')}</nav>
         <div class="itable-wrap stack"><table class="itable">
           <thead><tr><th scope="col">Type</th><th scope="col">Item</th><th scope="col">Project</th><th scope="col">Due / amount</th><th scope="col"><span class="sr-only">Action</span></th></tr></thead>

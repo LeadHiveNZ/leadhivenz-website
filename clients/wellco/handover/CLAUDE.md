@@ -169,7 +169,7 @@ change here, explain the effect and suggest he checks with Lucy before you do it
    a password reset is part of the test. Only look at live data; if a test needs a save, use a deal or
    project clearly named TEST and delete it straight after (the log keeps a line, which is fine).
 4. Click through and check nothing is broken, on a normal window and a phone-width window:
-   - Login works; Home loads with Needs attention and the projects table.
+   - Login works; Home loads with Today (the needs-attention list) and the projects table.
    - Open a project: Stage & tasks, Quotes, Money, Documents (open a file), Log.
    - Money > Bills: open a split bill (one with lines in two categories) and check the totals.
    - Money > GST / BAS: the quarter figures show.
