@@ -11,6 +11,12 @@
 //   POST /v1/payment_intents/:id/capture   takes up to the held amount (amount_to_capture), never more
 //   POST /v1/payment_intents/:id/cancel    lets an uncaptured hold go; nothing is charged
 //   GET  /v1/payment_intents/:id           look one up
+// and, like Stripe, for a NZ BECS Direct Debit from a saved bank account (DECISIONS.md, 2026-11-23, second entry):
+//   POST /v1/payment_intents with allowed_payment_method_types[0]=nz_bank_account
+//                                          "processing" at once, never "succeeded" at once
+//   GET  /v1/payment_intents/:id           a debit is looked up once it would have cleared: "succeeded", or for a
+//                                          payment method ending in "fails", "requires_payment_method" with
+//                                          last_payment_error insufficient_funds (and stays that way)
 // No real money, no real network.
 
 import { randomBytes } from "node:crypto";
@@ -36,8 +42,9 @@ function intentJson(intent) {
     latest_charge: {
       id: intent.chargeId,
       object: "charge",
-      payment_method_details: { type: "card", card: intent.manual ? { capture_before: intent.captureBefore } : {} },
+      payment_method_details: intent.bank ? { type: "nz_bank_account", nz_bank_account: {} } : { type: "card", card: intent.manual ? { capture_before: intent.captureBefore } : {} },
     },
+    ...(intent.failure ? { last_payment_error: { type: "invalid_request_error", code: intent.failure, message: "The bank account has insufficient funds." } } : {}),
     livemode: false,
   };
 }
@@ -115,6 +122,15 @@ const server = http.createServer(async (req, res) => {
       if (match) metadata[match[1]] = value;
     }
     const manual = form.get("capture_method") === "manual";
+    const bank = form.get("allowed_payment_method_types[0]") === "nz_bank_account";
+    if (bank) {
+      const intent = {
+        id: `pi_fake_${suffix}`, chargeId: `ch_fake_${suffix}`, amount: Number(form.get("amount")), currency: form.get("currency"), manual: false, metadata,
+        status: "processing", received: 0, bank: true, fails: (form.get("payment_method") ?? "").endsWith("fails"), failure: null,
+      };
+      intents.set(intent.id, intent);
+      return json(res, 200, intentJson(intent));
+    }
     const intent = {
       id: `pi_fake_${suffix}`, chargeId: `ch_fake_${suffix}`, amount: Number(form.get("amount")), currency: form.get("currency"), manual, metadata,
       status: manual ? "requires_capture" : "succeeded", received: manual ? 0 : Number(form.get("amount")),
@@ -133,7 +149,19 @@ const server = http.createServer(async (req, res) => {
   if (intentAction) {
     const intent = intents.get(intentAction[1]);
     if (!intent) return json(res, 404, { error: { type: "invalid_request_error", code: "resource_missing", message: "No such payment_intent" } });
-    if (req.method === "GET" && !intentAction[2]) return json(res, 200, intentJson(intent));
+    if (req.method === "GET" && !intentAction[2]) {
+      // A bank debit has cleared (or failed) by the time anyone asks again.
+      if (intent.bank && intent.status === "processing") {
+        if (intent.fails) {
+          intent.status = "requires_payment_method";
+          intent.failure = "insufficient_funds";
+        } else {
+          intent.status = "succeeded";
+          intent.received = intent.amount;
+        }
+      }
+      return json(res, 200, intentJson(intent));
+    }
     const form = new URLSearchParams(await readBody(req));
     if (intentAction[2] === "capture") {
       if (intent.status !== "requires_capture") {

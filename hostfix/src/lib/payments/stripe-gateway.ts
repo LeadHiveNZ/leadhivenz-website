@@ -2,7 +2,7 @@ import Stripe from "stripe";
 import { brand } from "@config/brand";
 import type { Market } from "@config/markets";
 import { formatMoney } from "@/lib/money";
-import { PlatformBalanceTooLow, TransferRefused, type CaptureResult, type CardSummary, type ChargeResult, type HoldResult, type InvoiceSummary, type MembershipStart, type PaymentsGateway, type TierForBilling } from "./gateway";
+import { PlatformBalanceTooLow, TransferRefused, type BankSummary, type CaptureResult, type DebitResult, type CardSummary, type ChargeResult, type HoldResult, type InvoiceSummary, type MembershipStart, type PaymentsGateway, type TierForBilling } from "./gateway";
 import { stripeClient, type StripeAccount } from "./stripe";
 
 /**
@@ -44,6 +44,19 @@ import { stripeClient, type StripeAccount } from "./stripe";
  *    2026) a hold then a cancel made no balance transaction, and a partial
  *    capture's fee was only on the amount captured
  *    (docs.stripe.com/payments/place-a-hold-on-a-payment-method, read 23 Nov 2026).
+ *
+ *  - Big work is paid by NZ BECS Direct Debit from the owner's bank account (DECISIONS.md, 2026-11-23, second
+ *    entry; docs.stripe.com/payments/nz-bank-account, /set-up-payment and /accept-a-payment, read 23 Nov 2026).
+ *    The account is saved once on Stripe's hosted page (Checkout in "setup" mode, allowed_payment_method_types
+ *    nz_bank_account), which shows the Direct Debit Service terms and collects the owner's agreement (the
+ *    mandate, SetupIntent.mandate). Stripe emails the mandate confirmation and a notice before each debit. A
+ *    later debit is a PaymentIntent with the customer, the saved payment method, confirm and off_session, as
+ *    Stripe's "accepting future payments" shows. It sits at "processing" and settles in about 2 business days
+ *    after it is submitted (T+2, cut-off 18:20 Auckland, next business day after that), then "succeeded"; a failed
+ *    one goes to "requires_payment_method" with last_payment_error (insufficient_funds, no_account,
+ *    debit_not_authorized, refer_to_customer). Webhooks: payment_intent.succeeded, payment_intent.payment_failed.
+ *    No manual capture, so no holds. Refunds within 90 days, 3 to 5 business days; one asked for before the
+ *    debit is submitted cancels it. Default limits: NZ$10,000 a debit and NZ$10,000 a week until Stripe raises them.
  *
  * NOT YET RUN AGAINST A REAL STRIPE ACCOUNT. The shapes are checked against
  * Stripe's library by the compiler, and the rules around them are tested with
@@ -225,6 +238,53 @@ export async function cardFromSetupCheckout(account: StripeAccount, sessionId: s
   return { propertyId, ownerId: session.metadata?.hostfix_owner ?? null, customerId, card };
 }
 
+/** A saved NZ bank account, from its PaymentMethod. */
+function bankOf(method: Stripe.PaymentMethod | string | null | undefined, mandate: Stripe.Mandate | string | null | undefined): BankSummary | null {
+  if (!method || typeof method === "string" || method.type !== "nz_bank_account") return null;
+  return {
+    paymentMethodId: method.id, bankName: method.nz_bank_account?.bank_name ?? null, last4: method.nz_bank_account?.last4 ?? null,
+    mandateId: typeof mandate === "string" ? mandate : (mandate?.id ?? null),
+  };
+}
+
+export type StripeBankSetup = { ownerId: string | null; customerId: string; bank: BankSummary };
+
+/**
+ * Reads a finished "add your bank account" page (DECISIONS.md, 2026-11-23, second entry). Called when the owner
+ * comes back and again when Stripe tells us in the background. Null unless an account was saved with a mandate.
+ */
+export async function bankFromSetupCheckout(account: StripeAccount, sessionId: string): Promise<StripeBankSetup | null> {
+  const stripe = stripeClient(account);
+  const session = await stripe.checkout.sessions.retrieve(sessionId, { expand: ["setup_intent.payment_method"] });
+  if (session.mode !== "setup" || session.metadata?.hostfix_purpose !== "bank_setup") return null;
+  if (session.status !== "complete" || !session.setup_intent || typeof session.setup_intent === "string") return null;
+  const intent = session.setup_intent;
+  if (intent.status !== "succeeded") return null;
+  const customerId = typeof session.customer === "string" ? session.customer : session.customer?.id;
+  const bank = bankOf(intent.payment_method as Stripe.PaymentMethod | string | null, intent.mandate);
+  if (!customerId || !bank) return null;
+  return { ownerId: session.metadata?.hostfix_owner ?? null, customerId, bank };
+}
+
+/** A PaymentIntent for a bank debit, in the app's words. */
+export function debitOf(intent: Stripe.PaymentIntent): DebitResult {
+  const charge = intent.latest_charge;
+  const chargeId = typeof charge === "string" ? charge : (charge?.id ?? null);
+  if (intent.status === "succeeded") return { status: "succeeded", paymentIntentId: intent.id, chargeId };
+  if (intent.status === "processing") return { status: "processing", paymentIntentId: intent.id, chargeId };
+  const error = intent.last_payment_error;
+  const code = error?.code ?? error?.decline_code ?? intent.status;
+  const reason =
+    code === "insufficient_funds"
+      ? "The bank account did not have enough money in it."
+      : code === "no_account" || code === "account_closed"
+        ? "The bank says the account is closed or does not exist."
+        : code === "debit_not_authorized"
+          ? "The bank says the direct debit was not authorised."
+          : `The bank debit did not go through${error?.message ? `: ${error.message}` : ` (Stripe says "${intent.status}").`}`;
+  return { status: "failed", reason, code, paymentIntentId: intent.id };
+}
+
 /** The card an owner has chosen as their default, for after they change it on Stripe's page. */
 export async function defaultCard(account: StripeAccount, customerId: string): Promise<CardSummary | null> {
   const stripe = stripeClient(account);
@@ -363,6 +423,67 @@ export function createStripeGateway(account: StripeAccount): PaymentsGateway {
       });
       if (!session.url) throw new Error("Stripe did not return a card page address.");
       return { url: session.url };
+    },
+
+    async startBankSetup(input) {
+      const metadata = { hostfix_purpose: "bank_setup", hostfix_owner: input.ownerId };
+      const session = await stripe.checkout.sessions.create({
+        mode: "setup",
+        customer: input.customerId,
+        // Only the NZ bank account: Stripe's page shows the Direct Debit Service terms and takes the owner's agreement.
+        allowed_payment_method_types: ["nz_bank_account"],
+        client_reference_id: input.ownerId,
+        metadata,
+        setup_intent_data: { metadata, description: `${brand.name} bank account for big work` },
+        custom_text: {
+          submit: {
+            // What the account will be used for. Keep this in step with the owner terms.
+            message: "Nothing is taken now. When you approve work that takes a job over NZ$1,000, half of it is debited then and the rest when the job is done. Stripe emails you before each debit.",
+          },
+        },
+        success_url: `${input.successUrl}${input.successUrl.includes("?") ? "&" : "?"}session_id={CHECKOUT_SESSION_ID}`,
+        cancel_url: input.cancelUrl,
+      });
+      if (!session.url) throw new Error("Stripe did not return a bank account page address.");
+      return { url: session.url };
+    },
+
+    async debitBank(input): Promise<DebitResult> {
+      try {
+        const intent = await stripe.paymentIntents.create(
+          {
+            amount: input.amountCents,
+            currency: input.currency.toLowerCase(),
+            customer: input.customerId,
+            payment_method: input.paymentMethodId,
+            allowed_payment_method_types: ["nz_bank_account"],
+            confirm: true,
+            off_session: true,
+            description: input.description,
+            metadata: { hostfix_job: String(input.jobNumber), hostfix_debit: input.purpose },
+            transfer_group: `hostfix-job-${input.jobNumber}`,
+          },
+          { idempotencyKey: input.idempotencyKey },
+        );
+        return debitOf(intent);
+      } catch (error) {
+        // A definite "no" from Stripe (the account or mandate can no longer be used): nothing was taken. Anything else
+        // (a timeout, a dropped connection, a Stripe server error, a 409) leaves it unknown, so it is thrown and the
+        // next try uses the same key.
+        if (
+          error instanceof Stripe.errors.StripeError && !(error instanceof Stripe.errors.StripeIdempotencyError) &&
+          error.statusCode !== undefined && error.statusCode >= 400 && error.statusCode < 500 && error.statusCode !== 409 && error.statusCode !== 429
+        ) {
+          const intent = (error as unknown as { payment_intent?: Stripe.PaymentIntent }).payment_intent;
+          if (intent?.id) return debitOf(intent);
+          return { status: "failed", reason: error.message, code: error.code ?? "invalid_request", paymentIntentId: null };
+        }
+        throw error;
+      }
+    },
+
+    async debitStatus(paymentIntentId) {
+      return debitOf(await stripe.paymentIntents.retrieve(paymentIntentId));
     },
 
     async cancelMembership(subscriptionId) {

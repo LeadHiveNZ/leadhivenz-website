@@ -74,9 +74,21 @@ export const texts = {
   jobCancelledOnSiteTradie: (o: { number: number; payoutCents: number; currency: string }) =>
     `${B}: job ${o.number} was cancelled after you arrived. You're paid the call-out, ${money(o.payoutCents, o.currency)}, at the usual time.`,
 
-  /** A quote paid on approval whose payment the owner's card declined (DECISIONS.md, 2026-11-23). */
+  /** Big work whose deposit the owner's card declined (DECISIONS.md, 2026-11-23, second entry). */
   quoteCannotStart: (o: { number: number; link: string }) =>
-    `${B} job ${o.number}: the owner's card declined the quote: don't start yet. We'll text you. ${o.link}`,
+    `${B} job ${o.number}: the owner's card declined the deposit: don't start yet. We'll text you. ${o.link}`,
+
+  /** Big work approved, the 50% deposit on its way from the owner's bank (DECISIONS.md, 2026-11-23, second entry). */
+  depositClearing: (o: { number: number; link: string }) =>
+    `${B} job ${o.number}: approved, deposit clearing (usually 3-4 working days). Don't start yet. ${o.link}`,
+
+  /** The deposit has cleared: the tradie can start. */
+  depositCleared: (o: { number: number; link: string }) =>
+    `${B} job ${o.number}: deposit cleared, go ahead with the approved work. ${o.link}`,
+
+  /** The deposit from the owner's bank did not go through: the work is not approved. */
+  depositFailedTradie: (o: { number: number; link: string }) =>
+    `${B} job ${o.number}: the owner's deposit didn't go through: don't start. We'll text you. ${o.link}`,
 
   /** The team asks for a part's receipt (a spot check, DECISIONS.md, 2026-11-23). Neutral: never says anything is wrong. */
   receiptRequested: (o: { number: number; what: string; days: number; link: string }) =>
@@ -200,13 +212,21 @@ export const texts = {
   callOutCharged: (o: { number: number; totalCents: number; currency: string; link: string }) =>
     `${B}: job ${o.number} was cancelled after the tradie arrived: ${money(o.totalCents, o.currency)} call-out charged. ${o.link}`,
 
-  /** A quote paid on approval declined by the card (DECISIONS.md, 2026-11-23). */
+  /** A big quote's deposit declined by the card (DECISIONS.md, 2026-11-23, second entry). */
   quotePaymentFailed: (o: { number: number; amountCents: number; currency: string; link: string }) =>
-    `${B} job ${o.number}: your card declined the ${money(o.amountCents, o.currency)} quote, so it's not approved yet. Update your card: ${o.link}`,
+    `${B} job ${o.number}: your card declined the ${money(o.amountCents, o.currency)} deposit, so the work is not approved. Update it: ${o.link}`,
+
+  /** A big quote's deposit debit from the owner's bank failed or came back. */
+  depositFailedOwner: (o: { number: number; amountCents: number; currency: string; link: string }) =>
+    `${B} job ${o.number}: the ${money(o.amountCents, o.currency)} deposit from your bank didn't go through, so the work isn't approved. ${o.link}`,
+
+  /** The bank debit at Job done failed: the owner owes it. */
+  debitFailedOwner: (o: { number: number; amountCents: number; currency: string; link: string }) =>
+    `${B} job ${o.number}: the ${money(o.amountCents, o.currency)} debit from your bank didn't go through. Update your card to pay: ${o.link}`,
 
   /** A quote paid on approval whose work did not go ahead, refunded. */
   quoteRefunded: (o: { number: number; amountCents: number; currency: string }) =>
-    `${B}: job ${o.number}: the ${money(o.amountCents, o.currency)} you paid for the approved work is refunded to your card, as it did not go ahead.`,
+    `${B}: job ${o.number}: the ${money(o.amountCents, o.currency)} deposit you paid for the approved work is refunded, as the work did not go ahead.`,
 
   /** A tradie found a hazard at the property and added it to the property's safety notes. */
   hazardAdded: (o: { tradie: string; property: string; hazard: string; link: string }) =>

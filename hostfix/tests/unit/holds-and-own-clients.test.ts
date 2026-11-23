@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { cancelDueHolds, HOLD_VALID_HOURS, keepHoldsAlive } from "@/lib/billing/card-holds";
-import { chargeJob, markMissedWindows, refundDuePrepayments, releaseDuePayouts, releaseDueRests } from "@/lib/billing/settle";
+import { chargeJob, markMissedWindows, releaseDuePayouts, releaseDueRests } from "@/lib/billing/settle";
 import { acceptClientInvite, acceptOwnTradieInvite, addressKey, inviteClient, inviteFromLink, inviteOwnTradie, makePair } from "@/lib/clients/own-clients";
 import { addHours, addMinutes, setTestNow } from "@/lib/clock";
 import { acceptOffer } from "@/lib/dispatch/cascade";
@@ -369,41 +369,45 @@ describe("the payout guarantee, up to NZ$1,000 of a job's price (DECISIONS.md, 2
   it("pays the guaranteed part at the usual time, and the rest once the card pays", async () => {
     const s = await setup();
     const job = await onSite(s, { code: "PL-01" });
-    // 6.25 hours at NZ$160 = 100000 of work, the most that can be quoted in hours; the tradie keeps 100000 - 15000 = 85000.
-    const quoted = await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Replace the cistern and the pipe behind it", hours: 6.25, uploadIds: [] });
+    // NZ$3,000 of work at the tradie's own price: 300000, the tradie 300000 - 15% (45000) = 255000. It takes the job over
+    // NZ$1,000, so approving it takes a 50% deposit (DECISIONS.md, 2026-11-23, second entry): here by card, 300000 / 2 = 150000.
+    const quoted = await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Replace the hot water cylinder and the pipe behind it", labourCents: 300000, uploadIds: [] });
     if (!quoted.ok) throw new Error(quoted.message);
-    expect(await decideQuote(t.db, quoted.quote.id, true, `owner:${s.owner.ownerId}`)).toMatchObject({ ok: true });
-    // NZ$150 of parts: 15000, the tradie 15000 - 450 = 14550. Over the overall limit, so the owner says yes.
+    const { calls, gateways } = recording();
+    expect(await answerQuote(t.db, gateways, quoted.quote.id, true, `owner:${s.owner.ownerId}`, { method: "card" })).toMatchObject({ ok: true, quote: { status: "approved" } });
+    expect(calls).toEqual([expect.objectContaining({ kind: "charge", amountCents: 150000, key: `hostfix-quote-${quoted.quote.id}-deposit-1` })]);
+    // NZ$150 of parts: 15000, the tradie 15000 - 450 = 14550. Over the overall limit, so the owner says yes. Parts never ask for a deposit.
     const parts = await addParts(t.db, job.id, s.tradie.tradieId, { parts: [{ name: "Cistern kit", quantity: 1, unitCents: 15000 }] });
     if (!parts.ok) throw new Error(parts.message);
-    await decideQuote(t.db, parts.quote.id, true, `owner:${s.owner.ownerId}`);
-    // Owner 22500 + 100000 + 15000 = 137500. Tradie 19000 + 85000 + 14550 = 118550.
+    expect(await decideQuote(t.db, parts.quote.id, true, `owner:${s.owner.ownerId}`)).toMatchObject({ ok: true });
+    // Owner 22500 + 300000 + 15000 = 337500. The tiered fee: the price, parts aside, is 322500; the lines keep 3500 + 45000 = 48500;
+    // 15% of 100000 (15000) + 3% of 222500 (6675) = 21675, so the tradie gets 48500 - 21675 = 26825 more.
+    // Tradie 19000 + 255000 + 14550 + 26825 = 315375.
     const done = await finish(s, job.id);
-    expect(done).toMatchObject({ ownerTotalCents: 137500, tradieTotalCents: 118550 });
-    // The card declines now: the 22500 hold is taken, the 115000 beyond it fails.
+    expect(done).toMatchObject({ ownerTotalCents: 337500, tradieTotalCents: 315375, tierReliefCents: 26825 });
+    // The card declines now: left to charge 337500 - 150000 = 187500; the 22500 hold is taken, the 165000 beyond it fails.
     await cardDeclinesFromNow(t.db, s.owner.ownerId);
-    const { calls, gateways } = recording();
     expect(await chargeJob(t.db, gateways, job.id)).toBe("failed");
-    expect(await payment(job.id)).toMatchObject({ status: "failed", amount_cents: 137500, hold_captured_cents: 22500 });
-    expect((await messagesTo(t.db, s.owner.user.phone!, "payment_failed"))[0]!.body).toContain("could not charge your card NZ$1,150");
-    // Not collected: 137500 - 22500 = 115000. Over the NZ$1,000: 15000. Waits: 15000 x 118550 / 137500 = 12932.7, so 12933.
-    // Sent at the usual time: 118550 - 12933 = 105617.
+    expect(await payment(job.id)).toMatchObject({ status: "failed", amount_cents: 187500, hold_captured_cents: 22500 });
+    expect((await messagesTo(t.db, s.owner.user.phone!, "payment_failed"))[0]!.body).toContain("could not charge your card NZ$1,650");
+    // Collected 150000 + 22500 = 172500. Not collected 337500 - 172500 = 165000. Over the NZ$1,000: 65000.
+    // Waits: 65000 x 315375 / 337500 = 60738.9, so 60739. Sent at the usual time: 315375 - 60739 = 254636.
     setTestNow(addHours(MONDAY_10AM, 24));
     expect(await releaseDuePayouts(t.db, gateways)).toBe(1);
-    expect(calls.filter((call) => call.kind === "transfer").map((call) => call.amountCents)).toEqual([105617]);
-    expect(await payout(job.id)).toMatchObject({ status: "sent", amount_cents: 118550, waits_cents: 12933, rest_status: "waiting" });
-    expect((await messagesTo(t.db, s.tradie.phone, "payout_sent"))[0]!.body).toContain("NZ$1,056.17 for job");
+    expect(calls.filter((call) => call.kind === "transfer").map((call) => call.amountCents)).toEqual([254636]);
+    expect(await payout(job.id)).toMatchObject({ status: "sent", amount_cents: 315375, waits_cents: 60739, rest_status: "waiting" });
+    expect((await messagesTo(t.db, s.tradie.phone, "payout_sent"))[0]!.body).toContain("NZ$2,546.36 for job");
     expect(await releaseDueRests(t.db, gateways)).toBe(0);
     // The owner saves a new card; it is charged, and the rest goes to the tradie, on its own key.
     await saveBilling(t.db, { ownerId: s.owner.ownerId, country: "NZ", provider: "demo", customerId: "demo_cus_new", card: DEMO_CARD_OK });
     expect(await chargeJob(t.db, gateways, job.id, { force: true })).toBe("succeeded");
     expect(await payout(job.id)).toMatchObject({ rest_status: "due" });
     expect(await releaseDueRests(t.db, gateways)).toBe(1);
-    expect(calls.at(-1)).toMatchObject({ kind: "transfer", amountCents: 12933, key: `hostfix-job-${job.id}-payout-rest` });
+    expect(calls.at(-1)).toMatchObject({ kind: "transfer", amountCents: 60739, key: `hostfix-job-${job.id}-payout-rest` });
     expect(await payout(job.id)).toMatchObject({ rest_status: "sent" });
     expect(await releaseDueRests(t.db, gateways)).toBe(0);
-    // 105617 + 12933 = 118550: the tradie got their full share, once.
-    expect(105617 + 12933).toBe(118550);
+    // 254636 + 60739 = 315375: the tradie got their full share, once.
+    expect(254636 + 60739).toBe(315375);
   });
 });
 
@@ -426,69 +430,6 @@ describe("a market that guarantees nothing ahead of the card", () => {
     expect(await chargeJob(t.db, gatewayFor(t.db), job.id, { force: true })).toBe("succeeded");
     expect(await releaseDuePayouts(t.db, gatewayFor(t.db))).toBe(1);
     expect(await payout(job.id)).toMatchObject({ status: "sent", amount_cents: 19000 });
-  });
-});
-
-describe("work the tradie prices over NZ$1,000 is charged when the owner approves it (DECISIONS.md, 2026-11-23)", () => {
-  async function bigQuote(s: Setup) {
-    const job = await onSite(s, { code: "PL-01" });
-    const quoted = await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Replace the hot water cylinder", labourCents: 150000, uploadIds: [] });
-    if (!quoted.ok) throw new Error(quoted.message);
-    // Over the NZ$600 limit anyway, and work over NZ$1,000 always waits: the tradie keeps 150000 - 22500 = 127500.
-    expect(quoted.quote).toMatchObject({ status: "pending", ownerTotalCents: 150000, tradieTotalCents: 127500 });
-    return { job, quote: quoted.quote };
-  }
-
-  it("charges the full 150000 at once, then the job's own 22500 from the hold at Job done; the tradie's 146500 goes tied to the quote's charge", async () => {
-    const s = await setup();
-    const { job, quote } = await bigQuote(s);
-    // Approving without the payment is refused.
-    expect(await decideQuote(t.db, quote.id, true, `owner:${s.owner.ownerId}`)).toMatchObject({ ok: false });
-    const { calls, gateways } = recording();
-    expect(await answerQuote(t.db, gateways, quote.id, true, `owner:${s.owner.ownerId}`)).toMatchObject({ ok: true, quote: { status: "approved" } });
-    expect(calls).toEqual([expect.objectContaining({ kind: "charge", amountCents: 150000, key: `hostfix-quote-${quote.id}-prepay-1` })]);
-    expect((await t.db.query<{ status: string }>("select status from public.job_prepayments where quote_id = $1::uuid", [quote.id]))[0]!.status).toBe("succeeded");
-    // Owner 22500 + 150000 = 172500. Tradie 19000 + 127500 = 146500.
-    const done = await finish(s, job.id);
-    expect(done).toMatchObject({ ownerTotalCents: 172500, tradieTotalCents: 146500 });
-    expect(await chargeJob(t.db, gateways, job.id)).toBe("succeeded");
-    // Only 172500 - 150000 = 22500 is left to charge, all of it from the hold.
-    expect(await payment(job.id)).toMatchObject({ status: "succeeded", amount_cents: 22500, hold_captured_cents: 22500 });
-    setTestNow(addHours(MONDAY_10AM, 24));
-    expect(await releaseDuePayouts(t.db, gateways)).toBe(1);
-    const transfer = calls.filter((call) => call.kind === "transfer");
-    expect(transfer).toHaveLength(1);
-    // Collected 22500 + 150000 = 172500, all of it: nothing waits. 146500 fits the 150000 quote charge, not the 22500.
-    expect(transfer[0]).toMatchObject({ amountCents: 146500 });
-    expect(transfer[0]!.chargeId).toMatch(/^demo_ch_/);
-  });
-
-  it("a declined card: the quote is not approved, the owner is told, the tradie is told the work can't start; a new card then approves it", async () => {
-    const s = await setup();
-    const { job, quote } = await bigQuote(s);
-    await cardDeclinesFromNow(t.db, s.owner.ownerId);
-    const answer = await answerQuote(t.db, gatewayFor(t.db), quote.id, true, `owner:${s.owner.ownerId}`);
-    expect(answer).toMatchObject({ ok: false, message: "Your card was declined for the NZ$1,500 quote, so it is not approved yet and the work cannot start. Update your card on the Billing page, then approve it again." });
-    expect(await getJobForStaff(t.db, job.id)).toMatchObject({ status: "awaiting_approval" });
-    expect((await textsTo(t.db, s.tradie.phone, "quote_cannot_start"))[0]!.body).toContain("the owner's card declined the quote: don't start yet.");
-    await saveBilling(t.db, { ownerId: s.owner.ownerId, country: "NZ", provider: "demo", customerId: "demo_cus_new", card: DEMO_CARD_OK });
-    const { calls, gateways } = recording();
-    expect(await answerQuote(t.db, gateways, quote.id, true, `owner:${s.owner.ownerId}`)).toMatchObject({ ok: true });
-    // A definite "no" moved the next try to a new key.
-    expect(calls).toEqual([expect.objectContaining({ kind: "charge", key: `hostfix-quote-${quote.id}-prepay-2` })]);
-  });
-
-  it("refunds the 150000 in full if the work then does not go ahead", async () => {
-    const s = await setup();
-    const { job, quote } = await bigQuote(s);
-    await answerQuote(t.db, gatewayFor(t.db), quote.id, true, `owner:${s.owner.ownerId}`);
-    await cancelJob(t.db, job.id, { actor: "staff:maria", staff: true }, "Owner is selling the house");
-    const { calls, gateways } = recording();
-    expect(await refundDuePrepayments(t.db, gateways)).toBe(1);
-    expect(calls).toEqual([expect.objectContaining({ kind: "refund", amountCents: 150000 })]);
-    expect((await t.db.query<{ status: string; refunded_cents: number }>("select status, refunded_cents from public.job_prepayments where quote_id = $1::uuid", [quote.id]))[0]).toEqual({ status: "refunded", refunded_cents: 150000 });
-    expect((await messagesTo(t.db, s.owner.user.phone!, "quote_refunded"))[0]!.body).toContain("the NZ$1,500 you paid for the approved work is refunded");
-    expect(await refundDuePrepayments(t.db, gateways)).toBe(0);
   });
 });
 

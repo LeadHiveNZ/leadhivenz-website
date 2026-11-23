@@ -180,7 +180,7 @@ Do all of this in Stripe's **sandbox** first (its test area, where no real money
    1. Open **Webhooks** (dashboard.stripe.com/webhooks) and press **Create an event destination**.
    2. Choose **Your account**.
    3. Payload format: either choice works with this site. If unsure, choose **Snapshot**.
-   4. Select these **nine** events:
+   4. Select these **twelve** events:
       - `checkout.session.completed`
       - `checkout.session.async_payment_succeeded`
       - `invoice.paid`
@@ -191,25 +191,31 @@ Do all of this in Stripe's **sandbox** first (its test area, where no real money
       - `charge.refunded`
       - `charge.dispute.created`
       - `charge.dispute.closed` (so a lost chargeback comes to the queue for "whose fault?")
+      - `payment_intent.succeeded` and `payment_intent.payment_failed` (so a debit from an owner's bank for
+        work over NZ$1,000 is known to have cleared or failed; the site also asks Stripe once an hour)
    5. Choose **Webhook endpoint** and enter the address `https://YOUR-SITE-ADDRESS/api/stripe/webhook`.
    6. On the next screen press **Reveal secret** and copy the signing secret. It starts with `whsec_`.
-4. Switch on **Connect**, which is how tradies are paid into their own bank accounts. In the Stripe
+4. Switch on **New Zealand BECS Direct Debit** (owners pay work over NZ$1,000 from their bank account):
+   **Settings > Payment methods**, find "NZ BECS Direct Debit" and request access. Stripe asks for extra
+   identity checks first. Until it is on, owners can still pay that work by card. Stripe starts accounts on a
+   NZ$10,000 limit per debit and per week; ask Stripe support to raise it before big jobs come in.
+5. Switch on **Connect**, which is how tradies are paid into their own bank accounts. In the Stripe
    dashboard open **Connect** and follow "Get started". Stripe asks what your platform does and who is
    responsible if a payment is disputed: the site is built for **you (the platform) to collect the money
    and pay tradies afterwards**, with tradies using Stripe's own simple page to enter their bank details.
    (The exact wording of Stripe's questions could not be confirmed.)
-5. Switch on the **customer portal**, which is the page owners use to change their card:
+6. Switch on the **customer portal**, which is the page owners use to change their card:
    **Settings > Billing > Customer portal**. Allow customers to **update payment methods** and **view
    invoices**. Save it. (It has to be saved once in the sandbox and once in live mode.)
-6. In Vercel add:
+7. In Vercel add:
 
    | Name | Value |
    | --- | --- |
    | `STRIPE_NZ_SECRET_KEY` | the `sk_test_...` key |
    | `STRIPE_NZ_WEBHOOK_SECRET` | the `whsec_...` secret |
 
-7. Redeploy, then work through `docs/STRIPE-TEST-CHECKLIST.md` with Stripe's test card `4242 4242 4242 4242`.
-8. **Going live:** finish Stripe's business verification, leave the sandbox (account picker, top left),
+8. Redeploy, then work through `docs/STRIPE-TEST-CHECKLIST.md` with Stripe's test card `4242 4242 4242 4242`.
+9. **Going live:** finish Stripe's business verification, leave the sandbox (account picker, top left),
    then repeat steps 2 to 6 with the live key (`sk_live_...`) and a new webhook made in live mode.
 
 Things to know:

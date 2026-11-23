@@ -108,6 +108,13 @@ export type Market = {
    * waits until it is. NZ$1,000.
    */
   payoutGuaranteeCents: number;
+  /**
+   * The tiered fee (DECISIONS.md, 2026-11-23, second entry): of a job's price, parts aside, the part up to
+   * tierThresholdCents (NZ$1,000) pays the job's fee (platformFeeBps, or 5% for an own client); the part above it
+   * pays aboveTierFeeBps (3%).
+   */
+  tierThresholdCents: number;
+  aboveTierFeeBps: number;
 
   /** Minutes each tradie has to accept an offer before it moves on. */
   offerMinutes: number;
@@ -218,6 +225,8 @@ export function defineMarket(input: MarketInput): Market {
     partsIncludedCents: 2000,
     partsApprovalCents: 15000,
     payoutGuaranteeCents: 100000,
+    tierThresholdCents: 100000,
+    aboveTierFeeBps: 300,
     offerMinutes: 15,
     // The after-hours rate applies after 4:30pm and on Saturdays (DECISIONS.md). 16.5 is 4:30pm.
     hoursStart: 7,

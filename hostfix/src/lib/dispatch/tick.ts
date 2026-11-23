@@ -1,5 +1,6 @@
 import { purgeOldCodes } from "@/lib/auth/codes";
 import { purgeExpiredSessions } from "@/lib/auth/sessions";
+import { checkDebits } from "@/lib/billing/debits";
 import { applyPendingCredits, chargeDuePayments, flagAtRisk, markMissedWindows, refundDuePrepayments, releaseDuePayouts, releaseDueRests, type GatewayFor } from "@/lib/billing/settle";
 import { keepHoldsAlive } from "@/lib/billing/card-holds";
 import { addHours, now } from "@/lib/clock";
@@ -92,6 +93,8 @@ async function chaseQuotes(db: Db): Promise<number> {
        join public.users u on u.id = o.user_id
        join public.tradies t on t.id = q.tradie_id
       where q.status = 'pending' and q.created_at <= $1::timestamptz
+        -- Approved, with the deposit clearing from the bank: nothing for the owner to answer (DECISIONS.md, 2026-11-23, second entry).
+        and not exists (select 1 from public.job_prepayments x where x.quote_id = q.id and x.status = 'processing')
       limit 100`,
     [addHours(at, -1).toISOString()],
   );
@@ -335,6 +338,7 @@ export async function runTick(db: Db, deps: TickDeps): Promise<TickReport> {
   await step("receipts_refunded", () => refundMissingReceipts(db, deps.gatewayFor));
   await step("credits_applied", () => applyPendingCredits(db, deps.gatewayFor));
   await step("cards_charged", () => chargeDuePayments(db, deps.gatewayFor));
+  await step("bank_debits", () => checkDebits(db, deps.gatewayFor));
   await step("payouts_sent", () => releaseDuePayouts(db, deps.gatewayFor));
   await step("payout_rests_sent", () => releaseDueRests(db, deps.gatewayFor));
   await step("quotes_refunded", () => refundDuePrepayments(db, deps.gatewayFor));

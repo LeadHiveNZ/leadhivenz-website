@@ -2,7 +2,7 @@ import type { CountryCode } from "@config/markets";
 import { now } from "@/lib/clock";
 import type { Db } from "@/lib/db/types";
 import { randomToken } from "@/lib/ids";
-import { addMonths, type CardSummary, type ChargeResult, type HoldResult, type InvoiceSummary, type PaymentsGateway } from "./gateway";
+import { addMonths, type BankSummary, type CardSummary, type ChargeResult, type DebitResult, type HoldResult, type InvoiceSummary, type PaymentsGateway } from "./gateway";
 
 /**
  * PRETEND MONEY, for demo mode and the automated tests. It follows the same
@@ -17,7 +17,20 @@ import { addMonths, type CardSummary, type ChargeResult, type HoldResult, type I
  * declining card declines the hold too; a hold lasts 4 days 18 hours on the
  * app's clock (the shortest card window, a Visa payment the merchant starts);
  * taking from it never takes more than was held; letting it go costs nothing.
+ *
+ * Bank debits (DECISIONS.md, 2026-11-23, second entry) behave as NZ BECS Direct Debit does: a debit is
+ * "processing" when made and clears DEMO_DEBIT_HOURS later on the app's clock (the timer asks, debitStatus);
+ * a bank account whose id ends in "fails" has every debit fail when it would have cleared.
  */
+
+/** How long a pretend bank debit takes to clear: 3 days on the app's clock ("usually 3-4 working days"). */
+export const DEMO_DEBIT_HOURS = 72;
+
+export const DEMO_BANK_OK: BankSummary = { paymentMethodId: "demo_bank_ok", bankName: "ASB Bank (pretend)", last4: "0010", mandateId: "demo_mandate_ok" };
+export const DEMO_BANK_FAILS: BankSummary = { paymentMethodId: "demo_bank_fails", bankName: "ASB Bank (pretend)", last4: "0027", mandateId: "demo_mandate_fails" };
+
+type DemoDebit = { id: string; createdAt: string; fails: boolean };
+const debitKey = (id: string) => `demo_debit:${id}`;
 
 /** How long a pretend hold lasts: 4 days 18 hours, like Stripe's shortest (Visa, merchant-initiated). */
 export const DEMO_HOLD_HOURS = 4 * 24 + 18;
@@ -44,6 +57,8 @@ export type DemoCheckout = {
   completed: boolean;
   /** True for a free membership: the page only saves a card, and nothing is charged. */
   setupOnly?: boolean;
+  /** True for the "add your bank account" page (DECISIONS.md, 2026-11-23, second entry). Nothing is taken. */
+  bankOnly?: boolean;
 };
 
 const checkoutKey = (id: string) => `demo_checkout:${id}`;
@@ -84,6 +99,14 @@ export async function completeDemoCardSetup(db: Db, id: string): Promise<{ check
   if (!checkout || checkout.completed || !checkout.setupOnly) return null;
   await saveDemoCheckout(db, { ...checkout, completed: true });
   return { checkout, card: DEMO_CARD_OK };
+}
+
+/** The owner pressed "Save bank account" on the pretend bank page. Nothing is taken. */
+export async function completeDemoBankSetup(db: Db, id: string): Promise<{ checkout: DemoCheckout; bank: BankSummary } | null> {
+  const checkout = await getDemoCheckout(db, id);
+  if (!checkout || checkout.completed || !checkout.bankOnly) return null;
+  await saveDemoCheckout(db, { ...checkout, completed: true });
+  return { checkout, bank: DEMO_BANK_OK };
 }
 
 export function createDemoGateway(db: Db, country: CountryCode): PaymentsGateway {
@@ -146,6 +169,41 @@ export function createDemoGateway(db: Db, country: CountryCode): PaymentsGateway
       };
       await saveDemoCheckout(db, checkout);
       return { url: `/demo/checkout/${checkout.id}` };
+    },
+
+    async startBankSetup(input) {
+      const checkout: DemoCheckout = {
+        id: randomToken(16), ownerId: input.ownerId, propertyId: null, portfolioId: null, propertyName: "Bank account for big work",
+        tierId: "", tierName: "Bank account", priceCents: 0, discountCents: 0, discountLabel: null, currency: input.market.currency,
+        customerId: input.customerId, successUrl: input.successUrl, cancelUrl: input.cancelUrl, completed: false, bankOnly: true,
+      };
+      await saveDemoCheckout(db, checkout);
+      return { url: `/demo/checkout/${checkout.id}` };
+    },
+
+    async debitBank(input): Promise<DebitResult> {
+      const ref = input.idempotencyKey.replace(/[^a-z0-9]/gi, "").slice(-18);
+      const id = `demo_pi_${ref}`;
+      // The same key gives the same debit, as Stripe's would.
+      const existing = await db.query<{ value: DemoDebit }>("select value from public.app_state where key = $1", [debitKey(id)]);
+      if (!existing[0]) {
+        const debit: DemoDebit = { id, createdAt: now().toISOString(), fails: input.paymentMethodId.endsWith("fails") };
+        await db.query(
+          "insert into public.app_state (key, value, updated_at) values ($1, $2::jsonb, $3::timestamptz) on conflict (key) do nothing",
+          [debitKey(id), JSON.stringify(debit), now().toISOString()],
+        );
+      }
+      return { status: "processing", paymentIntentId: id, chargeId: `demo_ch_${ref}` };
+    },
+
+    async debitStatus(paymentIntentId): Promise<DebitResult> {
+      const rows = await db.query<{ value: DemoDebit }>("select value from public.app_state where key = $1", [debitKey(paymentIntentId)]);
+      const debit = rows[0]?.value;
+      if (!debit) return { status: "failed", reason: "There is no such debit.", code: "resource_missing", paymentIntentId };
+      const chargeId = paymentIntentId.replace(/^demo_pi_/, "demo_ch_");
+      if (now().getTime() < new Date(debit.createdAt).getTime() + DEMO_DEBIT_HOURS * 3_600_000) return { status: "processing", paymentIntentId, chargeId };
+      if (debit.fails) return { status: "failed", reason: "The bank account did not have enough money in it.", code: "insufficient_funds", paymentIntentId };
+      return { status: "succeeded", paymentIntentId, chargeId };
     },
 
     async cancelMembership() {

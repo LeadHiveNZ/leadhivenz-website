@@ -9,6 +9,7 @@ import { FLAG_DAYS, flagsNeedReview, recentFlags } from "@/lib/tradies/reliabili
 import { formatClock, formatDate } from "@/lib/time";
 import { openSettlement, type GatewayFor } from "@/lib/billing/settle";
 import { getBilling } from "@/lib/owners/service";
+import type { DebitResult } from "@/lib/payments/gateway";
 import { baseUrl } from "@/lib/env";
 import { addMinutes } from "@/lib/clock";
 import { releaseIfClear } from "@/lib/billing/holds";
@@ -16,7 +17,7 @@ import { loadContext, offerUrl, ownerJobUrl } from "./context";
 import { arrivedOnTime, linesToDrop, surchargeVerdict } from "./arrival";
 import { receiptsAtJobDone } from "./parts";
 import { checkTap, chooseReference, jobFlags, minutesOnSite, photoIsStale, pointFrom, tooQuick } from "./checks";
-import { callOutPayout, hourlyLabour, noAccessLines, quoteAmounts, withFee } from "./pricing";
+import { callOutPayout, DEPOSIT_ABOVE_CENTS, depositFor, hourlyLabour, noAccessLines, quoteAmounts, withFee } from "./pricing";
 import { HOURLY_LIMIT_CENTS, hourlyRate } from "./rates";
 import { noteQuoteRate } from "@/lib/tradies/quote-rate";
 import { formatMoney } from "@/lib/money";
@@ -327,20 +328,24 @@ export async function submitQuote(db: Db, jobId: string, tradieId: string, input
       description, labourCents, creditCents,
       limitCents: property.spendLimitCents, alreadyApprovedCents: Number(approved[0]?.total ?? 0),
     });
-    // A quote sent with "Not the job described" always waits for the owner. So does work the tradie priced
-    // themselves over NZ$1,000: it is charged in full when the owner approves it (DECISIONS.md, 2026-11-23).
-    const needsApproval = amounts.needsApproval || notDescribed !== null || (hours === null && labourCents > HOURLY_LIMIT_CENTS);
+    // A quote sent with "Not the job described" always waits for the owner. So does work that takes the job's total
+    // over NZ$1,000: approving it takes a 50% deposit first, by bank debit or card (DECISIONS.md, 2026-11-23, second entry).
+    const activeLines = lines.filter((line) => line.status === "active");
+    const jobNowCents = activeLines.reduce((sum, line) => sum + line.ownerCents, 0)
+      - (notDescribed ? activeLines.filter((line) => line.kind === "menu").reduce((sum, line) => sum + line.ownerCents, 0) - market.diagnosisFeeCents : 0);
+    const deposit = jobNowCents + amounts.ownerTotalCents > DEPOSIT_ABOVE_CENTS;
+    const needsApproval = amounts.needsApproval || notDescribed !== null || deposit;
     const at = now();
     const rows = await tx.query<Parameters<typeof rowToQuote>[0]>(
       `insert into public.quotes
          (created_at, job_id, tradie_id, description, labour_cents, parts_cents, owner_total_cents, tradie_total_cents, needs_approval, status, decided_at, decided_by,
-          hours, rate_cents, credit_cents, not_described)
-       values ($1::timestamptz, $2::uuid, $3::uuid, $4, $5, $6, $7, $8, $9, $10, $11::timestamptz, $12, $13, $14, $15, $16)
+          hours, rate_cents, credit_cents, not_described, deposit)
+       values ($1::timestamptz, $2::uuid, $3::uuid, $4, $5, $6, $7, $8, $9, $10, $11::timestamptz, $12, $13, $14, $15, $16, $17)
        returning *`,
       [
         at.toISOString(), jobId, tradieId, description, labourCents, 0, amounts.ownerTotalCents, amounts.tradieTotalCents,
         needsApproval, needsApproval ? "pending" : "auto_approved", needsApproval ? null : at.toISOString(), needsApproval ? null : "system",
-        hours, hours === null ? null : rate, creditCents > 0 ? Math.min(creditCents, labourCents) : 0, notDescribed !== null,
+        hours, hours === null ? null : rate, creditCents > 0 ? Math.min(creditCents, labourCents) : 0, notDescribed !== null, deposit,
       ],
     );
     const quote = rowToQuote(rows[0]!);
@@ -385,23 +390,41 @@ export async function submitQuote(db: Db, jobId: string, tradieId: string, input
   });
 }
 
-/**
- * Work the tradie priced themselves over NZ$1,000 (the existing "over NZ$1,000, their own price" path) is charged in
- * full when the owner approves it, before the work starts (DECISIONS.md, 2026-11-23).
- */
-export function paidOnApproval(quote: Pick<Quote, "hours" | "labourCents">): boolean {
-  return quote.hours === null && quote.labourCents > HOURLY_LIMIT_CENTS;
+/** How big work's deposit is paid (DECISIONS.md, 2026-11-23, second entry): the owner's bank (the default) or their card. */
+export type DepositMethod = "bank" | "card";
+
+/** Half of the approved amount the hold on the card does not already cover (depositFor), for a quote waiting on the owner. */
+export async function depositNeeded(db: Db, quote: Pick<Quote, "jobId" | "ownerTotalCents">, jobTotalCents: number): Promise<number> {
+  const hold = await db.query<{ amount_cents: number }>(
+    "select amount_cents from public.card_holds where job_id = $1::uuid and status = 'held' order by seq desc limit 1",
+    [quote.jobId],
+  );
+  return depositFor({ quoteCents: Math.max(0, quote.ownerTotalCents), holdCents: Number(hold[0]?.amount_cents ?? 0), jobTotalCents });
 }
 
+type PrepaymentRow = { id: string; status: string; attempts: number; claimed_until: Date | null; method: DepositMethod; amount_cents: number; approved_by: string | null };
+
 /**
- * The owner (or the team, on their behalf) answers a quote. A quote paid on approval is charged first: if the card
- * declines, the quote is not approved, the owner is asked to update the card, and the tradie is told the work
- * cannot start yet. Claimed first, then charged with a key that makes a repeat harmless, then written down.
+ * The owner (or the team, on their behalf) answers a quote. Work that takes the job over NZ$1,000 (`quote.deposit`)
+ * takes a 50% deposit when it is approved (DECISIONS.md, 2026-11-23, second entry):
+ *  - by bank debit (the default, no card fees): the debit is made and the quote waits while it clears (usually 3 to 4
+ *    working days). The tradie is told "approved, deposit clearing" and must not start. Once it clears (Stripe's
+ *    message, or the timer asking: src/lib/billing/debits.ts) the quote is approved and the tradie told to go ahead.
+ *  - by card (for urgent big work): charged at once; the quote is approved as soon as it goes through.
+ * The other half comes with the rest of the job at Job done, the same way. A deposit that fails leaves the quote
+ * unapproved: the owner is asked to sort it and the tradie told not to start. Claimed first, then asked for with a
+ * key that makes a repeat harmless, then written down.
  */
-export async function answerQuote(db: Db, gatewayFor: GatewayFor, quoteId: string, approve: boolean, actor: string): Promise<QuoteResult> {
+export async function answerQuote(db: Db, gatewayFor: GatewayFor, quoteId: string, approve: boolean, actor: string, options: { method?: DepositMethod } = {}): Promise<QuoteResult> {
   const quote = await getQuote(db, quoteId);
   if (!quote) return { ok: false, message: "We could not find that quote." };
-  if (!approve || !paidOnApproval(quote) || quote.status !== "pending") return decideQuote(db, quoteId, approve, actor);
+  if (quote.status === "pending") {
+    const clearing = await db.query("select 1 from public.job_prepayments where quote_id = $1::uuid and status = 'processing'", [quoteId]);
+    if (clearing.length > 0) {
+      return { ok: false, message: "The deposit for this work is on its way from the bank, so there is nothing to answer now. If you no longer want the work, ring us." };
+    }
+  }
+  if (!approve || !quote.deposit || quote.status !== "pending") return decideQuote(db, quoteId, approve, actor);
 
   const claim = await db.tx(async (tx) => {
     const job = await lockJob(tx, quote.jobId);
@@ -409,91 +432,225 @@ export async function answerQuote(db: Db, gatewayFor: GatewayFor, quoteId: strin
     const fresh = (await getQuote(tx, quoteId))!;
     if (fresh.status !== "pending") return { done: true as const };
     const at = now();
-    const rows = await tx.query<{ id: string; status: string; attempts: number; claimed_until: Date | null }>(
-      "select id, status, attempts, claimed_until from public.job_prepayments where quote_id = $1::uuid for update",
+    const existing = (await tx.query<PrepaymentRow>(
+      "select id, status, attempts, claimed_until, method, amount_cents, approved_by from public.job_prepayments where quote_id = $1::uuid for update",
       [quoteId],
-    );
-    const existing = rows[0];
+    ))[0];
     if (existing?.status === "succeeded") return { paid: true as const };
-    if (existing?.status === "charging" && existing.claimed_until && new Date(existing.claimed_until).getTime() > at.getTime()) return { error: "The payment for this quote is going through now. Refresh in a minute." };
+    if (existing?.status === "processing") return { error: "The deposit for this work is on its way from the bank. We text you both once it clears." };
+    if (existing?.status === "charging" && existing.claimed_until && new Date(existing.claimed_until).getTime() > at.getTime()) return { error: "The deposit for this work is going through now. Refresh in a minute." };
+    const context = await loadContext(tx, job);
+    const billing = await getBilling(tx, job.ownerId, context.market.country);
+    // A try that was cut off half-way keeps its method, amount and key, so a repeat is the same request.
+    const resume = existing?.status === "charging";
+    const method: DepositMethod = resume ? existing.method : (options.method ?? (billing?.bankPaymentMethodId ? "bank" : "card"));
+    if (method === "bank" && !billing?.bankPaymentMethodId) return { error: "Add your bank account first, or pay the deposit by card instead." };
+    const amount = resume ? Number(existing.amount_cents) : await depositNeeded(tx, fresh, job.ownerTotalCents);
+    // The hold on the card already covers the work: nothing to take now.
+    if (amount <= 0) return { free: true as const };
     let id = existing?.id;
     let attempt = 1;
     if (!existing) {
       const inserted = await tx.query<{ id: string }>(
-        `insert into public.job_prepayments (created_at, job_id, quote_id, owner_id, amount_cents, currency, status, attempts, claimed_until)
-         values ($1::timestamptz, $2::uuid, $3::uuid, $4::uuid, $5, $6, 'charging', 1, $7::timestamptz) returning id`,
-        [at.toISOString(), job.id, quoteId, job.ownerId, fresh.ownerTotalCents, job.currency, addMinutes(at, 2).toISOString()],
+        `insert into public.job_prepayments (created_at, job_id, quote_id, owner_id, amount_cents, currency, status, attempts, claimed_until, method, approved_by)
+         values ($1::timestamptz, $2::uuid, $3::uuid, $4::uuid, $5, $6, 'charging', 1, $7::timestamptz, $8, $9) returning id`,
+        [at.toISOString(), job.id, quoteId, job.ownerId, amount, job.currency, addMinutes(at, 2).toISOString(), method, actor],
       );
       id = inserted[0]!.id;
     } else {
       // A try that ended in a definite "no" moves to the next key; one that was cut off keeps its key.
       attempt = existing.status === "failed" ? Number(existing.attempts) + 1 : Number(existing.attempts);
-      await tx.query("update public.job_prepayments set status = 'charging', attempts = $2, claimed_until = $3::timestamptz where id = $1::uuid", [existing.id, attempt, addMinutes(at, 2).toISOString()]);
+      await tx.query(
+        "update public.job_prepayments set status = 'charging', attempts = $2, claimed_until = $3::timestamptz, method = $4, amount_cents = $5, approved_by = $6, last_error = null where id = $1::uuid",
+        [existing.id, attempt, addMinutes(at, 2).toISOString(), method, amount, actor],
+      );
     }
-    const context = await loadContext(tx, job);
-    const billing = await getBilling(tx, job.ownerId, context.market.country);
-    return { id: id!, attempt, job, context, billing, amount: fresh.ownerTotalCents };
+    return { id: id!, attempt, job, context, billing, amount, method };
   });
   if ("error" in claim) return { ok: false, message: claim.error! };
-  if ("done" in claim) return decideQuote(db, quoteId, approve, actor);
+  if ("done" in claim || "free" in claim) return decideQuote(db, quoteId, approve, actor, { depositChecked: true });
   if ("paid" in claim) return decideQuote(db, quoteId, true, actor);
 
-  const { id, attempt, job, context, billing, amount } = claim;
+  const { id, attempt, job, context, billing, amount, method } = claim;
   const gateway = gatewayFor(context.market.country);
-  let result: Awaited<ReturnType<NonNullable<ReturnType<GatewayFor>>["chargeJob"]>>;
-  if (!gateway) result = { status: "failed", reason: "Card payments are not set up for this country.", code: "not_configured", paymentIntentId: null };
-  else if (!billing || billing.provider !== gateway.provider) result = { status: "failed", reason: "The owner has no card on file.", code: "no_card", paymentIntentId: null };
-  else {
+  const description = `Job ${job.number}: 50% deposit for approved work at ${context.property.name}`.slice(0, 200);
+  let result: DebitResult;
+  if (!gateway) result = { status: "failed", reason: "Payments are not set up for this country.", code: "not_configured", paymentIntentId: null };
+  else if (!billing || billing.provider !== gateway.provider) result = { status: "failed", reason: "The owner has no card or bank account on file.", code: "no_card", paymentIntentId: null };
+  else if (method === "bank") {
     try {
-      result = await gateway.chargeJob({
-        customerId: billing.customerId, paymentMethodId: billing.paymentMethodId, amountCents: amount, currency: job.currency,
-        description: `Job ${job.number}: approved quote at ${context.property.name}`.slice(0, 200), jobNumber: job.number, receiptEmail: context.owner.email,
-        idempotencyKey: `hostfix-quote-${quoteId}-prepay-${attempt}`,
+      result = await gateway.debitBank({
+        customerId: billing.customerId, paymentMethodId: billing.bankPaymentMethodId!, amountCents: amount, currency: job.currency, description,
+        jobNumber: job.number, purpose: "deposit", idempotencyKey: `hostfix-quote-${quoteId}-deposit-${attempt}`,
       });
     } catch (error) {
-      result = { status: "failed", reason: error instanceof Error ? error.message : String(error), code: "error", paymentIntentId: null };
+      // Unknown whether the debit was made: the claim is let go and the next try asks again with the same key.
+      const reason = error instanceof Error ? error.message : String(error);
+      await db.tx(async (tx) => {
+        await tx.query("update public.job_prepayments set claimed_until = null, last_error = $2 where id = $1::uuid and status = 'charging'", [id, reason.slice(0, 500)]);
+        await audit(tx, { actor: "system", action: "quote.deposit_unclear", entity: "job", entityId: job.id, amount, currency: job.currency, detail: { quote: quoteId, reason, attempt } });
+      });
+      return { ok: false, message: "We could not reach the bank just now. Nothing has been approved yet. Try again in a minute." };
     }
+  } else {
+    result = await gateway.chargeJob({
+      customerId: billing.customerId, paymentMethodId: billing.paymentMethodId, amountCents: amount, currency: job.currency, description,
+      jobNumber: job.number, receiptEmail: context.owner.email, idempotencyKey: `hostfix-quote-${quoteId}-deposit-${attempt}`,
+    });
   }
 
   if (result.status === "succeeded") {
+    const paid = result;
     await db.tx(async (tx) => {
       await tx.query(
         "update public.job_prepayments set status = 'succeeded', payment_intent_id = $2, charge_id = $3, provider = $4, paid_at = $5::timestamptz, claimed_until = null, last_error = null where id = $1::uuid",
-        [id, result.paymentIntentId, result.status === "succeeded" ? result.chargeId : null, gateway!.provider, now().toISOString()],
+        [id, paid.paymentIntentId, paid.chargeId, gateway!.provider, now().toISOString()],
       );
       await audit(tx, {
-        actor: gateway!.provider, action: "quote.paid", entity: "job", entityId: job.id, amount, currency: job.currency,
-        detail: { quote: quoteId, payment_intent: result.paymentIntentId, attempt }, dedupeKey: `quote.paid:${quoteId}`,
+        actor: gateway!.provider, action: "quote.deposit_paid", entity: "job", entityId: job.id, amount, currency: job.currency,
+        detail: { quote: quoteId, payment_intent: paid.paymentIntentId, attempt, method }, dedupeKey: `quote.deposit_paid:${quoteId}`,
       });
     });
     return decideQuote(db, quoteId, true, actor);
   }
 
+  if (result.status === "processing") {
+    const clearing = result;
+    await db.tx(async (tx) => {
+      await tx.query(
+        "update public.job_prepayments set status = 'processing', payment_intent_id = $2, charge_id = $3, provider = $4, claimed_until = null, last_error = null, checked_at = $5::timestamptz where id = $1::uuid",
+        [id, clearing.paymentIntentId, clearing.chargeId, gateway!.provider, now().toISOString()],
+      );
+      await audit(tx, {
+        actor: gateway!.provider, action: "quote.deposit_clearing", entity: "job", entityId: job.id, amount, currency: job.currency,
+        detail: { quote: quoteId, payment_intent: clearing.paymentIntentId, attempt, approved_by: actor }, dedupeKey: `quote.deposit_clearing:${quoteId}:${attempt}`,
+      });
+      // The owner has answered; the work waits for the bank, not for them.
+      await resolveExceptionsFor(tx, job.id, ["quote_waiting"], "Owner approved: the deposit is clearing");
+      const offer = await acceptedOfferFor(tx, job);
+      if (context.tradie?.phone && offer) {
+        await enqueue(tx, {
+          channel: "sms", to: context.tradie.phone, template: "deposit_clearing", audience: "tradie", jobId: job.id, userId: context.tradie.userId,
+          body: texts.depositClearing({ number: job.number, link: offerUrl(offer) }), dedupeKey: `deposit_clearing:${quoteId}:${attempt}`,
+        });
+      }
+    });
+    return { ok: true, job: (await lockJob(db, job.id))!, quote: (await getQuote(db, quoteId))! };
+  }
+
   const reason = result.reason;
+  const failedIntent = result.paymentIntentId;
   await db.tx(async (tx) => {
     await tx.query("update public.job_prepayments set status = 'failed', payment_intent_id = coalesce($2, payment_intent_id), claimed_until = null, last_error = $3 where id = $1::uuid", [
-      id, result.paymentIntentId, reason.slice(0, 500),
+      id, failedIntent, reason.slice(0, 500),
     ]);
-    await audit(tx, { actor: gateway?.provider ?? "system", action: "quote.payment_failed", entity: "job", entityId: job.id, amount, currency: job.currency, detail: { quote: quoteId, reason, attempt }, dedupeKey: `quote.payment_failed:${quoteId}:${attempt}` });
+    await audit(tx, { actor: gateway?.provider ?? "system", action: "quote.payment_failed", entity: "job", entityId: job.id, amount, currency: job.currency, detail: { quote: quoteId, reason, attempt, method }, dedupeKey: `quote.payment_failed:${quoteId}:${attempt}` });
     const offer = await acceptedOfferFor(tx, job);
     if (context.tradie?.phone && offer) {
       await enqueue(tx, {
         channel: "sms", to: context.tradie.phone, template: "quote_cannot_start", audience: "tradie", jobId: job.id, userId: context.tradie.userId,
-        body: texts.quoteCannotStart({ number: job.number, link: offerUrl(offer) }), dedupeKey: `quote_cannot_start:${quoteId}:${attempt}`,
+        body: (method === "bank" ? texts.depositFailedTradie : texts.quoteCannotStart)({ number: job.number, link: offerUrl(offer) }), dedupeKey: `quote_cannot_start:${quoteId}:${attempt}`,
       });
     }
     if (context.owner.phone && !actor.startsWith("owner:")) {
       await enqueue(tx, {
         channel: "sms", to: context.owner.phone, template: "quote_payment_failed", audience: "owner", jobId: job.id, userId: context.owner.userId,
-        body: texts.quotePaymentFailed({ number: job.number, amountCents: amount, currency: job.currency, link: `${baseUrl()}/app/billing` }), dedupeKey: `quote_payment_failed:${quoteId}:${attempt}`,
+        body: (method === "bank" ? texts.depositFailedOwner : texts.quotePaymentFailed)({ number: job.number, amountCents: amount, currency: job.currency, link: method === "bank" ? ownerJobUrl(job) : `${baseUrl()}/app/billing` }),
+        dedupeKey: `quote_payment_failed:${quoteId}:${attempt}`,
+      });
+    }
+    if (method === "bank") {
+      await raiseException(tx, {
+        kind: "deposit_failed", market: job.market, jobId: job.id, tradieId: job.tradieId,
+        summary: `Job ${job.number}: the bank did not accept the ${formatMoney(amount, job.currency)} deposit (${reason}). The work is not approved and the tradie has been told not to start. The owner can approve it again by card, or after updating their bank account.`,
+        dedupeKey: `deposit_failed:${quoteId}:${attempt}`,
       });
     }
   });
-  return { ok: false, message: `Your card was declined for the ${formatMoney(amount, job.currency)} quote, so it is not approved yet and the work cannot start. Update your card on the Billing page, then approve it again.` };
+  return {
+    ok: false,
+    message: method === "bank"
+      ? `Your bank did not accept the ${formatMoney(amount, job.currency)} deposit (${reason}), so the work is not approved yet. Pay it by card instead, or update your bank account on the Billing page, then approve it again.`
+      : `Your card was declined for the ${formatMoney(amount, job.currency)} deposit, so the work is not approved yet and cannot start. Update your card on the Billing page, then approve it again.`,
+  };
 }
 
-/** The owner (or the team, on their behalf) answers a quote. A quote paid on approval needs its payment first (answerQuote). */
-export async function decideQuote(db: Db, quoteId: string, approve: boolean, actor: string): Promise<QuoteResult> {
+/**
+ * A deposit debit from the owner's bank has cleared or failed (DECISIONS.md, 2026-11-23, second entry): Stripe's
+ * message, or the timer asking (src/lib/billing/debits.ts). Safe to call twice: only a deposit still processing moves.
+ *  - cleared: the quote is approved in the name of whoever approved it, and the tradie is told to go ahead. If the
+ *    work is no longer going ahead (the job was cancelled, the quote withdrawn), the deposit is refunded instead.
+ *  - failed (or came back): the quote stays unapproved, the owner is asked to sort it, the tradie told not to start,
+ *    and the team has it in the queue.
+ */
+export async function depositOutcome(db: Db, prepaymentId: string, result: DebitResult): Promise<"approved" | "refund_due" | "failed" | "nothing"> {
+  if (result.status === "processing") {
+    await db.query("update public.job_prepayments set checked_at = $2::timestamptz where id = $1::uuid and status = 'processing'", [prepaymentId, now().toISOString()]);
+    return "nothing";
+  }
+  const step = await db.tx(async (tx) => {
+    const row = (await tx.query<PrepaymentRow & { job_id: string; quote_id: string; currency: string; provider: string | null }>(
+      "select * from public.job_prepayments where id = $1::uuid and status = 'processing' for update",
+      [prepaymentId],
+    ))[0];
+    if (!row) return null;
+    const job = await lockJob(tx, row.job_id);
+    if (!job) return null;
+    const quote = await getQuote(tx, row.quote_id);
+    const context = await loadContext(tx, job);
+    const at = now();
+    if (result.status === "succeeded") {
+      const going = quote?.status === "pending" && job.status === "awaiting_approval";
+      await tx.query(
+        "update public.job_prepayments set status = $2, charge_id = coalesce($3, charge_id), paid_at = $4::timestamptz, last_error = null where id = $1::uuid",
+        [row.id, going ? "succeeded" : "refund_due", result.chargeId, at.toISOString()],
+      );
+      await audit(tx, {
+        actor: row.provider ?? "stripe", action: "quote.deposit_paid", entity: "job", entityId: job.id, amount: Number(row.amount_cents), currency: row.currency,
+        detail: { quote: row.quote_id, method: "bank", going_ahead: going }, dedupeKey: `quote.deposit_paid:${row.quote_id}`,
+      });
+      return { kind: going ? ("approve" as const) : ("refund" as const), row };
+    }
+    await tx.query("update public.job_prepayments set status = 'failed', last_error = $2 where id = $1::uuid", [row.id, result.reason.slice(0, 500)]);
+    await audit(tx, {
+      actor: row.provider ?? "stripe", action: "quote.payment_failed", entity: "job", entityId: job.id, amount: Number(row.amount_cents), currency: row.currency,
+      detail: { quote: row.quote_id, reason: result.reason, code: result.code, method: "bank" }, dedupeKey: `quote.deposit_failed:${row.quote_id}:${row.attempts}`,
+    });
+    if (quote?.status === "pending" && job.status === "awaiting_approval") {
+      const offer = await acceptedOfferFor(tx, job);
+      if (context.tradie?.phone && offer) {
+        await enqueue(tx, {
+          channel: "sms", to: context.tradie.phone, template: "quote_cannot_start", audience: "tradie", jobId: job.id, userId: context.tradie.userId,
+          body: texts.depositFailedTradie({ number: job.number, link: offerUrl(offer) }), dedupeKey: `deposit_failed_tradie:${row.quote_id}:${row.attempts}`,
+        });
+      }
+      if (context.owner.phone) {
+        await enqueue(tx, {
+          channel: "sms", to: context.owner.phone, template: "quote_payment_failed", audience: "owner", jobId: job.id, userId: context.owner.userId,
+          body: texts.depositFailedOwner({ number: job.number, amountCents: Number(row.amount_cents), currency: row.currency, link: ownerJobUrl(job) }),
+          dedupeKey: `deposit_failed_owner:${row.quote_id}:${row.attempts}`,
+        });
+      }
+      await raiseException(tx, {
+        kind: "deposit_failed", market: job.market, jobId: job.id, tradieId: job.tradieId,
+        summary: `Job ${job.number}: the ${formatMoney(Number(row.amount_cents), row.currency)} deposit from ${context.owner.name}'s bank did not go through (${result.reason}). The work is not approved and the tradie has been told not to start. Ring the owner: they can approve it again from the job page, by bank or card.`,
+        dedupeKey: `deposit_failed:${row.quote_id}:${row.attempts}`,
+      });
+    }
+    return { kind: "failed" as const, row };
+  });
+  if (!step) return "nothing";
+  if (step.kind === "refund") return "refund_due";
+  if (step.kind === "failed") return "failed";
+  const decided = await decideQuote(db, step.row.quote_id, true, step.row.approved_by ?? "system", { cleared: true });
+  return decided.ok ? "approved" : "nothing";
+}
+
+/**
+ * The owner (or the team, on their behalf) answers a quote. Big work needs its deposit first (answerQuote);
+ * `cleared` is the deposit from the bank having cleared, so the tradie is told to go ahead.
+ */
+export async function decideQuote(db: Db, quoteId: string, approve: boolean, actor: string, options: { depositChecked?: boolean; cleared?: boolean } = {}): Promise<QuoteResult> {
   return db.tx(async (tx) => {
     const found = await getQuote(tx, quoteId);
     if (!found) return { ok: false, message: "We could not find that quote." };
@@ -501,9 +658,9 @@ export async function decideQuote(db: Db, quoteId: string, approve: boolean, act
     if (!job) return { ok: false, message: "We could not find that job." };
     const quote = (await getQuote(tx, quoteId))!;
     if (quote.status !== "pending") return { ok: true, job, quote };
-    if (approve && paidOnApproval(quote)) {
+    if (approve && quote.deposit && !options.depositChecked) {
       const paid = await tx.query("select 1 from public.job_prepayments where quote_id = $1::uuid and status = 'succeeded'", [quoteId]);
-      if (paid.length === 0) return { ok: false, message: "This quote is paid when it is approved. Approve it from the job page so the card can be charged." };
+      if (paid.length === 0) return { ok: false, message: "This work takes a 50% deposit when it is approved. Approve it from the job page so the deposit can be taken." };
     }
     const context = await loadContext(tx, job);
     const at = now();
@@ -530,9 +687,11 @@ export async function decideQuote(db: Db, quoteId: string, approve: boolean, act
     const offer = await acceptedOfferFor(tx, job);
     if (context.tradie?.phone && offer) {
       await enqueue(tx, {
-        channel: "sms", to: context.tradie.phone, template: approve ? "quote_approved" : "quote_declined", audience: "tradie", jobId: job.id, userId: context.tradie.userId,
+        channel: "sms", to: context.tradie.phone, template: approve ? (options.cleared ? "deposit_cleared" : "quote_approved") : "quote_declined", audience: "tradie", jobId: job.id, userId: context.tradie.userId,
         body: approve
-          ? texts.quoteApproved({ number: job.number, amountCents: quote.ownerTotalCents, currency: job.currency, link: offerUrl(offer) })
+          ? options.cleared
+            ? texts.depositCleared({ number: job.number, link: offerUrl(offer) })
+            : texts.quoteApproved({ number: job.number, amountCents: quote.ownerTotalCents, currency: job.currency, link: offerUrl(offer) })
           : texts.quoteDeclined({ number: job.number, link: offerUrl(offer) }),
         dedupeKey: `quote_decided:${quoteId}`,
       });

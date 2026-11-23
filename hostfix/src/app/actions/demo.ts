@@ -12,8 +12,8 @@ import { demoPeople, skipAhead } from "@/lib/demo/state";
 import { appSecret, baseUrl, demoModeAllowed } from "@/lib/env";
 import { text, type FormState } from "@/lib/forms";
 import { handleInboundSms } from "@/lib/notify/inbound";
-import { saveBilling } from "@/lib/owners/service";
-import { completeDemoCardSetup, completeDemoCheckout, DEMO_CARD_DECLINES, DEMO_CARD_OK, getDemoCheckout } from "@/lib/payments/demo-gateway";
+import { saveBank, saveBilling } from "@/lib/owners/service";
+import { completeDemoBankSetup, completeDemoCardSetup, completeDemoCheckout, DEMO_CARD_DECLINES, DEMO_CARD_OK, getDemoCheckout } from "@/lib/payments/demo-gateway";
 import { activatePortfolio } from "@/lib/properties/portfolio";
 import { sealTeamDevice, TEAM_DEVICE_COOKIE, TEAM_DEVICE_DAYS } from "@/lib/team/device";
 import { activateFreeMembership, activateMembership } from "@/lib/properties/service";
@@ -77,6 +77,15 @@ export async function payDemoCheckout(_previous: FormState, formData: FormData):
   const id = text(formData, "checkoutId");
   const checkout = await getDemoCheckout(db, id);
   if (!checkout || !viewer?.ownerId || viewer.ownerId !== checkout.ownerId) return { message: "That payment page is not yours, or has run out. Go back and start again." };
+  if (checkout.bankOnly) {
+    // The pretend bank page (DECISIONS.md, 2026-11-23, second entry): the account is saved, nothing is taken.
+    const back = checkout.successUrl.replace(/^https?:\/\/[^/]+/, "").replace("/app/billing/bank/return?job=", "/app/jobs/").replace("/app/billing/bank/return", "/app/billing");
+    if (!checkout.completed) {
+      const saved = await completeDemoBankSetup(db, id);
+      if (saved) await saveBank(db, { ownerId: checkout.ownerId, country: "NZ", provider: "demo", customerId: checkout.customerId, bank: saved.bank });
+    }
+    redirect(back);
+  }
   const after = checkout.portfolioId || !checkout.propertyId ? "/app/billing?member=1" : `/app/properties/${checkout.propertyId}?member=1`;
   if (checkout.completed) redirect(after);
   if (checkout.setupOnly && checkout.propertyId) {

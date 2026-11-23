@@ -1,3 +1,4 @@
+import { brand } from "@config/brand";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { openPayoutAccount } from "@/app/actions/tradie";
@@ -119,6 +120,9 @@ export default async function TradiePayPage({ searchParams }: { searchParams: Se
                     </span>
                     <span className="flex flex-wrap items-center gap-2 text-sm text-muted">
                       {formatDate(line.date, market.timezone)} · {line.suburb} <Chip tone={status.tone}>{status.label}</Chip>
+                    </span>
+                    <span className="block text-sm text-muted">
+                      Job price {money(line.jobPriceCents)} · {brand.name} fee {money(line.feeCents)}
                     </span>
                   </span>
                   <span className="tabular shrink-0 text-right font-semibold text-ink">

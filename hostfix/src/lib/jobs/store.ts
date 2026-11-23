@@ -1,7 +1,7 @@
 import { isUuid } from "@/lib/uuid";
 import type { Db } from "@/lib/db/types";
 import type { Line, LineKind } from "./pricing";
-import { taxPortion, totals } from "./pricing";
+import { taxPortion, tierRelief, totals } from "./pricing";
 import type { ArrivalCheck, ConfirmStatus, Job, JobLine, JobOutcome, JobStatus, Offer, OfferStatus, Quote, QuoteStatus, ReportedBy } from "./types";
 
 /**
@@ -31,7 +31,7 @@ export type JobRow = {
   confirm_status?: ConfirmStatus | null; confirm_by?: Date | null; confirm_decided_at?: Date | null; confirm_decided_by?: string | null;
   card_hold?: Job["cardHold"]; guest_staying?: Job["guestStaying"]; guest_name?: string | null; guest_phone?: string | null; may_let_in?: boolean | null;
   not_described_at?: Date | null; not_described_reason?: string | null; not_described_status?: Job["notDescribedStatus"]; not_described_by?: Date | null;
-  hold_due_at?: Date | null; platform_fee_bps?: number | null;
+  hold_due_at?: Date | null; platform_fee_bps?: number | null; tier_relief_cents?: number | null;
 };
 
 const num = (value: number | string | null | undefined) => (value === null || value === undefined ? null : Number(value));
@@ -48,7 +48,7 @@ export function rowToJob(row: JobRow): Job {
     respondBy: d(row.respond_by), acceptedAt: d(row.accepted_at), enRouteAt: d(row.en_route_at), arrivedAt: d(row.arrived_at),
     completedAt: d(row.completed_at), cancelledAt: d(row.cancelled_at), cancelledBy: row.cancelled_by, cancelReason: row.cancel_reason,
     windowMissedAt: d(row.window_missed_at), outcome: row.outcome, completionNote: row.completion_note, currency: row.currency,
-    ownerTotalCents: row.owner_total_cents, tradieTotalCents: row.tradie_total_cents, taxCents: row.tax_cents,
+    ownerTotalCents: row.owner_total_cents, tradieTotalCents: row.tradie_total_cents, tierReliefCents: Number(row.tier_relief_cents ?? 0), taxCents: row.tax_cents,
     teamMemberId: row.team_member_id ?? null,
     arrivalWindowStart: d(row.arrival_window_start ?? null), arrivalWindowEnd: d(row.arrival_window_end ?? null), noShowAt: d(row.no_show_at ?? null),
     arrivalCheck: row.arrival_check ?? null, arrivalDistanceM: row.arrival_distance_m === null || row.arrival_distance_m === undefined ? null : Number(row.arrival_distance_m),
@@ -180,15 +180,29 @@ export async function insertLines(db: Db, jobId: string, lines: Line[], options:
   }
 }
 
-/** Adds up the job's active lines and stores the totals on the job. Returns them. */
-export async function recalcTotals(db: Db, jobId: string, taxRate: number, taxRegistered: boolean): Promise<{ ownerCents: number; tradieCents: number; taxCents: number }> {
+/**
+ * Adds up the job's active lines and stores the totals on the job. Returns them. Above the market's line (NZ$1,000 of
+ * the price, parts aside) the fee on the job is the tiered fee (DECISIONS.md, 2026-11-23, second entry): what that
+ * gives the tradie on top of their lines is kept as tier_relief_cents and included in tradie_total_cents.
+ */
+export async function recalcTotals(db: Db, jobId: string, taxRate: number, taxRegistered: boolean): Promise<{ ownerCents: number; tradieCents: number; taxCents: number; tierReliefCents: number }> {
   const active = (await listLines(db, jobId)).filter((line) => line.status === "active");
   const sum = totals(active);
+  const fee = (await db.query<{ job_fee: number | null; market_fee: number; threshold: number; above: number }>(
+    `select j.platform_fee_bps as job_fee, m.platform_fee_bps as market_fee, m.tier_threshold_cents as threshold, m.above_tier_fee_bps as above
+       from public.jobs j join public.markets m on m.slug = j.market where j.id = $1::uuid`,
+    [jobId],
+  ))[0];
+  const tierReliefCents = fee
+    ? tierRelief(active, fee.job_fee === null ? Number(fee.market_fee) : Number(fee.job_fee), { thresholdCents: Number(fee.threshold), aboveBps: Number(fee.above) })
+    : 0;
   const ownerCents = Math.max(0, sum.ownerCents);
-  const tradieCents = Math.max(0, sum.tradieCents);
+  const tradieCents = Math.max(0, sum.tradieCents + tierReliefCents);
   const taxCents = taxRegistered ? taxPortion(ownerCents, taxRate) : 0;
-  await db.query("update public.jobs set owner_total_cents = $2, tradie_total_cents = $3, tax_cents = $4 where id = $1::uuid", [jobId, ownerCents, tradieCents, taxCents]);
-  return { ownerCents, tradieCents, taxCents };
+  await db.query("update public.jobs set owner_total_cents = $2, tradie_total_cents = $3, tax_cents = $4, tier_relief_cents = $5 where id = $1::uuid", [
+    jobId, ownerCents, tradieCents, taxCents, tierReliefCents,
+  ]);
+  return { ownerCents, tradieCents, taxCents, tierReliefCents };
 }
 
 // ---------------------------------------------------------------------------
@@ -252,7 +266,7 @@ export async function listLiveOffersForTradie(db: Db, tradieId: string, at: Date
 type QuoteRow = {
   id: string; created_at: Date; job_id: string; tradie_id: string; description: string; labour_cents: number; parts_cents: number;
   owner_total_cents: number; tradie_total_cents: number; needs_approval: boolean; status: QuoteStatus; decided_at: Date | null; decided_by: string | null;
-  hours?: number | string | null; rate_cents?: number | null; credit_cents?: number | null; not_described?: boolean | null;
+  hours?: number | string | null; rate_cents?: number | null; credit_cents?: number | null; not_described?: boolean | null; deposit?: boolean | null;
 };
 
 export function rowToQuote(row: QuoteRow): Quote {
@@ -261,7 +275,7 @@ export function rowToQuote(row: QuoteRow): Quote {
     labourCents: row.labour_cents, partsCents: row.parts_cents, ownerTotalCents: row.owner_total_cents, tradieTotalCents: row.tradie_total_cents,
     needsApproval: row.needs_approval, status: row.status, decidedAt: d(row.decided_at), decidedBy: row.decided_by,
     hours: row.hours === null || row.hours === undefined ? null : Number(row.hours), rateCents: row.rate_cents ?? null,
-    creditCents: Number(row.credit_cents ?? 0), notDescribed: Boolean(row.not_described),
+    creditCents: Number(row.credit_cents ?? 0), notDescribed: Boolean(row.not_described), deposit: Boolean(row.deposit),
   };
 }
 

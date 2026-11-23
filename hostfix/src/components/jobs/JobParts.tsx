@@ -103,10 +103,15 @@ export function BeforeAfter({ before, after, query = "", timeZone, reference }: 
 }
 
 /** The money on a job, line by line. Owners see what they pay; tradies see what they get. */
-export function CostLines({ lines, currency, side, totalLabel }: { lines: JobLine[]; currency: string; side: "owner" | "tradie"; totalLabel: string }) {
+/**
+ * A job's lines for one side. On the tradie's side, `tierReliefCents` is what the lower fee above NZ$1,000 of the job's
+ * price adds (DECISIONS.md, 2026-11-23, second entry), shown as its own line with `feeWords`.
+ */
+export function CostLines({ lines, currency, side, totalLabel, tierReliefCents = 0, feeWords }: { lines: JobLine[]; currency: string; side: "owner" | "tradie"; totalLabel: string; tierReliefCents?: number; feeWords?: string }) {
   const shown = lines.filter((line) => line.status !== "void");
   const amount = (line: JobLine) => (side === "owner" ? line.ownerCents : line.tradieCents);
-  const total = shown.filter((line) => line.status === "active").reduce((sum, line) => sum + amount(line), 0);
+  const relief = side === "tradie" ? tierReliefCents : 0;
+  const total = shown.filter((line) => line.status === "active").reduce((sum, line) => sum + amount(line), 0) + relief;
   return (
     <div>
       <ul className="divide-y divide-line">
@@ -119,6 +124,12 @@ export function CostLines({ lines, currency, side, totalLabel }: { lines: JobLin
             <Money cents={amount(line)} currency={currency} className={`shrink-0 font-semibold ${line.status === "pending" ? "text-muted" : "text-ink"}`} />
           </li>
         ))}
+        {relief > 0 && (
+          <li className="flex items-baseline justify-between gap-4 py-2.5">
+            <span className="text-ink">{feeWords ?? "Lower fee on the price above NZ$1,000"}</span>
+            <Money cents={relief} currency={currency} className="shrink-0 font-semibold text-ink" />
+          </li>
+        )}
       </ul>
       <div className="mt-1 flex items-baseline justify-between gap-4 border-t-2 border-ink pt-3">
         <span className="font-bold text-ink">{totalLabel}</span>

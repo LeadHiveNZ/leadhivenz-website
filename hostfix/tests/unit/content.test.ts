@@ -173,6 +173,8 @@ describe("placeholders", () => {
       // DECISIONS.md, 2026-11-23: 500 basis points is 5%; the payout guarantee is 100000 cents, NZ$1,000.
       own_client_fee: "5%",
       payout_guarantee: "NZ$1,000",
+      tier_threshold: "NZ$1,000",
+      above_tier_fee: "3%",
     });
     const noosa = {
       ...launchMarket,

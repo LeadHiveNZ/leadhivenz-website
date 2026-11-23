@@ -14,7 +14,7 @@ import { raiseException, resolveExceptionsFor } from "@/lib/ops/exceptions";
 import { getBilling } from "@/lib/owners/service";
 import { holdReasons } from "./holds";
 import { releaseJobHolds } from "./card-holds";
-import { PlatformBalanceTooLow, TransferRefused, type PaymentsGateway, type Provider } from "@/lib/payments/gateway";
+import { PlatformBalanceTooLow, TransferRefused, type DebitResult, type PaymentsGateway, type Provider } from "@/lib/payments/gateway";
 import { formatDeadline, monthKey, monthLabel } from "@/lib/time";
 import { formatMoney } from "@/lib/money";
 import { NO_SHOW_DAYS, needsReview, recentNoShows } from "@/lib/tradies/reliability";
@@ -26,7 +26,10 @@ import { notePatterns } from "@/lib/ops/patterns";
  *   job done      the owner's card is charged the total straight away: taken
  *                 from the hold placed when the job went out, up to the held
  *                 amount, and anything beyond it as a second, separate charge
- *                 (DECISIONS.md, 2026-11-23; src/lib/billing/card-holds.ts)
+ *                 (DECISIONS.md, 2026-11-23; src/lib/billing/card-holds.ts). Big
+ *                 work paid from the bank (a 50% deposit at approval) has
+ *                 the rest debited from the bank instead: "processing" for a
+ *                 few working days (src/lib/billing/debits.ts)
  *   24 hours on   the tradie's share is sent, unless the owner has raised a problem.
  *                 It never waits for the owner's card for the first NZ$1,000
  *                 of the job's price not yet collected (the payout guarantee);
@@ -57,6 +60,7 @@ type PaymentRow = {
   id: string; job_id: string; owner_id: string; amount_cents: number; tax_cents: number; currency: string; status: string;
   provider: Provider; payment_intent_id: string | null; charge_id: string | null; attempts: number; refunded_cents: number;
   hold_captured_cents?: number; extra_payment_intent_id?: string | null; extra_charge_id?: string | null;
+  method?: "card" | "bank";
 };
 
 type HoldClaim = { id: string; amount_cents: number; currency: string; payment_intent_id: string | null; charge_id: string | null; provider: Provider | null };
@@ -135,12 +139,15 @@ export async function openSettlement(db: Db, job: Job, market: Market): Promise<
       detail: { reason: "missed_window", credit: credit.id, charged: chargeCents }, dedupeKey: `credit.applied:${credit.id}`,
     });
   }
-  // A quote over NZ$1,000 was charged when the owner approved it (DECISIONS.md, 2026-11-23): it is not charged again.
-  // One whose work did not go ahead (its lines are no longer on the job) is refunded instead (refundDuePrepayments).
-  const prepaid = await db.query<{ id: string; amount_cents: number; quote_id: string }>(
-    "select id, amount_cents, quote_id from public.job_prepayments where job_id = $1::uuid and status = 'succeeded' for update",
+  // Big work's 50% deposit was taken when the owner approved it (DECISIONS.md, 2026-11-23, second entry): it is not
+  // charged again. One whose work did not go ahead (its lines are no longer on the job) is refunded instead
+  // (refundDuePrepayments). The rest is taken the way the deposit was: a deposit from the bank means the rest is
+  // debited from the bank too; by card, the card.
+  const prepaid = await db.query<{ id: string; amount_cents: number; quote_id: string; method: "card" | "bank" }>(
+    "select id, amount_cents, quote_id, method from public.job_prepayments where job_id = $1::uuid and status = 'succeeded' for update",
     [job.id],
   );
+  let method: "card" | "bank" = "card";
   for (const row of prepaid) {
     const going = await db.query("select 1 from public.job_lines where quote_id = $1::uuid and status = 'active' limit 1", [row.quote_id]);
     if (going.length === 0) {
@@ -148,15 +155,16 @@ export async function openSettlement(db: Db, job: Job, market: Market): Promise<
       continue;
     }
     chargeCents -= Math.min(Number(row.amount_cents), chargeCents);
+    if (row.method === "bank") method = "bank";
   }
   const taxCents = chargeCents === job.ownerTotalCents ? job.taxCents : job.taxCents > 0 ? taxPortion(chargeCents, market.taxRate) : 0;
 
   if (chargeCents > 0) {
     await db.query(
-      `insert into public.payments (created_at, job_id, owner_id, amount_cents, tax_cents, currency, status, provider)
-       values ($1::timestamptz, $2::uuid, $3::uuid, $4, $5, $6, 'pending', $7)
+      `insert into public.payments (created_at, job_id, owner_id, amount_cents, tax_cents, currency, status, provider, method)
+       values ($1::timestamptz, $2::uuid, $3::uuid, $4, $5, $6, 'pending', $7, $8)
        on conflict (job_id) do nothing`,
-      [at.toISOString(), job.id, job.ownerId, chargeCents, taxCents, job.currency, billing?.provider ?? "stripe"],
+      [at.toISOString(), job.id, job.ownerId, chargeCents, taxCents, job.currency, billing?.provider ?? "stripe", method],
     );
   }
   if (job.tradieTotalCents > 0 && job.tradieId) {
@@ -176,7 +184,8 @@ export async function openSettlement(db: Db, job: Job, market: Market): Promise<
   }
 }
 
-export type ChargeOutcome = "succeeded" | "failed" | "skipped";
+/** processing: the rest was debited from the owner's bank and has not cleared yet (src/lib/billing/debits.ts). */
+export type ChargeOutcome = "succeeded" | "processing" | "failed" | "skipped";
 
 /**
  * Charges the owner for a finished job. Safe to call again: a job is never charged twice.
@@ -238,8 +247,11 @@ export async function chargeJob(db: Db, gatewayFor: GatewayFor, jobId: string, o
   const alreadyFromHold = Number(payment.hold_captured_cents ?? 0) + (captured?.amountCents ?? 0);
   const remaining = payment.amount_cents - alreadyFromHold;
 
-  // 2. Anything beyond the hold: a separate charge on the saved card.
-  let result: Awaited<ReturnType<PaymentsGateway["chargeJob"]>>;
+  // 2. Anything beyond the hold: a separate charge on the saved card, or for big work paid from the bank, a direct
+  // debit from the owner's bank account (DECISIONS.md, 2026-11-23, second entry).
+  let result: DebitResult;
+  let usedBank = false;
+  let bankUnknown: string | null = null;
   if (captureError) {
     result = { status: "failed", reason: `Taking the charge from the hold on the card did not finish: ${captureError}`, code: "error", paymentIntentId: null };
   } else if (remaining <= 0) {
@@ -248,6 +260,19 @@ export async function chargeJob(db: Db, gatewayFor: GatewayFor, jobId: string, o
     result = { status: "failed", reason: "Card payments are not set up for this country.", code: "not_configured", paymentIntentId: null };
   } else if (!billing || billing.provider !== gateway.provider) {
     result = { status: "failed", reason: "The owner has no card on file.", code: "no_card", paymentIntentId: null };
+  } else if (payment.method === "bank" && billing.bankPaymentMethodId) {
+    usedBank = true;
+    try {
+      result = await gateway.debitBank({
+        customerId: billing.customerId, paymentMethodId: billing.bankPaymentMethodId, amountCents: remaining, currency: payment.currency,
+        description: `Job ${job.number}: the rest of ${job.title} at ${context.property.name}`.slice(0, 200), jobNumber: job.number,
+        purpose: "job", idempotencyKey: `hostfix-job-${jobId}-debit-${payment.attempts}`,
+      });
+    } catch (error) {
+      // Unknown whether the debit was made: the next try (a minute on) asks again with the same key.
+      bankUnknown = error instanceof Error ? error.message : String(error);
+      result = { status: "failed", reason: bankUnknown, code: "error", paymentIntentId: null };
+    }
   } else {
     try {
       result = await gateway.chargeJob({
@@ -281,6 +306,30 @@ export async function chargeJob(db: Db, gatewayFor: GatewayFor, jobId: string, o
     } else if (hold && captureError) {
       await tx.query("update public.card_holds set claimed_until = null, last_error = $2 where id = $1::uuid", [hold.id, captureError.slice(0, 500)]);
     }
+    if (bankUnknown) {
+      // The try is not counted, so the same key is used again (status and attempts as they were).
+      await tx.query("update public.payments set claimed_until = null, last_error = $2, next_retry_at = $3::timestamptz where id = $1::uuid", [
+        payment.id, `The bank debit did not finish: ${bankUnknown}`.slice(0, 500), addMinutes(at, 10).toISOString(),
+      ]);
+      await audit(tx, { actor: "system", action: "payment.debit_unclear", entity: "job", entityId: jobId, amount: remaining, currency: payment.currency, detail: { reason: bankUnknown, attempt: payment.attempts } });
+      return "failed";
+    }
+    if (result.status === "processing") {
+      // Made, not cleared: a few working days. Stripe's message (or the timer asking) finishes it (src/lib/billing/debits.ts).
+      await tx.query(
+        `update public.payments set status = 'processing', ${twoPayments ? "extra_payment_intent_id = $2, extra_charge_id = $3" : "payment_intent_id = $2, charge_id = $3"},
+                provider = $4, last_error = null, attempts = $5, claimed_until = null, checked_at = $6::timestamptz
+          where id = $1::uuid`,
+        [payment.id, result.paymentIntentId, result.chargeId, gateway!.provider, payment.attempts, at.toISOString()],
+      );
+      await releaseJobHolds(tx, jobId, "The job is charged.");
+      await audit(tx, {
+        actor: gateway!.provider, action: "payment.debit_processing", entity: "job", entityId: jobId, amount: remaining, currency: payment.currency,
+        detail: { payment_intent: result.paymentIntentId, attempt: payment.attempts, from_hold: alreadyFromHold }, dedupeKey: `payment.debit_processing:${jobId}:${payment.attempts}`,
+      });
+      await paidFollowUps(tx, { jobId, job, context, payment, provider: gateway!.provider, paymentIntentId: result.paymentIntentId, alreadyFromHold, remaining, textsOnly: true });
+      return "processing";
+    }
     if (result.status === "succeeded") {
       if (twoPayments) {
         await tx.query(
@@ -297,52 +346,20 @@ export async function chargeJob(db: Db, gatewayFor: GatewayFor, jobId: string, o
           [payment.id, at.toISOString(), result.paymentIntentId || payment.payment_intent_id, result.chargeId, gateway?.provider ?? payment.provider, payment.attempts],
         );
       }
-      await releaseJobHolds(tx, jobId, "The job is charged.");
-      const dispute = await tx.query("select 1 from public.disputes where job_id = $1::uuid and status = 'open'", [jobId]);
-      await tx.query("update public.payouts set status = $2 where job_id = $1::uuid and status = 'waiting'", [jobId, dispute.length > 0 ? "paused" : "scheduled"]);
-      // The part of a big job's payout that waited for the card can go now (DECISIONS.md, 2026-11-23).
-      await tx.query("update public.payouts set rest_status = 'due' where job_id = $1::uuid and rest_status = 'waiting' and status = 'sent'", [jobId]);
-      await tx.query("update public.payouts set release_at = $2::timestamptz, rest_status = null where job_id = $1::uuid and rest_status = 'waiting' and status = 'scheduled'", [jobId, at.toISOString()]);
-      await resolveExceptionsFor(tx, jobId, ["payment_failed", "owner_owes"], "Card charged");
-      await audit(tx, {
-        actor: gateway?.provider ?? payment.provider, action: "payment.succeeded", entity: "job", entityId: jobId, amount: payment.amount_cents, currency: payment.currency,
-        detail: { payment_intent: result.paymentIntentId, attempt: payment.attempts, tax: payment.tax_cents, from_hold: alreadyFromHold, beyond_hold: Math.max(0, remaining) }, dedupeKey: `payment.succeeded:${jobId}`,
-      });
-      if (context.owner.phone) {
-        // A flagged job: the same text asks the owner to look at the photos and confirm, on the job page (DECISIONS.md, 2026-11-19).
-        const check = job.confirmStatus === "waiting";
-        // A cancelled job is charged only the call-out (cancelled after the tradie arrived, DECISIONS.md, 2026-11-23),
-        // or parts bought for it that could not go back (DECISIONS.md, 2026-11-20).
-        const cancelled = job.status === "cancelled";
-        const boughtParts = cancelled && (await tx.query("select 1 from public.job_lines where job_id = $1::uuid and status = 'active' and kind = 'adjustment' and label like 'Parts bought before%' limit 1", [jobId])).length > 0;
-        await enqueue(tx, {
-          channel: "sms", to: context.owner.phone, template: cancelled ? (boughtParts ? "bought_parts_charged" : "call_out_charged") : check ? "job_check" : "job_done", audience: "owner", jobId, userId: context.owner.userId,
-          body: cancelled
-            ? boughtParts
-              ? texts.boughtPartsCharged({ number: job.number, property: context.property.name, totalCents: payment.amount_cents, currency: payment.currency, link: ownerJobUrl(job) })
-              : texts.callOutCharged({ number: job.number, totalCents: payment.amount_cents, currency: payment.currency, link: ownerJobUrl(job) })
-            : check
-              ? texts.jobCheck({ title: job.title, property: context.property.name, totalCents: payment.amount_cents, currency: payment.currency, flags: job.checkFlags, link: ownerJobUrl(job) })
-              : texts.jobDone({ title: job.title, property: context.property.name, totalCents: payment.amount_cents, currency: payment.currency, link: ownerJobUrl(job) }),
-          dedupeKey: `job_done:${jobId}`,
-        });
-      }
-      if (job.status === "completed" && job.reporterPhone && job.reportedBy !== "owner" && job.reporterPhone !== context.owner.phone && job.outcome !== "no_access") {
-        await enqueue(tx, {
-          channel: "sms", to: job.reporterPhone, template: "reporter_done", audience: "reporter", jobId,
-          body: texts.reporterDone({ property: context.property.name }), dedupeKey: `reporter_done:${jobId}`,
-        });
-      }
+      await paidFollowUps(tx, { jobId, job, context, payment, provider: gateway?.provider ?? payment.provider, paymentIntentId: result.paymentIntentId, alreadyFromHold, remaining });
       return "succeeded";
     }
 
     const owed = Math.max(0, payment.amount_cents - alreadyFromHold);
-    const retry = payment.attempts < MAX_CHARGE_ATTEMPTS;
+    // A bank debit is not tried again by itself (each failed debit can cost the owner a bank fee): the owner owes it,
+    // and the next try (a new card saved, or our team's Try again) is on the card.
+    const retry = !usedBank && payment.attempts < MAX_CHARGE_ATTEMPTS;
     await tx.query(
       `update public.payments set status = 'failed', last_error = $2, next_retry_at = $3::timestamptz,
-              ${alreadyFromHold > 0 ? "extra_payment_intent_id = coalesce($4, extra_payment_intent_id)" : "payment_intent_id = coalesce($4, payment_intent_id)"}, attempts = $5, claimed_until = null
+              ${alreadyFromHold > 0 ? "extra_payment_intent_id = coalesce($4, extra_payment_intent_id)" : "payment_intent_id = coalesce($4, payment_intent_id)"}, attempts = $5, claimed_until = null,
+              method = 'card'
         where id = $1::uuid`,
-      [payment.id, result.reason.slice(0, 500), retry ? addHours(at, RETRY_HOURS).toISOString() : null, result.paymentIntentId, payment.attempts],
+      [payment.id, result.reason.slice(0, 500), retry ? addHours(at, RETRY_HOURS).toISOString() : null, result.paymentIntentId, usedBank ? Math.max(payment.attempts, MAX_CHARGE_ATTEMPTS) : payment.attempts],
     );
     await audit(tx, {
       actor: gateway?.provider ?? "system", action: "payment.failed", entity: "job", entityId: jobId, amount: owed, currency: payment.currency,
@@ -351,7 +368,9 @@ export async function chargeJob(db: Db, gatewayFor: GatewayFor, jobId: string, o
     const fromHoldWords = alreadyFromHold > 0 ? ` ${formatMoney(alreadyFromHold, payment.currency)} was taken from the hold on the card; ${formatMoney(owed, payment.currency)} beyond it was not.` : "";
     await raiseException(tx, {
       kind: "payment_failed", market: job.market, jobId,
-      summary: `Job ${job.number}: the owner's card was not charged (${result.reason}).${fromHoldWords} ${retry ? "It will be tried again tomorrow." : "It has been tried four times."} The tradie is paid at the usual time anyway, up to the payout guarantee: chasing the owner is ours.`,
+      summary: usedBank
+        ? `Job ${job.number}: the debit from the owner's bank did not go through (${result.reason}).${fromHoldWords} It is not tried again by itself: the next try is on their card, once they update it or you press Try again. The tradie is paid at the usual time anyway, up to the payout guarantee.`
+        : `Job ${job.number}: the owner's card was not charged (${result.reason}).${fromHoldWords} ${retry ? "It will be tried again tomorrow." : "It has been tried four times."} The tradie is paid at the usual time anyway, up to the payout guarantee: chasing the owner is ours.`,
       dedupeKey: `payment_failed:${jobId}`,
     });
     if (!retry) {
@@ -359,15 +378,133 @@ export async function chargeJob(db: Db, gatewayFor: GatewayFor, jobId: string, o
       // and no new jobs go out for them until it is paid (cardProblem, src/lib/owners/service.ts).
       await raiseException(tx, {
         kind: "owner_owes", market: job.market, jobId,
-        summary: `${context.owner.name} owes ${formatMoney(owed, payment.currency)} for job ${job.number} at ${context.property.name}: the card was tried four times. The tradie is paid by us anyway, up to the payout guarantee. Ring the owner${context.owner.phone ? ` on ${context.owner.phone}` : ""}.`,
+        summary: `${context.owner.name} owes ${formatMoney(owed, payment.currency)} for job ${job.number} at ${context.property.name}: ${usedBank ? "the bank debit did not go through" : "the card was tried four times"}. The tradie is paid by us anyway, up to the payout guarantee. Ring the owner${context.owner.phone ? ` on ${context.owner.phone}` : ""}.`,
         dedupeKey: `owner_owes:${jobId}`,
       });
     }
     if (context.owner.phone) {
       await enqueue(tx, {
         channel: "sms", to: context.owner.phone, template: "payment_failed", audience: "owner", jobId, userId: context.owner.userId,
-        body: texts.paymentFailed({ amountCents: owed, currency: payment.currency, number: job.number, link: `${baseUrl()}/app/billing` }),
+        body: (usedBank ? texts.debitFailedOwner : texts.paymentFailed)({ amountCents: owed, currency: payment.currency, number: job.number, link: `${baseUrl()}/app/billing` }),
         dedupeKey: `payment_failed:${jobId}`,
+      });
+    }
+    return "failed";
+  });
+}
+
+/**
+ * What follows a job's charge going through, whether at once (a card) or days later (a bank debit clearing,
+ * src/lib/billing/debits.ts): any other hold is let go, the payout is no longer waiting for the money, the part of
+ * a big job's payout that waited can go, and the owner (and whoever reported it) is told. With `textsOnly`, just the
+ * texts: a bank debit has been made but not cleared, and the owner is told the job is done (the same text, once).
+ */
+async function paidFollowUps(
+  tx: Db,
+  input: {
+    jobId: string; job: Job; context: Awaited<ReturnType<typeof loadContext>>; payment: PaymentRow; provider: Provider;
+    paymentIntentId: string | null; alreadyFromHold: number; remaining: number; textsOnly?: boolean;
+  },
+): Promise<void> {
+  const { jobId, job, context, payment, alreadyFromHold, remaining } = input;
+  const at = now();
+  if (!input.textsOnly) {
+    await releaseJobHolds(tx, jobId, "The job is charged.");
+    const dispute = await tx.query("select 1 from public.disputes where job_id = $1::uuid and status = 'open'", [jobId]);
+    await tx.query("update public.payouts set status = $2 where job_id = $1::uuid and status = 'waiting'", [jobId, dispute.length > 0 ? "paused" : "scheduled"]);
+    // The part of a big job's payout that waited for the card can go now (DECISIONS.md, 2026-11-23).
+    await tx.query("update public.payouts set rest_status = 'due' where job_id = $1::uuid and rest_status = 'waiting' and status = 'sent'", [jobId]);
+    await tx.query("update public.payouts set release_at = $2::timestamptz, rest_status = null where job_id = $1::uuid and rest_status = 'waiting' and status = 'scheduled'", [jobId, at.toISOString()]);
+    await resolveExceptionsFor(tx, jobId, ["payment_failed", "owner_owes"], "Card charged");
+    await audit(tx, {
+      actor: input.provider, action: "payment.succeeded", entity: "job", entityId: jobId, amount: payment.amount_cents, currency: payment.currency,
+      detail: { payment_intent: input.paymentIntentId, attempt: payment.attempts, tax: payment.tax_cents, from_hold: alreadyFromHold, beyond_hold: Math.max(0, remaining) }, dedupeKey: `payment.succeeded:${jobId}`,
+    });
+  }
+  if (context.owner.phone) {
+    // A flagged job: the same text asks the owner to look at the photos and confirm, on the job page (DECISIONS.md, 2026-11-19).
+    const check = job.confirmStatus === "waiting";
+    // A cancelled job is charged only the call-out (cancelled after the tradie arrived, DECISIONS.md, 2026-11-23),
+    // or parts bought for it that could not go back (DECISIONS.md, 2026-11-20).
+    const cancelled = job.status === "cancelled";
+    const boughtParts = cancelled && (await tx.query("select 1 from public.job_lines where job_id = $1::uuid and status = 'active' and kind = 'adjustment' and label like 'Parts bought before%' limit 1", [jobId])).length > 0;
+    await enqueue(tx, {
+      channel: "sms", to: context.owner.phone, template: cancelled ? (boughtParts ? "bought_parts_charged" : "call_out_charged") : check ? "job_check" : "job_done", audience: "owner", jobId, userId: context.owner.userId,
+      body: cancelled
+        ? boughtParts
+          ? texts.boughtPartsCharged({ number: job.number, property: context.property.name, totalCents: payment.amount_cents, currency: payment.currency, link: ownerJobUrl(job) })
+          : texts.callOutCharged({ number: job.number, totalCents: payment.amount_cents, currency: payment.currency, link: ownerJobUrl(job) })
+        : check
+          ? texts.jobCheck({ title: job.title, property: context.property.name, totalCents: payment.amount_cents, currency: payment.currency, flags: job.checkFlags, link: ownerJobUrl(job) })
+          : texts.jobDone({ title: job.title, property: context.property.name, totalCents: payment.amount_cents, currency: payment.currency, link: ownerJobUrl(job) }),
+      dedupeKey: `job_done:${jobId}`,
+    });
+  }
+  if (job.status === "completed" && job.reporterPhone && job.reportedBy !== "owner" && job.reporterPhone !== context.owner.phone && job.outcome !== "no_access") {
+    await enqueue(tx, {
+      channel: "sms", to: job.reporterPhone, template: "reporter_done", audience: "reporter", jobId,
+      body: texts.reporterDone({ property: context.property.name }), dedupeKey: `reporter_done:${jobId}`,
+    });
+  }
+}
+
+/**
+ * The debit from the owner's bank for the rest of a big job has cleared or failed (DECISIONS.md, 2026-11-23, second
+ * entry): Stripe's message, or the timer asking (src/lib/billing/debits.ts). Safe to call twice: only a payment still
+ * processing moves. Cleared: as a card charge going through (the part of the payout that waited can go). Failed (or
+ * came back): the owner owes it, no new jobs go out for them until it is paid (cardProblem), the team has it in the
+ * queue, and the tradie's share above the payout guarantee keeps waiting. The next try is on the card.
+ */
+export async function jobDebitOutcome(db: Db, paymentId: string, result: DebitResult): Promise<"succeeded" | "failed" | "nothing"> {
+  if (result.status === "processing") {
+    await db.query("update public.payments set checked_at = $2::timestamptz where id = $1::uuid and status = 'processing'", [paymentId, now().toISOString()]);
+    return "nothing";
+  }
+  return db.tx(async (tx) => {
+    const at = now();
+    const payment = (await tx.query<PaymentRow>("select * from public.payments where id = $1::uuid and status = 'processing' for update", [paymentId]))[0];
+    if (!payment) return "nothing";
+    const job = await getJobForStaff(tx, payment.job_id);
+    if (!job) return "nothing";
+    const context = await loadContext(tx, job);
+    const alreadyFromHold = Number(payment.hold_captured_cents ?? 0);
+    const remaining = payment.amount_cents - alreadyFromHold;
+    const second = alreadyFromHold > 0 && Boolean(payment.extra_payment_intent_id);
+    if (result.status === "succeeded") {
+      await tx.query(
+        `update public.payments set status = 'succeeded', paid_at = $2::timestamptz, ${second ? "extra_charge_id = coalesce($3, extra_charge_id)" : "charge_id = coalesce($3, charge_id)"},
+                last_error = null, claimed_until = null
+          where id = $1::uuid`,
+        [payment.id, at.toISOString(), result.chargeId],
+      );
+      await paidFollowUps(tx, { jobId: job.id, job, context, payment, provider: payment.provider, paymentIntentId: result.paymentIntentId, alreadyFromHold, remaining });
+      return "succeeded";
+    }
+    const owed = Math.max(0, remaining);
+    await tx.query(
+      `update public.payments set status = 'failed', last_error = $2, next_retry_at = null, attempts = greatest(attempts, $3), method = 'card', claimed_until = null
+        where id = $1::uuid`,
+      [payment.id, result.reason.slice(0, 500), MAX_CHARGE_ATTEMPTS],
+    );
+    await audit(tx, {
+      actor: payment.provider, action: "payment.failed", entity: "job", entityId: job.id, amount: owed, currency: payment.currency,
+      detail: { reason: result.reason, code: result.code, method: "bank", from_hold: alreadyFromHold }, dedupeKey: `payment.debit_failed:${job.id}:${payment.attempts}`,
+    });
+    await raiseException(tx, {
+      kind: "payment_failed", market: job.market, jobId: job.id,
+      summary: `Job ${job.number}: the ${formatMoney(owed, payment.currency)} debit from the owner's bank did not go through (${result.reason}). It is not tried again by itself: the next try is on their card, once they update it or you press Try again. The tradie's share above the payout guarantee waits until it is paid.`,
+      dedupeKey: `payment_failed:${job.id}`,
+    });
+    await raiseException(tx, {
+      kind: "owner_owes", market: job.market, jobId: job.id,
+      summary: `${context.owner.name} owes ${formatMoney(owed, payment.currency)} for job ${job.number} at ${context.property.name}: the bank debit did not go through. No new jobs go out for them until it is paid. Ring the owner${context.owner.phone ? ` on ${context.owner.phone}` : ""}.`,
+      dedupeKey: `owner_owes:${job.id}`,
+    });
+    if (context.owner.phone) {
+      await enqueue(tx, {
+        channel: "sms", to: context.owner.phone, template: "payment_failed", audience: "owner", jobId: job.id, userId: context.owner.userId,
+        body: texts.debitFailedOwner({ amountCents: owed, currency: payment.currency, number: job.number, link: `${baseUrl()}/app/billing` }),
+        dedupeKey: `payment_failed:${job.id}`,
       });
     }
     return "failed";

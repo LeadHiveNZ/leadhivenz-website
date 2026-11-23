@@ -34,6 +34,9 @@ import { formatMoney } from "@/lib/money";
  *   {{urgent_share}} {{after_hours_share}}  the tradie's share of each: the
  *                                        surcharge less the platform fee
  *   {{platform_fee}}                    the platform fee, for example "15%"
+ *   {{tier_threshold}} {{above_tier_fee}}  the fee is {{platform_fee}} up to
+ *                                        this much of a job's price, and
+ *                                        {{above_tier_fee}} (3%) above it
  *   {{callout}}                         the fee for a tradie to come and look at
  *                                        something that is not on the menu
  *   {{approval_limit}}                  quotes above this need the owner's yes
@@ -113,6 +116,9 @@ export function contentTokens(market: Market): Record<string, string> {
     // DECISIONS.md, 2026-11-23: the own-client rate and the payout guarantee.
     own_client_fee: `${OWN_CLIENT_FEE_BPS / 100}%`,
     payout_guarantee: money(market.payoutGuaranteeCents),
+    // DECISIONS.md, 2026-11-23, second entry: the tiered fee.
+    tier_threshold: money(market.tierThresholdCents),
+    above_tier_fee: `${market.aboveTierFeeBps / 100}%`,
     payout_days: payoutArrival(market.country),
   };
 }

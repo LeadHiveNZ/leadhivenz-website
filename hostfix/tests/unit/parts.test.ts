@@ -380,7 +380,7 @@ describe("a job cancelled after the owner approved work", () => {
   it("is charged only for parts already bought that cannot go back, at their cost: owner 8650, tradie 8650, HostFix 0", async () => {
     const s = await setup();
     const job = await onSite(s);
-    const quoted = await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Replace the cistern", hours: 5.75, uploadIds: [] });
+    const quoted = await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Replace the cistern", hours: 3, uploadIds: [] });
     await decideQuote(t.db, quoted.ok ? quoted.quote.id : "", true, `owner:${s.owner.ownerId}`);
     // Our team cancels without the call-out (the owner rang), so only the bought parts are charged.
     expect(await cancelJob(t.db, job.id, { actor: "staff:maria", staff: true }, "Owner is replacing the whole bathroom")).toMatchObject({ ok: true });

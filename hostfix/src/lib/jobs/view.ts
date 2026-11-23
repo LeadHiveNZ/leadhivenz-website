@@ -13,6 +13,8 @@ import { loadContext } from "./context";
 import { listLines, listOffers, listQuotes, type OfferWithTradie } from "./store";
 import { listParts, type JobPart } from "./parts";
 import { liveHold } from "@/lib/billing/card-holds";
+import { getBilling } from "@/lib/owners/service";
+import { depositNeeded } from "./work";
 import type { Job, JobLine, Quote, StatusTone } from "./types";
 
 /**
@@ -65,6 +67,14 @@ export type JobView = {
   parts: JobPart[];
   /** The parts receipts. Staff only: an owner never sees a receipt, and a tradie sees their own on the part. */
   receipts: Upload[];
+  /**
+   * Big work waiting on its 50% deposit (DECISIONS.md, 2026-11-23, second entry): how much, how it is being paid, and
+   * (for the owner) whether a bank account is saved. Null when no quote waiting needs one.
+   */
+  deposit: {
+    quoteId: string; amountCents: number; status: "to_pay" | "charging" | "processing" | "failed"; method: "bank" | "card" | null;
+    lastError: string | null; bankSaved: boolean; bankLabel: string | null;
+  } | null;
 };
 
 const str = (value: unknown): string => (typeof value === "string" ? value : "");
@@ -74,6 +84,12 @@ function describe(row: AuditRow, audience: Audience, job: Job, market: Market): 
   const amount = row.amount !== null && row.currency ? formatMoney(row.amount, row.currency) : "";
   const entry = (title: string, tone: StatusTone = "quiet", detail: string | null = null): HistoryEntry => ({ at: row.at, title, detail, tone });
   switch (row.action) {
+    case "quote.deposit_clearing":
+      return entry(audience === "owner" ? "You approved the work: the deposit is coming from your bank" : "Work approved: the deposit is clearing", "waiting", audience === "tradie" ? "Don't start until it clears (usually 3-4 working days)." : `${amount}, usually 3-4 working days.`);
+    case "quote.deposit_paid":
+      return entry(audience === "tradie" ? "Deposit cleared: go ahead" : `Deposit paid: ${amount}`, "active", d.going_ahead === false ? "The work is no longer going ahead, so it is refunded." : null);
+    case "payment.debit_processing":
+      return audience === "tradie" ? null : entry(`${amount} debited from the owner's bank`, "waiting", "Usually clears in 3-4 working days.");
     case "job.created": {
       const by = str(d.reported_by);
       const who = job.reporterName ?? (by === "guest" ? "a guest" : by === "team" ? "your team" : by === "staff" ? "the team" : audience === "owner" ? "you" : "the owner");
@@ -261,5 +277,26 @@ export async function loadJobView(db: Db, job: Job, audience: Audience): Promise
     laterTime: audience === "tradie" ? null : await waitingLaterTime(db, job.id),
     parts: (await listParts(db, job.id)).map((part) => (audience === "owner" ? { ...part, receiptUploadId: null, receiptTotalCents: null, amountCents: 0, tradieCents: 0 } : part)),
     receipts: audience === "staff" ? uploads.filter((upload) => upload.kind === "receipt") : [],
+    deposit: await depositView(db, job, quotes, audience, context.market),
+  };
+}
+
+async function depositView(db: Db, job: Job, quotes: Quote[], audience: Audience, market: Market): Promise<JobView["deposit"]> {
+  const quote = quotes.find((entry) => entry.status === "pending" && entry.deposit);
+  if (!quote) return null;
+  const row = (await db.query<{ status: string; amount_cents: number; method: "bank" | "card"; last_error: string | null }>(
+    "select status, amount_cents, method, last_error from public.job_prepayments where quote_id = $1::uuid",
+    [quote.id],
+  ))[0];
+  const billing = audience === "tradie" ? null : await getBilling(db, job.ownerId, market.country);
+  const live = row && ["charging", "processing"].includes(row.status);
+  return {
+    quoteId: quote.id,
+    amountCents: live ? Number(row.amount_cents) : await depositNeeded(db, quote, job.ownerTotalCents),
+    status: row?.status === "charging" || row?.status === "processing" || row?.status === "failed" ? row.status : "to_pay",
+    method: row?.method ?? null,
+    lastError: audience === "tradie" ? null : (row?.last_error ?? null),
+    bankSaved: Boolean(billing?.bankPaymentMethodId),
+    bankLabel: billing?.bankPaymentMethodId ? `${billing.bankName ?? "Bank account"}${billing.bankLast4 ? ` ending ${billing.bankLast4}` : ""}` : null,
   };
 }

@@ -4,7 +4,7 @@ import { audit } from "@/lib/audit";
 import { createUser, type User } from "@/lib/auth/users";
 import { now } from "@/lib/clock";
 import type { Db } from "@/lib/db/types";
-import type { CardSummary, Provider } from "@/lib/payments/gateway";
+import type { BankSummary, CardSummary, Provider } from "@/lib/payments/gateway";
 
 /**
  * OWNERS: the people who pay. An owner is a user with one or more properties
@@ -33,6 +33,10 @@ export type Billing = {
   cardLast4: string | null;
   cardExpMonth: number | null;
   cardExpYear: number | null;
+  /** The NZ bank account saved for big work's direct debits (DECISIONS.md, 2026-11-23, second entry). */
+  bankPaymentMethodId: string | null;
+  bankName: string | null;
+  bankLast4: string | null;
 };
 
 type OwnerRow = {
@@ -97,6 +101,7 @@ export async function getBilling(db: Db, ownerId: string, country: CountryCode):
   const rows = await db.query<{
     owner_id: string; country: CountryCode; provider: Provider; customer_id: string; payment_method_id: string | null;
     card_brand: string | null; card_last4: string | null; card_exp_month: number | null; card_exp_year: number | null;
+    bank_payment_method_id: string | null; bank_name: string | null; bank_last4: string | null;
   }>("select * from public.owner_billing where owner_id = $1::uuid and country = $2", [ownerId, country]);
   const row = rows[0];
   if (!row) return null;
@@ -104,6 +109,7 @@ export async function getBilling(db: Db, ownerId: string, country: CountryCode):
     ownerId: row.owner_id, country: row.country, provider: row.provider, customerId: row.customer_id,
     paymentMethodId: row.payment_method_id, cardBrand: row.card_brand, cardLast4: row.card_last4,
     cardExpMonth: row.card_exp_month, cardExpYear: row.card_exp_year,
+    bankPaymentMethodId: row.bank_payment_method_id ?? null, bankName: row.bank_name ?? null, bankLast4: row.bank_last4 ?? null,
   };
 }
 
@@ -131,6 +137,26 @@ export async function saveBilling(
       card?.last4 ?? null, card?.expMonth ?? null, card?.expYear ?? null, now().toISOString(),
     ],
   );
+}
+
+/**
+ * Saves the owner's NZ bank account for direct debits (DECISIONS.md, 2026-11-23, second entry), beside the card.
+ * The row must exist already (the customer is made before the bank page). Saving one replaces any earlier account.
+ */
+export async function saveBank(db: Db, input: { ownerId: string; country: CountryCode; provider: Provider; customerId: string; bank: BankSummary }): Promise<boolean> {
+  const at = now().toISOString();
+  const rows = await db.query(
+    `update public.owner_billing set bank_payment_method_id = $5, bank_name = $6, bank_last4 = $7, bank_mandate_id = $8,
+            bank_saved_at = $9::timestamptz, updated_at = $9::timestamptz
+      where owner_id = $1::uuid and country = $2 and provider = $3 and customer_id = $4
+        and bank_payment_method_id is distinct from $5
+      returning owner_id`,
+    [input.ownerId, input.country, input.provider, input.customerId, input.bank.paymentMethodId, input.bank.bankName, input.bank.last4, input.bank.mandateId, at],
+  );
+  if (rows.length > 0) {
+    await audit(db, { actor: `owner:${input.ownerId}`, action: "owner.bank_saved", entity: "owner", entityId: input.ownerId, detail: { bank: input.bank.bankName, last4: input.bank.last4 } });
+  }
+  return rows.length > 0;
 }
 
 export async function findOwnerByCustomer(db: Db, provider: Provider, customerId: string): Promise<{ ownerId: string; country: CountryCode } | null> {

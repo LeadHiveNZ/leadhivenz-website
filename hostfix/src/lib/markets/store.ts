@@ -29,7 +29,7 @@ type MarketRow = {
   tax_rate: number; tax_name: string; tax_registered: boolean; tax_number: string | null;
   platform_fee_bps: number; platform_fee_bps_next?: number | null; platform_fee_from?: Date | string | null; urgent_surcharge_cents: number; after_hours_surcharge_cents: number;
   diagnosis_fee_cents: number; diagnosis_payout_cents: number; approval_threshold_cents: number;
-  parts_included_cents: number; parts_approval_cents: number; payout_guarantee_cents?: number | null;
+  parts_included_cents: number; parts_approval_cents: number; payout_guarantee_cents?: number | null; tier_threshold_cents?: number | null; above_tier_fee_bps?: number | null;
   offer_minutes: number; hours_start: number; hours_end: number; work_days: string[]; payout_hold_hours: number;
   unaccepted_alert_hours?: number | null; counter_offer_hours?: number | null;
   min_minutes_on_site?: number | null; owner_confirm_hours?: number | null; not_described_hours?: number | null; offer_push_sms_minutes?: number | null; map_lat?: number | string | null; map_lng?: number | string | null;
@@ -109,6 +109,8 @@ function rowToMarket(row: MarketRow, tiers: Tier[]): Market {
     partsIncludedCents: row.parts_included_cents,
     partsApprovalCents: row.parts_approval_cents,
     payoutGuaranteeCents: Number(row.payout_guarantee_cents ?? 100000),
+    tierThresholdCents: Number(row.tier_threshold_cents ?? 100000),
+    aboveTierFeeBps: Number(row.above_tier_fee_bps ?? 300),
     offerMinutes: row.offer_minutes,
     hoursStart: row.hours_start,
     hoursEnd: row.hours_end,

@@ -3,7 +3,7 @@ import { brand } from "@config/brand";
 import { LegalPage, Section } from "@/components/LegalPage";
 import { launchMarket } from "@config/markets";
 import { OLD_RECEIPT_DAYS, PART_PRICE_FLAG_MULTIPLE, RECEIPT_TO_FOLLOW_DAYS } from "@/lib/jobs/parts";
-import { OWN_CLIENT_FEE_BPS, PART_FEE_BPS } from "@/lib/jobs/pricing";
+import { DEPOSIT_ABOVE_CENTS, DEPOSIT_BPS, OWN_CLIENT_FEE_BPS, PART_FEE_BPS, tieredFee } from "@/lib/jobs/pricing";
 import { PATTERN_DAYS, PATTERN_PAIR_JOBS, PATTERN_TRADIE_CANCELS } from "@/lib/ops/patterns";
 import { formatMoney } from "@/lib/money";
 import { FEE_NOTICE_DAYS } from "@/lib/markets/admin";
@@ -33,6 +33,13 @@ export default function Page() {
   const fee = `${launchMarket.platformFeeBps / 100}%`;
   const ownFee = `${OWN_CLIENT_FEE_BPS / 100}%`;
   const guarantee = money(launchMarket.payoutGuaranteeCents);
+  // The tiered fee (DECISIONS.md, 2026-11-23, second entry): the fee on the first NZ$1,000 of a job's price, 3% above it.
+  const line = money(launchMarket.tierThresholdCents);
+  const aboveFee = `${launchMarket.aboveTierFeeBps / 100}%`;
+  const exampleCents = 1_500_000;
+  const exampleFee = tieredFee(exampleCents, launchMarket.platformFeeBps, { thresholdCents: launchMarket.tierThresholdCents, aboveBps: launchMarket.aboveTierFeeBps });
+  const big = money(DEPOSIT_ABOVE_CENTS);
+  const half = `${DEPOSIT_BPS / 100}%`;
   return (
     <LegalPage
       title="Tradie agreement"
@@ -144,13 +151,18 @@ export default function Page() {
         <p>
           <strong>How quotes are priced.</strong> Work up to {money(HOURLY_LIMIT_CENTS)} is quoted in hours, in quarter hours, at {n}&rsquo;s fixed hourly
           rate for your trade (shown on the quote screen; it is what the owner pays, GST included). You cannot use a different rate. Above{" "}
-          {money(HOURLY_LIMIT_CENTS)} you price the work your own way. The {fee} platform fee comes off the work, as on every job ({ownFee} for your own clients, section
-          10). Parts are added on their own, below. <strong>If you need to come back, include the extra visit in your quote.</strong> There is no second call-out on the same job.
+          {money(HOURLY_LIMIT_CENTS)} you price the work your own way. The platform fee comes off the work, as on every job: {fee} of the first {line} of the
+          job&rsquo;s price and {aboveFee} of the part above it ({ownFee} below the line for your own clients, section 10; section 6 has the detail). Parts are added on
+          their own, below. <strong>If you need to come back, include the extra visit in your quote.</strong> There is no second call-out on the same job.
         </p>
         <p>
-          <strong>Work you price yourself over {money(HOURLY_LIMIT_CENTS)}</strong> always waits for the owner&rsquo;s yes, and is charged to their card in full when
-          they approve it, before you start. If their card declines, the quote is not approved yet: we text you that the work cannot start, and ask the owner to
-          update their card. If the work then does not go ahead, the owner is refunded.
+          <strong>Work that takes a job over {big}</strong> always waits for the owner&rsquo;s yes, even inside their limit. When they approve it, {half} of the
+          approved amount (less any of it the hold on their card already covers) is taken from them as a deposit, <strong>and you do not start until the deposit
+          has cleared.</strong> The owner pays it from their bank account by direct debit (what we recommend: no card fees), which usually takes 3-4 working days
+          to clear, or by card, which is charged straight away. We text you &ldquo;approved, deposit clearing&rdquo; and then &ldquo;deposit cleared, go
+          ahead&rdquo;; paid by card, you get the approval as soon as it goes through. The other {half} is taken from the owner the same way when you tap Job done. If
+          the deposit does not go through, or comes back, the quote is not approved: we text you not to start, and ask the owner to sort it. If the work then does
+          not go ahead, the owner is refunded.
         </p>
         <p>
           <strong>The call-out credit.</strong> On a look-and-price job, if the owner approves your quote, the {money(launchMarket.diagnosisFeeCents)} call-out
@@ -180,6 +192,13 @@ export default function Page() {
 
       <Section n={6} title="Pay">
         <ul>
+          <li>
+            <strong>The platform fee is {fee} of the first {line} of a job&rsquo;s price and {aboveFee} of the part above it.</strong> The price is everything
+            the owner pays for the job (the menu price or call-out, surcharges, quotes and hourly work) except parts, which have their own {PART_FEE_BPS / 100}%.
+            For your own clients it is {ownFee} below the line and {aboveFee} above it (section 10). A {money(exampleCents)} job: {fee} of {line} plus {aboveFee} of{" "}
+            {money(exampleCents - launchMarket.tierThresholdCents)} is {money(exampleFee)}, so you get {money(exampleCents - exampleFee)}. Your job page, the offer
+            and your Pay page show the fee.
+          </li>
           <li>Your share is the amount in the offer. On an urgent or after-hours job, your share of the surcharge is in that amount, like the rest of the price: the surcharge less the {fee} platform fee ({ownFee} for your own clients). Parts are paid as in section 5: your price less {PART_FEE_BPS / 100}% (parts added before 23 November 2026: the list price less 3%, or what you paid plus 17%).</li>
           <li>
             <strong>The job&rsquo;s price is held on the owner&rsquo;s card when the job is sent out</strong>, and the charge is taken from that hold when you finish. Anything
@@ -204,9 +223,10 @@ export default function Page() {
           </li>
           <li>Your Pay page in the app lists every job and every payment. Statements are there for your accountant.</li>
           <li>
-            <strong>Once you finish a job the owner approved, you&rsquo;re paid even if their card fails, for up to {guarantee} of the job&rsquo;s price. Chasing is our job.</strong>{" "}
-            Your payment goes out at the usual time whatever the card does; the owner owes the money to {n}, not to you. On a bigger job, if more than {guarantee} of its
-            price has not been paid by the owner&rsquo;s card when your payment is due, your share of the part above {guarantee} waits, and is sent to you as soon as the card pays.
+            <strong>Once you finish a job the owner approved, you&rsquo;re paid even if their card or bank payment fails, for up to {guarantee} of the job&rsquo;s price. Chasing is our job.</strong>{" "}
+            Your payment goes out at the usual time whatever the payment does; the owner owes the money to {n}, not to you. On a bigger job, if more than {guarantee} of its
+            price has not been paid by the owner when your payment is due (for example the second half of big work, debited from their bank at Job done and not yet
+            cleared), your share of the part above {guarantee} waits, and is sent to you as soon as it is paid.
           </li>
           <li>If you could not get in through no fault of yours, tap <strong>Could not get in</strong> with a photo, and you are paid the call-out.</li>
           <li>
@@ -290,13 +310,13 @@ export default function Page() {
         <p>
           <strong>Your own clients.</strong> You can bring owners you already work for to {n}: send them an invite from the app, or they can add you from their
           property page with &ldquo;Bring your own tradie&rdquo; (you still sign up and are approved as normal). Once they accept for a property, jobs between you and
-          that property take a <strong>{ownFee} platform fee</strong> instead of {fee}, on everything the {fee} applies to: the menu price, the surcharges, the call-out,
-          quotes and hourly work. Parts are as in section 5. {ownFee} covers the card fees (about 3%), the automatic texts and payment, and chasing late payers. You are
+          that property take a <strong>{ownFee} platform fee</strong> instead of {fee} on the first {line} of the job&rsquo;s price, on everything the {fee} applies to:
+          the menu price, the surcharges, the call-out, quotes and hourly work. Above {line} it is {aboveFee}, as for every job. Parts are as in section 5. {ownFee} covers the card fees (about 3%), the automatic texts and payment, and chasing late payers. You are
           also the first choice for that property in your trade. Every other tradie and trade at that property stays at {fee}. This does not apply to a property where{" "}
           {n} has already offered you a job, or you have done one: we check that by the property&rsquo;s address and map pin, not by the owner&rsquo;s account.
         </p>
         <p>
-          <strong>Owners {n} introduces</strong> stay at the normal {fee} fee for every job through the app, however long you have known them. There is no time limit and
+          <strong>Owners {n} introduces</strong> stay at the normal fee ({fee} to {line}, {aboveFee} above) for every job through the app, however long you have known them. There is no time limit and
           no buyout.
         </p>
         <p>

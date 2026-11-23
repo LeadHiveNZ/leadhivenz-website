@@ -114,6 +114,8 @@ export type Job = {
   currency: string;
   ownerTotalCents: number;
   tradieTotalCents: number;
+  /** What the lower fee above NZ$1,000 adds to the tradie's share (DECISIONS.md, 2026-11-23, second entry). In tradieTotalCents. */
+  tierReliefCents: number;
   taxCents: number;
   /** The owner's team member who reported it from their own team link, if one did. */
   teamMemberId?: string | null;
@@ -170,6 +172,8 @@ export type Quote = {
   creditCents: number;
   /** Sent with "Not the job described". */
   notDescribed: boolean;
+  /** It takes the job over NZ$1,000: approving it takes a 50% deposit first (DECISIONS.md, 2026-11-23, second entry). */
+  deposit: boolean;
 };
 
 /** A job is "open" while something still has to happen on it. */

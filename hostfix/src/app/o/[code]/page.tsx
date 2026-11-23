@@ -29,7 +29,8 @@ import { getMarket } from "@/lib/markets/store";
 import { formatMoney } from "@/lib/money";
 import { getPropertyForStaff } from "@/lib/properties/service";
 import { formatDeadline, formatHourOfDay } from "@/lib/time";
-import { payTiming } from "@/lib/markets/display";
+import { feeWords, payTiming, tierLineWords } from "@/lib/markets/display";
+import { brand } from "@config/brand";
 
 export const metadata: Metadata = { title: "Job offer", robots: { index: false, follow: false } };
 
@@ -257,8 +258,10 @@ async function Opened({ params, searchParams }: { params: Params; searchParams: 
 
       <Card>
         <p className="mb-1 font-bold text-ink">How the pay is made up</p>
-        <CostLines lines={lines} currency={job.currency} side="tradie" totalLabel="You get" />
-        <p className="mt-3 text-sm text-muted">{payTiming(market).line}</p>
+        <CostLines lines={lines} currency={job.currency} side="tradie" totalLabel="You get" tierReliefCents={job.tierReliefCents} feeWords={tierLineWords(market)} />
+        <p className="mt-3 text-sm text-muted">
+          {payTiming(market).line} The {brand.name} fee is {feeWords(market, job.platformFeeBps)}, taken before this is worked out.
+        </p>
       </Card>
 
       {query.passed && <Notice tone="info" title="Passed" />}

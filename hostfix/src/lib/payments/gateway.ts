@@ -56,6 +56,23 @@ export type HoldResult =
   | { status: "held"; paymentIntentId: string; chargeId: string | null; captureBefore: Date | null }
   | { status: "declined"; reason: string; code: string | null; paymentIntentId: string | null };
 
+/**
+ * The owner's NZ bank account, saved once with a Direct Debit Authority (DECISIONS.md, 2026-11-23, second entry).
+ * Stripe: a PaymentMethod of type nz_bank_account saved by a SetupIntent, whose mandate is the authority
+ * (docs.stripe.com/payments/nz-bank-account and /set-up-payment, read 23 Nov 2026).
+ */
+export type BankSummary = { paymentMethodId: string; bankName: string | null; last4: string | null; mandateId: string | null };
+
+/**
+ * A direct debit from the owner's bank account. Stripe confirms it at once and it sits at "processing" until the
+ * bank pays (several working days) or says no ("requires_payment_method", with the reason in last_payment_error).
+ * Failed here means definitely not taken: nothing will arrive.
+ */
+export type DebitResult =
+  | { status: "processing"; paymentIntentId: string; chargeId: string | null }
+  | { status: "succeeded"; paymentIntentId: string; chargeId: string | null }
+  | { status: "failed"; reason: string; code: string | null; paymentIntentId: string | null };
+
 /** Taking the charge from a hold: never more than was held. A partial capture lets the rest go. */
 export type CaptureResult =
   | { status: "captured"; amountCents: number; chargeId: string | null }
@@ -135,6 +152,31 @@ export interface PaymentsGateway {
     successUrl: string;
     cancelUrl: string;
   }): Promise<{ url: string }>;
+
+  /**
+   * Sends the owner to the payment company's own page to add their NZ bank account and agree the Direct Debit
+   * Authority (DECISIONS.md, 2026-11-23, second entry). Nothing is taken. They come back to successUrl.
+   */
+  startBankSetup(input: { customerId: string; ownerId: string; market: Market; successUrl: string; cancelUrl: string }): Promise<{ url: string }>;
+
+  /**
+   * A direct debit from the owner's saved bank account, customer not present. Never throws for a definite "no"
+   * (that is "failed"); anything thrown means the outcome is unknown and the next try must use the same key.
+   */
+  debitBank(input: {
+    customerId: string;
+    paymentMethodId: string;
+    amountCents: number;
+    currency: string;
+    description: string;
+    jobNumber: number;
+    /** deposit: half of big work, when the owner approves it. job: the rest of the job, at Job done. */
+    purpose: "deposit" | "job";
+    idempotencyKey: string;
+  }): Promise<DebitResult>;
+
+  /** Where a debit has got to. Asked by the timer, in case the payment company's message never arrived. */
+  debitStatus(paymentIntentId: string): Promise<DebitResult>;
 
   /** Stops the membership at the end of the month already paid for. */
   cancelMembership(subscriptionId: string): Promise<{ endsAt: Date | null }>;

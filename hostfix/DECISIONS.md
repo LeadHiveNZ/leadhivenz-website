@@ -9,6 +9,107 @@ price, a fee or a promise, add a line here saying what and why.
 
 ---
 
+## 2026-11-23 (second entry) — A tiered fee (15% to NZ$1,000, 3% above), and work over NZ$1,000 paid by a 50% deposit from the owner's bank
+
+(Approved by Joe on 23 Nov 2026, NZ time. Replaces "charged in full on approval" in the first 2026-11-23 entry, point 3. Migration
+`supabase/migrations/20261202000000_tiered_fee_bank_deposits.sql`, which only adds. Tests, every amount worked by hand:
+`tests/unit/tier-and-deposits.test.ts` (new), `tests/unit/holds-and-own-clients.test.ts` (the guarantee example redone with the tier and a
+card deposit), `tests/unit/legal.test.ts`, `tests/unit/messages.test.ts`, `tests/unit/content.test.ts`.) **The tradie agreement and owner terms
+were edited in place, still dated 23 November 2026, with no version bump**: nothing is in production yet and no tradie has agreed to the
+earlier text, so nobody needs to agree again.
+Stripe's documentation read for this (23 Nov 2026): docs.stripe.com/payments/nz-bank-account, /nz-bank-account/set-up-payment, the
+Checkout Sessions and PaymentIntents API reference. NZ BECS Direct Debit: NZ accounts only, NZD only, minimum NZ$0.50; a Direct Debit
+Authority (the mandate) is collected and shown by Checkout or the Payment Element; saved with a SetupIntent (`SetupIntent.mandate`); later
+debits are a PaymentIntent with the customer, the saved payment method, `confirm` and `off_session`; "processing" until it settles (T+2
+business days after submission, cut-off 18:20 Auckland, so usually 3-4 working days from the owner's yes), then "succeeded", or
+"requires_payment_method" with `last_payment_error` (insufficient_funds, no_account, debit_not_authorized, refer_to_customer); no manual
+capture; refunds within 90 days take 3-5 business days; disputes up to 9 months, for the full amount (`charge.dispute.created`); Stripe
+emails the mandate confirmation and a notice before each debit; **default limits NZ$10,000 a debit and NZ$10,000 a week**, raised by
+Stripe support.
+
+**1. The tiered fee** (`tieredFee`, `tierRelief` in `src/lib/jobs/pricing.ts`; `recalcTotals` in `src/lib/jobs/store.ts`). 15% on the first
+NZ$1,000 of a job's price, 3% on the part above. Market columns like the guarantee: `markets.tier_threshold_cents` (100000) and
+`above_tier_fee_bps` (300); `TIER_THRESHOLD_CENTS`, `ABOVE_TIER_FEE_BPS` are the starting values. They are not editable on More > Markets
+yet (a change is a fee change, which needs the 30 days' notice to tradies; ask a developer).
+- The "price" is every active line except parts (and the "parts bought before the job was cancelled" line, which has no fee): menu price,
+  surcharges, call-out, quotes, hourly. Parts keep their own 3% and are left out.
+- How: each line is still priced as it always was (the menu payout, a surcharge less 15%, a quote less 15%). When the price is over the line,
+  `recalcTotals` works out what the lines keep, the tiered fee on the price, and gives the tradie the difference: `jobs.tier_relief_cents`,
+  included in `tradie_total_cents`, so payouts, refunds and the guarantee all use it with no other change. Never negative.
+- Own-client pairs: 5% below the line, 3% above it (`tieredFee` with the job's own fee).
+- Worked: NZ$15,000 of work: 15% x 1,000 = 150 + 3% x 14,000 = 420: HostFix 570, tradie 14,430. PL-01 + 6.25 hours at NZ$160: price 122500,
+  lines keep 3500 + 15000 = 18500, tiered fee 15000 + 675 = 15675, the tradie gets 2825 more. PL-01 + a NZ$1,500 quote: tradie
+  19000 + 127500 + 8825 = 155325 (172500 - 17175). PL-01 + NZ$3,000 + NZ$150 of parts: 19000 + 255000 + 14550 + 26825 = 315375.
+- Shown: the tradie's job page (a line "Fee only 3% above NZ$1,000 of the price", and "The HostFix fee is 15% of the first NZ$1,000 of the
+  job's price, 3% of the rest (on this job so far ...)"), the offer page (/o), the staff job page ("We keep"), the tradie's Pay page (each
+  job's price and fee), and the quote form's hints ("you keep 85% ... and 97% of any part of the job's price above NZ$1,000").
+
+**2. Work over NZ$1,000: a 50% deposit, from the bank by default** (`answerQuote`, `depositOutcome` in `src/lib/jobs/work.ts`; `chargeJob`,
+`jobDebitOutcome` in `src/lib/billing/settle.ts`; `src/lib/billing/debits.ts`; `startBankSetup`, `debitBank`, `debitStatus` in the gateways).
+- **Which work.** A quote whose approval would take the job's total (everything on it now, plus the quote) over NZ$1,000
+  (`DEPOSIT_ABOVE_CENTS`) is marked `quotes.deposit` and always waits for the owner, even inside their limit (the old rule only caught work
+  the tradie priced themselves over NZ$1,000; 6.25 hours on PL-01 now counts). Parts never ask for a deposit.
+- **How much.** `depositFor`: half of the approved amount the card hold does not already cover (the hold less what is on the job now), an odd
+  cent in the deposit. NZ$1,500 on PL-01: 75000. The other half is not a separate number: at Job done the rest of the job (hold first,
+  then everything not yet paid) is taken the same way as the deposit.
+- **The owner's bank account** (`/app/billing/bank`, Billing > "Bank account for big work"). Added once on Stripe's Checkout page in setup
+  mode (`allowed_payment_method_types: ["nz_bank_account"]`, which shows the Direct Debit terms and takes the mandate), read back on return
+  (`/app/billing/bank/return`) and from `checkout.session.completed` (`hostfix_purpose = bank_setup`), saved on `owner_billing.bank_*`.
+  Saving one replaces the last.
+- **Approving, by bank** (the default when one is saved; the approval screen shows it first, "no card fees"): the debit is made at once
+  (key `hostfix-quote-<quote>-deposit-<try>`) and is "processing". The quote stays pending, the job stays "awaiting approval" (Job done is
+  refused), the tradie is texted "approved, deposit clearing (usually 3-4 working days). Don't start yet." and the owner's page says it is
+  clearing. Cleared (`payment_intent.succeeded`, or the timer asking every hour, `checkDebits`): the quote is approved in the owner's name
+  and the tradie texted "deposit cleared, go ahead with the approved work". With no bank saved, the main button is "Add your bank account
+  to pay"; choosing the bank without one is refused with "Add your bank account first, or pay the deposit by card instead."
+- **Approving, by card** ("Urgent? Pay NZ$750 by card instead"): charged at once on the saved card; approved as soon as it goes through.
+- **A deposit that fails or comes back**: the quote stays unapproved, the owner is texted (bank: "the NZ$750 deposit from your bank didn't go
+  through, so the work isn't approved") and can approve again by bank or card (a new key), the tradie is texted "don't start", and the queue
+  has "Deposit for big work did not go through" (`deposit_failed`). A deposit that clears after the job was cancelled or the quote
+  withdrawn is refunded by the timer (`refundDuePrepayments`), not approved. A deposit debit Stripe reverses later comes as a chargeback
+  (`charge.dispute.created` now also finds deposits and second payments).
+- **At Job done** (`openSettlement`, `chargeJob`): `payments.method` is "bank" when the job has a cleared bank deposit. The hold is taken
+  first, then the rest is debited (`hostfix-job-<job>-debit-<try>`), "processing" until it clears; the owner gets the usual Job done text then.
+  By card, as before. Cleared: as a card charge going through (the part of the payout that waited can go). **Failed**: the owner owes it,
+  `cardProblem` blocks their new jobs ("unpaid"), the queue has "Card payment failed" and "Owner owes us for a job", the owner is texted, the
+  tradie's share above the guarantee keeps waiting, and it is not tried again by itself (a failed debit can cost the owner a bank fee): the
+  next try (a new card saved, or "Try the card again now") is on the card. A debit whose answer is unknown (a timeout) keeps its key and is
+  asked again a minute later.
+- **The tradie's pay**: the NZ$1,000 guarantee works as now. Worked: NZ$1,500 on PL-01 by bank: at payout time 22500 + 75000 is collected,
+  75000 is not, inside the guarantee, so all 155325 goes at the usual time. NZ$3,000 on PL-01 with the second debit failing: not collected
+  150000, over the guarantee 50000, waits 50000 x 300825 / 322500 = 46639.5, so 46640; 254185 at the usual time, 46640 once paid.
+- The demo gateway (a debit clears 72 hours later on the app's clock; the pretend account `demo_bank_fails` fails then; a pretend bank page)
+  and `e2e/fake-stripe.mjs` (`allowed_payment_method_types[0]=nz_bank_account` gives "processing"; looked up again it has succeeded, or
+  failed with insufficient_funds for a payment method ending "fails") behave the same.
+
+**3. Words.** Tradie agreement (sections 5, 6 and 10) and owner terms (sections 2, 3 and 6), edited in place; both landing pages
+(`{{tier_threshold}}`, `{{above_tier_fee}}` are new placeholders); `docs/outreach/hostfix-for-tradies-full.html` (the short one does not
+state the fee or big quotes); RUNBOOK (the new queue item); SETUP.md (switch on NZ BECS Direct Debit, the two `payment_intent.*` webhook
+events); `docs/STRIPE-TEST-CHECKLIST.md` B10. New texts, each under 160 GSM-7 characters with the STOP line: `depositClearing`,
+`depositCleared`, `depositFailedTradie`, `depositFailedOwner`, `debitFailedOwner`; `quoteCannotStart`, `quotePaymentFailed` and
+`quoteRefunded` now say "deposit".
+
+**Decided while building, to confirm with Joe:**
+- The tier is applied to the job as a whole, after the lines: the lines keep their own shares and the tradie gets the difference as one
+  amount (so a menu job's own payout, which is not exactly 15%, still counts below the line). Above the line the fee is exactly 15% of
+  NZ$1,000 + 3% of the rest, never more than the lines kept.
+- "Over NZ$1,000" for the deposit means the job's whole total including parts already on it; the deposit is only on the quote.
+- The deposit is held as "not yet approved" while it clears: the quote stays pending until the money is there, so a failed deposit needs no
+  undoing. The owner cannot decline a quote whose deposit is clearing (they are asked to ring us).
+- The second half is "the rest of the job", taken the way the deposit was: if anything else was added (parts), it goes in the same debit.
+- The guarantee reads "as now": a job whose uncollected part is under NZ$1,000 (NZ$1,500 on PL-01) pays the tradie in full at the usual time
+  even while the second debit is clearing. Only the part above NZ$1,000 waits for the debit.
+- A failed bank debit is not retried automatically, and the next try is on the card.
+- The tier threshold and rate are market columns but not editable on More > Markets (a fee change needs the 30 days' notice).
+- Staff approving for the owner use the owner's bank if saved, otherwise the card.
+
+**Not done:** the Payment Element is not used (Stripe's hosted page is, as for cards); the PDF and PNG copies of the outreach pages are not
+regenerated; the public sign-up form (`hostfix-landing/lovable/join`) still has the older agreement text; `mandate.updated` (an owner cancelling
+the authority at their bank) is not listed for: the next debit simply fails and is handled as above. Run B10 of the Stripe checklist in the
+sandbox, and ask Stripe to raise the NZ$10,000 limits, before launch.
+
+---
+
 ## 2026-11-23 — A hold on the card at booking, pattern flags, the payout guarantee capped at NZ$1,000, simpler parts, 5% for own clients, one in-app rule
 
 (Approved by Joe on 23 Nov 2026, NZ time. Migration `supabase/migrations/20261201000000_holds_parts_own_clients.sql`, which only adds,
@@ -62,7 +163,8 @@ job's own proportion, waits (`payouts.waits_cents`, worked out once on the payou
 (`hostfix-job-<job>-payout-rest`). Worked: PL-01 plus 6.25 hours at NZ$160 (100000) plus NZ$150 of parts: owner 137500, tradie 19000 + 85000 +
 14550 = 118550; the 22500 hold taken, the 115000 beyond it declined; not collected 115000, over NZ$1,000 15000; waits 15000 x 118550 / 137500 =
 12932.7, so 12933; sent at the usual time 105617; the rest when a new card pays. Jobs up to NZ$1,000 pay exactly as before.
-- **Work a tradie prices themselves over NZ$1,000** (the "over NZ$1,000, their own price" path) always waits for the owner, even inside their
+- **(Replaced the same day by the second 2026-11-23 entry: a 50% deposit, by bank or card, instead of the full amount.)**
+  **Work a tradie prices themselves over NZ$1,000** (the "over NZ$1,000, their own price" path) always waits for the owner, even inside their
   limit, and is charged in full when they approve it (`answerQuote` in `work.ts`, `job_prepayments`, key `hostfix-quote-<quote>-prepay-<try>`).
   Declined: the quote stays unapproved, the owner is told to update the card, the tradie is texted the work can't start yet. `decideQuote` refuses
   to approve one that has not been paid. At Job done the paid amount is not charged again; if the work does not go ahead (the job is cancelled, or

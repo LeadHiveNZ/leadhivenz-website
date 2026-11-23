@@ -74,7 +74,9 @@ export type ExceptionKind =
   /** A part picked from the price list but priced well over it (more than 1.5 times). A look; nothing is held. */
   | "part_price"
   /** The owner's card declined when the hold on an open job was renewed. The job stays booked: ring the owner. */
-  | "hold_failed";
+  | "hold_failed"
+  /** Big work's 50% deposit from the owner's bank did not go through (DECISIONS.md, 2026-11-23, second entry). */
+  | "deposit_failed";
 
 /** The ones worth a text to the founder as well as an email. */
 const URGENT: ExceptionKind[] = ["nobody_accepted", "missed_window", "dispute", "chargeback", "not_taken_yet", "owner_says_absent", "no_show"];
@@ -266,6 +268,7 @@ export const EXCEPTION_LABELS: Record<ExceptionKind, string> = {
   pattern_cancels: "Worth a look: cancelled after On my way",
   part_price: "Worth a look: a part priced over the list",
   hold_failed: "Owner's card declined renewing a hold",
+  deposit_failed: "Deposit for big work did not go through",
 };
 
 /** One line on what to do about each kind. The runbook (RUNBOOK.md) has the longer version. */
@@ -304,4 +307,5 @@ export const EXCEPTION_ACTIONS: Record<ExceptionKind, string> = {
   pattern_cancels: "3 or more of this tradie's accepted jobs in 90 days were cancelled after they tapped On my way. Look at who cancelled and why. Talk to them if it keeps happening. Never a removal by itself, and never counted as a decline.",
   part_price: "A part picked from the price list was priced at more than 1.5 times its list price. Nothing is held. Look at it, and if it seems high, request the receipt on the job page or ring the tradie.",
   hold_failed: "The owner's card declined when the hold on this open job was renewed. The job is still booked and the tradie is still going. Ring the owner and ask them to update their card on the Billing page: it is tried again by itself.",
+  deposit_failed: "The 50% deposit for work over NZ$1,000 did not come through from the owner's bank (or came back). The quote is not approved and the tradie has been told not to start. Ring the owner: they can approve it again on the job page, by bank or by card (card is charged at once). If the work is no longer wanted, decline the quote on the job page.",
 };

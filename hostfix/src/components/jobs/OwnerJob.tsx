@@ -2,7 +2,7 @@ import Link from "next/link";
 import { answerLater, answerQuote, cancelOwnerJob, confirmJob, goAhead, objectNotDescribed, reportProblem, tradieNotHere } from "@/app/actions/owner";
 import { ActionForm, Area } from "@/components/forms/ActionForm";
 import { SubmitButton } from "@/components/forms/SubmitButton";
-import { secondaryButtonClass } from "@/components/forms/styles";
+import { buttonClass, secondaryButtonClass } from "@/components/forms/styles";
 import { Card, Chip, Facts, Notice, SectionTitle } from "@/components/ui/Bits";
 import { Icon } from "@/components/ui/Icon";
 import { Reveal } from "@/components/ui/Reveal";
@@ -10,6 +10,7 @@ import type { PricePreview } from "@/lib/jobs/create";
 import type { JobView } from "@/lib/jobs/view";
 import type { JobPart } from "@/lib/jobs/parts";
 import { partsWords } from "@/lib/markets/display";
+import { DEPOSIT_ABOVE_CENTS } from "@/lib/jobs/pricing";
 import { cardProblemWords } from "@/lib/owners/service";
 import { formatMoney } from "@/lib/money";
 import { displayPhone } from "@/lib/phone";
@@ -79,6 +80,7 @@ export function OwnerJob({ view, now, code, flash = {}, prices }: Props) {
   const photoQuery = code ? `?j=${encodeURIComponent(code)}` : "";
   const fmt = (cents: number) => formatMoney(cents, job.currency);
   const pendingQuote = view.quotes.find((quote) => quote.status === "pending") ?? null;
+  const deposit = view.deposit;
   const canCancel = ["awaiting_owner", "offering", "unfilled", "accepted", "on_site", "awaiting_approval"].includes(job.status) && job.cardHold !== "placing";
   // After the tradie has arrived, cancelling charges the call-out (DECISIONS.md, 2026-11-23).
   const cancelAfterArrived = job.status === "on_site" || job.status === "awaiting_approval";
@@ -290,17 +292,58 @@ export function OwnerJob({ view, now, code, flash = {}, prices }: Props) {
               <PhotoGrid photos={quotePhotos} query={photoQuery} />
             </div>
           )}
-          <ActionForm action={answerQuote} className="mt-4 space-y-2.5">
-            {which}
-            <input type="hidden" name="quoteId" value={pendingQuote.id} />
-            <SubmitButton name="answer" value="yes" pendingLabel="Sending..." className="w-full">
-              Yes, go ahead · {fmt(pendingQuote.ownerTotalCents)}
-            </SubmitButton>
-            <SubmitButton name="answer" value="no" variant="secondary" pendingLabel="Sending..." className="w-full">
-              No thanks
-            </SubmitButton>
-            <p className="text-center text-sm text-muted">If you say no, you pay only for what has been done so far: {fmt(activeTotal)}.</p>
-          </ActionForm>
+          {deposit && deposit.quoteId === pendingQuote.id && deposit.status === "processing" ? (
+            // Big work approved, the deposit on its way from the bank (DECISIONS.md, 2026-11-23, second entry).
+            <div className="mt-4 rounded-xl bg-tint p-4 text-ink">
+              <p className="font-semibold">You approved it. The {fmt(deposit.amountCents)} deposit is coming from your bank.</p>
+              <p className="mt-1 text-sm text-muted">
+                Bank debits usually take 3-4 working days to clear. The tradie starts once it has, and we text you both. The other half is taken when the job is done.
+              </p>
+            </div>
+          ) : deposit && deposit.quoteId === pendingQuote.id ? (
+            <ActionForm action={answerQuote} className="mt-4 space-y-2.5">
+              {which}
+              <input type="hidden" name="quoteId" value={pendingQuote.id} />
+              <p className="text-ink">
+                This takes the job over {fmt(DEPOSIT_ABOVE_CENTS)}, so half is paid now as a deposit: <strong>{fmt(deposit.amountCents)}</strong>. The rest is taken when the tradie taps Job done, the same way.
+              </p>
+              {deposit.status === "failed" && deposit.lastError && (
+                <p className="text-sm font-semibold text-alert">The last try did not go through: {deposit.lastError}</p>
+              )}
+              {deposit.bankSaved ? (
+                <SubmitButton name="answer" value="bank" pendingLabel="Sending..." className="w-full">
+                  Yes, pay {fmt(deposit.amountCents)} from my bank · no card fees
+                </SubmitButton>
+              ) : (
+                <a href={code ? `/sign-in?next=${encodeURIComponent(`/app/billing/bank?job=${job.id}`)}` : `/app/billing/bank?job=${job.id}`} className={`${buttonClass} w-full`}>
+                  Add your bank account to pay · no card fees
+                </a>
+              )}
+              <p className="text-center text-sm text-muted">
+                Recommended. {deposit.bankSaved ? `From ${deposit.bankLabel}. ` : ""}A bank debit usually takes 3-4 working days to clear, and the tradie starts once it has.
+              </p>
+              <SubmitButton name="answer" value="card" variant="secondary" pendingLabel="Sending..." className="w-full">
+                Urgent? Pay {fmt(deposit.amountCents)} by card instead
+              </SubmitButton>
+              <p className="text-center text-sm text-muted">Charged to your saved card straight away, so the work can start as soon as it goes through.</p>
+              <SubmitButton name="answer" value="no" variant="secondary" pendingLabel="Sending..." className="w-full">
+                No thanks
+              </SubmitButton>
+              <p className="text-center text-sm text-muted">If you say no, you pay only for what has been done so far: {fmt(activeTotal)}.</p>
+            </ActionForm>
+          ) : (
+            <ActionForm action={answerQuote} className="mt-4 space-y-2.5">
+              {which}
+              <input type="hidden" name="quoteId" value={pendingQuote.id} />
+              <SubmitButton name="answer" value="yes" pendingLabel="Sending..." className="w-full">
+                Yes, go ahead · {fmt(pendingQuote.ownerTotalCents)}
+              </SubmitButton>
+              <SubmitButton name="answer" value="no" variant="secondary" pendingLabel="Sending..." className="w-full">
+                No thanks
+              </SubmitButton>
+              <p className="text-center text-sm text-muted">If you say no, you pay only for what has been done so far: {fmt(activeTotal)}.</p>
+            </ActionForm>
+          )}
         </Card>
       )}
 

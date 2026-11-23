@@ -21,6 +21,40 @@ export default async function DemoCheckoutPage({ params }: { params: Promise<{ i
   const today = Math.max(0, checkout.priceCents - checkout.discountCents);
   const back = checkout.cancelUrl.replace(/^https?:\/\/[^/]+/, "") || "/app";
 
+  if (checkout.bankOnly) {
+    // The "add your bank account" page (DECISIONS.md, 2026-11-23, second entry): saves a pretend NZ bank account.
+    return (
+      <div className="mx-auto max-w-md space-y-5">
+        <Notice tone="warn" title="Pretend bank page">
+          On the live site the owner types their bank account into Stripe&apos;s own secure page here and agrees the direct debit. In the demo, nothing is saved or taken.
+        </Notice>
+        <Card className="sm:p-6">
+          <h1 className="display text-3xl text-ink">Add a bank account</h1>
+          <div className="mt-4">
+            <Facts
+              rows={[
+                { label: "Taken today", value: <span className="text-xl">{money(0)}</span> },
+                { label: "Taken later", value: "Half of approved work over NZ$1,000, then the rest at Job done" },
+                { label: "Account", value: "ASB ending 0010 (pretend)" },
+              ]}
+            />
+          </div>
+          <ActionForm action={payDemoCheckout} className="mt-5 space-y-3">
+            <input type="hidden" name="checkoutId" value={checkout.id} />
+            <SubmitButton pendingLabel="Saving..." className="w-full">
+              Save bank account
+            </SubmitButton>
+          </ActionForm>
+          <p className="mt-3 text-center text-sm">
+            <Link href={back} className="font-semibold text-muted underline underline-offset-2">
+              Go back without saving
+            </Link>
+          </p>
+        </Card>
+      </div>
+    );
+  }
+
   if (checkout.setupOnly) {
     // A free membership: the page only saves a card.
     return (

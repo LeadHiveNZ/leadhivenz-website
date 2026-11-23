@@ -30,6 +30,10 @@ import type { Market } from "@config/markets";
  *    property they brought to HostFix themselves (an own-client pair) takes a
  *    5% platform fee instead of 15% on everything the 15% applies to: the
  *    menu share, the surcharges, the call-out, quotes and hourly work.
+ *  - The tiered fee (DECISIONS.md, 2026-11-23, second entry): above NZ$1,000
+ *    of a job's price (parts aside) the fee is 3%, not 15% (or 5%). Lines are
+ *    priced as above; tierRelief gives the tradie the difference on the job.
+ *  - Work that takes a job over NZ$1,000 takes a 50% deposit (depositFor).
  */
 
 export type LineKind = "menu" | "diagnosis" | "urgent" | "after_hours" | "quote" | "parts" | "no_access" | "adjustment";
@@ -99,6 +103,66 @@ export const OWN_CLIENT_FEE_BPS = 500;
  * app uses; this is the starting value for a new market.
  */
 export const PAYOUT_GUARANTEE_CENTS = 100_000;
+
+/**
+ * The tiered fee (DECISIONS.md, 2026-11-23, second entry). Of a job's price, parts aside, the first NZ$1,000 pays the
+ * job's own fee (15%, or 5% between an own-client pair) and the part above it pays 3%. These are the starting values;
+ * the market's own figures (markets.tier_threshold_cents, markets.above_tier_fee_bps) are what the app uses.
+ */
+export const TIER_THRESHOLD_CENTS = 100_000;
+export const ABOVE_TIER_FEE_BPS = 300;
+
+export type FeeTier = { thresholdCents: number; aboveBps: number };
+
+/**
+ * The fee on a job's price (parts aside) under the tier. NZ$15,000 at 15%: 15% of 100000 (15000) + 3% of 1400000
+ * (42000) = 57000, so HostFix keeps NZ$570 and the tradie NZ$14,430. At 5% (an own client): 5000 + 42000 = 47000.
+ * Up to the line it is the plain fee: NZ$800 at 15% is 12000.
+ */
+export function tieredFee(priceCents: number, feeBps: number, tier: FeeTier): number {
+  whole(priceCents, "Price");
+  const below = Math.min(priceCents, tier.thresholdCents);
+  return platformFee(below, feeBps) + platformFee(priceCents - below, tier.aboveBps);
+}
+
+/**
+ * What the tier adds to the tradie's share of a job (DECISIONS.md, 2026-11-23, second entry). Each line is priced as
+ * it always was (a menu payout, a surcharge or a quote less 15%); once the job's price, parts aside, is over the line,
+ * the fee on all of it becomes `tieredFee` instead, and the difference goes to the tradie. Never less than nothing: a
+ * job whose lines already keep less than the tiered fee is left alone. Parts (their own 3%) and the "parts bought
+ * before the job was cancelled" line (no fee) are left out of the price.
+ * Worked: PL-01 (22500, tradie 19000) + 6.25 hours at NZ$160 (100000, tradie 85000): price 122500, fee kept by the
+ * lines 3500 + 15000 = 18500, tiered fee 15000 + 3% of 22500 (675) = 15675, so the tradie gets 2825 more.
+ */
+export function tierRelief(lines: Pick<Line, "kind" | "label" | "ownerCents" | "tradieCents">[], feeBps: number, tier: FeeTier): number {
+  let price = 0;
+  let kept = 0;
+  for (const line of lines) {
+    if (line.kind === "parts") continue;
+    if (line.kind === "adjustment" && line.ownerCents === line.tradieCents) continue;
+    price += line.ownerCents;
+    kept += line.ownerCents - line.tradieCents;
+  }
+  if (price <= tier.thresholdCents) return 0;
+  return Math.max(0, kept - tieredFee(price, feeBps, tier));
+}
+
+/**
+ * The deposit when approved work takes a job over NZ$1,000 (DECISIONS.md, 2026-11-23, second entry): half of the
+ * approved amount the hold on the card does not already cover, taken when the owner approves. The other half is
+ * taken at Job done with the rest of the job. A NZ$1,500 quote on PL-01 (22500 held, 22500 on the job): the hold
+ * covers none of the quote, so 150000 / 2 = 75000. With 5000 of the hold spare (an urgent line that came off):
+ * (150000 - 5000) / 2 = 72500. An odd cent goes in the deposit: 150001 gives 75001.
+ */
+export const DEPOSIT_BPS = 5000;
+/** A quote that takes the job's total over this asks for the deposit. */
+export const DEPOSIT_ABOVE_CENTS = 100_000;
+
+export function depositFor(input: { quoteCents: number; holdCents: number; jobTotalCents: number }): number {
+  const spare = Math.max(0, whole(input.holdCents, "Hold") - Math.max(0, input.jobTotalCents));
+  const uncovered = Math.max(0, whole(input.quoteCents, "Quote") - spare);
+  return uncovered - Math.floor((uncovered * (10_000 - DEPOSIT_BPS)) / 10_000);
+}
 
 /** The market's numbers with a job's own fee in place of the market's: the own-client rate when the job has one. */
 export function withFee<T extends Pick<Market, "platformFeeBps">>(market: T, feeBps: number | null | undefined): T {

@@ -324,8 +324,11 @@ export async function answerQuote(_previous: FormState, formData: FormData): Pro
   if (!found) return { message: NOT_FOUND };
   const quote = await getQuote(db, text(formData, "quoteId"));
   if (!quote || quote.jobId !== found.job.id) return { message: "We could not find that quote." };
-  // A quote over NZ$1,000 priced by the tradie is charged when it is approved (DECISIONS.md, 2026-11-23).
-  const result = await answerQuoteWithCharge(db, gatewayFor(db), quote.id, text(formData, "answer") === "yes", found.actor);
+  // Work that takes the job over NZ$1,000 takes a 50% deposit when it is approved: from the bank (the default) or
+  // by card (DECISIONS.md, 2026-11-23, second entry).
+  const answer = text(formData, "answer");
+  const method = answer === "bank" ? "bank" : answer === "card" ? "card" : undefined;
+  const result = await answerQuoteWithCharge(db, gatewayFor(db), quote.id, answer === "yes" || method !== undefined, found.actor, { method });
   await sendQueued(db);
   if (!result.ok) return { message: result.message };
   redirect(`${found.back}?answered=1`);
@@ -422,6 +425,35 @@ export async function changeCard(_previous: FormState, formData: FormData): Prom
   } catch (error) {
     console.error("[billing] opening the card page failed:", error instanceof Error ? error.message : error);
     return { message: "The card page could not be opened just now. Please try again." };
+  }
+  redirect(url);
+}
+
+/**
+ * "Add your bank account" (DECISIONS.md, 2026-11-23, second entry): opens the payment company's own page, where the
+ * owner adds their NZ bank account and agrees the Direct Debit Authority. Nothing is taken. Used for work that takes a
+ * job over NZ$1,000: half when they approve it, the rest at Job done.
+ */
+export async function addBankAccount(_previous: FormState, formData: FormData): Promise<FormState> {
+  const viewer = await requireOwner("/app/billing/bank");
+  const db = await getDb();
+  const jobId = text(formData, "job");
+  const job = isUuid(jobId) ? await getJobForOwner(db, viewer.ownerId, jobId) : null;
+  const market = await getMarket(db, job?.market ?? text(formData, "market"));
+  if (!market || market.country !== "NZ") return { message: "Paying from a bank account is only for New Zealand properties for now." };
+  const gateway = paymentsFor(db, market.country);
+  const billing = await getBilling(db, viewer.ownerId, market.country);
+  if (!gateway || !billing || billing.provider !== gateway.provider) return { message: "Add a card first: it is added when you cover your first property." };
+  const back = job ? `${baseUrl()}/app/jobs/${job.id}` : `${baseUrl()}/app/billing`;
+  let url: string;
+  try {
+    url = (await gateway.startBankSetup({
+      customerId: billing.customerId, ownerId: viewer.ownerId, market,
+      successUrl: `${baseUrl()}/app/billing/bank/return${job ? `?job=${job.id}` : ""}`, cancelUrl: back,
+    })).url;
+  } catch (error) {
+    console.error("[billing] opening the bank account page failed:", error instanceof Error ? error.message : error);
+    return { message: "The bank account page could not be opened just now. Please try again." };
   }
   redirect(url);
 }

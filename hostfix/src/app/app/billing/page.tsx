@@ -16,6 +16,7 @@ import { listMarkets, listTiers } from "@/lib/markets/store";
 import { formatMoney } from "@/lib/money";
 import { isMonthKey, shiftMonth } from "@/lib/months";
 import { getBilling } from "@/lib/owners/service";
+import { DEPOSIT_ABOVE_CENTS } from "@/lib/jobs/pricing";
 import { tierPriceLabel } from "@/lib/markets/display";
 import { membershipLabel } from "@/lib/properties/display";
 import { minimumProperties } from "@/lib/markets/bands";
@@ -206,6 +207,30 @@ export default async function BillingPage({ searchParams }: { searchParams: Sear
             )}
           </Card>
         ))}
+
+        {cards.some(({ country }) => country === "NZ") && (
+          // Work that takes a job over NZ$1,000 is paid from the bank by default (DECISIONS.md, 2026-11-23, second entry).
+          <Card>
+            <SectionTitle>Bank account for big work</SectionTitle>
+            {(() => {
+              const nz = cards.find(({ country }) => country === "NZ")?.billing;
+              return nz?.bankPaymentMethodId ? (
+                <p className="flex items-center gap-3 text-lg font-semibold text-ink">
+                  <Icon name="card" className="text-brand" />
+                  <span>
+                    {nz.bankName ?? "Bank account"}
+                    {nz.bankLast4 ? ` ending ${nz.bankLast4}` : ""}
+                  </span>
+                </p>
+              ) : (
+                <p className="text-muted">None yet. Work that takes a job over {formatMoney(DEPOSIT_ABOVE_CENTS, "NZD")} is paid half when you approve it and half at Job done, from your bank (no card fees) or by card.</p>
+              );
+            })()}
+            <Link href="/app/billing/bank" className={`${smallButtonClass} mt-4`}>
+              {cards.find(({ country }) => country === "NZ")?.billing?.bankPaymentMethodId ? "Change bank account" : "Add a bank account"}
+            </Link>
+          </Card>
+        )}
 
         <Card>
           <SectionTitle>Memberships</SectionTitle>

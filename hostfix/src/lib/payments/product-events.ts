@@ -7,12 +7,13 @@ import { formatMoney } from "@/lib/money";
 import { refundSplit } from "@/lib/jobs/pricing";
 import { closeChargeback, recordChargeback } from "@/lib/billing/chargebacks";
 import { raiseException } from "@/lib/ops/exceptions";
-import { findOwnerByCustomer, saveBilling } from "@/lib/owners/service";
+import { settleDebit } from "@/lib/billing/debits";
+import { findOwnerByCustomer, saveBank, saveBilling } from "@/lib/owners/service";
 import { activatePortfolio } from "@/lib/properties/portfolio";
 import { activateFreeMembership, activateMembership, endMembership, recordMembershipPaymentFailed, recordRenewal } from "@/lib/properties/service";
 import type { StripeMessage } from "./deposit";
 import { stripeClient, type StripeAccount } from "./stripe";
-import { cardFromSetupCheckout, defaultCard, invoiceSubscriptionId, invoiceSummary, membershipFromCheckout } from "./stripe-gateway";
+import { bankFromSetupCheckout, cardFromSetupCheckout, debitOf, defaultCard, invoiceSubscriptionId, invoiceSummary, membershipFromCheckout } from "./stripe-gateway";
 
 /**
  * WHAT STRIPE TELLS US ABOUT MEMBERSHIPS AND JOB PAYMENTS.
@@ -36,6 +37,7 @@ type Fetchers = {
   charge: (id: string) => Promise<Stripe.Charge>;
   session: (id: string) => Promise<Stripe.Checkout.Session>;
   refundsFor: (paymentIntentId: string) => Promise<Stripe.Refund[]>;
+  paymentIntent: (id: string) => Promise<Stripe.PaymentIntent>;
 };
 
 export type ProductDeps = {
@@ -43,6 +45,7 @@ export type ProductDeps = {
   fetch?: Partial<Fetchers>;
   membershipFromCheckout?: typeof membershipFromCheckout;
   cardFromSetupCheckout?: typeof cardFromSetupCheckout;
+  bankFromSetupCheckout?: typeof bankFromSetupCheckout;
   defaultCard?: typeof defaultCard;
 };
 
@@ -55,6 +58,7 @@ function fetchers(account: StripeAccount, overrides: Partial<Fetchers> = {}): Fe
     charge: overrides.charge ?? ((id) => stripe().charges.retrieve(id)),
     session: overrides.session ?? ((id) => stripe().checkout.sessions.retrieve(id)),
     refundsFor: overrides.refundsFor ?? (async (paymentIntentId) => (await stripe().refunds.list({ payment_intent: paymentIntentId, limit: 100 })).data),
+    paymentIntent: overrides.paymentIntent ?? ((id) => stripe().paymentIntents.retrieve(id)),
   };
 }
 
@@ -83,6 +87,9 @@ async function unpack(message: StripeMessage, get: Fetchers): Promise<{ type: st
       return { type, id: message.id, object: await get.charge(related) };
     case "customer.updated":
       return { type, id: message.id, object: { id: related } };
+    case "payment_intent.succeeded":
+    case "payment_intent.payment_failed":
+      return { type, id: message.id, object: await get.paymentIntent(related) };
     default:
       return null;
   }
@@ -98,6 +105,15 @@ export async function handleProductMessage(db: Db, message: StripeMessage, accou
     case "checkout.session.completed":
     case "checkout.session.async_payment_succeeded": {
       const session = event.object as Stripe.Checkout.Session;
+      // The owner added their NZ bank account for big work's direct debits (DECISIONS.md, 2026-11-23, second entry).
+      if (session.mode === "setup" && session.metadata?.hostfix_purpose === "bank_setup") {
+        const saved = await (deps.bankFromSetupCheckout ?? bankFromSetupCheckout)(account, session.id);
+        if (!saved) return { handled: true, outcome: "bank_not_saved" };
+        const owner = await findOwnerByCustomer(db, "stripe", saved.customerId);
+        if (!owner) return { handled: true, outcome: "owner_missing" };
+        await saveBank(db, { ownerId: owner.ownerId, country: owner.country, provider: "stripe", customerId: saved.customerId, bank: saved.bank });
+        return { handled: true, outcome: "bank_saved" };
+      }
       // A free membership: the page only saved a card, and the property is covered once it has.
       if (session.mode === "setup" && session.metadata?.hostfix_purpose === "card_setup") {
         const saved = await (deps.cardFromSetupCheckout ?? cardFromSetupCheckout)(account, session.id);
@@ -190,7 +206,10 @@ export async function handleProductMessage(db: Db, message: StripeMessage, accou
       const amount = formatMoney(dispute.amount, dispute.currency.toUpperCase());
       const found = paymentIntentId
         ? await db.query<{ job_id: string; number: number; market: string }>(
-            "select p.job_id, j.number, j.market from public.payments p join public.jobs j on j.id = p.job_id where p.payment_intent_id = $1",
+            // The job's charge (either payment), or big work's deposit (DECISIONS.md, 2026-11-23, second entry).
+            `select p.job_id, j.number, j.market from public.payments p join public.jobs j on j.id = p.job_id where p.payment_intent_id = $1 or p.extra_payment_intent_id = $1
+             union all
+             select x.job_id, j.number, j.market from public.job_prepayments x join public.jobs j on j.id = x.job_id where x.payment_intent_id = $1`,
             [paymentIntentId],
           )
         : [];
@@ -312,6 +331,16 @@ export async function handleProductMessage(db: Db, message: StripeMessage, accou
         dedupeKey: `refund_outside:${paymentIntentId}:${outside}`,
       });
       return { handled: true, outcome: "refund_outside_app" };
+    }
+
+    // A direct debit from an owner's bank (big work's deposit, or the rest of the job) cleared or failed
+    // (DECISIONS.md, 2026-11-23, second entry). Any other payment is not ours to handle here.
+    case "payment_intent.succeeded":
+    case "payment_intent.payment_failed": {
+      const intent = event.object as Stripe.PaymentIntent;
+      if (!intent.metadata?.hostfix_debit) return null;
+      const moved = await settleDebit(db, intent.id, debitOf(intent));
+      return { handled: true, outcome: moved === "nothing" ? "nothing_to_change" : `debit_${moved}_${event.type === "payment_intent.succeeded" ? "cleared" : "failed"}` };
     }
 
     default:

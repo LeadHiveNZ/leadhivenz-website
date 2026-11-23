@@ -160,6 +160,28 @@ three-digit code work with them.
       then disputed. Make it the owner's card and do a job.
 - [ ] *Should happen:* the queue shows **Bank dispute (chargeback)**.
 
+**B10. Big work paid from the owner's bank (DECISIONS.md, 2026-11-23, second entry).** Needs NZ BECS Direct
+Debit switched on in the sandbox (SETUP.md, Stripe step 4) and the two `payment_intent.*` events on the webhook.
+- [ ] As the owner, Billing > **Add a bank account**. On Stripe's page use bank 11, branch 0000, account 0000000,
+      suffix 010 (Stripe's test account that clears), and agree to the direct debit.
+- [ ] *Should happen:* back on Billing, the bank account shows. In Stripe the customer has an `nz_bank_account`
+      payment method with an active mandate.
+- [ ] Do a PL-01 job; as the tradie, after Arrived, quote NZ$1,500 of work at your own price.
+- [ ] *Should happen:* the owner's job page shows **Yes, pay NZ$750 from my bank** and **Urgent? Pay NZ$750 by
+      card instead**. Press the bank one. Stripe > Payments shows NZ$750 "Processing"; the tradie is texted
+      "approved, deposit clearing". The quote stays waiting.
+- [ ] Wait for it to succeed (Stripe's test account moves it on by itself; account 9999999 / 000 stays
+      "Processing" until moved on with the API request on docs.stripe.com/payments/nz-bank-account/set-up-payment,
+      "Test your integration"). *Should happen:* within an
+      hour (or straight away with the webhook), the quote is approved and the tradie texted "deposit cleared, go
+      ahead". If nothing happens, look at **Developers > Webhooks** for the `payment_intent.succeeded` delivery.
+- [ ] Finish the job. *Should happen:* NZ$225 taken from the hold and NZ$750 debited from the bank
+      ("Processing"). The tradie is paid at the usual time.
+- [ ] Repeat with account 2222222, suffix 027 (insufficient funds). *Should happen:* the deposit fails, the quote
+      stays waiting, the queue shows **Deposit for big work did not go through**, and the owner and tradie are
+      texted. Approving again by card charges the card at once.
+- [ ] Check the per-debit and weekly limits on the account (Stripe starts at NZ$10,000 each) before real big jobs.
+
 ## C. Going live
 
 - [ ] Every box above is ticked.

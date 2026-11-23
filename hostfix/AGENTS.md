@@ -27,7 +27,9 @@ it when you change one.
 | Parts on a job: the price list, receipts, asking first, receipts to follow, receipt checks | `src/lib/jobs/parts.ts`, `seed/parts-queenstown.json` |
 | Why a payout is held (a flagged job, a receipt) and letting it go | `src/lib/billing/holds.ts` |
 | The hold on the owner's card: placed when a job goes out, renewed, let go, captured | `src/lib/billing/card-holds.ts`, `sendOut` in `src/lib/jobs/create.ts`, `chargeJob` in `settle.ts` |
-| The payout guarantee (NZ$1,000 of a job's price), the part of a payout that waits, a big quote paid on approval | `payoutWaits` in `pricing.ts`, `releasePayout`/`releaseDueRests` in `settle.ts`, `answerQuote` in `src/lib/jobs/work.ts` |
+| The payout guarantee (NZ$1,000 of a job's price), the part of a payout that waits | `payoutWaits` in `pricing.ts`, `releasePayout`/`releaseDueRests` in `settle.ts` |
+| The tiered fee (15% to NZ$1,000 of a job's price, 3% above) | `tieredFee`/`tierRelief` in `pricing.ts`, `recalcTotals` in `src/lib/jobs/store.ts` (`jobs.tier_relief_cents`), `markets.tier_threshold_cents`/`above_tier_fee_bps` |
+| Big work's 50% deposit (bank debit or card) and the rest at Job done; bank debits clearing or failing | `answerQuote`/`depositOutcome` in `src/lib/jobs/work.ts`, `chargeJob`/`jobDebitOutcome` in `settle.ts`, `src/lib/billing/debits.ts`, `/app/billing/bank` |
 | Own clients at 5%: tradie + property pairs, the guard, invite links | `src/lib/clients/own-clients.ts`, `src/app/i/[token]/page.tsx`, `src/app/actions/clients.ts` |
 | Pattern flags (same tradie and owner, cancelled after On my way) | `src/lib/ops/patterns.ts` |
 | Logging a job, guest reports, the card check before sending out, cancelling | `src/lib/jobs/create.ts`, `cardProblem` in `src/lib/owners/service.ts` |
@@ -74,14 +76,22 @@ it when you change one.
   are worked out by hand from the menu file, never pasted from what the code returns.
 - **Every promise on a public page must be something the code does today**, or be tracked as owed in
   `DECISIONS.md` and on the go-live checklist (the founding half price is one). No unsourced statistics.
-- **Free to join; the money is the 15% inside every fixed job price** (`DECISIONS.md`, 2026-11-17).
+- **Free to join; the money is the 15% inside every fixed job price** (`DECISIONS.md`, 2026-11-17; 3% on the part of
+  a job's price above NZ$1,000 since 2026-11-23, second entry).
   Essential costs NZ$0: a property is covered once a card is on file, with no subscription. The founding
   deposit is no longer offered (paid ones are refunded by hand); the lead form has one button, "send me
   the price list". The demand test's scorecard still counts leads and any deposits paid before the change.
 - **Two tiers, one fee.** Essential (free) for owners. Portfolio for managers with 10+ properties, a
-  retainer banded by portfolio size, built and switched off for now. The platform fee is 15% of every job
-  in both. The one exception is a tradie's own client (DECISIONS.md, 2026-11-23): a job between an own-client
-  pair (one tradie, one property, made by an invite link from either side) takes 5% (`OWN_CLIENT_FEE_BPS`) on
+  retainer banded by portfolio size, built and switched off for now. The platform fee is tiered (DECISIONS.md,
+  2026-11-23, second entry): 15% of the first NZ$1,000 of every job's price and 3% of the part above it
+  (`markets.tier_threshold_cents` 100000, `above_tier_fee_bps` 300; `TIER_THRESHOLD_CENTS`, `ABOVE_TIER_FEE_BPS` are
+  the starting values), on everything the 15% applies to (menu price, surcharges, call-out, quotes, hourly); parts
+  keep their own 3% and are left out of the price. Each line is priced as before; `recalcTotals` gives the tradie
+  the difference above the line (`tierRelief`, `jobs.tier_relief_cents`, inside `tradie_total_cents`). NZ$15,000:
+  150 + 420 = 570 to HostFix, 14,430 to the tradie. The offer, job page and Pay page show the fee. The one exception
+  is a tradie's own client (DECISIONS.md, 2026-11-23): a job between an own-client
+  pair (one tradie, one property, made by an invite link from either side) takes 5% (`OWN_CLIENT_FEE_BPS`) below the
+  line (3% above it, as every job) on
   everything the 15% applies to (menu share, surcharges, call-out, quotes, hourly), set on the job
   (`jobs.platform_fee_bps`) when that tradie accepts; that tradie is first choice there in their trade. No pair
   where HostFix already offered that tradie a job at that place, matched by normalised address or pin, never by
@@ -161,14 +171,26 @@ it when you change one.
 - **A finished job is paid whatever the owner's card does, up to NZ$1,000 of its price** (DECISIONS.md, 2026-11-20,
   second entry; capped 2026-11-23). A payout never waits for the charge for the first `payout_guarantee_cents`
   (NZ$1,000, a market column) of the job's price not yet collected; the tradie's share of anything above that
-  waits (`payouts.waits_cents`) and is sent as a second transfer once the card pays (`releaseDueRests`). Work a
-  tradie prices themselves over NZ$1,000 always waits for the owner and is charged in full when they approve it
-  (`answerQuote`, `job_prepayments`); a declined card leaves it unapproved, and it is refunded if the work does not
-  go ahead. A charge that fails four times is what the owner owes, and blocks their
+  waits (`payouts.waits_cents`) and is sent as a second transfer once the money arrives (`releaseDueRests`). A
+  charge that fails four times, or a bank debit that fails once (not retried by itself; the next try is on the
+  card), is what the owner owes, and blocks their
   new jobs (`cardProblem`: no card, expired, a failed charge, or a declined hold). No job is sent to tradies without a usable
   saved card: an owner is refused, anyone else's report is held (`card_hold`) until the card is sorted.
   A lost chargeback the team marks as the tradie's fault becomes a balance taken from later payouts, never
   more than half of any one (`deducted_cents`); otherwise HostFix carries it.
+- **Work that takes a job over NZ$1,000 takes a 50% deposit** (DECISIONS.md, 2026-11-23, second entry; replaces
+  "charged in full on approval"). Such a quote (`quotes.deposit`, `DEPOSIT_ABOVE_CENTS`) always waits for the owner,
+  even inside their limit; parts never do. Approving takes `depositFor`: half the approved amount the card hold does
+  not cover (`job_prepayments`, key `hostfix-quote-<quote>-deposit-<try>`). By default from the owner's NZ bank
+  account by Stripe NZ BECS Direct Debit (saved once on Stripe's page with its mandate, `owner_billing.bank_*`,
+  `/app/billing/bank`; none saved asks them to add it or pay by card): `processing` for a few working days, the
+  quote stays pending and the tradie is texted "approved, deposit clearing" and must not start; cleared
+  (`payment_intent.succeeded`, or `checkDebits` asking hourly) approves it and texts "deposit cleared, go ahead";
+  failed leaves it unapproved, texts both, and raises `deposit_failed`. By card: charged at once, approved when it goes
+  through. At Job done the rest is taken the same way as the deposit (`payments.method`): the hold first, then a bank
+  debit (`processing` until it clears, key `hostfix-job-<job>-debit-<try>`) or a card charge. A deposit for work that
+  does not go ahead is refunded (`refundDuePrepayments`). The demo gateway (debits clear 72 hours on the app's clock;
+  `demo_bank_fails` fails) and `e2e/fake-stripe.mjs` behave the same.
 - **No offers without the current tradie agreement.** Both offer queries require
   `agreement_version = TRADIE_AGREEMENT_VERSION`, which is also the date on the agreement page. Change the
   agreement, bump the version, and every tradie agrees again in the app. A platform fee change waits 30

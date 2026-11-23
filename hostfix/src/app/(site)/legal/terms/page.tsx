@@ -5,7 +5,7 @@ import { LegalPage, Section } from "@/components/LegalPage";
 import { FAR_METRES, PROPOSAL_DAYS, WINDOW_HOURS } from "@/lib/jobs/arrival";
 import { partsWords } from "@/lib/markets/display";
 import { formatMoney } from "@/lib/money";
-import { HOURLY_LIMIT_CENTS } from "@/lib/jobs/rates";
+import { DEPOSIT_ABOVE_CENTS, DEPOSIT_BPS, PART_FEE_BPS } from "@/lib/jobs/pricing";
 import { FLAG_DAYS, TRUSTED_FINISHED_JOBS } from "@/lib/tradies/reliability";
 import { formatHourOfDay, TEXTING_ENDS, TEXTING_STARTS } from "@/lib/time";
 
@@ -54,7 +54,8 @@ export default function Page() {
         <p>
           There is no joining fee and no monthly fee. To cover a property you add it to the app and put a card on file with Stripe, our payment
           company. We never see your card number. Nothing is charged until a job is done at your property. When a job is sent out, its price is held on your
-          card: a hold is not a charge, and it is let go if the job does not go ahead.
+          card: a hold is not a charge, and it is let go if the job does not go ahead. For work that takes a job over {money(DEPOSIT_ABOVE_CENTS)} you can also add a
+          New Zealand bank account, once, on Stripe&rsquo;s page, where you agree to the direct debit (section 6).
         </p>
       </Section>
 
@@ -75,6 +76,11 @@ export default function Page() {
             the limit you set for that property, stops until you say yes. When a quote goes ahead (your yes, or inside your limit), the call-out comes off
             it, so you pay for the visit once. If you say no, the call-out is still charged. Extra work up to NZ$1,000 is quoted in hours at a fixed hourly rate for the trade,
             which the tradie cannot change; bigger work the tradie prices. A return visit is part of the quote, never a second call-out.
+          </li>
+          <li>
+            <strong>How {n} is paid.</strong> Our fee comes out of the price, never on top of it: {launchMarket.platformFeeBps / 100}% of the first{" "}
+            {money(launchMarket.tierThresholdCents)} of a job&rsquo;s price and {launchMarket.aboveTierFeeBps / 100}% of the part above it, and{" "}
+            {PART_FEE_BPS / 100}% of parts. The tradie gets the rest.
           </li>
           <li>
             <strong>Not the job described.</strong> On a menu job, a quote is only for work beyond the job you described, which is still done at its
@@ -197,10 +203,19 @@ export default function Page() {
         <p>
           <strong>You&rsquo;re only charged once it&rsquo;s fixed.</strong> When the tradie finishes, with a photo and a note, the job&rsquo;s price is taken
           from the hold. Anything approved beyond it (parts, more work) is charged then, separately, to the same card. There is no approval step at that point,
-          because you approved the price when the job was logged and anything more as it came up. Work a tradie prices themselves over{" "}
-          {money(HOURLY_LIMIT_CENTS)} is different: it is charged in full when you approve it, before the work starts, and refunded if the work then does not go
-          ahead. If a charge fails we try again, a day apart, four times, and then a person contacts you. The tradie is paid at the usual time either way, so
+          because you approved the price when the job was logged and anything more as it came up. If a charge fails we try again, a day apart, four times, and
+          then a person contacts you. The tradie is paid at the usual time either way, so
           a charge that still fails is an amount you owe us. You cannot send new jobs until it is paid. A new card on the Billing page is tried straight away.
+        </p>
+        <p>
+          <strong>Work that takes a job over {money(DEPOSIT_ABOVE_CENTS)}</strong> always waits for your yes, even inside your limit. When you approve it,{" "}
+          {DEPOSIT_BPS / 100}% of the approved amount (less any of it the hold on your card already covers) is taken as a deposit, and the tradie does not start until
+          it has cleared. The other {DEPOSIT_BPS / 100}% is taken, the same way, when the tradie taps Job done, with the rest of the job. You choose how on the job
+          page: <strong>from your bank account by direct debit</strong> (what we recommend: no card fees), which usually takes 3-4 working days to clear, and Stripe
+          emails you before each debit; or <strong>by card</strong>, charged straight away, so urgent work can start as soon as the deposit goes through. If the deposit
+          does not go through, or comes back, the work is not approved and the tradie does not start; you can approve it again, by bank or card. If the debit at Job
+          done does not go through, it is an amount you owe us, and you cannot send new jobs until it is paid: we charge your card once you update it on the Billing
+          page. If the work does not go ahead after a deposit, the deposit is refunded.
         </p>
         <p>
           <strong>Cancelling.</strong> You can cancel a job on its page. Until the tradie taps &ldquo;I have arrived&rdquo;, even when they are on the way, it

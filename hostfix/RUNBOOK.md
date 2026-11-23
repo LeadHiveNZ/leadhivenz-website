@@ -146,6 +146,18 @@ the tradie. There can be good reasons: a better or harder-to-get part.
 job is still booked and the tradie still going. **Do.** Ring the owner and ask them to update their card on the
 Billing page: it is tried again by itself.
 
+### Deposit for big work did not go through
+**Means.** The owner approved work that takes a job over NZ$1,000 and chose to pay the 50% deposit from their bank,
+and the bank said no (or the debit came back). The quote is not approved and the tradie has been texted not to start.
+**Do.** Ring the owner. They can approve it again on the job page: by card (charged at once, the work can start as
+soon as it goes through), or by bank after fixing or changing their bank account on the Billing page. If they no
+longer want the work, decline the quote on the job page for them.
+
+### Owner owes us for a job (a bank debit)
+The same queue item as for a card ("Owner owes us for a job") also comes when the second half of big work, debited
+from the owner's bank at Job done, does not go through. It is not tried again by itself. Ask the owner to update
+their card on the Billing page: it is charged straight away. The tradie's share above NZ$1,000 waits until then.
+
 ### Tradie's jobs keep being flagged
 **Means.** 3 or more of a tradie's jobs in 90 days could not be confirmed. Their page shows it too.
 

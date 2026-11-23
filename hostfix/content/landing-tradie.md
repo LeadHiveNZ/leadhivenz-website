@@ -31,7 +31,7 @@ We send you fixed-price maintenance jobs at holiday homes, straight to your phon
 
 ### What does it cost me?
 
-Nothing to join, and no lead fees. We keep a fee out of each job, and the payout you see in the text is what you get.
+Nothing to join, and no lead fees. We keep a fee out of each job: {{platform_fee}} of the first {{tier_threshold}} of the job's price and {{above_tier_fee}} of the rest, so on big jobs you keep nearly all of it. The payout you see in the text is what you get.
 
 ### Do I have to take every job?
 
@@ -39,7 +39,7 @@ No. Passing on a job never leads to fewer offers or to being removed. What count
 
 ### How do I get paid?
 
-By bank transfer, automatically. You set up your bank details once. Your payment is sent within two days of each job and takes a few working days to reach your bank. A job the app couldn't confirm waits for the owner to check the before and after photos, or for our team if the owner doesn't answer. Once you finish a job the owner approved, you're paid even if their card fails, for up to {{payout_guarantee}} of the job's price. Chasing is our job. Work you price yourself over {{payout_guarantee}} is charged to the owner's card when they approve it, before you start.
+By bank transfer, automatically. You set up your bank details once. Your payment is sent within two days of each job and takes a few working days to reach your bank. A job the app couldn't confirm waits for the owner to check the before and after photos, or for our team if the owner doesn't answer. Once you finish a job the owner approved, you're paid even if their card fails, for up to {{payout_guarantee}} of the job's price. Chasing is our job. When approved work takes a job over {{payout_guarantee}}, the owner pays half as a deposit when they approve it, from their bank or by card, and you start once it has cleared (usually 3-4 working days from a bank, straight away by card). The other half is taken when you tap Job done.
 
 ### What about parts?
 
@@ -51,7 +51,7 @@ Before you tap "I have arrived", even when you're on the way, the owner can canc
 
 ### Can I bring my own clients?
 
-Yes. Send them an invite from the app. Jobs for a client you bring are {{own_client_fee}}, not {{platform_fee}}: that covers the card fees (about 3%), the automatic texts and payment, and chasing late payers. Owners HostFix introduces stay at {{platform_fee}} for jobs through the app.
+Yes. Send them an invite from the app. Jobs for a client you bring are {{own_client_fee}}, not {{platform_fee}}, on the first {{tier_threshold}} of the job's price ({{above_tier_fee}} above it, as on every job): that covers the card fees (about 3%), the automatic texts and payment, and chasing late payers. Owners HostFix introduces stay at {{platform_fee}} for jobs through the app.
 
 ### When do you start?
 

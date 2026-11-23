@@ -65,7 +65,7 @@ It's shown only to the tradie who accepts a job at your place, and to our small 
 
 ### What if the job turns out to be big?
 
-Anything over {{approval_limit}} stops and comes back to you as a quote before any work starts. You say yes or no.
+Anything over {{approval_limit}} stops and comes back to you as a quote before any work starts. You say yes or no. If you say yes to work that takes the job over {{payout_guarantee}}, half is paid as a deposit then and the rest when it's done: from your bank account (no card fees, a few working days to clear) or by card if it's urgent.
 
 ### When do you start?
 

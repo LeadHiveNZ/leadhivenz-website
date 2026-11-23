@@ -49,3 +49,18 @@ export function tierPriceLabel(tier: Pick<MembershipTier, "monthlyPriceCents">, 
 export function partsWords(market: Pick<Market, "partsIncludedCents" | "partsApprovalCents" | "currency">): string {
   return `Small parts up to ${formatMoney(market.partsIncludedCents, market.currency)} are in the price. Other parts are charged at the tradie's price, including GST, and above ${formatMoney(market.partsApprovalCents, market.currency)} of parts on a job you say yes first.`;
 }
+
+/**
+ * The platform fee in one line, for the tradie (DECISIONS.md, 2026-11-23, second entry): the job's fee (15%, or 5% for
+ * an own client) on the first NZ$1,000 of the job's price and 3% on the part above, parts aside. "15% of the first
+ * NZ$1,000 of the job's price, 3% of the rest".
+ */
+export function feeWords(market: Pick<Market, "platformFeeBps" | "tierThresholdCents" | "aboveTierFeeBps" | "currency">, feeBps?: number | null): string {
+  const below = (feeBps ?? market.platformFeeBps) / 100;
+  return `${below}% of the first ${formatMoney(market.tierThresholdCents, market.currency)} of the job's price, ${market.aboveTierFeeBps / 100}% of the rest`;
+}
+
+/** The label of the line that gives the tradie the lower fee above the line. */
+export function tierLineWords(market: Pick<Market, "tierThresholdCents" | "aboveTierFeeBps" | "currency">): string {
+  return `Fee only ${market.aboveTierFeeBps / 100}% above ${formatMoney(market.tierThresholdCents, market.currency)} of the price`;
+}

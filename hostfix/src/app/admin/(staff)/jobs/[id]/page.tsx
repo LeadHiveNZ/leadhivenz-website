@@ -1,3 +1,4 @@
+import { feeWords, tierLineWords } from "@/lib/markets/display";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -658,13 +659,13 @@ export default async function StaffJobPage({ params, searchParams }: { params: P
           </div>
           <div>
             <p className="mb-1 text-sm font-bold tracking-wide text-muted uppercase">Tradie gets</p>
-            <CostLines lines={view.lines} currency={job.currency} side="tradie" totalLabel="Tradie total" />
+            <CostLines lines={view.lines} currency={job.currency} side="tradie" totalLabel="Tradie total" tierReliefCents={job.tierReliefCents} feeWords={tierLineWords(market)} />
           </div>
         </div>
         <div className="mt-4">
           <Facts
             rows={[
-              { label: "We keep", value: fmt(job.ownerTotalCents - job.tradieTotalCents) },
+              { label: "We keep", value: `${fmt(job.ownerTotalCents - job.tradieTotalCents)} (${feeWords(market, job.platformFeeBps)}; parts 3%)` },
               ...(market.taxRegistered ? [{ label: `${market.taxName} inside the owner's total`, value: fmt(job.taxCents) }] : []),
               {
                 label: "Owner's card",

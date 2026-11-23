@@ -17,7 +17,8 @@ import { formatMoney } from "@/lib/money";
 import { displayPhone } from "@/lib/phone";
 import { addressLine } from "@/lib/properties/service";
 import { formatDate, formatDateTime } from "@/lib/time";
-import { payTiming } from "@/lib/markets/display";
+import { feeWords, payTiming, tierLineWords } from "@/lib/markets/display";
+import { brand } from "@config/brand";
 import { FAR_METRES } from "@/lib/jobs/arrival";
 import { flagWords, type CheckFlag } from "@/lib/jobs/checks";
 import { BeforeAfter, CostLines, Deadline, History, JobStatus, Panel, PhotoGrid } from "./JobParts";
@@ -91,6 +92,8 @@ export function TradieJob({ view, now, code, flash = {}, propertyPhotos, priceLi
   const limit = property.spendLimitCents ?? market.approvalThresholdCents;
   // An own-client job (DECISIONS.md, 2026-11-23) takes 5%, so the tradie keeps 95%.
   const share = 100 - (job.platformFeeBps ?? market.platformFeeBps) / 100;
+  // The tiered fee (DECISIONS.md, 2026-11-23, second entry): 3% on the job's price above NZ$1,000.
+  const above = `${100 - market.aboveTierFeeBps / 100}% of any part of the job's price above ${fmt(market.tierThresholdCents)}`;
   const paid = payoutLine(view);
   const open = job.status === "accepted" || job.status === "on_site" || job.status === "awaiting_approval";
   const receiptsMissing = view.parts.some((part) => part.status === "active" && part.receiptStatus === "needed");
@@ -175,7 +178,13 @@ export function TradieJob({ view, now, code, flash = {}, propertyPhotos, priceLi
         </Card>
       )}
 
-      {job.status === "awaiting_approval" && pendingQuote && (
+      {job.status === "awaiting_approval" && pendingQuote && view.deposit?.quoteId === pendingQuote.id && view.deposit.status === "processing" ? (
+        // Approved, the 50% deposit clearing from the owner's bank (DECISIONS.md, 2026-11-23, second entry).
+        <Notice tone="warn" title={`Approved: deposit clearing (usually 3-4 working days)`}>
+          The owner approved your quote of {fmt(pendingQuote.ownerTotalCents)} and is paying the deposit from their bank. Do not start the extra work until it clears: we text you
+          &ldquo;deposit cleared, go ahead&rdquo;.
+        </Notice>
+      ) : job.status === "awaiting_approval" && pendingQuote && (
         <Notice tone="warn" title={pendingQuote.labourCents === 0 ? `Waiting for the owner's answer on the parts (${fmt(pendingQuote.ownerTotalCents)})` : `Waiting for the owner's answer on your quote of ${fmt(pendingQuote.ownerTotalCents)}`}>
           {pendingQuote.labourCents === 0 ? "Do not buy them yet." : "Do not start the extra work yet."} We have texted them and will text you the answer. If they say no, finish the job as it stands.
         </Notice>
@@ -212,7 +221,7 @@ export function TradieJob({ view, now, code, flash = {}, propertyPhotos, priceLi
                   A quote here is for work <strong>beyond</strong> the job described. You still do the job described at its price. If what you found is not the job described at all, use &ldquo;Not the job described&rdquo; below.
                 </p>
               )}
-              <QuoteFields currency={job.currency} hourlyRateCents={hourlyRateCents} share={share} fmt={fmt} />
+              <QuoteFields currency={job.currency} hourlyRateCents={hourlyRateCents} share={share} above={above} fmt={fmt} />
               <PhotoUploader kind="quote" name="quoteUploadIds" label="Photos of what you found (optional)" offer={code} max={4} />
               <p className="text-sm text-muted">
                 Up to {fmt(limit)} of extra work (parts included) goes ahead straight away and the owner is told. Above that, the owner is asked first and you wait for their yes.
@@ -237,7 +246,7 @@ export function TradieJob({ view, now, code, flash = {}, propertyPhotos, priceLi
                 <Field label="Why, in one line" name="notDescribedReason" required maxLength={160} placeholder="The tap is fine. The pipe behind the wall has burst." />
                 <PhotoUploader kind="quote" name="quoteUploadIds" label="Photos of what you found (at least one)" offer={code} max={4} camera />
                 <Field label="What is the work?" name="quoteDescription" required maxLength={160} placeholder="Cut out and replace the burst section of pipe" />
-                <QuoteFields currency={job.currency} hourlyRateCents={hourlyRateCents} share={share} fmt={fmt} />
+                <QuoteFields currency={job.currency} hourlyRateCents={hourlyRateCents} share={share} above={above} fmt={fmt} />
                 <SubmitButton variant="secondary" pendingLabel="Sending...">
                   Not the job described: send it
                 </SubmitButton>
@@ -364,8 +373,8 @@ export function TradieJob({ view, now, code, flash = {}, propertyPhotos, priceLi
 
       {job.status !== "cancelled" && view.lines.length > 0 && (
         <Panel title="What you get">
-          <CostLines lines={view.lines} currency={job.currency} side="tradie" totalLabel="You get" />
-          <p className="mt-3 text-sm text-muted">{payTiming(market).line} Parts pay your price less 3% (parts added before 23 November 2026: the list price less 3%, or what you paid plus 17%). Urgent and after-hours amounts are your share, after the platform fee. The urgent share is paid only if you tap Arrived by the urgent deadline, and the after-hours share only if you arrive outside working hours.</p>
+          <CostLines lines={view.lines} currency={job.currency} side="tradie" totalLabel="You get" tierReliefCents={job.tierReliefCents} feeWords={tierLineWords(market)} />
+          <p className="mt-3 text-sm text-muted">{payTiming(market).line} The {brand.name} fee is {feeWords(market, job.platformFeeBps)}{job.ownerTotalCents > 0 ? ` (on this job so far ${fmt(job.ownerTotalCents - job.tradieTotalCents)} of ${fmt(job.ownerTotalCents)})` : ""}. Parts pay your price less 3% (parts added before 23 November 2026: the list price less 3%, or what you paid plus 17%). Urgent and after-hours amounts are your share, after the platform fee. The urgent share is paid only if you tap Arrived by the urgent deadline, and the after-hours share only if you arrive outside working hours.</p>
         </Panel>
       )}
 
@@ -390,10 +399,10 @@ export function TradieJob({ view, now, code, flash = {}, propertyPhotos, priceLi
  * The price of the work: hours at the market's fixed rate up to NZ$1,000, or
  * the tradie's own price above that (DECISIONS.md, 2026-11-20, third entry).
  */
-function QuoteFields({ currency, hourlyRateCents, share, fmt }: { currency: string; hourlyRateCents: number | null; share: number; fmt: (cents: number) => string }) {
+function QuoteFields({ currency, hourlyRateCents, share, above, fmt }: { currency: string; hourlyRateCents: number | null; share: number; above: string; fmt: (cents: number) => string }) {
   const visit = "If you need to come back, include the extra visit in your quote. There is no second call-out on the same job.";
   if (hourlyRateCents === null) {
-    return <Field label={`Your price for the work (${currency})`} name="labour" inputMode="decimal" maxLength={10} placeholder="180" hint={`You keep ${share}% of this. Parts go in "Add parts", below. ${visit}`} />;
+    return <Field label={`Your price for the work (${currency})`} name="labour" inputMode="decimal" maxLength={10} placeholder="180" hint={`You keep ${share}% of this, and ${above}. Parts go in "Add parts", below. ${visit}`} />;
   }
   return (
     <>
@@ -403,7 +412,7 @@ function QuoteFields({ currency, hourlyRateCents, share, fmt }: { currency: stri
         inputMode="decimal"
         maxLength={5}
         placeholder="1.5"
-        hint={`In quarter hours (0.25, 0.5, 0.75...). At the fixed ${fmt(hourlyRateCents)} an hour, the owner's price; you keep ${share}%. Parts go in "Add parts". ${visit}`}
+        hint={`In quarter hours (0.25, 0.5, 0.75...). At the fixed ${fmt(hourlyRateCents)} an hour, the owner's price; you keep ${share}% (and ${above}). Parts go in "Add parts". ${visit}`}
       />
       <Field
         label={`Over ${fmt(HOURLY_LIMIT_CENTS)}? Your price for the whole job instead (${currency})`}
