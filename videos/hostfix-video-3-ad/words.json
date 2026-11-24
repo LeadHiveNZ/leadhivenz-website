@@ -1,0 +1,398 @@
+[
+{
+"text": "If",
+"start": 0.32
+},
+{
+"text": "you",
+"start": 0.64
+},
+{
+"text": "manage",
+"start": 0.8
+},
+{
+"text": "10,",
+"start": 1.2
+},
+{
+"text": "30",
+"start": 1.68
+},
+{
+"text": "or",
+"start": 2.16
+},
+{
+"text": "60",
+"start": 2.32
+},
+{
+"text": "holiday",
+"start": 2.72
+},
+{
+"text": "homes,",
+"start": 3.12
+},
+{
+"text": "then",
+"start": 3.52
+},
+{
+"text": "this",
+"start": 3.76
+},
+{
+"text": "one",
+"start": 4.0
+},
+{
+"text": "is",
+"start": 4.24
+},
+{
+"text": "for",
+"start": 4.56
+},
+{
+"text": "you.",
+"start": 4.8
+},
+{
+"text": "How",
+"start": 6.08
+},
+{
+"text": "many",
+"start": 6.32
+},
+{
+"text": "hours",
+"start": 6.48
+},
+{
+"text": "a",
+"start": 6.72
+},
+{
+"text": "week",
+"start": 6.8
+},
+{
+"text": "do",
+"start": 7.04
+},
+{
+"text": "you",
+"start": 7.12
+},
+{
+"text": "spend",
+"start": 7.28
+},
+{
+"text": "ringing",
+"start": 7.52
+},
+{
+"text": "around",
+"start": 7.84
+},
+{
+"text": "tradeies,",
+"start": 8.0
+},
+{
+"text": "cleaners,",
+"start": 8.56
+},
+{
+"text": "gardeners",
+"start": 9.2
+},
+{
+"text": "for",
+"start": 9.76
+},
+{
+"text": "jobs?",
+"start": 9.92
+},
+{
+"text": "How",
+"start": 11.84
+},
+{
+"text": "many",
+"start": 12.0
+},
+{
+"text": "hours",
+"start": 12.16
+},
+{
+"text": "a",
+"start": 12.4
+},
+{
+"text": "week",
+"start": 12.48
+},
+{
+"text": "do",
+"start": 12.64
+},
+{
+"text": "you",
+"start": 12.8
+},
+{
+"text": "spend",
+"start": 12.88
+},
+{
+"text": "ringing",
+"start": 13.12
+},
+{
+"text": "around",
+"start": 13.44
+},
+{
+"text": "trade's,",
+"start": 13.6
+},
+{
+"text": "cleaners,",
+"start": 14.24
+},
+{
+"text": "gardeners",
+"start": 14.8
+},
+{
+"text": "for",
+"start": 15.36
+},
+{
+"text": "jobs?",
+"start": 15.52
+},
+{
+"text": "Host",
+"start": 16.64
+},
+{
+"text": "Fix",
+"start": 17.04
+},
+{
+"text": "puts",
+"start": 17.44
+},
+{
+"text": "every",
+"start": 17.68
+},
+{
+"text": "job",
+"start": 17.84
+},
+{
+"text": "across",
+"start": 18.24
+},
+{
+"text": "every",
+"start": 18.64
+},
+{
+"text": "property",
+"start": 18.88
+},
+{
+"text": "all",
+"start": 19.52
+},
+{
+"text": "in",
+"start": 19.76
+},
+{
+"text": "one",
+"start": 20.0
+},
+{
+"text": "place.",
+"start": 20.32
+},
+{
+"text": "Your",
+"start": 20.96
+},
+{
+"text": "cleaners",
+"start": 21.2
+},
+{
+"text": "report",
+"start": 21.6
+},
+{
+"text": "problems",
+"start": 22.0
+},
+{
+"text": "straight",
+"start": 22.4
+},
+{
+"text": "from",
+"start": 22.72
+},
+{
+"text": "the",
+"start": 22.88
+},
+{
+"text": "job",
+"start": 22.96
+},
+{
+"text": "with",
+"start": 23.36
+},
+{
+"text": "photos.",
+"start": 23.6
+},
+{
+"text": "Fixed",
+"start": 25.09
+},
+{
+"text": "prices,",
+"start": 25.49
+},
+{
+"text": "ensure",
+"start": 25.97
+},
+{
+"text": "tradies",
+"start": 26.37
+},
+{
+"text": "before",
+"start": 27.01
+},
+{
+"text": "and",
+"start": 27.25
+},
+{
+"text": "after",
+"start": 27.41
+},
+{
+"text": "photos",
+"start": 27.65
+},
+{
+"text": "and",
+"start": 28.05
+},
+{
+"text": "an",
+"start": 28.21
+},
+{
+"text": "invoice",
+"start": 28.37
+},
+{
+"text": "to",
+"start": 28.77
+},
+{
+"text": "send",
+"start": 28.85
+},
+{
+"text": "to",
+"start": 29.09
+},
+{
+"text": "your",
+"start": 29.17
+},
+{
+"text": "owners",
+"start": 29.33
+},
+{
+"text": "straight",
+"start": 29.81
+},
+{
+"text": "after",
+"start": 30.05
+},
+{
+"text": "the",
+"start": 30.21
+},
+{
+"text": "job's",
+"start": 30.37
+},
+{
+"text": "finished.",
+"start": 30.77
+},
+{
+"text": "Free",
+"start": 31.81
+},
+{
+"text": "to",
+"start": 32.13
+},
+{
+"text": "join,",
+"start": 32.29
+},
+{
+"text": "tap",
+"start": 32.69
+},
+{
+"text": "below",
+"start": 32.93
+},
+{
+"text": "and",
+"start": 33.25
+},
+{
+"text": "I'll",
+"start": 33.33
+},
+{
+"text": "give",
+"start": 33.57
+},
+{
+"text": "you",
+"start": 33.65
+},
+{
+"text": "a",
+"start": 33.81
+},
+{
+"text": "call.",
+"start": 34.05
+}
+]
