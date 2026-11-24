@@ -113,17 +113,8 @@ function OwnerForm({ market }: { market: Market }) {
   );
 }
 
-/**
- * The form, worked out on each visit. The page around it is built once and
- * kept, and the build cannot always know whether the market has opened (the
- * demo build pretends it has). So the choice between "send me the price list"
- * and "join now" is made from the market as it is this instant, after the
- * request is touched, inside Suspense. The kept copy is the fallback.
- */
-async function OwnerFormSlot({ data }: { data: PublicMarket }) {
-  await connection();
-  const market = (await publicMarketNow(data.market.slug))?.market ?? data.market;
-  if (market.stage !== "live") return <OwnerForm market={market} />;
+/** "Join now" for a market that is open: no fields, just the way in. */
+function OwnerJoin({ market }: { market: Market }) {
   const tier = market.tiers[0];
   return (
     <>
@@ -135,6 +126,33 @@ async function OwnerFormSlot({ data }: { data: PublicMarket }) {
         <JoinPanel marketSlug={market.slug} marketName={market.name} />
       </div>
     </>
+  );
+}
+
+function OwnerFormFor({ market }: { market: Market }) {
+  return market.stage === "live" ? <OwnerJoin market={market} /> : <OwnerForm market={market} />;
+}
+
+/**
+ * The page around the form is built once and kept, and the build cannot always
+ * know whether the market has opened (the demo build pretends it has). So the
+ * market is checked again on each visit, after the request is touched, inside
+ * Suspense.
+ *
+ * The form itself stays in the kept page and is never swapped: a form inside a
+ * Suspense fallback is shown and typed into before the visit's copy streams in,
+ * and the swap wipes what was typed. Only when this instant disagrees with the
+ * kept page (a market opened or closed since it was built) does this draw the
+ * other form, and `data-form-override` hides the kept one.
+ */
+async function OwnerFormCheck({ data }: { data: PublicMarket }) {
+  await connection();
+  const market = (await publicMarketNow(data.market.slug))?.market ?? data.market;
+  if ((market.stage === "live") === (data.market.stage === "live")) return null;
+  return (
+    <div data-form-override="">
+      <OwnerFormFor market={market} />
+    </div>
   );
 }
 
@@ -158,9 +176,14 @@ export function OwnerLanding({ data }: { data: PublicMarket }) {
       : null;
   const cta = live ? "Join now" : "Get the price list";
   const form = (
-    <Suspense fallback={<OwnerForm market={market} />}>
-      <OwnerFormSlot data={data} />
-    </Suspense>
+    <div className="[&:has([data-form-override])>[data-form-static]]:hidden">
+      <div data-form-static="">
+        <OwnerFormFor market={market} />
+      </div>
+      <Suspense fallback={null}>
+        <OwnerFormCheck data={data} />
+      </Suspense>
+    </div>
   );
   return (
     <LandingPage
@@ -188,13 +211,15 @@ export function OwnerLanding({ data }: { data: PublicMarket }) {
 const tradeOptions = trades.map((trade) => ({ key: trade.key, label: trade.label }));
 
 /**
- * The tradie form, worked out on each visit: whether the insurance
- * certificate can be uploaded depends on file storage being set up on the
- * running site, which the build cannot know.
+ * Whether the insurance certificate can be uploaded depends on file storage
+ * being set up on the running site, which the build cannot know. It is worked
+ * out on each visit and handed to the form as a promise: only the certificate
+ * field waits for it, so the rest of the form is in the kept page and is never
+ * swapped out while someone is typing.
  */
-async function TradieFormSlot({ buttonLabel }: { buttonLabel: string }) {
+async function certificateUploadsNow(): Promise<boolean> {
   await connection();
-  return <TradieLeadForm brandName={brand.name} buttonLabel={buttonLabel} trades={tradeOptions} certificateUploads={fileStoreReady()} />;
+  return fileStoreReady();
 }
 
 export function TradieLanding({ data }: { data: PublicMarket }) {
@@ -210,9 +235,7 @@ export function TradieLanding({ data }: { data: PublicMarket }) {
       formTitle="Get jobs by text"
       formNote="Takes about a minute. We'll be in touch to check your details."
       form={
-        <Suspense fallback={<TradieLeadForm brandName={brand.name} buttonLabel={cta} trades={tradeOptions} />}>
-          <TradieFormSlot buttonLabel={cta} />
-        </Suspense>
+        <TradieLeadForm brandName={brand.name} buttonLabel={cta} trades={tradeOptions} certificateUploads={certificateUploadsNow()} />
       }
       ctaLabel={cta}
       closingTitle="Fixed-price jobs, straight to your phone"

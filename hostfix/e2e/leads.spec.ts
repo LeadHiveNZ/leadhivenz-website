@@ -25,6 +25,32 @@ test.describe("owner landing page on a phone", () => {
     expect(overflow).toBeLessThanOrEqual(0);
   });
 
+  test("keeps what a fast typist types while the page is still loading, with no hydration error", async ({ browser }) => {
+    // A form that streams in, or a page that fails to hydrate (React error #418), is redrawn and loses what was
+    // typed. Type the moment each form appears, on a slowed-down phone, several times over.
+    for (const [path, label] of [["/owners", "Your name"], ["/tradies", "Your name"]] as const) {
+      for (let visit = 0; visit < 3; visit += 1) {
+        const context = await browser.newContext({ ...test.info().project.use, baseURL: BASE });
+        const page = await context.newPage();
+        const problems: string[] = [];
+        page.on("pageerror", (error) => problems.push(error.message));
+        page.on("console", (message) => {
+          if (message.type() === "error" && /react|hydrat|#41[89]|#42[35]/i.test(message.text())) problems.push(message.text());
+        });
+        const cdp = await context.newCDPSession(page);
+        await cdp.send("Emulation.setCPUThrottlingRate", { rate: 6 });
+        await page.goto(path, { waitUntil: "commit" });
+        const field = page.getByLabel(label, { exact: true });
+        await field.fill("Quick Fingers");
+        await page.waitForLoadState("load");
+        await page.waitForTimeout(1500);
+        await expect(field).toHaveValue("Quick Fingers");
+        expect(problems, `${path}, visit ${visit + 1}`).toEqual([]);
+        await context.close();
+      }
+    }
+  });
+
   test("shows real prices and no unfinished copy", async ({ page }) => {
     for (const path of ["/owners", "/tradies"]) {
       await page.goto(path);

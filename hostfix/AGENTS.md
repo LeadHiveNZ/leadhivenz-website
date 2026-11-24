@@ -256,6 +256,14 @@ it when you change one.
 - `now()` and random values need `await connection()` first, inside `<Suspense>`. `currentViewer()` and
   `currentStaff()` do this for signed-in pages. Public token pages (`/r`, `/j`, `/o`) do it themselves.
 - `usePathname()` in a layout above a dynamic route needs its own `<Suspense>` (`NavLink`, `MetaPixel`).
+- A setting read while rendering (`demoModeAllowed()`, `fileStoreReady()`, any `env()`) is the build's value in
+  the kept page but the running site's in each visit's React data. If they differ, the whole page fails to
+  hydrate (React error #418, production builds only), is redrawn, and anything typed is lost. Read it after
+  `await connection()` inside `<Suspense>` (`DemoBanner` in `src/app/layout.tsx`).
+- Never put a form, or any field, in a `<Suspense>` fallback. The fallback can be typed into, then the visit's
+  copy streams in and replaces it. Keep the form in the kept page and let only the per-visit part wait:
+  a small hole beside it (`OwnerFormCheck`) or a promise read with `use()` (`certificateUploads` in
+  `TradieLeadForm`). `e2e/leads.spec.ts` "keeps what a fast typist types" checks both landing pages.
 - Page-level redirects for signed-out visitors arrive after the page has started streaming. `src/proxy.ts`
   does the proper redirect first.
 - A server action that redirects to a **route handler** never lands. Redirect to a page.
