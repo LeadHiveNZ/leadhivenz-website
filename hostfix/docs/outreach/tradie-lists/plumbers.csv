@@ -1,14 +1,15 @@
-business,contact,town,email,phone,website,email_source,notes
-Remarkable Plumbing & Gas,Clinton,Queenstown,admin@remarkableplumbing.co.nz,03 442 4311 / 021 811 173,https://remarkableplumbing.co.nz,https://remarkableplumbing.co.nz/,owner-led; gas; emergencies
-Dart Plumbing,Greg,Queenstown/Arrowtown/Wanaka,office@dartplumbing.co.nz,021 956 521,https://dartplumbing.co.nz,https://dartplumbing.co.nz/,residential maintenance
-Queenstown Plumbing & Gas,,Arrowtown/Queenstown,reception@queenstownplumbing.co.nz,03 441 8071,https://www.queenstownplumbing.co.nz,https://www.queenstownplumbing.co.nz/contact,gas; heating
-Flomac Drainage & Plumbing,Chris,Queenstown/Arrowtown,info@flomac.co.nz,,https://www.flomac.co.nz,https://www.flomac.co.nz/contact,drainage focus
-Advantage Plumbing,,Queenstown,enquiries@advantageqt.co.nz,03 442 8926,https://www.advantageplumbing.co.nz,https://www.advantageplumbing.co.nz/,larger firm; does maintenance
-GW Plumbing,Glen,Wanaka,info@gwplumbing.co.nz,021 709 918,https://www.gwplumbing.co.nz,https://www.gwplumbing.co.nz/,owner-led
-Grizzly Plumbing,Francis,Wanaka/Hawea/Cardrona,francis@grizzlyplumbing.co.nz,027 474 9919,https://grizzlyplumbing.co.nz,https://grizzlyplumbing.co.nz/,maintenance & repairs
-Eco Plumbing & Gas,Hayden,Wanaka,info@ecoplumbinggas.co.nz,021 345 508,https://www.ecoplumbinggas.co.nz,https://www.ecoplumbinggas.co.nz/contact-plumber-wanaka,plumbing & maintenance; 24/7
-Jarvie Plumbing,Brendan,Wanaka,info@jarvieplumbing.co.nz,0274 335 839,https://jarvieplumbing.co.nz,https://jarvieplumbing.co.nz/,owner-operator; gas
-R&R Plumbing & Gas,Matt / Pat,Wanaka/Cromwell,info@rr-plumbing.com,027 340 2323,https://www.rr-plumbing.com,https://www.rr-plumbing.com/,general maintenance
-RESERVE Macklin Plumbing & Gas,Conan,Hawea/Wanaka,conan@macklinplumbing.co.nz,027 696 0604,http://www.macklinplumbing.co.nz,homepage,family-owned
-RESERVE ALBA Plumbing,Gordon,Wanaka,albaplumb@gmail.com,021 504 194,https://www.albaplumb.com,homepage,trading status unconfirmed
-RESERVE McIvor Plumbers Wanaka,Ash,Wanaka,ash@mcivors.co.nz,03 443 4211,https://www.mcivorplumberswanaka.co.nz,/about,family firm
+business,contact,town,email,phone,website,email_source,notes,call_notes
+Remarkable Plumbing & Gas,Clinton,Queenstown,admin@remarkableplumbing.co.nz,03 442 4311 / 021 811 173,https://remarkableplumbing.co.nz,https://remarkableplumbing.co.nz/,owner-led; gas; emergencies,
+Dart Plumbing,Greg,Queenstown/Arrowtown/Wanaka,office@dartplumbing.co.nz,021 956 521,https://dartplumbing.co.nz,https://dartplumbing.co.nz/,residential maintenance,"24 Nov call: keen but said he can't be reliable. Keep as backup, not first choice."
+Queenstown Plumbing & Gas,,Arrowtown/Queenstown,reception@queenstownplumbing.co.nz,03 441 8071,https://www.queenstownplumbing.co.nz,https://www.queenstownplumbing.co.nz/contact,gas; heating,
+Flomac Drainage & Plumbing,Chris,Queenstown/Arrowtown,info@flomac.co.nz,,https://www.flomac.co.nz,https://www.flomac.co.nz/contact,drainage focus,
+Advantage Plumbing,,Queenstown,enquiries@advantageqt.co.nz,03 442 8926,https://www.advantageplumbing.co.nz,https://www.advantageplumbing.co.nz/,larger firm; does maintenance,
+GW Plumbing,Glen,Wanaka,info@gwplumbing.co.nz,021 709 918,https://www.gwplumbing.co.nz,https://www.gwplumbing.co.nz/,owner-led,
+Grizzly Plumbing,Francis,Wanaka/Hawea/Cardrona,francis@grizzlyplumbing.co.nz,027 474 9919,https://grizzlyplumbing.co.nz,https://grizzlyplumbing.co.nz/,maintenance & repairs,
+Eco Plumbing & Gas,Hayden,Wanaka,info@ecoplumbinggas.co.nz,021 345 508,https://www.ecoplumbinggas.co.nz,https://www.ecoplumbinggas.co.nz/contact-plumber-wanaka,plumbing & maintenance; 24/7,24 Nov call: sounded keen. Firm with 5 guys. Spoke to Matt or Hayden (check). SEND SIGN-UP LINK hostfix.co.nz/tradies/join.
+Jarvie Plumbing,Brendan,Wanaka,info@jarvieplumbing.co.nz,0274 335 839,https://jarvieplumbing.co.nz,https://jarvieplumbing.co.nz/,owner-operator; gas,24 Nov call: Brendan wants a call back later this week.
+R&R Plumbing & Gas,Matt / Pat,Wanaka/Cromwell,info@rr-plumbing.com,027 340 2323,https://www.rr-plumbing.com,https://www.rr-plumbing.com/,general maintenance,
+RESERVE Macklin Plumbing & Gas,Conan,Hawea/Wanaka,conan@macklinplumbing.co.nz,027 696 0604,http://www.macklinplumbing.co.nz,homepage,family-owned,
+RESERVE ALBA Plumbing,Gordon,Wanaka,albaplumb@gmail.com,021 504 194,https://www.albaplumb.com,homepage,trading status unconfirmed,
+RESERVE McIvor Plumbers Wanaka,Ash,Wanaka,ash@mcivors.co.nz,03 443 4211,https://www.mcivorplumberswanaka.co.nz,/about,family firm,
+Kelly Plumbing Services,,Queenstown Lakes/Wanaka,,027 324 8890,,,phone-only (Builderscrack),"24 Nov call: interested; has off periods. Told him he can pause in the app, jobs just go to the next plumber."
