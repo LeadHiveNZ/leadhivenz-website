@@ -1,12 +1,22 @@
 #!/usr/bin/env python3
 """HostFix 'video 1' FB/IG ad: overlay layer only (headlines + subtitles + end card), rendered with transparency
-and composited onto the untouched HDR footage. Edit = head trim to the final take (src 9.40s) and tail trim
-(src 41.60s), then the last frame held 1s. Output time = source time - IN."""
+and composited onto the untouched HDR footage. Edit = jump cuts from edl.json (frame ranges of the source;
+every pause between phrases removed, audio untouched apart from the cuts), then the last frame held 1s."""
 import json, html
 
-IN, OUT, HOLD = 9.40, 41.60, 1.0
+EDL = json.load(open("edl.json"))["EDL_FRAMES"]
+FPS, HOLD = 30, 1.0
+SEGS, cum = [], 0
+for a, b in EDL:
+    SEGS.append((a / FPS, b / FPS, cum / FPS)); cum += b - a
+SPEECH = cum / FPS
+def omap(t):   # source seconds -> output seconds (times inside a removed gap snap to the next segment start)
+    for a, b, o in SEGS:
+        if t < a: return o
+        if t <= b: return o + (t - a)
+    return SPEECH
 W, H = 1080, 1920
-TOTAL = round(OUT - IN + HOLD, 3)
+TOTAL = round(SPEECH + HOLD, 3)
 PLUM, LIME = "#3b1e3f", "#d4f23a"
 esc = lambda s: html.escape(s, quote=True)
 def T(x): return f"{x:.3f}"
@@ -25,7 +35,7 @@ while i < len(raw):
     elif txt == "four" and st > 26.5:
         txt = "4"
     txt = FIX.get(txt, txt)
-    words.append(dict(text=txt, t=round(max(st - IN, 0.05), 3)))
+    words.append(dict(text=txt, t=round(max(omap(st), 0.05), 3)))
     i += 1
 for k in range(1, len(words)):
     words[k]["t"] = max(words[k]["t"], words[k - 1]["t"] + 0.06)
@@ -44,17 +54,17 @@ for k, w in enumerate(words):
 SUB = []
 for ci, c in enumerate(chunks):
     s = c[0]["t"] - 0.04
-    nx = chunks[ci + 1][0]["t"] - 0.04 if ci + 1 < len(chunks) else OUT - IN
+    nx = chunks[ci + 1][0]["t"] - 0.04 if ci + 1 < len(chunks) else SPEECH
     e = min(nx, c[-1]["t"] + 0.9)
     SUB.append((s, e, c))
 
 # ------------------------------------------------------------------ headlines (key word in lime), each until the next
 HL = [("h1", 'Guest checks in at <em>3pm</em> 😬', 0.08),
       ("h2", 'Report it in <em>30 seconds</em>', at("report") - 0.05),
-      ("h3", 'Insured tradie in <em>24 hrs</em>', at("a", 14) - 0.05),
+      ("h3", 'Insured tradie in <em>24 hrs</em>', at("a", 10) - 0.05),
       ("h4", 'Fixed price <em>✓</em> Photos <em>✓</em>', at("fixed") - 0.05),
       ("h5", '<em>Free</em> to join 👇', at("free") - 0.05),
-      ("end", 'HostFix · <em>Free to join</em>', OUT - IN)]
+      ("end", 'HostFix · <em>Free to join</em>', SPEECH)]
 over, js = [], []
 for k, (hid, inner, a) in enumerate(HL):
     b = HL[k + 1][2] if k + 1 < len(HL) else None
