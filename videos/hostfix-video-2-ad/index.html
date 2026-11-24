@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <title>HostFix video 2 ad overlay</title>
+    <script src="assets/vendor/gsap.min.js"></script>
+    <style>
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { width:1080px; height:1920px; overflow:hidden; background:transparent; }
+#root { position:relative; width:100%; height:100%; overflow:hidden; background:transparent; }
+.hl { position:absolute; left:60px; right:60px; top:215px; display:flex; justify-content:center; opacity:0; }
+.hbox { background:#3b1e3f; color:#fff; font-family:'Nunito', sans-serif; font-weight:900; font-size:62px; line-height:1.15;
+  padding:20px 38px 24px; border-radius:30px; text-align:center; box-shadow:0 12px 32px rgba(0,0,0,0.30); }
+.hbox em { font-style:normal; color:#d4f23a; }
+.sub { position:absolute; left:70px; right:70px; top:1480px; height:200px; display:flex; align-items:center; justify-content:center; opacity:0; }
+.sub p { font-family:'Montserrat', sans-serif; font-weight:800; font-size:70px; line-height:1.16; color:#fff; text-align:center;
+  -webkit-text-stroke:10px #000; paint-order:stroke fill; }
+.w { opacity:0; }
+.plist { position:absolute; left:120px; right:120px; top:362px; display:flex; flex-direction:column; gap:8px; }
+.row { display:flex; justify-content:space-between; align-items:baseline; gap:24px; padding:12px 34px; background:#3b1e3f; border-radius:22px;
+  font-family:'Nunito', sans-serif; font-weight:900; font-size:48px; line-height:1.15; color:#fff; opacity:0; box-shadow:0 10px 26px rgba(0,0,0,0.28); }
+.row b { color:#d4f23a; font-weight:900; }
+</style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-width="1080" data-height="1920" data-duration="25.933">
+      <div class="hl" id="h1"><div class="hbox">The actual <em>price list</em> 👀</div></div>
+      <div class="hl" id="h2"><div class="hbox">Call-out <em>included ✓</em></div></div>
+      <div class="hl" id="h3"><div class="hbox"><em>Free</em> to join 👇</div></div>
+      <div class="hl endc" id="end"><div class="hbox">HostFix · <em>Free to join</em></div></div>
+      <div class="plist" id="plist"><div class="row" id="r0"><span>Dripping tap</span><b>$235</b></div><div class="row" id="r1"><span>Blocked toilet</span><b>$245</b></div><div class="row" id="r2"><span>Light bulbs (up to 5)</span><b>$165</b></div><div class="row" id="r3"><span>Heat pump fault</span><b>$245</b></div></div>
+      <div class="sub" id="s0"><p><span class="w" id="w0-0">Here&#x27;s</span> <span class="w" id="w0-1">what</span> <span class="w" id="w0-2">a</span> <span class="w" id="w0-3">tradie</span> <span class="w" id="w0-4">actually</span></p></div>
+      <div class="sub" id="s1"><p><span class="w" id="w1-0">costs</span> <span class="w" id="w1-1">for</span> <span class="w" id="w1-2">your</span> <span class="w" id="w1-3">Queenstown</span></p></div>
+      <div class="sub" id="s2"><p><span class="w" id="w2-0">or Wanaka</span> <span class="w" id="w2-1">holiday</span> <span class="w" id="w2-2">home.</span></p></div>
+      <div class="sub" id="s3"><p><span class="w" id="w3-0">Dripping</span> <span class="w" id="w3-1">tap,</span> <span class="w" id="w3-2">$235.</span></p></div>
+      <div class="sub" id="s4"><p><span class="w" id="w4-0">Blocked</span> <span class="w" id="w4-1">toilet,</span> <span class="w" id="w4-2">$245.</span></p></div>
+      <div class="sub" id="s5"><p><span class="w" id="w5-0">Light</span> <span class="w" id="w5-1">bulbs,</span> <span class="w" id="w5-2">$165.</span></p></div>
+      <div class="sub" id="s6"><p><span class="w" id="w6-0">Heat</span> <span class="w" id="w6-1">pump</span> <span class="w" id="w6-2">fault,</span> <span class="w" id="w6-3">$245.</span></p></div>
+      <div class="sub" id="s7"><p><span class="w" id="w7-0">Call-outs</span> <span class="w" id="w7-1">are</span> <span class="w" id="w7-2">included.</span></p></div>
+      <div class="sub" id="s8"><p><span class="w" id="w8-0">There&#x27;s</span> <span class="w" id="w8-1">no</span> <span class="w" id="w8-2">surprise</span> <span class="w" id="w8-3">invoice</span></p></div>
+      <div class="sub" id="s9"><p><span class="w" id="w9-0">two</span> <span class="w" id="w9-1">weeks</span> <span class="w" id="w9-2">later.</span></p></div>
+      <div class="sub" id="s10"><p><span class="w" id="w10-0">A</span> <span class="w" id="w10-1">local</span> <span class="w" id="w10-2">and</span> <span class="w" id="w10-3">insured</span> <span class="w" id="w10-4">tradie</span></p></div>
+      <div class="sub" id="s11"><p><span class="w" id="w11-0">there</span> <span class="w" id="w11-1">within</span> <span class="w" id="w11-2">24</span> <span class="w" id="w11-3">hours</span> <span class="w" id="w11-4">and</span></p></div>
+      <div class="sub" id="s12"><p><span class="w" id="w12-0">photos</span> <span class="w" id="w12-1">when</span> <span class="w" id="w12-2">it&#x27;s</span> <span class="w" id="w12-3">done.</span></p></div>
+      <div class="sub" id="s13"><p><span class="w" id="w13-0">It&#x27;s</span> <span class="w" id="w13-1">free</span> <span class="w" id="w13-2">to</span> <span class="w" id="w13-3">join</span> <span class="w" id="w13-4">and</span> <span class="w" id="w13-5">you</span> <span class="w" id="w13-6">only</span></p></div>
+      <div class="sub" id="s14"><p><span class="w" id="w14-0">pay</span> <span class="w" id="w14-1">when</span> <span class="w" id="w14-2">something&#x27;s</span> <span class="w" id="w14-3">fixed.</span></p></div>
+      <div class="sub" id="s15"><p><span class="w" id="w15-0">Tap</span> <span class="w" id="w15-1">the</span> <span class="w" id="w15-2">link</span> <span class="w" id="w15-3">below</span> <span class="w" id="w15-4">and</span> <span class="w" id="w15-5">see</span> <span class="w" id="w15-6">the</span></p></div>
+      <div class="sub" id="s16"><p><span class="w" id="w16-0">full</span> <span class="w" id="w16-1">list</span> <span class="w" id="w16-2">of</span> <span class="w" id="w16-3">prices.</span></p></div>
+    </div>
+    <script>
+      const tl = gsap.timeline({ paused: true });
+      tl.set("#h1", { opacity: 0 }, 0);
+      tl.to("#h1", { opacity: 1, duration: 0.35, ease: "power1.out" }, 0.080);
+      tl.to("#h1", { opacity: 0, duration: 0.2, ease: "power1.in" }, 11.423);
+      tl.set("#h1", { visibility: "hidden" }, 11.623);
+      tl.set("#h2", { opacity: 0 }, 0);
+      tl.to("#h2", { opacity: 1, duration: 0.35, ease: "power1.out" }, 11.623);
+      tl.to("#h2", { opacity: 0, duration: 0.2, ease: "power1.in" }, 19.567);
+      tl.set("#h2", { visibility: "hidden" }, 19.767);
+      tl.set("#h3", { opacity: 0 }, 0);
+      tl.to("#h3", { opacity: 1, duration: 0.35, ease: "power1.out" }, 19.767);
+      tl.to("#h3", { opacity: 0, duration: 0.2, ease: "power1.in" }, 24.733);
+      tl.set("#h3", { visibility: "hidden" }, 24.933);
+      tl.set("#end", { opacity: 0 }, 0);
+      tl.to("#end", { opacity: 1, duration: 0.35, ease: "power1.out" }, 24.933);
+      tl.set("#r0", { opacity: 0 }, 0);
+      tl.to("#r0", { opacity: 1, duration: 0.3, ease: "power1.out" }, 3.597);
+      tl.set("#r1", { opacity: 0 }, 0);
+      tl.to("#r1", { opacity: 1, duration: 0.3, ease: "power1.out" }, 5.677);
+      tl.set("#r2", { opacity: 0 }, 0);
+      tl.to("#r2", { opacity: 1, duration: 0.3, ease: "power1.out" }, 7.517);
+      tl.set("#r3", { opacity: 0 }, 0);
+      tl.to("#r3", { opacity: 1, duration: 0.3, ease: "power1.out" }, 9.517);
+      tl.set("#s0", { opacity: 0 }, 0);
+      tl.set("#s0", { opacity: 1 }, 0.010);
+      tl.set("#w0-0", { opacity: 0.0 }, 0);
+      tl.set("#w0-0", { opacity: 1 }, 0.020);
+      tl.set("#w0-1", { opacity: 0.0 }, 0);
+      tl.set("#w0-1", { opacity: 1 }, 0.197);
+      tl.set("#w0-2", { opacity: 0.0 }, 0);
+      tl.set("#w0-2", { opacity: 1 }, 0.277);
+      tl.set("#w0-3", { opacity: 0.0 }, 0);
+      tl.set("#w0-3", { opacity: 1 }, 0.357);
+      tl.set("#w0-4", { opacity: 0.0 }, 0);
+      tl.set("#w0-4", { opacity: 1 }, 0.997);
+      tl.set("#s0", { opacity: 0, visibility: "hidden" }, 1.227);
+      tl.set("#s1", { opacity: 0 }, 0);
+      tl.set("#s1", { opacity: 1 }, 1.227);
+      tl.set("#w1-0", { opacity: 0.0 }, 0);
+      tl.set("#w1-0", { opacity: 1 }, 1.237);
+      tl.set("#w1-1", { opacity: 0.0 }, 0);
+      tl.set("#w1-1", { opacity: 1 }, 1.637);
+      tl.set("#w1-2", { opacity: 0.0 }, 0);
+      tl.set("#w1-2", { opacity: 1 }, 1.797);
+      tl.set("#w1-3", { opacity: 0.0 }, 0);
+      tl.set("#w1-3", { opacity: 1 }, 1.957);
+      tl.set("#s1", { opacity: 0, visibility: "hidden" }, 2.347);
+      tl.set("#s2", { opacity: 0 }, 0);
+      tl.set("#s2", { opacity: 1 }, 2.347);
+      tl.set("#w2-0", { opacity: 0.0 }, 0);
+      tl.set("#w2-0", { opacity: 1 }, 2.357);
+      tl.set("#w2-1", { opacity: 0.0 }, 0);
+      tl.set("#w2-1", { opacity: 1 }, 2.917);
+      tl.set("#w2-2", { opacity: 0.0 }, 0);
+      tl.set("#w2-2", { opacity: 1 }, 3.317);
+      tl.set("#s2", { opacity: 0, visibility: "hidden" }, 3.607);
+      tl.set("#s3", { opacity: 0 }, 0);
+      tl.set("#s3", { opacity: 1 }, 3.607);
+      tl.set("#w3-0", { opacity: 0.0 }, 0);
+      tl.set("#w3-0", { opacity: 1 }, 3.617);
+      tl.set("#w3-1", { opacity: 0.0 }, 0);
+      tl.set("#w3-1", { opacity: 1 }, 4.097);
+      tl.set("#w3-2", { opacity: 0.0 }, 0);
+      tl.set("#w3-2", { opacity: 1 }, 4.497);
+      tl.set("#s3", { opacity: 0, visibility: "hidden" }, 5.427);
+      tl.set("#s4", { opacity: 0 }, 0);
+      tl.set("#s4", { opacity: 1 }, 5.687);
+      tl.set("#w4-0", { opacity: 0.0 }, 0);
+      tl.set("#w4-0", { opacity: 1 }, 5.697);
+      tl.set("#w4-1", { opacity: 0.0 }, 0);
+      tl.set("#w4-1", { opacity: 1 }, 6.097);
+      tl.set("#w4-2", { opacity: 0.0 }, 0);
+      tl.set("#w4-2", { opacity: 1 }, 6.417);
+      tl.set("#s4", { opacity: 0, visibility: "hidden" }, 7.347);
+      tl.set("#s5", { opacity: 0 }, 0);
+      tl.set("#s5", { opacity: 1 }, 7.527);
+      tl.set("#w5-0", { opacity: 0.0 }, 0);
+      tl.set("#w5-0", { opacity: 1 }, 7.537);
+      tl.set("#w5-1", { opacity: 0.0 }, 0);
+      tl.set("#w5-1", { opacity: 1 }, 7.857);
+      tl.set("#w5-2", { opacity: 0.0 }, 0);
+      tl.set("#w5-2", { opacity: 1 }, 8.257);
+      tl.set("#s5", { opacity: 0, visibility: "hidden" }, 9.187);
+      tl.set("#s6", { opacity: 0 }, 0);
+      tl.set("#s6", { opacity: 1 }, 9.527);
+      tl.set("#w6-0", { opacity: 0.0 }, 0);
+      tl.set("#w6-0", { opacity: 1 }, 9.537);
+      tl.set("#w6-1", { opacity: 0.0 }, 0);
+      tl.set("#w6-1", { opacity: 1 }, 9.777);
+      tl.set("#w6-2", { opacity: 0.0 }, 0);
+      tl.set("#w6-2", { opacity: 1 }, 10.017);
+      tl.set("#w6-3", { opacity: 0.0 }, 0);
+      tl.set("#w6-3", { opacity: 1 }, 10.417);
+      tl.set("#s6", { opacity: 0, visibility: "hidden" }, 11.347);
+      tl.set("#s7", { opacity: 0 }, 0);
+      tl.set("#s7", { opacity: 1 }, 11.633);
+      tl.set("#w7-0", { opacity: 0.0 }, 0);
+      tl.set("#w7-0", { opacity: 1 }, 11.643);
+      tl.set("#w7-1", { opacity: 0.0 }, 0);
+      tl.set("#w7-1", { opacity: 1 }, 12.283);
+      tl.set("#w7-2", { opacity: 0.0 }, 0);
+      tl.set("#w7-2", { opacity: 1 }, 12.363);
+      tl.set("#s7", { opacity: 0, visibility: "hidden" }, 12.913);
+      tl.set("#s8", { opacity: 0 }, 0);
+      tl.set("#s8", { opacity: 1 }, 12.913);
+      tl.set("#w8-0", { opacity: 0.0 }, 0);
+      tl.set("#w8-0", { opacity: 1 }, 12.923);
+      tl.set("#w8-1", { opacity: 0.0 }, 0);
+      tl.set("#w8-1", { opacity: 1 }, 13.163);
+      tl.set("#w8-2", { opacity: 0.0 }, 0);
+      tl.set("#w8-2", { opacity: 1 }, 13.323);
+      tl.set("#w8-3", { opacity: 0.0 }, 0);
+      tl.set("#w8-3", { opacity: 1 }, 13.723);
+      tl.set("#s8", { opacity: 0, visibility: "hidden" }, 14.273);
+      tl.set("#s9", { opacity: 0 }, 0);
+      tl.set("#s9", { opacity: 1 }, 14.273);
+      tl.set("#w9-0", { opacity: 0.0 }, 0);
+      tl.set("#w9-0", { opacity: 1 }, 14.283);
+      tl.set("#w9-1", { opacity: 0.0 }, 0);
+      tl.set("#w9-1", { opacity: 1 }, 14.443);
+      tl.set("#w9-2", { opacity: 0.0 }, 0);
+      tl.set("#w9-2", { opacity: 1 }, 14.683);
+      tl.set("#s9", { opacity: 0, visibility: "hidden" }, 15.030);
+      tl.set("#s10", { opacity: 0 }, 0);
+      tl.set("#s10", { opacity: 1 }, 15.030);
+      tl.set("#w10-0", { opacity: 0.0 }, 0);
+      tl.set("#w10-0", { opacity: 1 }, 15.040);
+      tl.set("#w10-1", { opacity: 0.0 }, 0);
+      tl.set("#w10-1", { opacity: 1 }, 15.200);
+      tl.set("#w10-2", { opacity: 0.0 }, 0);
+      tl.set("#w10-2", { opacity: 1 }, 15.520);
+      tl.set("#w10-3", { opacity: 0.0 }, 0);
+      tl.set("#w10-3", { opacity: 1 }, 15.680);
+      tl.set("#w10-4", { opacity: 0.0 }, 0);
+      tl.set("#w10-4", { opacity: 1 }, 16.080);
+      tl.set("#s10", { opacity: 0, visibility: "hidden" }, 16.710);
+      tl.set("#s11", { opacity: 0 }, 0);
+      tl.set("#s11", { opacity: 1 }, 16.710);
+      tl.set("#w11-0", { opacity: 0.0 }, 0);
+      tl.set("#w11-0", { opacity: 1 }, 16.720);
+      tl.set("#w11-1", { opacity: 0.0 }, 0);
+      tl.set("#w11-1", { opacity: 1 }, 16.960);
+      tl.set("#w11-2", { opacity: 0.0 }, 0);
+      tl.set("#w11-2", { opacity: 1 }, 17.200);
+      tl.set("#w11-3", { opacity: 0.0 }, 0);
+      tl.set("#w11-3", { opacity: 1 }, 17.680);
+      tl.set("#w11-4", { opacity: 0.0 }, 0);
+      tl.set("#w11-4", { opacity: 1 }, 18.080);
+      tl.set("#s11", { opacity: 0, visibility: "hidden" }, 18.230);
+      tl.set("#s12", { opacity: 0 }, 0);
+      tl.set("#s12", { opacity: 1 }, 18.230);
+      tl.set("#w12-0", { opacity: 0.0 }, 0);
+      tl.set("#w12-0", { opacity: 1 }, 18.240);
+      tl.set("#w12-1", { opacity: 0.0 }, 0);
+      tl.set("#w12-1", { opacity: 1 }, 18.720);
+      tl.set("#w12-2", { opacity: 0.0 }, 0);
+      tl.set("#w12-2", { opacity: 1 }, 18.880);
+      tl.set("#w12-3", { opacity: 0.0 }, 0);
+      tl.set("#w12-3", { opacity: 1 }, 19.200);
+      tl.set("#s12", { opacity: 0, visibility: "hidden" }, 19.457);
+      tl.set("#s13", { opacity: 0 }, 0);
+      tl.set("#s13", { opacity: 1 }, 19.457);
+      tl.set("#w13-0", { opacity: 0.0 }, 0);
+      tl.set("#w13-0", { opacity: 1 }, 19.467);
+      tl.set("#w13-1", { opacity: 0.0 }, 0);
+      tl.set("#w13-1", { opacity: 1 }, 19.787);
+      tl.set("#w13-2", { opacity: 0.0 }, 0);
+      tl.set("#w13-2", { opacity: 1 }, 20.027);
+      tl.set("#w13-3", { opacity: 0.0 }, 0);
+      tl.set("#w13-3", { opacity: 1 }, 20.107);
+      tl.set("#w13-4", { opacity: 0.0 }, 0);
+      tl.set("#w13-4", { opacity: 1 }, 20.427);
+      tl.set("#w13-5", { opacity: 0.0 }, 0);
+      tl.set("#w13-5", { opacity: 1 }, 20.587);
+      tl.set("#w13-6", { opacity: 0.0 }, 0);
+      tl.set("#w13-6", { opacity: 1 }, 20.747);
+      tl.set("#s13", { opacity: 0, visibility: "hidden" }, 20.977);
+      tl.set("#s14", { opacity: 0 }, 0);
+      tl.set("#s14", { opacity: 1 }, 20.977);
+      tl.set("#w14-0", { opacity: 0.0 }, 0);
+      tl.set("#w14-0", { opacity: 1 }, 20.987);
+      tl.set("#w14-1", { opacity: 0.0 }, 0);
+      tl.set("#w14-1", { opacity: 1 }, 21.227);
+      tl.set("#w14-2", { opacity: 0.0 }, 0);
+      tl.set("#w14-2", { opacity: 1 }, 21.467);
+      tl.set("#w14-3", { opacity: 0.0 }, 0);
+      tl.set("#w14-3", { opacity: 1 }, 21.867);
+      tl.set("#s14", { opacity: 0, visibility: "hidden" }, 22.337);
+      tl.set("#s15", { opacity: 0 }, 0);
+      tl.set("#s15", { opacity: 1 }, 22.337);
+      tl.set("#w15-0", { opacity: 0.0 }, 0);
+      tl.set("#w15-0", { opacity: 1 }, 22.347);
+      tl.set("#w15-1", { opacity: 0.0 }, 0);
+      tl.set("#w15-1", { opacity: 1 }, 22.587);
+      tl.set("#w15-2", { opacity: 0.0 }, 0);
+      tl.set("#w15-2", { opacity: 1 }, 22.667);
+      tl.set("#w15-3", { opacity: 0.0 }, 0);
+      tl.set("#w15-3", { opacity: 1 }, 22.907);
+      tl.set("#w15-4", { opacity: 0.0 }, 0);
+      tl.set("#w15-4", { opacity: 1 }, 23.227);
+      tl.set("#w15-5", { opacity: 0.0 }, 0);
+      tl.set("#w15-5", { opacity: 1 }, 23.467);
+      tl.set("#w15-6", { opacity: 0.0 }, 0);
+      tl.set("#w15-6", { opacity: 1 }, 23.627);
+      tl.set("#s15", { opacity: 0, visibility: "hidden" }, 23.697);
+      tl.set("#s16", { opacity: 0 }, 0);
+      tl.set("#s16", { opacity: 1 }, 23.697);
+      tl.set("#w16-0", { opacity: 0.0 }, 0);
+      tl.set("#w16-0", { opacity: 1 }, 23.707);
+      tl.set("#w16-1", { opacity: 0.0 }, 0);
+      tl.set("#w16-1", { opacity: 1 }, 23.947);
+      tl.set("#w16-2", { opacity: 0.0 }, 0);
+      tl.set("#w16-2", { opacity: 1 }, 24.107);
+      tl.set("#w16-3", { opacity: 0.0 }, 0);
+      tl.set("#w16-3", { opacity: 1 }, 24.267);
+      tl.set("#s16", { opacity: 0, visibility: "hidden" }, 24.933);
+      tl.set({}, {}, 25.933);
+      window.__timelines["main"] = tl;
+      tl.seek(0);
+    </script>
+  </body>
+</html>
