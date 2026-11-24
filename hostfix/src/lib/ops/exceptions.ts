@@ -76,10 +76,12 @@ export type ExceptionKind =
   /** The owner's card declined when the hold on an open job was renewed. The job stays booked: ring the owner. */
   | "hold_failed"
   /** Big work's 50% deposit from the owner's bank did not go through (DECISIONS.md, 2026-11-23, second entry). */
-  | "deposit_failed";
+  | "deposit_failed"
+  /** The owner chose "Not sure" for the trade: a person picks it with one tap, then it goes out (DECISIONS.md, 2026-11-24). */
+  | "trade_needed";
 
 /** The ones worth a text to the founder as well as an email. */
-const URGENT: ExceptionKind[] = ["nobody_accepted", "missed_window", "dispute", "chargeback", "not_taken_yet", "owner_says_absent", "no_show"];
+const URGENT: ExceptionKind[] = ["nobody_accepted", "missed_window", "dispute", "chargeback", "not_taken_yet", "owner_says_absent", "no_show", "trade_needed"];
 
 export type ExceptionInput = {
   kind: ExceptionKind;
@@ -191,7 +193,7 @@ export type QueueItem = {
 };
 
 /** The kinds where a promised time is running, so the deadline is what matters. */
-export const TIME_BOUND: ExceptionKind[] = ["nobody_accepted", "at_risk", "missed_window", "quote_waiting", "not_taken_yet", "no_show"];
+export const TIME_BOUND: ExceptionKind[] = ["nobody_accepted", "at_risk", "missed_window", "quote_waiting", "not_taken_yet", "no_show", "trade_needed"];
 
 /** The queue. Open items first, the ones closest to their deadline at the top. */
 export async function listExceptions(db: Db, filter: { status?: "open" | "resolved"; market?: string | null; limit?: number } = {}): Promise<QueueItem[]> {
@@ -269,11 +271,12 @@ export const EXCEPTION_LABELS: Record<ExceptionKind, string> = {
   part_price: "Worth a look: a part priced over the list",
   hold_failed: "Owner's card declined renewing a hold",
   deposit_failed: "Deposit for big work did not go through",
+  trade_needed: "Pick the trade for this job",
 };
 
 /** One line on what to do about each kind. The runbook (RUNBOOK.md) has the longer version. */
 export const EXCEPTION_ACTIONS: Record<ExceptionKind, string> = {
-  nobody_accepted: "Ring a tradie who does this trade. If they say yes, assign them on the job page. Or start the offers again.",
+  nobody_accepted: "Ring a tradie who does this trade. If they say yes, assign them on the job page. Or start the offers again. If nobody in the market does this trade, pick another trade on the job page.",
   at_risk: "The promised time is close. Ring the tradie and check they are on their way.",
   missed_window: "Nobody was on site by the promised time. Nothing is credited automatically any more. Ring the owner to say sorry, and make sure a tradie is going.",
   dispute: "Read what the owner said, look at the photos, ring both sides, then settle it on the job page.",
@@ -307,5 +310,6 @@ export const EXCEPTION_ACTIONS: Record<ExceptionKind, string> = {
   pattern_cancels: "3 or more of this tradie's accepted jobs in 90 days were cancelled after they tapped On my way. Look at who cancelled and why. Talk to them if it keeps happening. Never a removal by itself, and never counted as a decline.",
   part_price: "A part picked from the price list was priced at more than 1.5 times its list price. Nothing is held. Look at it, and if it seems high, request the receipt on the job page or ring the tradie.",
   hold_failed: "The owner's card declined when the hold on this open job was renewed. The job is still booked and the tradie is still going. Ring the owner and ask them to update their card on the Billing page: it is tried again by itself.",
+  trade_needed: "The owner did not know which trade this needs. Read what they wrote (and the photos on the job page), then tap the trade below. It goes out to those tradies straight away, first choice first. Ring the owner if you cannot tell.",
   deposit_failed: "The 50% deposit for work over NZ$1,000 did not come through from the owner's bank (or came back). The quote is not approved and the tradie has been told not to start. Ring the owner: they can approve it again on the job page, by bank or by card (card is charged at once). If the work is no longer wanted, decline the quote on the job page.",
 };

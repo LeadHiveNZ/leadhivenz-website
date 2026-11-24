@@ -36,6 +36,8 @@ export type MenuSeedItem = {
   isAddOn?: boolean;
   /** A note for the tradie, used as the description when there is none. */
   notes?: string;
+  /** Where the price came from (DECISIONS.md, 2026-11-24). For people reading the file. */
+  source?: string;
   /** For people reading the file. Nothing reads these yet. */
   isDiagnosis?: boolean;
   seasonal?: { months: number[] };

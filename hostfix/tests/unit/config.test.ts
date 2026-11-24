@@ -72,11 +72,25 @@ describe("trades", () => {
     for (const trade of trades) expect(trade.label.length).toBeGreaterThan(2);
   });
 
-  it("plumbing, gas and electrical work always needs a licence", () => {
-    for (const key of ["plumber", "gasfitter", "electrician"]) {
+  it("plumbing, gas, electrical and drainlaying work always needs a licence", () => {
+    for (const key of ["plumber", "gasfitter", "electrician", "drainage_septic"]) {
       expect(findTrade(key)?.licenceRequired).toBe(true);
     }
     expect(findTrade("handyman")?.licenceRequired).toBe(false);
+  });
+
+  it("has the trades the founder added on 24 Nov 2026, with the keys the public sign-up form uses", () => {
+    // DECISIONS.md, 2026-11-24. The keys are shared with the separate sign-up form: never rename one.
+    expect(Object.fromEntries(trades.map((trade) => [trade.key, trade.label]))).toMatchObject({
+      handyman: "Handyman", plumber: "Plumber", electrician: "Electrician", gasfitter: "Gasfitter", appliance_tech: "Appliance repair",
+      heat_pump_tech: "Heat pump or air conditioning", locksmith: "Locksmith", other: "Something else",
+      cleaner: "Cleaner", window_cleaner: "Window cleaner", gardener: "Gardener or landscaper", builder: "Builder (LBP)", painter: "Painter",
+      roofer: "Roofing and gutters", pest_control: "Pest control", carpet_cleaner: "Carpet and upholstery cleaning", pool_spa: "Pool and spa",
+      drainage_septic: "Drainage and septic",
+    });
+    expect(trades).toHaveLength(18);
+    // Building work only goes to a tradie with an LBP number on file; no other trade asks for one.
+    expect(trades.filter((trade) => trade.lbpRequired).map((trade) => trade.key)).toEqual(["builder"]);
   });
 });
 
@@ -95,10 +109,11 @@ describe("the Queenstown menu file", () => {
     expect(typeof menu.placeholderPrices).toBe("boolean");
   });
 
-  it("holds real prices, not placeholders: 60 researched jobs with unique codes", () => {
+  it("holds real prices, not placeholders: 92 researched jobs with unique codes", () => {
     // Nothing may be shown to an owner as a price unless this is false (DECISIONS.md).
+    // 60 researched on 16 Nov 2026, and 32 for the new trades on 24 Nov 2026 (DECISIONS.md, 2026-11-24).
     expect(menu.placeholderPrices).toBe(false);
-    expect(items).toHaveLength(60);
+    expect(items).toHaveLength(92);
     const codes = items.map((item) => item.code);
     expect(new Set(codes).size).toBe(codes.length);
   });
@@ -107,15 +122,18 @@ describe("the Queenstown menu file", () => {
     expect(item.ownerPriceDollars).toBe(5 * Math.round(item.tradiePayoutDollars / 0.85 / 5));
   });
 
-  it("loads the five jobs priced from national averages, and the two add-ons, switched off", () => {
+  it("loads the jobs priced without a local figure, and the two add-ons, switched off", () => {
     // Ring a local and confirm each price before an owner can book one. An add-on cannot be booked by itself.
+    // The first five from 16 Nov 2026 (PV-04 is now SP-02), and eleven of the 24 Nov 2026 jobs (DECISIONS.md, 2026-11-24).
     const needQuote = items.filter((item) => item.needsLocalQuote).map((item) => item.code);
-    expect(needQuote.sort()).toEqual(["GD-01", "OD-03", "PV-01", "PV-02", "PV-04"]);
+    expect(needQuote.sort()).toEqual([
+      "CC-02", "CC-03", "CC-04", "DS-02", "DS-03", "GD-01", "OD-03", "PC-01", "PC-02", "PC-03", "PV-01", "PV-02", "SP-02", "SP-03", "WC-02", "WC-03",
+    ]);
     const addOns = items.filter((item) => item.isAddOn).map((item) => item.code);
     expect(addOns.sort()).toEqual(["HP-01", "PV-03"]);
     const off = items.filter((item) => !startsOnTheMenu(item)).map((item) => item.code);
     expect(off.sort()).toEqual([...needQuote, ...addOns].sort());
-    expect(items.filter(startsOnTheMenu)).toHaveLength(60 - 7);
+    expect(items.filter(startsOnTheMenu)).toHaveLength(92 - 16 - 2);
   });
 
   it("keeps jobs an owner arranges off the form a guest sees", () => {
@@ -124,6 +142,27 @@ describe("the Queenstown menu file", () => {
     expect(guest).toEqual(expect.arrayContaining(["Blocked toilet, sink or shower drain", "No hot water, first-hour diagnosis", "Lockout, business hours", "Wi-Fi router reset and smart TV setup"]));
     // What only an owner would book.
     for (const name of ["Lawn mow and edges", "Gutter clean, single storey", "Lockbox or smart lock install", "Switchboard and RCD safety test"]) expect(guest).not.toContain(name);
+  });
+
+  it("records where each price for the new trades came from", () => {
+    // DECISIONS.md, 2026-11-24: every job added or moved that day carries its source.
+    const sourced = items.filter((item) => ["CL", "WC", "CC", "RF", "BL", "PT", "PC", "DS"].includes(item.code.split("-")[0]!) || ["SP-01", "SP-02", "SP-03", "OD-01", "OD-02", "OD-07", "OD-08"].includes(item.code));
+    expect(sourced).toHaveLength(39);
+    for (const item of sourced) expect(((item as { source?: string }).source ?? "").length, item.code).toBeGreaterThan(30);
+  });
+
+  it("puts cleaning on the menu by the size of the house, and the new trades' jobs on their own trades", () => {
+    const pick = (code: string) => items.find((item) => item.code === code)!;
+    expect([pick("CL-01"), pick("CL-02"), pick("CL-03")].map((item) => [item.trade, item.ownerPriceDollars, item.tradiePayoutDollars])).toEqual([
+      ["cleaner", 165, 140], ["cleaner", 270, 230], ["cleaner", 410, 350],
+    ]);
+    // Moved off the handyman: lawns and the garden, windows, carpets, gutters, the spa.
+    expect(["OD-01", "OD-02", "WC-01", "CC-01", "RF-01", "SP-01", "SP-02"].map((code) => pick(code).trade)).toEqual([
+      "gardener", "gardener", "window_cleaner", "carpet_cleaner", "roofer", "pool_spa", "pool_spa",
+    ]);
+    for (const old of ["HM-15", "OD-05", "GD-03", "PV-04"]) expect(items.find((item) => item.code === old)).toBeUndefined();
+    // Drainlaying is licensed work.
+    for (const item of items.filter((candidate) => candidate.trade === "drainage_septic")) expect(item.licenceRequired).toBe(true);
   });
 
   it.each(items)("$code has a known trade and sensible whole-dollar prices", (item) => {

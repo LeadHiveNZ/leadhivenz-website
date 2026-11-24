@@ -84,7 +84,7 @@ export default async function TradiesPage({ searchParams }: { searchParams: Sear
         <SectionTitle>First choice and backup, by trade</SectionTitle>
         <p className="mb-3 text-muted">
           A new job is offered to the first choice for {market.offerMinutes} minutes, then the backup, then every other approved tradie in that trade at once. &ldquo;Ready&rdquo; counts tradies who could be offered a job today: approved,
-          with bank details and, where needed, a current licence.
+          with bank details and, where needed, a current licence (or, for building work, an LBP number).
         </p>
         <div className="grid gap-3 lg:grid-cols-2">
           {cover.map((row) => {
@@ -97,6 +97,7 @@ export default async function TradiesPage({ searchParams }: { searchParams: Sear
                   <p className="font-bold text-ink">
                     {row.label}
                     {row.licenceRequired && <span className="ml-2 text-sm font-normal text-muted">licence needed</span>}
+                    {row.lbpRequired && <span className="ml-2 text-sm font-normal text-muted">LBP number needed</span>}
                   </p>
                   <Chip tone={row.ready === 0 ? "alert" : row.ready < 2 ? "waiting" : "done"}>{row.ready} ready</Chip>
                 </div>
@@ -216,7 +217,7 @@ export default async function TradiesPage({ searchParams }: { searchParams: Sear
             <Field label="Mobile" name="phone" type="tel" inputMode="tel" required maxLength={30} />
             <Field label="Email (optional)" name="email" type="email" maxLength={120} />
           </div>
-          <CheckList name="trades" legend="Work they do" options={trades.filter((trade) => trade.key !== "other").map((trade) => ({ key: trade.key, label: trade.label, detail: trade.licenceRequired ? "Needs a licence on file" : undefined }))} />
+          <CheckList name="trades" legend="Work they do" options={trades.filter((trade) => trade.key !== "other").map((trade) => ({ key: trade.key, label: trade.label, detail: trade.licenceRequired ? "Needs a licence on file" : trade.lbpRequired ? "Needs an LBP number on file" : undefined }))} />
           <Checks label="Days they work" name="daysAvailable" options={WEEKDAY_OPTIONS} defaultValues={["mon", "tue", "wed", "thu", "fri"]} />
           <Tick name="afterHours" label="Takes after-hours call-outs" />
           <Tick name="gstRegistered" label={`Registered for ${market.taxName}`} />

@@ -1,4 +1,4 @@
-import { findTrade } from "@config/trades";
+import { findTrade, NOT_SURE_TRADE } from "@config/trades";
 import { audit } from "@/lib/audit";
 import { placeHold, releaseJobHolds } from "@/lib/billing/card-holds";
 import { openSettlement, type GatewayFor } from "@/lib/billing/settle";
@@ -227,11 +227,13 @@ async function createJobRecord(db: Db, input: NewJob): Promise<(NewJobResult & {
       licenceRequired = found.licenceRequired;
       item = { name: found.name, ownerPriceCents: found.ownerPriceCents, tradiePayoutCents: found.tradiePayoutCents };
     } else {
-      const chosen = findTrade(input.offMenuTrade ?? "") ?? findTrade("handyman")!;
+      // Not on the menu. The owner picks the trade, or "Not sure" (DECISIONS.md, 2026-11-24): a "Not sure" job, or
+      // one with no trade we know, keeps the trade "other" and goes to our team to pick, never to handymen by default.
+      const chosen = findTrade(input.offMenuTrade ?? "") ?? findTrade(NOT_SURE_TRADE)!;
       const words = (input.offMenuTitle ?? "").replace(/\s+/g, " ").trim();
       if (words.length < 3) return { ok: false, reason: "invalid", message: "Tell us in a few words what is wrong." };
       title = words.slice(0, 110);
-      trade = chosen.key === "other" ? "handyman" : chosen.key;
+      trade = chosen.key;
       licenceRequired = chosen.licenceRequired;
     }
 
@@ -471,7 +473,7 @@ export async function cancelJob(db: Db, jobId: string, by: { actor: string; staf
       "update public.jobs set status = 'cancelled', cancelled_at = $2::timestamptz, cancelled_by = $3, cancel_reason = $4, card_hold = null where id = $1::uuid",
       [jobId, at.toISOString(), by.actor, reason.slice(0, 300)],
     );
-    await resolveExceptionsFor(tx, jobId, ["nobody_accepted", "at_risk", "quote_waiting", "card_needed", "hold_failed"], "Job cancelled");
+    await resolveExceptionsFor(tx, jobId, ["nobody_accepted", "at_risk", "quote_waiting", "card_needed", "hold_failed", "trade_needed"], "Job cancelled");
     await audit(tx, { actor: by.actor, action: "job.cancelled", entity: "job", entityId: jobId, amount: callOutCents ?? null, currency: callOutCents ? job.currency : null, detail: { reason, was: job.status, call_out: callOutCents ?? null } });
     // A quote paid when it was approved, for work that now will not happen, is refunded (the timer does it).
     await tx.query("update public.job_prepayments set status = 'refund_due' where job_id = $1::uuid and status = 'succeeded'", [jobId]);

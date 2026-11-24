@@ -16,6 +16,16 @@ const GROUPS_BY_TRADE: Record<string, string> = {
   appliance_tech: "Appliances",
   heat_pump_tech: "Heating and cooling",
   locksmith: "Locks and keys",
+  cleaner: "Cleaning",
+  window_cleaner: "Cleaning",
+  carpet_cleaner: "Cleaning",
+  gardener: "Outside",
+  builder: "Building and painting",
+  painter: "Building and painting",
+  roofer: "Roof and gutters",
+  pest_control: "Pests",
+  pool_spa: "Spa and pool",
+  drainage_septic: "Drains and septic",
 };
 
 const GROUPS_BY_CODE: Record<string, string> = {
@@ -33,6 +43,14 @@ const GROUPS_BY_CODE: Record<string, string> = {
   GD: "Breakages and lost things",
   PV: "Upkeep",
   OD: "Outside",
+  CL: "Cleaning",
+  WC: "Cleaning",
+  CC: "Cleaning",
+  BL: "Building and painting",
+  PT: "Building and painting",
+  RF: "Roof and gutters",
+  PC: "Pests",
+  DS: "Drains and septic",
 };
 
 export function tradeGroup(trade: string): string {

@@ -44,8 +44,10 @@ export default function Page() {
     >
       <Section n={1} title="What we do">
         <p>
-          {n} arranges maintenance at your property. You, your cleaner or your guest reports a problem. We offer it to a local tradie we have
-          checked, who comes and fixes it. When the job is sent out we hold its price on your saved card. You&rsquo;re only charged once it&rsquo;s fixed. We are the business you deal with:
+          {n} arranges maintenance at your property: cleaning, gardens, windows and carpets as well as repairs, plumbing, electrical and building
+          work. You, your cleaner or your guest reports a problem or books a job. We offer it to a local tradie we have checked, who comes and does it.
+          Building work is only offered to a Licensed Building Practitioner, and plumbing, gas, electrical and drainlaying work only to someone whose
+          licence is on file and in date. When the job is sent out we hold its price on your saved card. You&rsquo;re only charged once it&rsquo;s fixed. We are the business you deal with:
           you pay us, we pay the tradie, and you can raise any problem with us.
         </p>
       </Section>
@@ -72,7 +74,8 @@ export default function Page() {
             happened (section 4).
           </li>
           <li>
-            <strong>Jobs not on the menu</strong> cost a fixed call-out for a tradie to come and look, then a quote. Any quote over NZ$600, or over
+            <strong>Jobs not on the menu</strong> cost a fixed call-out for a tradie to come and look, then a quote. You choose the trade, or
+            &ldquo;Not sure&rdquo;: then our team reads what you wrote and chooses the trade before it is offered to anyone. Any quote over NZ$600, or over
             the limit you set for that property, stops until you say yes. When a quote goes ahead (your yes, or inside your limit), the call-out comes off
             it, so you pay for the visit once. If you say no, the call-out is still charged. Extra work up to NZ$1,000 is quoted in hours at a fixed hourly rate for the trade,
             which the tradie cannot change; bigger work the tradie prices. A return visit is part of the quote, never a second call-out.

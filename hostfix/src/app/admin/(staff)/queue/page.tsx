@@ -7,6 +7,7 @@ import { smallButtonClass } from "@/components/forms/styles";
 import { Card, Chip, EmptyState, Notice, PageTitle } from "@/components/ui/Bits";
 import { Icon } from "@/components/ui/Icon";
 import { Reveal } from "@/components/ui/Reveal";
+import { TradeButtons } from "@/components/jobs/TradeButtons";
 import { requireStaff } from "@/lib/auth/current";
 import { MINUTE, now } from "@/lib/clock";
 import { getDb } from "@/lib/db";
@@ -20,7 +21,7 @@ export const metadata: Metadata = { title: "Queue" };
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
-const RED: ExceptionKind[] = ["nobody_accepted", "missed_window", "dispute", "chargeback", "payout_failed", "payment_failed", "not_taken_yet", "owner_says_absent", "no_show"];
+const RED: ExceptionKind[] = ["trade_needed", "nobody_accepted", "missed_window", "dispute", "chargeback", "payout_failed", "payment_failed", "not_taken_yet", "owner_says_absent", "no_show"];
 
 export default async function QueuePage({ searchParams }: { searchParams: SearchParams }) {
   const staff = await requireStaff();
@@ -117,6 +118,12 @@ export default async function QueuePage({ searchParams }: { searchParams: Search
                         Hold the payment
                       </SubmitButton>
                     </ActionForm>
+                  )}
+                  {item.kind === "trade_needed" && item.jobId && (
+                    <div className="mt-3">
+                      <p className="text-sm font-semibold text-ink">Send it to:</p>
+                      <TradeButtons jobId={item.jobId} />
+                    </div>
                   )}
                   {item.kind === "receipt_check" && item.jobId && (
                     <ActionForm action={staffCheckReceipt} className="mt-3 flex flex-wrap gap-2">

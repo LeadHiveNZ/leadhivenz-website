@@ -46,16 +46,30 @@ means and what to do about it. The last section is for the admin.
 
 ## The queue, item by item
 
+### Pick the trade for this job
+**Means.** The owner (or their cleaner, or a guest) logged a job that is not on the menu and chose "Not
+sure" for the trade. Nobody has been offered it. The call-out is held on the owner's card and the promised
+time is running. The owner's page says "Our team is arranging a tradie".
+
+**Do.**
+1. Read what they wrote. Open the job to see the photos.
+2. Tap the trade on the queue item (or on the job page, under "Pick the trade"). It goes out to that
+   trade's tradies straight away, first choice first, and the item closes.
+3. Cannot tell? Ring the owner first. Building work only goes to builders with an LBP number on file.
+
 ### Nobody accepted
 **Means.** Every tradie who could take the job was offered it, and none said yes. The owner has been
-told you are finding someone by hand. The promised time is still running.
+told you are finding someone by hand. The promised time is still running. If the note says no approved
+tradie in the market is down for that trade yet, nobody was offered it at all: find one, or send it to
+another trade with **Wrong trade? Send it to another** on the job page (gutters to a handyman, say).
 
 **Do.**
 1. Open the job. Under "Nobody accepted. Find a tradie" is the list of tradies who do this trade.
 2. Ring them, best first. When one says yes, choose them and press **Assign this tradie**. They and the
    owner are texted straight away, and the item closes.
 3. Nobody free? Press **Start the offers again from the top**, then ring the owner with an honest time.
-4. A tradie marked "no current licence" cannot be given licensed work. "No bank details yet" means
+4. A tradie marked "no current licence" cannot be given licensed work, and one marked "no LBP number"
+   cannot be given building work. "No bank details yet" means
    they can do the job but cannot be paid until they add them. Avoid if you can.
 
 ### Running late
@@ -259,7 +273,7 @@ with no answer. The owner was reminded after one hour.
 **Owner said no**. The tradie is texted. If the owner says no, the tradie is still paid the call-out.
 
 ### Licence running out
-**Means.** A tradie's plumbing, gas or electrical licence runs out within 30 days, or already has.
+**Means.** A tradie's plumbing, gas, electrical or drainlaying licence runs out within 30 days, or already has.
 They have been texted. Once it has run out they are **not offered licensed jobs at all**.
 
 **Do.** Ask them for the renewed licence. Check it on the public register (in New Zealand: the Plumbers,

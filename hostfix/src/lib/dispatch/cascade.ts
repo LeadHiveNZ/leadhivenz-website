@@ -1,4 +1,5 @@
 import { brand } from "@config/brand";
+import { findTrade, NOT_SURE_TRADE } from "@config/trades";
 import { audit } from "@/lib/audit";
 import { addHours, addMinutes, now } from "@/lib/clock";
 import type { Db } from "@/lib/db/types";
@@ -26,6 +27,12 @@ import { ownClientLines } from "@/lib/jobs/pricing";
  *            once they have 10) is offered it in a second wave, after the
  *            others have had their 15 minutes (DECISIONS.md, 2026-11-18).
  *   stage 4  then it goes to the dispatcher
+ *
+ * Two jobs go to the dispatcher before anyone is offered them (DECISIONS.md,
+ * 2026-11-24): a job whose owner chose "Not sure" for the trade (trade
+ * "other"), for our team to pick the trade with one tap (chooseTrade); and a
+ * job in a trade no approved tradie in the market does at all, which says so.
+ * Nothing is ever sent to handymen just because nobody else matched.
  *
  * Passing, or letting an offer run out, never counts against anyone. Only
  * arriving late at jobs a tradie accepted moves them in the order, and never
@@ -105,6 +112,17 @@ export async function advanceCascade(db: Db, jobId: string): Promise<CascadeOutc
 
   const context = await loadContext(db, job);
   const { market, owner, property } = context;
+  // "Not sure" (DECISIONS.md, 2026-11-24): a person picks the trade first. The owner sees "our team is arranging a tradie".
+  if (job.trade === NOT_SURE_TRADE) {
+    await db.query("update public.jobs set status = 'unfilled', stage = 4 where id = $1::uuid", [jobId]);
+    await audit(db, { actor: "system", action: "job.trade_needed", entity: "job", entityId: jobId, detail: { round: job.offerRound } });
+    await raiseException(db, {
+      kind: "trade_needed", market: job.market, jobId,
+      summary: `Job ${job.number}: the owner was not sure which trade "${job.title}" at ${property.name} needs. Read it, pick the trade, and it goes out to tradies${job.respondBy ? `. Promised on site by ${formatDeadline(job.respondBy, at, market.timezone)}` : ""}.`,
+      dedupeKey: `trade_needed:${jobId}`,
+    });
+    return "unfilled";
+  }
   const all = await eligibleTradies(db, {
     market: job.market, trade: job.trade, licenceRequired: job.licenceRequired, afterHours: job.afterHours,
     urgent: job.urgency === "urgent", ...marketToday(market, at),
@@ -143,12 +161,18 @@ export async function advanceCascade(db: Db, jobId: string): Promise<CascadeOutc
     return "offered";
   }
 
-  // Nobody left to offer it to.
+  // Nobody left to offer it to. A trade nobody in the market does at all is said plainly, so the team can pick another trade.
   await db.query("update public.jobs set status = 'unfilled', stage = 4 where id = $1::uuid", [jobId]);
-  await audit(db, { actor: "system", action: "job.unfilled", entity: "job", entityId: jobId, detail: { round: job.offerRound, offered_to: already.size } });
+  const anyone = already.size > 0 || (await db.query(
+    "select 1 from public.tradies where market = $1 and status = 'approved' and $2 = any(trades) limit 1", [job.market, job.trade],
+  )).length > 0;
+  await audit(db, { actor: "system", action: "job.unfilled", entity: "job", entityId: jobId, detail: { round: job.offerRound, offered_to: already.size, ...(anyone ? {} : { no_tradie_in_trade: true }) } });
+  const promised = job.respondBy ? `. Promised on site by ${formatDeadline(job.respondBy, at, market.timezone)}` : "";
   await raiseException(db, {
     kind: "nobody_accepted", market: job.market, jobId,
-    summary: `Job ${job.number}: nobody accepted "${job.title}" at ${property.name}${job.respondBy ? `. Promised on site by ${formatDeadline(job.respondBy, at, market.timezone)}` : ""}.`,
+    summary: anyone
+      ? `Job ${job.number}: nobody accepted "${job.title}" at ${property.name}${promised}.`
+      : `Job ${job.number}: no approved tradie in ${market.name} is down for "${findTrade(job.trade)?.label ?? job.trade}" yet, so "${job.title}" at ${property.name} was not offered to anyone. Find one, or pick another trade on the job page${promised}.`,
     dedupeKey: `nobody_accepted:${jobId}`,
   });
   if (owner.phone) {
@@ -237,7 +261,7 @@ export async function acceptOffer(db: Db, offerId: string, via: "link" | "text" 
   );
   // An own-client pair's job takes the 5% fee from here on (DECISIONS.md, 2026-11-23).
   await applyOwnClientFee(db, job.id, current.tradieId, job.propertyId, market);
-  await resolveExceptionsFor(db, job.id, ["nobody_accepted", "not_taken_yet"], `${tradie.businessName} accepted`);
+  await resolveExceptionsFor(db, job.id, ["nobody_accepted", "not_taken_yet", "trade_needed"], `${tradie.businessName} accepted`);
   await audit(db, {
     actor: actor ?? `tradie:${current.tradieId}`, action: "job.accepted", entity: "job", entityId: job.id,
     detail: {
@@ -344,6 +368,29 @@ export async function reoffer(db: Db, jobId: string, actor: string): Promise<Cas
   await db.query("update public.jobs set status = 'offering', stage = 0, offer_round = offer_round + 1 where id = $1::uuid", [jobId]);
   await audit(db, { actor, action: "job.reoffered", entity: "job", entityId: jobId, detail: { round: job.offerRound + 1 } });
   return advanceCascade(db, jobId);
+}
+
+export type ChooseTradeResult = { ok: true; outcome: CascadeOutcome } | { ok: false; message: string };
+
+/**
+ * Our team picks the trade for a job (DECISIONS.md, 2026-11-24): one tap on the
+ * queue or the job page, for a "Not sure" job or one nobody in its trade could
+ * take. The job takes that trade (and its licence rule) and the offers start
+ * again from the top, as "Start the offers again" does. The promised time and
+ * the price stay as they were.
+ */
+export async function chooseTrade(db: Db, jobId: string, tradeKey: string, actor: string): Promise<ChooseTradeResult> {
+  const trade = findTrade(tradeKey);
+  if (!trade || trade.key === NOT_SURE_TRADE) return { ok: false, message: "Choose one of the trades." };
+  const job = await lockJob(db, jobId);
+  if (!job) return { ok: false, message: "We could not find that job." };
+  if ((job.status !== "unfilled" && job.status !== "offering") || job.tradieId) return { ok: false, message: "This job is not waiting for a tradie any more." };
+  // A job from the menu keeps its own licence rule; an off-menu job takes the trade's.
+  const licenceRequired = job.offMenu ? trade.licenceRequired : job.licenceRequired || trade.licenceRequired;
+  await db.query("update public.jobs set trade = $2, licence_required = $3 where id = $1::uuid", [jobId, trade.key, licenceRequired]);
+  await audit(db, { actor, action: "job.trade_chosen", entity: "job", entityId: jobId, detail: { from: job.trade, to: trade.key } });
+  await resolveExceptionsFor(db, jobId, ["trade_needed", "nobody_accepted"], `Sent to ${trade.label.toLowerCase()} tradies`);
+  return { ok: true, outcome: await reoffer(db, jobId, actor) };
 }
 
 /** Run by the timer: moves on every job whose live offer has run out. */

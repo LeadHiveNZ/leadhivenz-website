@@ -89,7 +89,7 @@ export async function acceptJob(_previous: FormState, formData: FormData): Promi
     case "window_gone":
       return { message: "That time is no longer on the list. Choose another time." };
     case "not_eligible":
-      return { message: "This job cannot be given to you right now. Check that your licence for this trade is on file and in date, and that you are not paused." };
+      return { message: "This job cannot be given to you right now. Check that your licence for this trade (or your LBP number, for building work) is on file and in date, and that you are not paused." };
     default:
       return { message: NO_OFFER };
   }

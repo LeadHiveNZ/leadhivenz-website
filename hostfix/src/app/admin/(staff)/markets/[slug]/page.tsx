@@ -138,7 +138,7 @@ function MenuForm({ slug, currency, item }: { slug: string; currency: string; it
       </div>
       <Area label="What is included (the tradie sees this)" name={`description-${key}`} rows={2} maxLength={400} defaultValue={item?.description ?? ""} />
       <Area label="Worth trying first (shown to whoever is reporting it)" name={`tryFirst-${key}`} rows={2} maxLength={300} defaultValue={item?.tryFirst ?? ""} hint="A quick fix that saves a call-out, for example: check the switch on the wall is on. Leave empty for none." />
-      <Tick name="licenceRequired" label="Only for tradies with a current licence" hint="Always on for plumbing, gas and electrical work, whatever is ticked here." defaultChecked={item?.licenceRequired ?? false} />
+      <Tick name="licenceRequired" label="Only for tradies with a current licence" hint="Always on for plumbing, gas, electrical and drainlaying work, whatever is ticked here. Building work also needs an LBP number on file." defaultChecked={item?.licenceRequired ?? false} />
       <Tick name="guestVisible" label="Guests can report this from the QR code" defaultChecked={item?.guestVisible ?? true} />
       <Tick name="active" label="On the menu" defaultChecked={item?.active ?? true} />
       <SubmitButton variant="secondary" pendingLabel="Saving...">

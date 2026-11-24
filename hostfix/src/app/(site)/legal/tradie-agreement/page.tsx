@@ -63,8 +63,8 @@ export default function Page() {
             current insurance and its certificate on file, and the app stops offering you jobs the day it expires.
           </li>
           <li>
-            <strong>Current licences</strong> for any plumbing, gas or electrical work, with the number and expiry in your profile. Licensed work
-            is only ever offered to someone whose licence is on file and in date. We check each one against the public register.
+            <strong>Current licences</strong> for any plumbing, gas, electrical or drainlaying work, with the number and expiry in your profile.
+            Licensed work is only ever offered to someone whose licence is on file and in date. We check each one against the public register.
           </li>
           <li>
             <strong>Your criminal record</strong>, because you will be entering homes that may have guests in them. You request your own copy
@@ -73,8 +73,8 @@ export default function Page() {
           </li>
           <li><strong>Bank details with Stripe</strong>, set up from your profile, so we can pay you.</li>
           <li>
-            <strong>A Licensed Building Practitioner (LBP) number</strong> is optional. Add it to your profile if you have one: some building work
-            needs it, most jobs do not.
+            <strong>A Licensed Building Practitioner (LBP) number</strong>, if you want building jobs. Building jobs are only offered to, and can
+            only be accepted by, a tradie with an LBP number in their profile. Other trades do not need one.
           </li>
         </ul>
         <p>
@@ -87,7 +87,8 @@ export default function Page() {
       <Section n={3} title="How offers work">
         <p>
           A job is offered by text to one tradie at a time. The first choice has <strong>15 minutes</strong> to accept, then it moves to the backup,
-          then to everyone who does that trade. Open the link and press a button to accept; opening the link alone does nothing. On a normal job
+          then to everyone who does that trade. A job is only offered in the trade it is for: when an owner is not sure which trade a job needs,
+          our team reads it and chooses the trade first. Open the link and press a button to accept; opening the link alone does nothing. On a normal job
           you accept by choosing the {WINDOW_HOURS}-hour window you will arrive in, inside the 24 hours; the owner is told that window. Pass whenever you
           cannot do it.
         </p>

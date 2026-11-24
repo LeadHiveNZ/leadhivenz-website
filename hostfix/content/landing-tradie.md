@@ -22,9 +22,9 @@ We send you fixed-price maintenance jobs at holiday homes, straight to your phon
 
 ## Who we're looking for
 
-- Handymen, plumbers, electricians, gasfitters and appliance techs working in and around {{market}}
+- Cleaners, handymen, plumbers, electricians, gasfitters, drainlayers, appliance and heat pump techs, builders, painters, roofers, gardeners, window and carpet cleaners, pest control and spa pool techs working in and around {{market}}
 - Insured. You'll need public liability insurance, and to upload the certificate from your insurer (a PDF or a photo of it)
-- Licensed where the law requires it. We'll need your licence number and expiry date. An LBP number is welcome but not needed
+- Licensed where the law requires it. We'll need your licence number and expiry date. Building jobs only go to a Licensed Building Practitioner, so builders need their LBP number on file
 - Reliable. You choose your arrival time when you accept, and we track whether you're there by then
 
 ## Questions

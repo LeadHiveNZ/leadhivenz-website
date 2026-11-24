@@ -12,7 +12,7 @@ import { flagWords, type CheckFlag } from "@/lib/jobs/checks";
 import { receiptFlagWords } from "@/lib/jobs/parts";
 import { Card, Chip, Facts, Notice, PageTitle, SectionTitle } from "@/components/ui/Bits";
 import { Reveal } from "@/components/ui/Reveal";
-import { findTrade } from "@config/trades";
+import { findTrade, needsLbp, NOT_SURE_TRADE } from "@config/trades";
 import { requireStaff } from "@/lib/auth/current";
 import { now } from "@/lib/clock";
 import { getDb } from "@/lib/db";
@@ -25,6 +25,7 @@ import { formatMoney } from "@/lib/money";
 import { chargebacksForJob } from "@/lib/billing/chargebacks";
 import { cardProblemWords } from "@/lib/owners/service";
 import { GuestNote, HazardNote } from "@/components/jobs/SafetyNotes";
+import { TradeButtons } from "@/components/jobs/TradeButtons";
 import { listMessages } from "@/lib/notify/outbox";
 import { displayPhone } from "@/lib/phone";
 import { addressLine } from "@/lib/properties/service";
@@ -152,6 +153,7 @@ export default async function StaffJobPage({ params, searchParams }: { params: P
         const licence = (await listLicences(db, tradie.id)).find((candidate) => candidate.trade === job.trade);
         note = licence && licence.expiresOn >= today ? "" : " (no current licence: cannot be assigned)";
       }
+      if (needsLbp(job.trade) && (tradie.lbpNumber ?? "").length < 2) note += " (no LBP number: cannot be assigned)";
       if (!tradie.payoutsEnabled) note += " (no bank details yet)";
       candidates.push({ key: tradie.id, label: `${tradie.businessName}, ${tradie.phone ? displayPhone(tradie.phone) : "no mobile"}${note}` });
     }
@@ -178,6 +180,8 @@ export default async function StaffJobPage({ params, searchParams }: { params: P
           {job.afterHours && <Chip tone="brand">After hours</Chip>}
           {job.offMenu && <Chip tone="brand">Off menu</Chip>}
           {job.licenceRequired && <Chip tone="brand">Licence needed</Chip>}
+          {needsLbp(job.trade) && <Chip tone="brand">LBP needed</Chip>}
+          {job.trade === NOT_SURE_TRADE && <Chip tone="alert">Trade not chosen yet</Chip>}
           <span className="tabular text-sm text-muted">
             Job {job.number} · {market.name} · {findTrade(job.trade)?.label ?? job.trade}
           </span>
@@ -289,7 +293,15 @@ export default async function StaffJobPage({ params, searchParams }: { params: P
         </Card>
       )}
 
-      {needsTradie && (
+      {needsTradie && job.trade === NOT_SURE_TRADE && (
+        <Card className="border-alert/40 sm:p-6">
+          <SectionTitle>Pick the trade</SectionTitle>
+          <p className="text-muted">The owner was not sure which trade this needs. Read what they wrote and look at the photos, then tap the trade. It goes out to those tradies straight away.</p>
+          <TradeButtons jobId={job.id} />
+        </Card>
+      )}
+
+      {needsTradie && job.trade !== NOT_SURE_TRADE && (
         <Card className="border-alert/40 sm:p-6">
           <SectionTitle>{job.status === "unfilled" ? "Nobody accepted. Find a tradie" : "Being offered now"}</SectionTitle>
           <p className="text-muted">
@@ -316,6 +328,13 @@ export default async function StaffJobPage({ params, searchParams }: { params: P
               Start the offers again from the top
             </SubmitButton>
           </ActionForm>
+          {job.status === "unfilled" && (
+            <div className="mt-3">
+              <Reveal label="Wrong trade? Send it to another">
+                <TradeButtons jobId={job.id} current={job.trade} />
+              </Reveal>
+            </div>
+          )}
         </Card>
       )}
 

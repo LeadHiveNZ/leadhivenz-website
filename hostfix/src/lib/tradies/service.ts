@@ -1,5 +1,5 @@
 import { isUuid } from "@/lib/uuid";
-import { findTrade, trades as tradeList } from "@config/trades";
+import { findTrade, needsLbp, trades as tradeList } from "@config/trades";
 import { audit } from "@/lib/audit";
 import { createUser, type User } from "@/lib/auth/users";
 import { now } from "@/lib/clock";
@@ -393,6 +393,7 @@ export type OfferCriteria = {
  *  - approved, in this market, does this trade, has a mobile, can be paid
  *  - public liability insurance on file (insurer, policy number, certificate uploaded) that has not expired
  *  - if the job needs a licence: has one for this trade that has not expired
+ *  - if the trade is building work: has an LBP number on file (DECISIONS.md, 2026-11-24)
  *  - if it is after hours: has said they take after-hours work
  *  - if it is urgent: works today
  */
@@ -417,10 +418,11 @@ export async function eligibleTradies(db: Db, criteria: OfferCriteria): Promise<
                where l.tradie_id = t.id and l.trade = $2
                  and char_length(l.licence_number) >= 2
                  and l.expires_on >= $6::date))
+        and (not $9::boolean or char_length(coalesce(t.lbp_number, '')) >= 2)
         and (not $4::boolean or t.after_hours)
         and (not $5::boolean or $7 = any(t.days_available))
       order by slot_rank nulls last, t.created_at`,
-    [criteria.market, criteria.trade, criteria.licenceRequired, criteria.afterHours, criteria.urgent, criteria.today, criteria.weekday, TRADIE_AGREEMENT_VERSION],
+    [criteria.market, criteria.trade, criteria.licenceRequired, criteria.afterHours, criteria.urgent, criteria.today, criteria.weekday, TRADIE_AGREEMENT_VERSION, needsLbp(criteria.trade)],
   );
   return rows.map((row) => ({
     tradieId: row.id, userId: row.user_id, name: row.name, businessName: row.business_name, phone: row.phone,
@@ -439,8 +441,9 @@ export async function canStillTake(db: Db, tradieId: string, job: { market: stri
         and exists (select 1 from public.uploads c where c.tradie_id = t.id and c.kind = 'insurance_certificate' and c.attached)
         and (not $4::boolean or exists (
               select 1 from public.tradie_licences l
-               where l.tradie_id = t.id and l.trade = $3 and char_length(l.licence_number) >= 2 and l.expires_on >= $5::date))`,
-    [tradieId, job.market, job.trade, job.licenceRequired, job.today, TRADIE_AGREEMENT_VERSION],
+               where l.tradie_id = t.id and l.trade = $3 and char_length(l.licence_number) >= 2 and l.expires_on >= $5::date))
+        and (not $7::boolean or char_length(coalesce(t.lbp_number, '')) >= 2)`,
+    [tradieId, job.market, job.trade, job.licenceRequired, job.today, TRADIE_AGREEMENT_VERSION, needsLbp(job.trade)],
   );
   return rows.length > 0;
 }
@@ -511,6 +514,8 @@ export type Coverage = {
   trade: string;
   label: string;
   licenceRequired: boolean;
+  /** Only tradies with an LBP number on file (building work). */
+  lbpRequired: boolean;
   firstChoice: string | null;
   backup: string | null;
   /** Approved tradies who could be offered a job in this trade today. */
@@ -528,8 +533,9 @@ export async function coverage(db: Db, market: string, today: string): Promise<C
       where t.market = $1 and t.status = 'approved' and t.payouts_enabled and u.phone is not null and u.disabled_at is null
         and (not (tr.trade = any($3::text[])) or exists (
               select 1 from public.tradie_licences l where l.tradie_id = t.id and l.trade = tr.trade and l.expires_on >= $2::date))
+        and (not (tr.trade = any($4::text[])) or char_length(coalesce(t.lbp_number, '')) >= 2)
       group by tr.trade`,
-    [market, today, tradeList.filter((trade) => trade.licenceRequired).map((trade) => trade.key)],
+    [market, today, tradeList.filter((trade) => trade.licenceRequired).map((trade) => trade.key), tradeList.filter((trade) => trade.lbpRequired).map((trade) => trade.key)],
   );
   const ready = new Map(counts.map((row) => [row.trade, Number(row.ready)]));
   return tradeList
@@ -538,6 +544,7 @@ export async function coverage(db: Db, market: string, today: string): Promise<C
       trade: trade.key,
       label: trade.label,
       licenceRequired: trade.licenceRequired,
+      lbpRequired: Boolean(trade.lbpRequired),
       firstChoice: slots.find((slot) => slot.trade === trade.key && slot.rank === 1)?.businessName ?? null,
       backup: slots.find((slot) => slot.trade === trade.key && slot.rank === 2)?.businessName ?? null,
       ready: ready.get(trade.key) ?? 0,

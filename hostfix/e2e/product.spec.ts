@@ -581,12 +581,12 @@ test("a tradie signs in with their mobile, adds bank details and their insurance
   await insurance.getByLabel("Insurer").fill("Southern Cover Ltd");
   await insurance.getByLabel("Policy number").fill("PL-445566");
   await insurance.getByLabel("Expiry date").fill("2027-06-30");
-  await insurance.getByLabel(/LBP/).fill("BP112233");
+  await insurance.getByLabel(/\(LBP\) number/).fill("BP112233");
   await insurance.getByLabel("Upload your certificate").setInputFiles({ ...PHOTO, name: "certificate.png" });
   await insurance.getByRole("button", { name: "Save", exact: true }).click();
   await expect(shown(page, "Saved, with your certificate.").first()).toBeVisible();
   await expect(insurance.getByLabel("Policy number")).toHaveValue("PL-445566");
-  await expect(insurance.getByLabel(/LBP/)).toHaveValue("BP112233");
+  await expect(insurance.getByLabel(/\(LBP\) number/)).toHaveValue("BP112233");
   const certificate = insurance.getByRole("link", { name: "Current certificate" });
   await expect(certificate).toBeVisible();
   expect((await page.request.get(`${BASE}${await certificate.getAttribute("href")}`)).status()).toBe(200);

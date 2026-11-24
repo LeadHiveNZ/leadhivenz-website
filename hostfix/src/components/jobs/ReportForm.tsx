@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from "react";
 import type { FormState } from "@/lib/forms";
 import { formatMoney } from "@/lib/money";
+import { NOT_SURE_TRADE } from "@config/trades";
 import { ActionForm, Area, Field } from "../forms/ActionForm";
 import { PhotoUploader } from "../forms/PhotoUploader";
 import { SubmitButton } from "../forms/SubmitButton";
@@ -80,7 +81,8 @@ export function ReportForm(props: Props) {
   const [guest, setGuest] = useState<"" | "yes" | "no" | "not_sure">("");
   const [letIn, setLetIn] = useState<boolean | null>(null);
   const mayLetIn = letIn ?? !(guest === "yes" || guest === "not_sure");
-  const [offTrade, setOffTrade] = useState<string>(props.offMenuTrades[0]?.key ?? "handyman");
+  // "Not sure" until the person picks a trade: our team then picks it (DECISIONS.md, 2026-11-24).
+  const [offTrade, setOffTrade] = useState<string>(props.offMenuTrades.some((trade) => trade.key === NOT_SURE_TRADE) ? NOT_SURE_TRADE : (props.offMenuTrades[0]?.key ?? NOT_SURE_TRADE));
   const showPrices = audience !== "guest";
   const selected = items.find((item) => item.id === choice) ?? null;
   const base = choice === OFF_MENU ? props.diagnosisCents : (selected?.ownerCents ?? 0);
@@ -167,6 +169,7 @@ export function ReportForm(props: Props) {
           <Field label="In a few words, what is wrong?" name="offMenuTitle" required maxLength={100} placeholder="Water coming through the ceiling" />
           <div role="radiogroup" aria-label="What kind of problem is it?">
             <p className={labelClass}>What kind of problem is it?</p>
+            <p className="-mt-1 mb-2 text-sm text-muted">Not sure? Leave it on &ldquo;Not sure&rdquo; and our team picks the right tradie.</p>
             <div className="flex flex-wrap gap-2">
               {props.offMenuTrades.map((trade) => (
                 <button

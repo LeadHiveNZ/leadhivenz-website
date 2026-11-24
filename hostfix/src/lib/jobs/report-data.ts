@@ -1,4 +1,4 @@
-import { trades } from "@config/trades";
+import { jobTrades, NOT_SURE_TRADE } from "@config/trades";
 import { menuGroup, tradeGroup } from "@/lib/markets/menu-groups";
 import { now } from "@/lib/clock";
 import type { Db } from "@/lib/db/types";
@@ -38,7 +38,16 @@ export async function reportFormData(db: Db, property: Property, audience: "owne
     items: menu.map((item) => ({
       id: item.id, name: item.name, tradeLabel: menuGroup(item), ownerCents: item.ownerPriceCents, tryFirst: item.tryFirst,
     })),
-    offMenuTrades: trades.filter((trade) => trade.key !== "other").map((trade) => ({ key: trade.key, label: tradeGroup(trade.key) === trade.key ? trade.label : tradeGroup(trade.key) })),
+    // Every trade, then "Not sure", which goes to our team to pick the trade (DECISIONS.md, 2026-11-24).
+    offMenuTrades: [
+      // The kind of problem ("Plumbing") where only one trade does it, otherwise the trade's own name ("Window cleaner").
+      ...jobTrades.map((trade) => {
+        const group = tradeGroup(trade.key);
+        const shared = jobTrades.filter((other) => tradeGroup(other.key) === group).length > 1;
+        return { key: trade.key, label: group === trade.key || shared ? trade.label : group };
+      }),
+      { key: NOT_SURE_TRADE, label: "Not sure" },
+    ],
     currency: market.currency,
     diagnosisCents: market.diagnosisFeeCents,
     standardHours: tier?.responseHours ?? 24,

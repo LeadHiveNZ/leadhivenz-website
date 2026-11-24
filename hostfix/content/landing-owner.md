@@ -15,7 +15,7 @@ One place for every trade your holiday home needs. A checked local tradie on sit
 ## How it works
 
 1. **Anyone can report it.** You, your cleaner from their own link (one link for every house you give them, signed with their name), or your guest from the QR card in the house. A photo and a minute.
-2. **We find the tradie, not you.** It goes straight to our first-choice tradie for that trade. If they can't take it, it goes to the next one. The tradie who takes it picks a two-hour window to arrive in, and you get a text with it.
+2. **We find the tradie, not you.** Plumber, electrician, cleaner, gardener or builder: it goes straight to our first-choice tradie for that trade. If they can't take it, it goes to the next one. The tradie who takes it picks a two-hour window to arrive in, and you get a text with it.
 3. **They get in without you.** Your lockbox code and access notes are shown only to the tradie who accepts the job.
 4. **You get before and after photos and a fixed price.** When it goes out we hold the price on your card; you're only charged once it's fixed. One statement a month. If the app can't confirm the tradie's visit (where they were, or how long they stayed), we may ask you to check the photos before they're paid.
 
@@ -57,7 +57,15 @@ No. The menu is priced from what {{market}} tradies charge for a call-out and th
 
 ### Who are your tradies?
 
-Local tradies we've checked and approved. Plumbing, gas and electrical work only ever goes to a tradie whose licence is on file and in date.
+Local tradies and cleaners we've checked and approved. Plumbing, gas, electrical and drainlaying work only ever goes to a tradie whose licence is on file and in date. Building work only goes to a Licensed Building Practitioner (LBP).
+
+### Can you do the cleaning too?
+
+Yes. Turnover, entry and exit cleans at a fixed price by the size of the house, deep cleans, oven cleans and a clean-up after a party. Need it done before today's check-in? Book it as urgent for {{urgent}} more and a cleaner is on site within 4 hours. We also send window and carpet cleaners, gardeners, roofers, painters, builders, pest control, spa pool techs and drainlayers. Anything not on the price list yet is booked as a job not on the menu.
+
+### Not sure who you need?
+
+Choose "Not sure" when you tell us what's wrong. Someone on our team reads it and sends it to the right tradie.
 
 ### What about my door code?
 

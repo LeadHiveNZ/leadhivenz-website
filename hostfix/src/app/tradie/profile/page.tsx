@@ -90,7 +90,7 @@ export default async function TradieProfilePage({ searchParams }: { searchParams
             name="trades"
             legend="Work you do"
             defaultValues={tradie.trades}
-            options={trades.filter((trade) => trade.key !== "other").map((trade) => ({ key: trade.key, label: trade.label, detail: trade.licenceRequired ? "Needs a licence on file" : undefined }))}
+            options={trades.filter((trade) => trade.key !== "other").map((trade) => ({ key: trade.key, label: trade.label, detail: trade.licenceRequired ? "Needs a licence on file" : trade.lbpRequired ? "Needs an LBP number on file" : undefined }))}
           />
           <Checks label="Days you work" name="daysAvailable" options={WEEKDAY_OPTIONS} defaultValues={tradie.daysAvailable} hint="Urgent jobs are only offered on your working days." />
           <Tick name="afterHours" label="I take after-hours call-outs" hint={`Outside ${workingHours(market)}. You get ${formatMoney(surchargeShare(market.afterHoursSurchargeCents, market.platformFeeBps), market.currency)} on top of the job's pay when you arrive outside those hours: the after-hours surcharge less the platform fee.`} defaultChecked={tradie.afterHours} />
@@ -101,7 +101,7 @@ export default async function TradieProfilePage({ searchParams }: { searchParams
             name="lbpNumber"
             maxLength={40}
             defaultValue={tradie.lbpNumber ?? ""}
-            hint="Only if you have one. Some building work needs it. Most jobs do not."
+            hint="Only if you have one. Building jobs only go to tradies with an LBP number on file. Most other jobs do not need one."
           />
           <fieldset className="space-y-4 rounded-2xl border border-line p-4">
             <legend className="flex items-center gap-2 px-1 font-semibold text-ink">

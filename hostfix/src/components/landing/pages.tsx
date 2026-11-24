@@ -31,11 +31,11 @@ function example(data: PublicMarket) {
 
 /**
  * The jobs owners most often need, shown first in the price preview when they
- * are on the menu: blocked drains, hot water, power, heat pumps, Wi-Fi and
+ * are on the menu: a turnover clean (DECISIONS.md, 2026-11-24), blocked drains, hot water, power, heat pumps, Wi-Fi and
  * lockouts are what guests complain about most. Any gaps are filled with a
  * spread across the trades, so a market with a different menu still works.
  */
-const FEATURED = ["PL-08", "PL-03", "PL-04", "PL-06", "EL-01", "EL-02", "HP-03", "HM-02", "HM-05", "LS-01", "HM-14", "HM-15"];
+const FEATURED = ["CL-02", "PL-08", "PL-03", "PL-04", "PL-06", "EL-01", "EL-02", "HP-03", "HM-02", "HM-05", "LS-01", "HM-14", "RF-01"];
 
 function featured(data: PublicMarket, count: number): PublicMarket["menu"] {
   const byCode = new Map(data.menu.map((item) => [item.code, item]));

@@ -10,7 +10,8 @@ import { addGoodwillCredit, chargeJob, resolveDispute, retryPayout } from "@/lib
 import { decideChargebackFault } from "@/lib/billing/chargebacks";
 import { staffDecideNotDescribed } from "@/lib/jobs/not-described";
 import { getDb } from "@/lib/db";
-import { assignTradie, reoffer } from "@/lib/dispatch/cascade";
+import { assignTradie, chooseTrade, reoffer } from "@/lib/dispatch/cascade";
+import { findTrade } from "@config/trades";
 import { baseUrl } from "@/lib/env";
 import { dollarsToCents, list, problem, text, ticked, type FormState } from "@/lib/forms";
 import { approveGuestReport, cancelJob, createJob } from "@/lib/jobs/create";
@@ -131,7 +132,7 @@ export async function staffAssign(_previous: FormState, formData: FormData): Pro
     case "already_yours":
       redirect(`${jobPath(jobId)}?did=assigned`);
     case "not_eligible":
-      return { message: "That tradie cannot be given this job. Check they are approved, do this trade, and have a current licence if the job needs one." };
+      return { message: "That tradie cannot be given this job. Check they are approved, do this trade, and have a current licence (or an LBP number, for building work) if the job needs one." };
     case "taken":
       return { message: "This job already has a tradie." };
     default:
@@ -159,6 +160,27 @@ export async function staffReoffer(_previous: FormState, formData: FormData): Pr
   revalidatePath(jobPath(jobId));
   if (outcome === "not_offering") return { message: "This job is not waiting for a tradie any more." };
   return outcome === "unfilled" ? { message: "There is still nobody who can be offered this job. Ring a tradie and assign them, or add another tradie to this trade." } : { done: "Offers have gone out again, starting with the first choice." };
+}
+
+/**
+ * One tap: the trade for a "Not sure" job, or another trade for one nobody could take (DECISIONS.md, 2026-11-24).
+ * The job goes out to that trade's tradies straight away.
+ */
+export async function staffChooseTrade(_previous: FormState, formData: FormData): Promise<FormState> {
+  const staff = await requireStaff();
+  const jobId = text(formData, "jobId");
+  const trade = text(formData, "trade");
+  if (!isUuid(jobId)) return { message: "We could not find that job." };
+  const db = await getDb();
+  const result = await db.tx((tx) => chooseTrade(tx, jobId, trade, staff.actor));
+  await sendQueued(db);
+  revalidatePath("/admin/queue");
+  revalidatePath(jobPath(jobId));
+  if (!result.ok) return { message: result.message };
+  const label = (findTrade(trade)?.label ?? trade).toLowerCase();
+  return result.outcome === "unfilled"
+    ? { message: `Saved as ${label}, but no ${label} can be offered it right now. Ring one and assign them on the job page, or pick another trade.` }
+    : { done: `Sent to ${label} tradies, starting with the first choice.` };
 }
 
 export async function staffCancel(_previous: FormState, formData: FormData): Promise<FormState> {

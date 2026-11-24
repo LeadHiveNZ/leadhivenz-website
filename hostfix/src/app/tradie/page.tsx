@@ -46,6 +46,7 @@ export default async function TradieHome({ searchParams }: { searchParams: Searc
   const licences = await listLicences(db, tradie.id);
   const today = dateKey(at, zone);
   const missing = tradie.trades.filter((key) => findTrade(key)?.licenceRequired && !licences.some((licence) => licence.trade === key && licence.expiresOn >= today));
+  const lbpMissing = tradie.trades.some((key) => findTrade(key)?.lbpRequired) && (tradie.lbpNumber ?? "").length < 2;
   const secret = appSecret();
   const noShows = await recentNoShows(db, tradie.id, at);
 
@@ -78,6 +79,14 @@ export default async function TradieHome({ searchParams }: { searchParams: Searc
           We only offer jobs to tradies we can pay.{" "}
           <Link href="/tradie/profile#bank" className="font-semibold underline underline-offset-2">
             Add bank details
+          </Link>
+        </Notice>
+      )}
+      {lbpMissing && (
+        <Notice tone="warn" title="Add your LBP number for building jobs">
+          You will not be offered building jobs until your Licensed Building Practitioner number is on your profile.{" "}
+          <Link href="/tradie/profile" className="font-semibold underline underline-offset-2">
+            Add it
           </Link>
         </Notice>
       )}

@@ -236,6 +236,11 @@ async function Opened({ params, searchParams }: { params: Params; searchParams: 
               <Icon name="shield" size={16} className="mt-0.5 text-brand" /> Needs your {trade?.label.toLowerCase() ?? job.trade} licence.
             </li>
           )}
+          {trade?.lbpRequired && (
+            <li className="flex gap-2">
+              <Icon name="shield" size={16} className="mt-0.5 text-brand" /> Building work: only for a tradie with an LBP number on file.
+            </li>
+          )}
           {photos > 0 && (
             <li className="flex gap-2">
               <Icon name="camera" size={16} className="mt-0.5 text-brand" /> {photos} {photos === 1 ? "photo" : "photos"}, shown once you accept.

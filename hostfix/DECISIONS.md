@@ -9,6 +9,142 @@ price, a fee or a promise, add a line here saying what and why.
 
 ---
 
+## 2026-11-24 — Every trade a holiday home needs, cleaning first; building work only for an LBP; "Not sure" goes to a person
+
+(Decided by the founder on 24 Nov 2026, NZ time: "add all the trades holiday-home owners need, cleaning first ... imagine how important an
+exit clean or an entry clean is". Migration `supabase/migrations/20261203000000_trades_and_trade_needed.sql`, which only adds a queue kind.
+Tests: `tests/unit/trades.test.ts` (new, amounts worked by hand from the menu file), `tests/unit/config.test.ts`,
+`tests/unit/demand-test.test.ts`. **The tradie agreement and owner terms were edited in place, still dated 23 November 2026, with no version
+bump**: nothing is in production yet and no tradie has agreed to the earlier text, so nobody needs to agree again.)
+
+**1. Ten new trades** (`config/trades.ts`; the keys are shared with the separate public sign-up form, so never rename one): `cleaner`
+"Cleaner", `window_cleaner` "Window cleaner", `gardener` "Gardener or landscaper", `builder` "Builder (LBP)", `painter` "Painter", `roofer`
+"Roofing and gutters", `pest_control` "Pest control", `carpet_cleaner` "Carpet and upholstery cleaning", `pool_spa` "Pool and spa",
+`drainage_septic` "Drainage and septic". The eight existing keys are unchanged. Every trade picker (tradie profile, admin, sign-up form on
+the site, the owner's off-menu choice, hourly-rate boxes on More > Markets) reads the list, so they all show the new trades.
+- **Licences, checked 24 Nov 2026.** Drainlaying is licensed: the Plumbers, Gasfitters and Drainlayers Board says restricted drainlaying
+  covers installing, altering or repairing a drain, including connecting a drain to an on-site wastewater system such as a septic tank,
+  and doing it unauthorised is illegal (PGDB leaflet, eqc.govt.nz; Drainlaying Registration and Licensing Notice 2016, NZ Gazette). So
+  `drainage_septic` has `licenceRequired: true`, like plumbing: its jobs only go to a tradie with a current `drainage_septic` licence on
+  file. Restricted building work (residential work that needs a consent and affects the primary structure, weathertightness or certain
+  fire safety design) must be done or supervised by a Licensed Building Practitioner (building.govt.nz, "Restricted building work",
+  updated Jan 2026). Most of the menu's small builder jobs (a deck board, a door) are not restricted work, so an LBP is the founder's
+  rule here, not the law's: **builder jobs only go to a tradie with an LBP number on file** (`lbpRequired` on the trade, `needsLbp`;
+  `tradies.lbp_number` at least 2 characters), checked in `eligibleTradies` (offering) and `canStillTake` (accepting and our team
+  assigning), and in the coverage count. Staff check the number on the public LBP register (linked from the tradie's page). Re-roofing or
+  new cladding is restricted building work: it is always a quote, never a menu job. Pest control, pool and spa, painting, roofing repairs,
+  gardening and cleaning need no licence (a pest firm using controlled fumigants needs a HSNO certificate; not a menu job).
+- The tradie's home page warns a builder with no LBP number; the staff tradie page lists it among the checks; the offer page says
+  "Building work: only for a tradie with an LBP number on file"; the job page marks candidates "no LBP number: cannot be assigned".
+- New trades have no fixed hourly rate for extra work (`DEFAULT_HOURLY_RATES` covers four trades): their extra work is priced the
+  tradie's own way until a rate is set on More > Markets. **To decide:** rates for cleaning, gardening and building.
+
+**2. The menu: 92 jobs** (`seed/menu-queenstown.json`, which only fills an empty database; there is no production database yet). 32 new
+jobs, and 7 moved off the handyman to the trade that does them. Every new or moved job has a `source` field saying where its price came
+from. Prices include GST, each is the tradie's payout divided by 0.85 to the nearest NZ$5, as for the first 60. Searching on 24 Nov 2026
+found that almost no Queenstown operator publishes a price list (cleaners, window and carpet cleaners, pest firms, septic operators and
+spa services all quote on request), so:
+- **Cleaning** is priced from the one Queenstown published rate found: Cleaning Mama Queenstown (cleaningmamaqueenstown.com, read 24 Nov
+  2026), one-off or move-out clean NZ$60 + GST an hour (NZ$69 incl.), 3-hour minimum; regular clean NZ$50 + GST (NZ$57.50), 2-hour
+  minimum; times an estimate of the hours (an estimate, stated in each source). Cross-checks: a Queenstown Airtasker 1-bed Airbnb clean
+  posted at NZ$130 (Jun 2025); an NZ cost guide (quicktrade, 2025) NZ$380-650 for a 3-bedroom end-of-tenancy clean. These load **on**.
+- **Builder, painter, roofer, drain jobs** are priced from the Queenstown labour band this menu already uses (call-out NZ$90-130 plus
+  NZ$90-150 for the first hour, ex GST; 2026-11-16 entry) and in step with the existing jobs next to them (HM-13, HM-15, PL-08, WI-04).
+  Cross-check: Builderscrack NZ builder profiles NZ$75-85 + GST an hour, LBP work NZ$80 + GST. These load **on**.
+- **Everything with no Queenstown figure behind it** carries `needsLocalQuote` and loads **switched off** until someone rings a local:
+  WC-02, WC-03, CC-02, CC-03, CC-04, PC-01, PC-02, PC-03, SP-03, DS-02, DS-03 (and SP-02, which was PV-04 and already waiting).
+- The septic reference from a Bay of Plenty specialist (NZ$200 fault call-out including the first hour, NZ$400 routine aerated-system
+  service) was used only as a reference, as asked: DS-01 sits at the Queenstown plumbing call-out band, DS-02 is the reference plus nothing,
+  and waits on a local quote.
+- Every job is under the NZ$600 approval limit (the dearest is DS-03 at NZ$575), so the config test that keeps the limit above the menu holds.
+
+| Code | Job | Trade | Owner | Tradie | Loads | Where the price came from |
+| --- | --- | --- | --- | --- | --- | --- |
+| CL-01 | Turnover, entry or exit clean, studio or 1 bedroom | cleaner | 165 | 140 | on | Cleaning Mama, about 2.5 h; Airtasker Queenstown NZ$130 |
+| CL-02 | Turnover, entry or exit clean, 2 or 3 bedrooms | cleaner | 270 | 230 | on | Cleaning Mama, about 4 h |
+| CL-03 | Turnover, entry or exit clean, 4 bedrooms or more | cleaner | 410 | 350 | on | Cleaning Mama, about 6 h |
+| CL-04 | Deep clean, up to 3 bedrooms | cleaner | 480 | 410 | on | Cleaning Mama one-off rate, about 7 h; quicktrade NZ$380-650 |
+| CL-05 | Oven clean, inside, racks and door glass | cleaner | 140 | 120 | on | Cleaning Mama one-off, about 1.5 h plus travel; GrabOne NZ NZ$59-89 |
+| CL-06 | Extra-mess clean after a party, up to 3 hours | cleaner | 205 | 175 | on | Cleaning Mama one-off, 3-hour minimum NZ$207 |
+| CL-07 | Linen change and beds made, up to 4 beds | cleaner | 120 | 100 | on | Cleaning Mama regular, 2-hour minimum NZ$115 |
+| WC-01 | Window clean, inside and out, up to 2 bedrooms (was OD-05) | window_cleaner | 190 | 160 | on | unchanged; Housecall Pro US$115-395 |
+| WC-02 | Window clean, inside and out, 3 or 4 bedrooms | window_cleaner | 305 | 260 | off | Housecall Pro US$115-395; in step with WC-01 |
+| WC-03 | Window clean, outside only, up to 4 bedrooms | window_cleaner | 200 | 170 | off | Housecall Pro exterior US$96-285 |
+| CC-01 | Carpet or upholstery stain treatment (was GD-03) | carpet_cleaner | 210 | 180 | on | unchanged |
+| CC-02 | Carpet clean, up to 2 rooms | carpet_cleaner | 165 | 140 | off | Yellow Pages AU AU$25-100 a room, minimum charges |
+| CC-03 | Carpet clean, 3 to 5 rooms | carpet_cleaner | 295 | 250 | off | Yellow Pages AU |
+| CC-04 | Couch or armchair clean, up to 3 seats | carpet_cleaner | 155 | 130 | off | cleaning hourly rate, about 2 h |
+| OD-01 | Lawn mow and edges | gardener (was handyman) | 120 | 100 | on | unchanged; two Queenstown Airtasker lawn jobs at NZ$100 |
+| OD-02 | Garden tidy, seasonal | gardener (was handyman) | 260 | 220 | on | unchanged |
+| OD-07 | Hedge trim, up to 20 metres, clippings taken away | gardener | 225 | 190 | on | OD-02's rate, about 3 h plus green waste |
+| OD-08 | Leaf and storm debris clear-up, up to 2 hours | gardener | 155 | 130 | on | OD-02's rate |
+| RF-01 | Gutter clean, single storey (was HM-15) | roofer | 280 | 240 | on | unchanged; Bark NZ NZ$220/320/500 |
+| RF-02 | Gutter clean, two storey | roofer | 390 | 330 | on | RF-01 plus about an hour |
+| RF-03 | Roof leak, find and make safe, first hour | roofer | 295 | 250 | on | Queenstown labour band |
+| RF-04 | Downpipe unblocked or reattached | roofer | 200 | 170 | on | in step with RF-01, about 1.5 h |
+| BL-01 | Rot repair, small area: sill, fascia or trim, up to 1 metre | builder | 330 | 280 | on | Queenstown labour band, about 2.5 h; Builderscrack NZ$80 + GST LBP |
+| BL-02 | Deck boards replaced, up to 3 | builder | 245 | 210 | on | Queenstown labour band, about 1.5 h |
+| BL-03 | Door rehang, or a new internal door hung | builder | 280 | 240 | on | Queenstown labour band, about 2 h |
+| BL-04 | Storm or impact damage, make safe, first hour | builder | 270 | 230 | on | Queenstown call-out and first hour NZ$207-322 |
+| PT-01 | Paint touch-ups, up to 2 hours | painter | 210 | 180 | on | in step with HM-13 (NZ$235) |
+| PT-02 | Repaint one wall or one ceiling, up to 15 square metres | painter | 305 | 260 | on | in step with HM-13, about 3.5 h |
+| PT-03 | Repaint one door and frame, or one window frame | painter | 260 | 220 | on | in step with HM-13, about 2.5 h |
+| PC-01 | Ant or spider treatment, inside and out | pest_control | 235 | 200 | off | Moneyhub Wellington ant control NZ$150+ |
+| PC-02 | Wasp nest removal | pest_control | 175 | 150 | off | Moneyhub Wellington NZ$100-175 |
+| PC-03 | Rats or mice: baiting and entry check, first visit | pest_control | 210 | 180 | off | Queenstown labour band, about 1.5 h |
+| SP-01 | Spa water balance and filter clean | pool_spa (was handyman) | 175 | 150 | on | unchanged |
+| SP-02 | Spa pool drain, clean and refill (was PV-04) | pool_spa | 305 | 260 | off | unchanged, still waiting on a local quote |
+| SP-03 | Spa not heating or not running, first-hour diagnosis | pool_spa | 245 | 210 | off | like HP-03 less its licence premium |
+| DS-01 | Septic or wastewater system fault, call-out and first hour | drainage_septic | 245 | 210 | on | BoP reference NZ$200; Queenstown plumbing band |
+| DS-02 | Aerated wastewater system service | drainage_septic | 470 | 400 | off | BoP reference NZ$400 |
+| DS-03 | Septic tank pump-out, standard household tank | drainage_septic | 575 | 490 | off | The Quote Yard QLD AU$350-750; no NZ price published |
+| DS-04 | Blocked outside drain or gully trap cleared | drainage_septic | 270 | 230 | on | in step with PL-08 (NZ$245) |
+
+- **Moved, judged clearly right:** lawns and garden tidy to the gardener; the window clean, the carpet stain and the gutter clean to their
+  new trades (codes changed to WC-01, CC-01, RF-01 so they sit in the right group); the spa jobs to pool and spa (PV-04 became SP-02).
+  Left with the handyman: water blasting, moss treatment, snow clearing, firewood, the BBQ (handymen do these in Queenstown). Moving a job
+  means a handyman is no longer offered it; with nobody in the new trade the job goes straight to the queue (point 3) and our team can send
+  it to a handyman with one tap.
+- **Urgent same-day turnover** uses the existing urgent add-on (NZ$50 more, on site within 4 hours, the cleaner gets NZ$42.50 of it), not a
+  separate price; the clean jobs' descriptions say so. Worked: CL-02 urgent, owner 27000 + 5000 = 32000, cleaner 23000 + 4250 = 27250.
+- **Guests:** every new job is owner-only (`guestVisible: false`) except PC-02 wasp nest (a guest at the door finds it; still waits for the
+  owner's go-ahead like any guest report). A guest who finds the house not cleaned reports "Something else", which goes to the owner.
+- **Menu groups** (`src/lib/markets/menu-groups.ts`): Cleaning (CL, WC, CC), Building and painting (BL, PT), Roof and gutters (RF), Pests
+  (PC), Drains and septic (DS); gardener jobs stay under Outside, spa under Spa and pool. The owner page's price preview shows CL-02 first.
+
+**3. A job nobody can match goes to a person, never to handymen** (`createJobRecord` in `src/lib/jobs/create.ts`, `advanceCascade` and
+`chooseTrade` in `src/lib/dispatch/cascade.ts`, `staffChooseTrade`, `TradeButtons`).
+- Before: an off-menu job with "Something else", or no trade, became a handyman job. Now the owner's off-menu choice is the full list of
+  trades plus **"Not sure"** (the default until they pick, key `other`). A "Not sure" job (or an unknown trade) keeps the trade `other`. It
+  is held on the card and sent out as normal (the call-out, NZ$225), but the cascade does not offer it: it becomes `unfilled` (the owner sees
+  "Our team is arranging a tradie") and the queue gets **"Pick the trade for this job"** (`trade_needed`, urgent like "Nobody accepted", so the
+  founder is texted too). Staff tap a trade on the queue item or the job page: the job takes that trade and its licence rule, and the offers
+  start again from the top (`reoffer`), first choice first. The promise and the price do not change. The owner is not texted "still
+  arranging" for it; the 3-hour "nobody has taken it yet" text and alert still apply if staff do not act.
+- **A trade nobody in the market does.** The cascade already skipped empty stages and went straight to the queue when nobody could be
+  offered a job (it never waited out the 15 minutes). Kept as it was, with clearer words: when no approved tradie in the market has the
+  trade at all, the "Nobody accepted" note says so ("no approved tradie in Queenstown is down for "Roofing and gutters" yet ... was not
+  offered to anyone"), and the job page offers **"Wrong trade? Send it to another"** (the same one-tap choice) on any job nobody has taken.
+
+**4. Words.** Owner terms section 1 (the kinds of work, LBP and licensed work) and section 3 ("Not sure"); tradie agreement section 2
+(drainlaying licence, the LBP number for building jobs) and section 3 (a job is only offered in its trade; "Not sure" is read by our team
+first); both landing pages (who we're looking for; a cleaning question; "Not sure who you need?"); RUNBOOK (the new queue item, "no LBP
+number"); the More > Markets licence hint.
+
+**Decided while building, to confirm with Joe:**
+- The hours behind each clean are estimates at a published Queenstown hourly rate, not quotes; ring two Queenstown cleaners before launch.
+- LBP is required for every builder job, even small ones the law does not restrict, as the founder said. A builder without an LBP number can
+  still be signed up as a handyman or painter.
+- Drainage and septic is one licensed trade, so a septic pump-out operator who is not a drainlayer cannot take DS-03. Split it if that
+  turns out to keep pump-outs from being done.
+- "Not sure" is the default on the off-menu form, so an owner who does not choose goes to a person rather than to a guess.
+- The founder's NZ$400 aerated-service reference was kept as the payout (owner NZ$470), off until a local confirms it.
+
+**Not done:** the public sign-up form (`hostfix-landing/lovable/join`) is a separate app and is not in this repository; it uses the same keys,
+so it only needs the ten new choices added. The outreach PDFs are not regenerated. No hourly rates for the new trades.
+
+---
+
 ## 2026-11-23 (second entry) — A tiered fee (15% to NZ$1,000, 3% above), and work over NZ$1,000 paid by a 50% deposit from the owner's bank
 
 (Approved by Joe on 23 Nov 2026, NZ time. Replaces "charged in full on approval" in the first 2026-11-23 entry, point 3. Migration

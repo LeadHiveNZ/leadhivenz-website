@@ -97,6 +97,10 @@ export default async function StaffTradiePage({ params, searchParams }: { params
       label: `${findTrade(key)?.label ?? key} licence, in date`,
       fix: `Without it they are not offered ${findTrade(key)?.label.toLowerCase() ?? key} jobs. Other work is not affected.`,
     })),
+    // Building work only goes to a tradie with an LBP number on file (DECISIONS.md, 2026-11-24).
+    ...(tradie.trades.some((key) => findTrade(key)?.lbpRequired)
+      ? [{ ok: (tradie.lbpNumber ?? "").length >= 2, label: "LBP number on file (for building work)", fix: "Without it they are not offered building jobs. Check the number on the public LBP register (linked below) and add it under Details." }]
+      : []),
   ];
   const blocking = checks.slice(0, 5).filter((check) => !check.ok);
 
@@ -352,7 +356,7 @@ export default async function StaffTradiePage({ params, searchParams }: { params
             name="trades"
             legend="Work they do"
             defaultValues={tradie.trades}
-            options={trades.filter((trade) => trade.key !== "other").map((trade) => ({ key: trade.key, label: trade.label, detail: trade.licenceRequired ? "Needs a licence on file" : undefined }))}
+            options={trades.filter((trade) => trade.key !== "other").map((trade) => ({ key: trade.key, label: trade.label, detail: trade.licenceRequired ? "Needs a licence on file" : trade.lbpRequired ? "Needs an LBP number on file" : undefined }))}
           />
           <Checks label="Days they work" name="daysAvailable" options={WEEKDAY_OPTIONS} defaultValues={tradie.daysAvailable} />
           <Tick name="afterHours" label="Takes after-hours call-outs" defaultChecked={tradie.afterHours} />

@@ -235,13 +235,17 @@ describe("the price list", () => {
 
   it("is every job that can be booked, at the owner's price, leaving out prices still waiting on a local quote", async () => {
     const list = await priceListFor(t.db, "queenstown");
-    // 60 researched jobs, less the five priced off national averages that wait on a local quote
-    // (DECISIONS.md: GD-01, PV-01, PV-02, PV-04, OD-03) and the two add-ons that only go on another job
-    // (HP-01 each extra heat pump, PV-03 filter clean between guests): 60 - 5 - 2 = 53.
-    expect(seed.items).toHaveLength(60);
-    expect(list.count).toBe(53);
+    // 92 researched jobs (60 on 16 Nov 2026, 32 for the new trades on 24 Nov 2026), less the 16 priced without a
+    // local figure that wait on a local quote (DECISIONS.md: GD-01, PV-01, PV-02, SP-02, OD-03 from the first menu;
+    // WC-02, WC-03, CC-02, CC-03, CC-04, PC-01, PC-02, PC-03, SP-03, DS-02, DS-03 from the second) and the two
+    // add-ons that only go on another job (HP-01 each extra heat pump, PV-03 filter clean between guests): 92 - 16 - 2 = 74.
+    expect(seed.items).toHaveLength(92);
+    expect(list.count).toBe(74);
     const codes = list.groups.flatMap((group) => group.items.map((item) => item.code));
-    for (const code of ["GD-01", "PV-01", "PV-02", "PV-04", "OD-03", "HP-01", "PV-03"]) expect(codes).not.toContain(code);
+    for (const code of ["GD-01", "PV-01", "PV-02", "SP-02", "OD-03", "HP-01", "PV-03", "WC-02", "DS-03"]) expect(codes).not.toContain(code);
+    // Cleaning is its own group on the list, at the price in the menu file.
+    const cleaning = list.groups.find((group) => group.group === "Cleaning");
+    expect(cleaning?.items.find((item) => item.code === "CL-02")).toMatchObject({ name: "Turnover, entry or exit clean, 2 or 3 bedrooms", ownerPriceCents: 27000 });
     const drain = list.groups.flatMap((group) => group.items).find((item) => item.code === "PL-08");
     expect(drain).toMatchObject({ name: "Blocked toilet, sink or shower drain", ownerPriceCents: 24500 });
   });

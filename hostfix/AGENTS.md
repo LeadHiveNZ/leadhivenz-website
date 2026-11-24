@@ -41,7 +41,8 @@ it when you change one.
 | Fixed hourly rates for extra work, the NZ$1,000 line, the call-out credit | `src/lib/jobs/rates.ts`, `hourlyLabour` and `quoteAmounts` in `pricing.ts` |
 | Quote rate and hours quoted per tradie | `src/lib/tradies/quote-rate.ts` |
 | Text, email or app notification; STOP; the first-text STOP line | `enqueue` in `src/lib/notify/outbox.ts`, `src/lib/notify/push.ts`, `src/lib/notify/inbound.ts` |
-| The offer cascade: first choice, backup, everyone, dispatcher | `src/lib/dispatch/cascade.ts` |
+| The offer cascade: first choice, backup, everyone, dispatcher; "Not sure" jobs and picking the trade | `src/lib/dispatch/cascade.ts` |
+| The trades, which need a licence, which need an LBP number | `config/trades.ts` |
 | Everything the clock drives | `src/lib/dispatch/tick.ts`, called by `/api/cron/tick` |
 | Charging, paying tradies, credits, disputes, refunds | `src/lib/billing/settle.ts` |
 | Memberships and referrals | `src/lib/properties/service.ts` |
@@ -70,8 +71,9 @@ it when you change one.
 - **All times come from the app's clock** (`now()` in `src/lib/clock.ts`), never `new Date()` or the
   database's `now()`. The tests and the demo move that clock.
 - **Nothing tied to one town, currency or tax rate.** Those live on the market row in the database.
-- **The real prices are loaded.** `seed/menu-queenstown.json` is the 60 researched Queenstown jobs. It only
-  fills an empty database: after that, prices change on the admin screen. The prices sit at local market
+- **The real prices are loaded.** `seed/menu-queenstown.json` is the 92 researched Queenstown jobs (60 on 16 Nov 2026,
+  32 for the new trades on 24 Nov 2026, each new one with a `source`; 16 with no local figure load switched off,
+  `needsLocalQuote`). It only fills an empty database: after that, prices change on the admin screen. The prices sit at local market
   rate, not above it, so nothing may tell an owner they pay a premium for price certainty. Money tests
   are worked out by hand from the menu file, never pasted from what the code returns.
 - **Every promise on a public page must be something the code does today**, or be tracked as owed in
@@ -217,8 +219,15 @@ it when you change one.
   and after-hours jobs pay the full card rate. A discounted urgent rate puts the network last in a cold
   snap, which is when the response guarantee is actually tested.
   `config/markets.ts` only seeds a market that does not exist yet.
-- **Licensed work is only offered to a tradie with a licence on file that has not expired.** Checked when
-  offering and again when accepting or assigning.
+- **Licensed work is only offered to a tradie with a licence on file that has not expired** (plumbing, gas,
+  electrical, appliances, heat pumps, drainage and septic). **Building work only goes to a tradie with an LBP
+  number on file** (`lbpRequired`, `needsLbp` in `config/trades.ts`; DECISIONS.md, 2026-11-24). Both are checked
+  when offering and again when accepting or assigning (`eligibleTradies`, `canStillTake`).
+- **A job nobody can match goes to a person, never to handymen by default** (DECISIONS.md, 2026-11-24). Off the
+  menu the owner picks a trade or "Not sure" (trade `other`); a "Not sure" job is held on the card, then waits in
+  the queue (`trade_needed`) until staff tap a trade (`chooseTrade` in `src/lib/dispatch/cascade.ts`). A trade no
+  approved tradie in the market has goes straight to the queue as "Nobody accepted", saying so. The trade keys in
+  `config/trades.ts` are shared with the separate public sign-up form: never rename one.
 - **A link in a text never changes anything by being opened.** Phones and chat apps open links to preview
   them. Accepting needs a button press.
 - **Plain language on every screen.** No jargon. Error messages say what to do next.
