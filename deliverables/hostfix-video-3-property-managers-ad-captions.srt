@@ -1,0 +1,63 @@
+1
+00:00:00,010 --> 00:00:02,513
+If you manage 10, 30 or 60 holiday
+
+2
+00:00:02,513 --> 00:00:04,467
+homes, then this one is for you.
+
+3
+00:00:04,467 --> 00:00:05,747
+How many hours a week do you spend
+
+4
+00:00:05,747 --> 00:00:06,867
+ringing around tradies,
+
+5
+00:00:06,867 --> 00:00:08,633
+cleaners, gardeners for jobs?
+
+6
+00:00:08,633 --> 00:00:09,433
+HostFix
+
+7
+00:00:09,433 --> 00:00:10,873
+puts every job across every
+
+8
+00:00:10,873 --> 00:00:12,620
+property all in one place.
+
+9
+00:00:12,620 --> 00:00:14,060
+Your cleaners report problems
+
+10
+00:00:14,060 --> 00:00:15,883
+straight from the job with photos.
+
+11
+00:00:15,883 --> 00:00:17,803
+Fixed prices, insured tradies
+
+12
+00:00:17,803 --> 00:00:19,163
+before and after photos and an
+
+13
+00:00:19,163 --> 00:00:20,603
+invoice to send to your owners
+
+14
+00:00:20,603 --> 00:00:21,870
+straight after the job's finished.
+
+15
+00:00:21,870 --> 00:00:23,630
+Free to join, tap below and I'll
+
+16
+00:00:23,630 --> 00:00:24,200
+give you a call.
