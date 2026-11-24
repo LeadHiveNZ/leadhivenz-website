@@ -1,5 +1,6 @@
 import { formatMoney } from "@/lib/money";
 import type { Db } from "@/lib/db/types";
+import { supplierTax } from "@/lib/billing/invoices";
 import { taxPortion } from "@/lib/jobs/pricing";
 import { monthBounds } from "@/lib/time";
 
@@ -7,9 +8,10 @@ import { monthBounds } from "@/lib/time";
  * MONTHLY STATEMENTS. Worked out from the payment records when asked for, so
  * a statement can never disagree with what was actually charged or paid.
  *
- * NOTE FOR YOUR ACCOUNTANT: these are records of what moved, not tax invoices.
- * Whether HostFix or the tradie is the seller for GST, and what a tax invoice
- * must show, is the open question in docs/LEGAL-TODO.md.
+ * NOTE FOR YOUR ACCOUNTANT: these are records of what moved. Each job also has
+ * its own invoice, issued by HostFix on the tradie's behalf (src/lib/billing/invoices.ts):
+ * HostFix collects payment as the tradie's agent (DECISIONS.md, 2026-11-24, fourth
+ * entry), so the GST on a job is the tradie's, and only a GST-registered tradie's.
  */
 
 export type OwnerStatementLine = {
@@ -59,14 +61,16 @@ export async function ownerStatement(db: Db, ownerId: string, market: { slug: st
 
   const jobs = await db.query<{
     paid_at: Date; amount_cents: number; tax_cents: number; refunded_cents: number; number: number; title: string; property: string; callout_off: number | null;
-    urgent_off: boolean; after_hours_off: boolean;
+    urgent_off: boolean; after_hours_off: boolean; gst_registered: boolean | null; gst_number: string | null; tax_rate: string | number;
   }>(
     `select pay.paid_at, pay.amount_cents, pay.tax_cents, pay.refunded_cents, j.number, j.title, p.name as property,
+            t.gst_registered, t.gst_number, m.tax_rate,
             (select c.amount_cents from public.credits c where c.job_id = j.id and c.reason = 'missed_window' and c.status = 'applied') as callout_off,
             -- A surcharge taken off because of when the tradie arrived (DECISIONS.md, 2026-11-18).
             exists (select 1 from public.job_lines l where l.job_id = j.id and l.kind = 'urgent' and l.status = 'void') as urgent_off,
             exists (select 1 from public.job_lines l where l.job_id = j.id and l.kind = 'after_hours' and l.status = 'void') as after_hours_off
        from public.payments pay join public.jobs j on j.id = pay.job_id join public.properties p on p.id = j.property_id
+       join public.markets m on m.slug = j.market left join public.tradies t on t.id = j.tradie_id
       where pay.owner_id = $1::uuid and j.market = $2 and pay.paid_at is not null and pay.paid_at >= $3::timestamptz and pay.paid_at < $4::timestamptz`,
     range,
   );
@@ -75,9 +79,11 @@ export async function ownerStatement(db: Db, ownerId: string, market: { slug: st
     const off = row.callout_off ? ` (${formatMoney(Number(row.callout_off), market.currency)} off: we missed our promised time)` : "";
     const surcharges = [row.urgent_off ? "urgent" : null, row.after_hours_off ? "after-hours" : null].filter(Boolean);
     const dropped = surcharges.length > 0 ? ` (no ${surcharges.join(" or ")} fee charged)` : "";
-    lines.push({ date: new Date(row.paid_at), kind: "job", description: `Job ${Number(row.number)}: ${row.title}${off}${dropped}`, property: row.property, amountCents: row.amount_cents, taxCents: row.tax_cents });
+    // The GST in a job is the tradie's: only a GST-registered tradie's job has any (src/lib/billing/invoices.ts).
+    const taxCents = supplierTax(Number(row.amount_cents), Number(row.tax_rate), { gstRegistered: Boolean(row.gst_registered), gstNumber: row.gst_number?.trim() || null });
+    lines.push({ date: new Date(row.paid_at), kind: "job", description: `Job ${Number(row.number)}: ${row.title}${off}${dropped}`, property: row.property, amountCents: row.amount_cents, taxCents });
     if (row.refunded_cents > 0) {
-      const share = row.amount_cents > 0 ? Math.round((row.tax_cents * row.refunded_cents) / row.amount_cents) : 0;
+      const share = row.amount_cents > 0 ? Math.round((taxCents * row.refunded_cents) / row.amount_cents) : 0;
       lines.push({ date: new Date(row.paid_at), kind: "refund", description: `Refund on job ${Number(row.number)}`, property: row.property, amountCents: -row.refunded_cents, taxCents: -share });
     }
   }

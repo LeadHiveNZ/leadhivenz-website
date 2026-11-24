@@ -235,13 +235,13 @@ describe("the price list", () => {
 
   it("is every job that can be booked, at the owner's price, leaving out prices still waiting on a local quote", async () => {
     const list = await priceListFor(t.db, "queenstown");
-    // 110 researched jobs (60 on 16 Nov 2026, 32 for the new trades and 18 sizes and one-room cleans on 24 Nov 2026), less
+    // 111 researched jobs (60 on 16 Nov 2026, 32 for the new trades, 18 sizes and one-room cleans and EL-07 on 24 Nov 2026), less
     // the 18 priced without a local figure that wait on a local quote (DECISIONS.md: GD-01, PV-01, PV-02, SP-02, OD-03
     // from the first menu; CC-02, CC-03, CC-04, PC-01, PC-02, PC-03, SP-03, DS-02, DS-03 from the second; WC-02, WC-04
     // and the add-ons WC-05, WC-06 from the third) and the two other add-ons that only go on another job (HP-01 each
-    // extra heat pump, PV-03 filter clean between guests): 110 - 18 - 2 = 90.
-    expect(seed.items).toHaveLength(110);
-    expect(list.count).toBe(90);
+    // extra heat pump, PV-03 filter clean between guests): 111 - 18 - 2 = 91.
+    expect(seed.items).toHaveLength(111);
+    expect(list.count).toBe(91);
     const codes = list.groups.flatMap((group) => group.items.map((item) => item.code));
     for (const code of ["GD-01", "PV-01", "PV-02", "SP-02", "OD-03", "HP-01", "PV-03", "WC-02", "WC-04", "WC-05", "WC-06", "DS-03"]) expect(codes).not.toContain(code);
     for (const code of ["WC-01", "WC-03", "CL-08", "CL-14", "OD-09", "OD-13"]) expect(codes).toContain(code);

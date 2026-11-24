@@ -110,12 +110,13 @@ describe("the Queenstown menu file", () => {
     expect(typeof menu.placeholderPrices).toBe("boolean");
   });
 
-  it("holds real prices, not placeholders: 110 researched jobs with unique codes", () => {
+  it("holds real prices, not placeholders: 111 researched jobs with unique codes", () => {
     // Nothing may be shown to an owner as a price unless this is false (DECISIONS.md).
     // 60 researched on 16 Nov 2026, 32 for the new trades on 24 Nov 2026 (DECISIONS.md, 2026-11-24), and 18 sizes
-    // and one-room cleans the same day (DECISIONS.md, 2026-11-24, second entry: 10 cleans, 3 window cleans, 5 garden jobs).
+    // and one-room cleans the same day (DECISIONS.md, 2026-11-24, second entry: 10 cleans, 3 window cleans, 5 garden jobs), and EL-07
+    // "Light not working, not sure why" (fourth entry).
     expect(menu.placeholderPrices).toBe(false);
-    expect(items).toHaveLength(110);
+    expect(items).toHaveLength(111);
     const codes = items.map((item) => item.code);
     expect(new Set(codes).size).toBe(codes.length);
   });
@@ -136,8 +137,8 @@ describe("the Queenstown menu file", () => {
     expect(addOns.sort()).toEqual(["HP-01", "PV-03", "WC-05", "WC-06"]);
     const off = items.filter((item) => !startsOnTheMenu(item)).map((item) => item.code);
     expect(off.sort()).toEqual([...new Set([...needQuote, ...addOns])].sort());
-    // 18 waiting on a local quote, and HP-01 and PV-03 (the two window add-ons are in both lists): 110 - 18 - 2 = 90.
-    expect(items.filter(startsOnTheMenu)).toHaveLength(110 - 18 - 2);
+    // 18 waiting on a local quote, and HP-01 and PV-03 (the two window add-ons are in both lists): 111 - 18 - 2 = 91.
+    expect(items.filter(startsOnTheMenu)).toHaveLength(111 - 18 - 2);
   });
 
   it("keeps jobs an owner arranges off the form a guest sees", () => {
@@ -201,7 +202,7 @@ describe("Wānaka", () => {
     const { readMenuSeed, readPartsSeed } = await import("@/lib/db/seed-core");
     const dir = path.join(process.cwd(), "seed");
     expect(readMenuSeed(dir, "wanaka")).toEqual(readMenuSeed(dir, "queenstown"));
-    expect(readMenuSeed(dir, "wanaka")!.items.length).toBe(110);
+    expect(readMenuSeed(dir, "wanaka")!.items.length).toBe(111);
     expect(readPartsSeed(dir, "wanaka")).toEqual(readPartsSeed(dir, "queenstown"));
     const wanaka = markets.find((m) => m.slug === "wanaka")!;
     const queenstown = markets.find((m) => m.slug === "queenstown")!;

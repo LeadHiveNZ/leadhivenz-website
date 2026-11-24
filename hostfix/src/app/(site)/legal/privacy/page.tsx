@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   description: `What ${brand.name} holds about you, why, who sees it, and how to ask for it or have it removed.`,
 };
 
-const UPDATED = "23 November 2026";
+const UPDATED = "24 November 2026";
 
 export default function Page() {
   const n = brand.name;
@@ -56,8 +56,9 @@ export default function Page() {
         <p>
           <strong>If you are a tradie:</strong> your name, business name, mobile number, email address, the work you do, your licence numbers and
           when they expire, your public liability insurance (insurer, policy number and expiry), your tax number, the days you work, and your
-          record with us (jobs offered, accepted, and whether you arrived on time). Our team may write notes about you that you cannot see, for
-          example after a call with an owner.
+          record with us (jobs offered, accepted, and whether you arrived on time). We also keep a record of our checks: who on our team checked
+          each licence on the public register and when, and a note that they saw your criminal record check (never the record itself). Our team
+          may write notes about you that you cannot see, for example after a call with an owner.
         </p>
         <p>
           <strong>If you fill in a form on our public pages:</strong> what you typed, which advertisement or website you came from, and the page

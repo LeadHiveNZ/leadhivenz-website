@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   description: `How ${brand.name} works for property owners: free to join, fixed prices, charged when a job is done.`,
 };
 
-const UPDATED = "23 November 2026";
+const UPDATED = "24 November 2026";
 
 /**
  * The hours in section 4 come from the launch market's settings (config/markets.ts), so the page cannot say
@@ -226,7 +226,12 @@ export default function Page() {
           is free: the hold is let go and you pay nothing. After they have arrived, cancelling charges the call-out (never more than the job would have cost,
           plus any urgent or after-hours charge) instead of the job, taken from the hold.
         </p>
-        <p>One statement a month in the app shows every job, charge and credit, with the GST inside the total.</p>
+        <p>
+          <strong>Invoices.</strong> The tradie does the work for you; we arrange it and collect your payment for them. For each job you get an invoice
+          in the app, issued by us on the tradie&rsquo;s behalf in their name. If the tradie is registered for GST it is a tax invoice showing their GST
+          number and the GST in the price; if not, there is no GST in it. The price is the same either way. One statement a month in the app also shows
+          every job, charge and credit.
+        </p>
       </Section>
 
       <Section n={8} title="If something is wrong with the work">

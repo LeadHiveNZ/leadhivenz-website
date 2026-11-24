@@ -56,12 +56,17 @@ export default function Page() {
           business: you use your own tools and vehicle, you work for whoever else you like, and you are responsible for your own tax, ACC levies
           and insurance. You are not our employee.
         </p>
+        <p>
+          <strong>The work is yours; we arrange it and collect the money for you.</strong> When you do a job, you are the one supplying the work to the
+          owner. {n} finds the job, sets the fixed price and collects the owner&rsquo;s payment as your agent, then pays you your share less the platform fee
+          (section 6). You can always say no to a job.
+        </p>
       </Section>
 
       <Section n={2} title="What you need before your first job">
         <ul>
           <li>
-            <strong>Public liability insurance</strong> in your own name, with the insurer, policy number and expiry date entered in your profile,
+            <strong>Public liability insurance of at least NZ$1 million</strong> in your own name (or your business&rsquo;s), with the insurer, policy number and expiry date entered in your profile,
             and the certificate of currency from your insurer uploaded there (a PDF, JPG or PNG). Only our team and you can open the certificate.
             When you renew, upload the new one: we keep the earlier ones as a record. We do not approve anyone, or offer them jobs, without
             current insurance and its certificate on file, and the app stops offering you jobs the day it expires.
@@ -72,8 +77,8 @@ export default function Page() {
           </li>
           <li>
             <strong>Your criminal record</strong>, because you will be entering homes that may have guests in them. You request your own copy
-            from the Ministry of Justice (it is free, and usually takes about a week) and send it to us before your first job. We treat it as
-            confidential and keep only a note that we have seen it.
+            from the Ministry of Justice (it is free, and can take up to 20 working days, so ask for it early) and send it to us before your first job.
+            We treat it as confidential and keep only a note that we have seen it.
           </li>
           <li><strong>Bank details with Stripe</strong>, set up from your profile, so we can pay you.</li>
           <li>
@@ -84,6 +89,12 @@ export default function Page() {
         <p>
           You can sign in to your own account as soon as you have applied, to fill these in. Only our team can approve you, and nothing is
           offered to you until we do. We text you when you are approved.
+        </p>
+        <p>
+          <strong>Our checks, and the record we keep.</strong> A person on our team checks every tradie before approving them: each licence and LBP number
+          against the public register, your insurance certificate, and your criminal record. We keep a record of each check (what was checked, when, and by
+          whom), your licence and insurance details and certificates, and your job history (for the record check, only the note that we saw it), for as long as you work with {n} and as long after as the law needs. You agree to these checks and
+          records, and to us showing owners your name, business name and mobile number on jobs you accept. Our privacy policy has the detail.
         </p>
         <p>Tell us within 7 days if any of these change or lapse.</p>
       </Section>
@@ -228,7 +239,15 @@ export default function Page() {
             Your payment is sent 24 hours after the job finishes and reaches your bank about 5 to 6 working days after the job. We will never
             promise you faster than Stripe actually pays.
           </li>
-          <li>Your Pay page in the app lists every job and every payment. Statements are there for your accountant.</li>
+          <li>Your Pay page in the app lists every job and every payment, with the platform fee on each. Statements are there for your accountant.</li>
+          <li>
+            <strong>Invoices and GST: we do the paperwork.</strong> You agree that {n} issues the owner&rsquo;s invoice for each job on your behalf, in your name,
+            and you do not issue your own invoice for it. If you are registered for GST and your GST number is in your profile, it is a tax invoice showing your
+            GST number and the GST in the price; if you are not registered, it shows no GST. The prices are the same either way, so tell us within 7 days if you
+            register or deregister. You account to Inland Revenue for any GST on your jobs; {n} accounts for its own. The platform fee is our charge to you for
+            finding the job, collecting the payment and the paperwork, and it is shown on every job and on your Pay page. {n} is not registered for GST yet,
+            so there is no GST in the fee; when that changes we will tell you and update this agreement.
+          </li>
           <li>
             <strong>Once you finish a job the owner approved, you&rsquo;re paid even if their card or bank payment fails, for up to {guarantee} of the job&rsquo;s price. Chasing is our job.</strong>{" "}
             Your payment goes out at the usual time whatever the payment does; the owner owes the money to {n}, not to you. On a bigger job, if more than {guarantee} of its
@@ -311,6 +330,17 @@ export default function Page() {
         <p>
           If an owner says you damaged something, the claim goes to your public liability insurer. {n} supplies the job&rsquo;s photos and times.
         </p>
+        <p>
+          <strong>Your staff.</strong> You can send an employee or someone who works for you to a job you accepted. Your business is responsible for them as
+          if you did the job yourself: their work, their conduct, the access codes they see, and anything they damage. They must hold any licence the work
+          needs, be covered by your insurance, and follow this agreement (knocking when a guest is staying, the photos, the taps). Anyone else, such as
+          another business, may not do a job you accepted.
+        </p>
+        <p>
+          <strong>Claims caused by your work.</strong> If {n} has to pay a claim, a refund beyond your share or costs because of something you or your staff
+          did or did not do on a job (damage, injury, bad work, or breaking this agreement), you agree to cover it. That is what your insurance is for.
+          This does not apply to anything {n} caused.
+        </p>
       </Section>
 
       <Section n={10} title="Your own clients, and app jobs stay in the app">
@@ -345,7 +375,15 @@ export default function Page() {
         </p>
       </Section>
 
-      <Section n={12} title="Changes">
+      <Section n={12} title="If we disagree">
+        <p>
+          Talk to us first: ring or email us and a person will look at it with you. If that does not sort it within 20 working days, either of us can
+          suggest mediation with an independent mediator, and either of us, you or {n}, can take it to the Disputes Tribunal (for claims inside its limit) or
+          a court. Nothing here stops either of us doing that. While a disagreement is open, jobs you have already accepted carry on as normal.
+        </p>
+      </Section>
+
+      <Section n={13} title="Changes">
         <p>
           If we change this agreement, the date at the top moves and you are asked to agree to the new version in the app (on your home page)
           before your next offer. We give you {FEE_NOTICE_DAYS} days&rsquo; notice by text before a change to the platform fee applies to you. New Zealand

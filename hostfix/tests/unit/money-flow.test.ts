@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { addGoodwillCredit, applyPendingCredits, chargeDuePayments, chargeJob, flagAtRisk, markMissedWindows, MAX_CHARGE_ATTEMPTS, raiseDispute, releaseDuePayouts, resolveDispute, retryPayout } from "@/lib/billing/settle";
+import { jobInvoice } from "@/lib/billing/invoices";
 import { ownerStatement } from "@/lib/billing/statements";
 import { addHours, addMinutes, setTestNow } from "@/lib/clock";
 import { getMarket } from "@/lib/markets/store";
@@ -852,6 +853,35 @@ describe("off-menu work and quotes", () => {
 });
 
 describe("when the tradie cannot get in", () => {
+  it("gives the owner an invoice in the tradie's name, with GST only when the tradie is registered (DECISIONS.md, 2026-11-24, fourth entry)", async () => {
+    const s = await setup();
+    const job = await onSite(s, { code: "PL-01" });
+    expect(await jobInvoice(t.db, s.owner.ownerId, job.id)).toBeNull(); // nothing until the job is charged
+    setTestNow(addMinutes(MONDAY_10AM, 90));
+    await finish(s, job.id);
+    expect(await chargeJob(t.db, gatewayFor(t.db), job.id)).toBe("succeeded");
+
+    // Ticked GST-registered but no number on file: an invoice with no GST on it.
+    const plain = await jobInvoice(t.db, s.owner.ownerId, job.id);
+    expect(plain).toMatchObject({ number: `HF-${job.number}`, taxInvoice: false, totalCents: 22500, taxCents: 0, supplier: { businessName: "Wakatipu Plumbing", taxNumber: null } });
+    expect(plain!.lines.reduce((sum, line) => sum + line.cents, 0)).toBe(22500);
+
+    // With a GST number: a tax invoice. NZ$225 including 15% GST: 22500 x 15 / 115 = 2934.78, so NZ$29.35.
+    await t.db.query("update public.tradies set gst_registered = true, gst_number = '123-456-789' where id = $1::uuid", [s.tradie.tradieId]);
+    expect(await jobInvoice(t.db, s.owner.ownerId, job.id)).toMatchObject({ taxInvoice: true, taxCents: 2935, supplier: { taxNumber: "123-456-789" } });
+    const market = (await getMarket(t.db, "queenstown"))!;
+    expect((await ownerStatement(t.db, s.owner.ownerId, market, "2026-11")).taxCents).toBe(2935);
+
+    // Not registered: no GST anywhere.
+    await t.db.query("update public.tradies set gst_registered = false where id = $1::uuid", [s.tradie.tradieId]);
+    expect(await jobInvoice(t.db, s.owner.ownerId, job.id)).toMatchObject({ taxInvoice: false, taxCents: 0 });
+    expect((await ownerStatement(t.db, s.owner.ownerId, market, "2026-11")).taxCents).toBe(0);
+
+    // Another owner never sees it.
+    const other = await makeOwner(t.db, { card: "ok" });
+    expect(await jobInvoice(t.db, other.ownerId, job.id)).toBeNull();
+  });
+
   it("charges the call-out fee instead of the job", async () => {
     const s = await setup();
     const job = await onSite(s, { code: "PL-06", urgent: true });

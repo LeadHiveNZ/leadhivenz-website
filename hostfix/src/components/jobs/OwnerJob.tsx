@@ -445,6 +445,11 @@ export function OwnerJob({ view, now, code, flash = {}, prices }: Props) {
                   ? `We hold ${fmt(money.hold.amountCents)} on your card now. You're only charged once it's fixed, and anything approved beyond that is charged then too.`
                   : "Charged to your card when the job is done. Nothing before."}
           </p>
+          {view.tradie && ["succeeded", "part_refunded", "refunded"].includes(money.payment?.status ?? "") && (
+            <Link href={code ? `/sign-in?next=${encodeURIComponent(`/app/jobs/${job.id}/invoice`)}` : `/app/jobs/${job.id}/invoice`} className={`${secondaryButtonClass} mt-3`}>
+              Your invoice
+            </Link>
+          )}
           {job.status === "completed" && money.payment?.status === "failed" && (
             <div className="mt-3">
               <Notice tone="error" title="We could not charge your card">

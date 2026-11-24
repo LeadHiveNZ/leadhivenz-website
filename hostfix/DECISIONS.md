@@ -9,6 +9,33 @@ price, a fee or a promise, add a line here saying what and why.
 
 ---
 
+## 2026-11-24 (fourth entry) — Tradie agreement approved with changes; invoices on the tradie's behalf; record checks noted; light jobs
+
+Joe went through the tradie agreement and approved it with these changes (version **24 November 2026**, `TRADIE_AGREEMENT_VERSION`;
+every tradie agrees again in the app):
+
+- **HostFix is the tradie's agent** (section 1, section 6 "Invoices and GST"). The work is the tradie's supply to the owner; HostFix
+  finds the job, sets the price and collects payment for them. HostFix issues the owner's invoice for each job **in the tradie's name**
+  (`src/lib/billing/invoices.ts`, `/app/jobs/[id]/invoice`, "Your invoice" on a paid job): a tax invoice with their GST number and the GST
+  in the price when they are GST-registered with a number on file, otherwise an invoice with no GST. Prices are the same either way. The
+  owner's monthly statement takes its GST the same way (`supplierTax`). HostFix's fee is a charge to the tradie; HostFix is not GST-registered
+  yet, so there is no GST in it (the agreement says so). Joe's accountant still to confirm the agent model; if they say principal, this changes.
+- **Public liability insurance of at least NZ$1 million** (section 2). Typed in by staff from the certificate; the app does not read the amount.
+- **Criminal record check: free, up to 20 working days** (was "about a week"). A person on the team presses "I've seen their record check" on
+  the tradie's admin page (`markRecordCheckSeen`, `tradies.record_check_seen_at/by`, audited); **a first approval is refused without it**.
+  Only the note is kept, never the record. Licence and LBP register checks were already recorded (`markLicenceVerified`). The agreement and
+  privacy policy say what is kept.
+- **Staff** (section 9): a tradie's business is responsible for anyone it sends as if it did the job itself; they need any licence the work
+  needs, the tradie's insurance cover, and to follow the agreement. Nobody else (another business) may do an accepted job. **Claims caused
+  by the tradie's work** are theirs to cover (an indemnity), not anything HostFix caused.
+- **If we disagree** (new section 12, for the unfair contract terms rules): talk first; after 20 working days either side may suggest
+  mediation, and either side (the tradie or HostFix) may go to the Disputes Tribunal or a court.
+- The contract is still in Joe's name (`brand.legalName`) until **HostFix Limited** is formed; then change `legalName` and bump the version.
+- **Light jobs.** A bulb is not electrical work; a fitting is. HM-03 "Light bulbs, up to 5" (handyman) now says what it covers, and
+  **EL-07 "Light not working, not sure why"** (electrician, first hour, NZ$225 / NZ$190, the same as EL-02) catches sealed LED downlights,
+  a new bulb that did not fix it, flickering lights and dead switches. Queenstown's live menu gets both from migration
+  `20261204000000_record_check_and_light_jobs.sql`; a new market from `seed/menu-queenstown.json` (111 jobs, 91 on).
+
 ## 2026-11-24 (third entry) — Wānaka as its own market, at Queenstown's prices
 
 Joe: "I am launching Queenstown but following up straight away in Wānaka", and "Wānaka and Queenstown prices should be

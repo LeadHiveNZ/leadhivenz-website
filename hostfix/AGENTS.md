@@ -58,6 +58,8 @@ it when you change one.
 | Pasting a spreadsheet of properties | `src/lib/properties/import.ts` |
 | The words of every text | `src/lib/notify/messages.ts` |
 | Stripe | `src/lib/payments/stripe-gateway.ts`, `product-events.ts`, `deposit.ts` |
+| The owner's invoice per job, in the tradie's name (HostFix as agent); GST only for a GST-registered tradie | `src/lib/billing/invoices.ts`, `/app/jobs/[id]/invoice` |
+| The criminal record check noted before a first approval | `markRecordCheckSeen`, `setTradieStatus` in `src/lib/tradies/service.ts` |
 
 ### Rules that must not be broken
 
@@ -71,7 +73,7 @@ it when you change one.
 - **All times come from the app's clock** (`now()` in `src/lib/clock.ts`), never `new Date()` or the
   database's `now()`. The tests and the demo move that clock.
 - **Nothing tied to one town, currency or tax rate.** Those live on the market row in the database.
-- **The real prices are loaded.** `seed/menu-queenstown.json` is the 110 researched Queenstown jobs (60 on 16 Nov 2026,
+- **The real prices are loaded.** `seed/menu-queenstown.json` is the 111 researched Queenstown jobs (EL-07 added 24 Nov 2026, fourth entry) (60 on 16 Nov 2026,
   32 for the new trades and 18 sizes and one-room cleans on 24 Nov 2026, each new one with a `source`; 18 with no local
   figure load switched off, `needsLocalQuote`, and 4 add-ons, `isAddOn`, because a job holds one menu item). Prices are
   fixed by size, never by the hour (DECISIONS.md, 2026-11-24, second entry): window cleans by storeys and bedrooms, lawns

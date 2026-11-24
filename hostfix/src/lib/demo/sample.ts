@@ -21,7 +21,7 @@ import { openPortfolio, startPortfolio } from "@/lib/properties/portfolio";
 import { activateFreeMembership, activateMembership, createProperty, type Property } from "@/lib/properties/service";
 import { confirmPin } from "@/lib/properties/pin";
 import { addTeamMember } from "@/lib/team/service";
-import { agreeToAgreement, createTradie, listLicences, markLicenceVerified, saveLicence, savePayoutAccount, setSlot, setTradieStatus, updateTradie } from "@/lib/tradies/service";
+import { agreeToAgreement, createTradie, listLicences, markLicenceVerified, markRecordCheckSeen, saveLicence, savePayoutAccount, setSlot, setTradieStatus, updateTradie } from "@/lib/tradies/service";
 import { recordInsuranceCertificate } from "@/lib/tradies/certificate";
 import { demoPhoto } from "./png";
 
@@ -124,6 +124,7 @@ async function tradie(
   if (input.approve !== false) {
     for (const licence of await listLicences(ctx.db, created.tradieId)) await markLicenceVerified(ctx.db, licence.id, "admin");
     await savePayoutAccount(ctx.db, created.tradieId, { provider: "demo", accountId: `demo_acct_${created.tradieId.replace(/-/g, "").slice(0, 16)}`, payoutsEnabled: true });
+    await markRecordCheckSeen(ctx.db, created.tradieId, "admin");
     await setTradieStatus(ctx.db, created.tradieId, "approved", "admin");
     await agreeToAgreement(ctx.db, created.tradieId);
   }

@@ -28,7 +28,7 @@ import { resolveException } from "@/lib/ops/exceptions";
 import { normalisePhone } from "@/lib/phone";
 import { getPropertyForStaff } from "@/lib/properties/service";
 import {
-  createTradie, getTradie, markLicenceVerified, saveLicence, setSlot, setTradieStatus, swapSlots, TradieError, updateTradie, type TradieStatus,
+  createTradie, getTradie, markLicenceVerified, markRecordCheckSeen, saveLicence, setSlot, setTradieStatus, swapSlots, TradieError, updateTradie, type TradieStatus,
 } from "@/lib/tradies/service";
 import { isUuid } from "@/lib/uuid";
 import { getFileStore } from "@/lib/files/store";
@@ -465,6 +465,15 @@ export async function verifyLicence(_previous: FormState, formData: FormData): P
   await markLicenceVerified(await getDb(), text(formData, "licenceId"), staff.actor);
   revalidatePath(`/admin/tradies/${text(formData, "tradieId")}`);
   return { done: "Marked as checked against the register." };
+}
+
+export async function recordCheckSeen(_previous: FormState, formData: FormData): Promise<FormState> {
+  const staff = await requireStaff();
+  const tradieId = text(formData, "tradieId");
+  if (!isUuid(tradieId)) return { message: "We could not find that tradie." };
+  await markRecordCheckSeen(await getDb(), tradieId, staff.actor);
+  revalidatePath(`/admin/tradies/${tradieId}`);
+  return { done: "Noted: you have seen their criminal record check. Only this note is kept." };
 }
 
 export async function staffSetSlot(_previous: FormState, formData: FormData): Promise<FormState> {

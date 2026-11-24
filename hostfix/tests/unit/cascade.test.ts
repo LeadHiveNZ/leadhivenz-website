@@ -6,7 +6,7 @@ import { getJobForStaff } from "@/lib/jobs/store";
 import { listExceptions, raiseException } from "@/lib/ops/exceptions";
 import { runTick } from "@/lib/dispatch/tick";
 import { listInsuranceCertificates } from "@/lib/tradies/certificate";
-import { canStillTake, eligibleTradies, getTradie, insuranceProblem, setTradiePaused, setTradieStatus, updateTradie } from "@/lib/tradies/service";
+import { canStillTake, eligibleTradies, getTradie, insuranceProblem, markRecordCheckSeen, setTradiePaused, setTradieStatus, updateTradie } from "@/lib/tradies/service";
 import { testDb } from "./db";
 import { auditActions, certificate, gatewayFor, liveMarket, logJob, makeOwner, makeProperty, makeTradie, menuItem, MONDAY_10AM, MONDAY_9PM, offersFor, openExceptions, textsTo } from "./factory";
 
@@ -432,6 +432,10 @@ describe("public liability insurance (DECISIONS.md, 2026-11-17)", () => {
     await expect(setTradieStatus(t.db, waiting.tradieId, "approved", "staff:test")).rejects.toThrow("has run out");
     expect((await getTradie(t.db, waiting.tradieId))!.status).toBe("applied");
     await updateTradie(t.db, waiting.tradieId, { insuranceExpiresOn: "2027-11-15" }, "test");
+    // Insurance in order, but nobody has seen their criminal record check yet (DECISIONS.md, 2026-11-24, fourth entry).
+    await expect(setTradieStatus(t.db, waiting.tradieId, "approved", "staff:test")).rejects.toThrow("criminal record check has not been marked as seen");
+    await markRecordCheckSeen(t.db, waiting.tradieId, "staff:test");
+    expect((await getTradie(t.db, waiting.tradieId))!.recordCheckSeenBy).toBe("staff:test");
     expect((await setTradieStatus(t.db, waiting.tradieId, "approved", "staff:test"))!.status).toBe("approved");
   });
 
@@ -470,6 +474,7 @@ describe("the insurance certificate (DECISIONS.md, 2026-11-17: uploaded, not jus
     expect((await getTradie(t.db, waiting.tradieId))!.status).toBe("applied");
 
     const first = await certificate(t.db, waiting.tradieId);
+    await markRecordCheckSeen(t.db, waiting.tradieId, "staff:test");
     expect((await setTradieStatus(t.db, waiting.tradieId, "approved", "staff:test"))!.status).toBe("approved");
     expect(await auditActions(t.db, waiting.tradieId)).toContain("tradie.insurance_certificate_uploaded");
 

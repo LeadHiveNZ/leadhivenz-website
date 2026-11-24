@@ -56,6 +56,9 @@ export type Tradie = {
   payoutAccountId: string | null;
   payoutsEnabled: boolean;
   notes: string;
+  /** A person on the team has seen their Ministry of Justice record check: who and when (DECISIONS.md, 2026-11-24, fourth entry). */
+  recordCheckSeenAt: Date | null;
+  recordCheckSeenBy: string | null;
 };
 
 export type Licence = {
@@ -75,13 +78,13 @@ type TradieRow = {
   after_hours: boolean; gst_registered: boolean; gst_number: string | null; insurance_expires_on: string | null;
   insurer: string | null; insurance_policy_number: string | null; insurance_certificate_id: string | null; lbp_number: string | null;
   payout_provider: Provider | null; payout_account_id: string | null; payouts_enabled: boolean; notes: string;
-  agreement_version?: string | null; agreed_at?: Date | null;
+  agreement_version?: string | null; agreed_at?: Date | null; record_check_seen_at?: Date | null; record_check_seen_by?: string | null;
 };
 
 const TRADIE_SELECT = `select t.id, t.created_at, t.user_id, u.name, u.phone, u.email, t.market, t.business_name, t.trades, t.status,
                               t.approved_at, t.days_available, t.after_hours, t.gst_registered, t.gst_number, t.insurance_expires_on,
                               t.insurer, t.insurance_policy_number, t.lbp_number, t.payout_provider, t.payout_account_id, t.payouts_enabled, t.notes,
-                              t.agreement_version, t.agreed_at,
+                              t.agreement_version, t.agreed_at, t.record_check_seen_at, t.record_check_seen_by,
                               (select x.id from public.uploads x
                                 where x.tradie_id = t.id and x.kind = 'insurance_certificate' and x.attached
                                 order by x.created_at desc, x.id desc limit 1) as insurance_certificate_id
@@ -98,6 +101,7 @@ function rowToTradie(row: TradieRow): Tradie {
     insuranceCertificateId: row.insurance_certificate_id ?? null, lbpNumber: row.lbp_number ?? null,
     payoutProvider: row.payout_provider, payoutAccountId: row.payout_account_id, payoutsEnabled: row.payouts_enabled, notes: row.notes,
     agreementVersion: row.agreement_version ?? null, agreedAt: row.agreed_at ? new Date(row.agreed_at) : null,
+    recordCheckSeenAt: row.record_check_seen_at ? new Date(row.record_check_seen_at) : null, recordCheckSeenBy: row.record_check_seen_by ?? null,
   };
 }
 
@@ -272,6 +276,10 @@ export async function setTradieStatus(db: Db, tradieId: string, status: TradieSt
     const zone = (await db.query<{ timezone: string }>("select timezone from public.markets where slug = $1", [tradie.market]))[0]?.timezone ?? "UTC";
     const problem = insuranceProblem(tradie, dateKey(now(), zone));
     if (problem) throw new TradieError(`Not approved. ${problem}`);
+    // The first approval needs their criminal record check seen (DECISIONS.md, 2026-11-24, fourth entry).
+    if (!tradie.approvedAt && !tradie.recordCheckSeenAt) {
+      throw new TradieError("Not approved. Their criminal record check has not been marked as seen. Look at it, then press \"I've seen their record check\".");
+    }
   }
   const at = now().toISOString();
   const rows = await db.query(
@@ -350,6 +358,15 @@ export async function saveLicence(
     [now().toISOString(), tradieId, input.trade, number, input.expiresOn],
   );
   await audit(db, { actor, action: "licence.saved", entity: "tradie", entityId: tradieId, detail: { trade: input.trade, expires: input.expiresOn } });
+}
+
+/** A person on the team has seen the tradie's criminal record check. Only the note is kept, never the record. */
+export async function markRecordCheckSeen(db: Db, tradieId: string, actor: string): Promise<void> {
+  const rows = await db.query(
+    "update public.tradies set record_check_seen_at = $2::timestamptz, record_check_seen_by = $3 where id = $1::uuid and record_check_seen_at is null returning id",
+    [tradieId, now().toISOString(), actor],
+  );
+  if (rows.length > 0) await audit(db, { actor, action: "tradie.record_check_seen", entity: "tradie", entityId: tradieId });
 }
 
 export async function markLicenceVerified(db: Db, licenceId: string, actor: string): Promise<void> {
@@ -562,7 +579,7 @@ export async function coverage(db: Db, market: string, today: string): Promise<C
  * Change this when the agreement changes, and the page's date with it
  * (tests/unit/legal.test.ts).
  */
-export const TRADIE_AGREEMENT_VERSION = "23 November 2026";
+export const TRADIE_AGREEMENT_VERSION = "24 November 2026";
 
 /*
  * The 12-month no-direct-dealing rule and its NZ$250 release (DECISIONS.md, 2026-11-20) were dropped on

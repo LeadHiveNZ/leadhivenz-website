@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { inviteTradie, staffSaveLicence, staffSaveTradie, staffSetTradieStatus, staffUploadCertificate, verifyLicence } from "@/app/actions/staff";
+import { inviteTradie, recordCheckSeen, staffSaveLicence, staffSaveTradie, staffSetTradieStatus, staffUploadCertificate, verifyLicence } from "@/app/actions/staff";
 import { ActionForm, Area, CheckList, Checks, Field, FileInput, Tick } from "@/components/forms/ActionForm";
 import { CERTIFICATE_ACCEPT } from "@/components/forms/Fields";
 import { CertificateList } from "@/components/ui/CertificateList";
@@ -86,6 +86,13 @@ export default async function StaffTradiePage({ params, searchParams }: { params
         "Insurer, policy number, expiry date and the certificate, under Insurance below or by them on their profile. No jobs are offered without it.",
     },
     {
+      ok: Boolean(tradie.recordCheckSeenAt),
+      label: tradie.recordCheckSeenAt
+        ? `Criminal record check seen (${tradie.recordCheckSeenBy ?? "staff"}, ${formatDate(tradie.recordCheckSeenAt, market.timezone)})`
+        : "Criminal record check seen",
+      fix: "They request it free from the Ministry of Justice (up to 20 working days) and send it to you. Look at it, then press \"I've seen their record check\" below. Only that note is kept.",
+    },
+    {
       ok: tradie.agreementVersion === TRADIE_AGREEMENT_VERSION,
       label: `Agreed to the tradie agreement (${TRADIE_AGREEMENT_VERSION})`,
       fix: tradie.agreementVersion
@@ -102,7 +109,7 @@ export default async function StaffTradiePage({ params, searchParams }: { params
       ? [{ ok: (tradie.lbpNumber ?? "").length >= 2, label: "LBP number on file (for building work)", fix: "Without it they are not offered building jobs. Check the number on the public LBP register (linked below) and add it under Details." }]
       : []),
   ];
-  const blocking = checks.slice(0, 5).filter((check) => !check.ok);
+  const blocking = checks.slice(0, 6).filter((check) => !check.ok);
 
   return (
     <div className="mx-auto max-w-3xl space-y-5">
@@ -153,6 +160,12 @@ export default async function StaffTradiePage({ params, searchParams }: { params
           ))}
         </ul>
         <div className="mt-4 flex flex-wrap gap-2">
+          {!tradie.recordCheckSeenAt && (
+            <ActionForm action={recordCheckSeen} className="">
+              <input type="hidden" name="tradieId" value={tradie.id} />
+              <SubmitButton variant="secondary" pendingLabel="Saving...">I&apos;ve seen their record check</SubmitButton>
+            </ActionForm>
+          )}
           {tradie.status === "applied" && (
             <ActionForm action={staffSetTradieStatus} className="">
               <input type="hidden" name="tradieId" value={tradie.id} />

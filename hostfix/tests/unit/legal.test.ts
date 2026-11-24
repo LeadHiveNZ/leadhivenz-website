@@ -204,7 +204,7 @@ describe("the hold on the card, cancelling, the payout guarantee, own clients an
     expect(launchMarket.platformFeeBps).toBe(1500);
     expect(launchMarket.diagnosisPayoutCents).toBe(19000);
     expect([PATTERN_PAIR_JOBS, PATTERN_TRADIE_CANCELS, PATTERN_DAYS]).toEqual([2, 3, 90]);
-    expect(TRADIE_AGREEMENT_VERSION).toBe("23 November 2026");
+    expect(TRADIE_AGREEMENT_VERSION).toBe("24 November 2026");
   });
 
   it("the tradie agreement says the hold, the free cancel before Arrived (the travel is theirs), and the call-out after it", () => {
