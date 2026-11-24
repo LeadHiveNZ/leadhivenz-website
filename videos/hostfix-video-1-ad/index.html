@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <title>HostFix video 1 ad overlay</title>
+    <script src="assets/vendor/gsap.min.js"></script>
+    <style>
+* { margin:0; padding:0; box-sizing:border-box; }
+html, body { width:1080px; height:1920px; overflow:hidden; background:transparent; }
+#root { position:relative; width:100%; height:100%; overflow:hidden; background:transparent; }
+.hl { position:absolute; left:60px; right:60px; top:290px; display:flex; justify-content:center; opacity:0; }
+.hbox { background:#3b1e3f; color:#fff; font-family:'Nunito', sans-serif; font-weight:900; font-size:62px; line-height:1.15;
+  padding:20px 38px 24px; border-radius:30px; text-align:center; box-shadow:0 12px 32px rgba(0,0,0,0.30); }
+.hbox em { font-style:normal; color:#d4f23a; }
+.sub { position:absolute; left:70px; right:70px; top:1395px; height:200px; display:flex; align-items:center; justify-content:center; opacity:0; }
+.sub p { font-family:'Montserrat', sans-serif; font-weight:800; font-size:70px; line-height:1.16; color:#fff; text-align:center;
+  -webkit-text-stroke:10px #000; paint-order:stroke fill; }
+.w { opacity:0; }
+</style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="main" data-start="0" data-width="1080" data-height="1920" data-duration="33.200">
+      <div class="hl" id="h1"><div class="hbox">Guest checks in at <em>3pm</em> 😬</div></div>
+      <div class="hl" id="h2"><div class="hbox">Report it in <em>30 seconds</em></div></div>
+      <div class="hl" id="h3"><div class="hbox">Insured tradie in <em>24 hrs</em></div></div>
+      <div class="hl" id="h4"><div class="hbox">Fixed price <em>✓</em> Photos <em>✓</em></div></div>
+      <div class="hl" id="h5"><div class="hbox"><em>Free</em> to join 👇</div></div>
+      <div class="hl endc" id="end"><div class="hbox">HostFix · <em>Free to join</em></div></div>
+      <div class="sub" id="s0"><p><span class="w" id="w0-0">The</span> <span class="w" id="w0-1">new</span> <span class="w" id="w0-2">guests</span> <span class="w" id="w0-3">check</span> <span class="w" id="w0-4">in</span> <span class="w" id="w0-5">at</span> <span class="w" id="w0-6">3,</span></p></div>
+      <div class="sub" id="s1"><p><span class="w" id="w1-0">your</span> <span class="w" id="w1-1">toilet&#x27;s</span> <span class="w" id="w1-2">running</span> <span class="w" id="w1-3">and</span> <span class="w" id="w1-4">your</span></p></div>
+      <div class="sub" id="s2"><p><span class="w" id="w2-0">plumber&#x27;s</span> <span class="w" id="w2-1">not</span> <span class="w" id="w2-2">picking</span> <span class="w" id="w2-3">up.</span></p></div>
+      <div class="sub" id="s3"><p><span class="w" id="w3-0">If</span> <span class="w" id="w3-1">you</span> <span class="w" id="w3-2">own</span> <span class="w" id="w3-3">a</span> <span class="w" id="w3-4">holiday</span> <span class="w" id="w3-5">home</span> <span class="w" id="w3-6">in</span></p></div>
+      <div class="sub" id="s4"><p><span class="w" id="w4-0">Queenstown</span> <span class="w" id="w4-1">or</span> <span class="w" id="w4-2">Wanaka,</span></p></div>
+      <div class="sub" id="s5"><p><span class="w" id="w5-0">then</span> <span class="w" id="w5-1">you</span> <span class="w" id="w5-2">know</span> <span class="w" id="w5-3">this</span> <span class="w" id="w5-4">feeling.</span></p></div>
+      <div class="sub" id="s6"><p><span class="w" id="w6-0">With</span> <span class="w" id="w6-1">HostFix,</span></p></div>
+      <div class="sub" id="s7"><p><span class="w" id="w7-0">you,</span> <span class="w" id="w7-1">your</span> <span class="w" id="w7-2">cleaners,</span></p></div>
+      <div class="sub" id="s8"><p><span class="w" id="w8-0">or</span> <span class="w" id="w8-1">even</span> <span class="w" id="w8-2">your</span> <span class="w" id="w8-3">guests</span> <span class="w" id="w8-4">can</span> <span class="w" id="w8-5">report</span></p></div>
+      <div class="sub" id="s9"><p><span class="w" id="w9-0">an</span> <span class="w" id="w9-1">issue</span> <span class="w" id="w9-2">within</span> <span class="w" id="w9-3">30</span> <span class="w" id="w9-4">seconds.</span></p></div>
+      <div class="sub" id="s10"><p><span class="w" id="w10-0">A</span> <span class="w" id="w10-1">local</span> <span class="w" id="w10-2">and</span> <span class="w" id="w10-3">insured</span> <span class="w" id="w10-4">tradie</span> <span class="w" id="w10-5">is</span></p></div>
+      <div class="sub" id="s11"><p><span class="w" id="w11-0">there</span> <span class="w" id="w11-1">within</span> <span class="w" id="w11-2">24</span> <span class="w" id="w11-3">hours</span> <span class="w" id="w11-4">and</span> <span class="w" id="w11-5">4</span> <span class="w" id="w11-6">if</span></p></div>
+      <div class="sub" id="s12"><p><span class="w" id="w12-0">it&#x27;s</span> <span class="w" id="w12-1">urgent.</span></p></div>
+      <div class="sub" id="s13"><p><span class="w" id="w13-0">You</span> <span class="w" id="w13-1">see</span> <span class="w" id="w13-2">the</span> <span class="w" id="w13-3">fixed</span> <span class="w" id="w13-4">price</span> <span class="w" id="w13-5">before</span></p></div>
+      <div class="sub" id="s14"><p><span class="w" id="w14-0">you</span> <span class="w" id="w14-1">book,</span> <span class="w" id="w14-2">photos</span> <span class="w" id="w14-3">before</span> <span class="w" id="w14-4">and</span></p></div>
+      <div class="sub" id="s15"><p><span class="w" id="w15-0">after,</span> <span class="w" id="w15-1">and</span> <span class="w" id="w15-2">payment</span></p></div>
+      <div class="sub" id="s16"><p><span class="w" id="w16-0">automatically</span> <span class="w" id="w16-1">deducts</span> <span class="w" id="w16-2">from</span></p></div>
+      <div class="sub" id="s17"><p><span class="w" id="w17-0">your</span> <span class="w" id="w17-1">account.</span></p></div>
+      <div class="sub" id="s18"><p><span class="w" id="w18-0">The</span> <span class="w" id="w18-1">best</span> <span class="w" id="w18-2">part</span> <span class="w" id="w18-3">is</span> <span class="w" id="w18-4">it&#x27;s</span></p></div>
+      <div class="sub" id="s19"><p><span class="w" id="w19-0">completely</span> <span class="w" id="w19-1">free</span> <span class="w" id="w19-2">for</span> <span class="w" id="w19-3">both</span></p></div>
+      <div class="sub" id="s20"><p><span class="w" id="w20-0">owners</span> <span class="w" id="w20-1">and</span> <span class="w" id="w20-2">tradies.</span></p></div>
+      <div class="sub" id="s21"><p><span class="w" id="w21-0">Tap</span> <span class="w" id="w21-1">below</span> <span class="w" id="w21-2">and</span> <span class="w" id="w21-3">I&#x27;ll</span> <span class="w" id="w21-4">send</span> <span class="w" id="w21-5">you</span></p></div>
+      <div class="sub" id="s22"><p><span class="w" id="w22-0">the</span> <span class="w" id="w22-1">full</span> <span class="w" id="w22-2">price</span> <span class="w" id="w22-3">list.</span></p></div>
+    </div>
+    <script>
+      const tl = gsap.timeline({ paused: true });
+      tl.set("#h1", { opacity: 0 }, 0);
+      tl.to("#h1", { opacity: 1, duration: 0.35, ease: "power1.out" }, 0.080);
+      tl.to("#h1", { opacity: 0, duration: 0.2, ease: "power1.in" }, 11.690);
+      tl.set("#h1", { visibility: "hidden" }, 11.890);
+      tl.set("#h2", { opacity: 0 }, 0);
+      tl.to("#h2", { opacity: 1, duration: 0.35, ease: "power1.out" }, 11.890);
+      tl.to("#h2", { opacity: 0, duration: 0.2, ease: "power1.in" }, 14.090);
+      tl.set("#h2", { visibility: "hidden" }, 14.290);
+      tl.set("#h3", { opacity: 0 }, 0);
+      tl.to("#h3", { opacity: 1, duration: 0.35, ease: "power1.out" }, 14.290);
+      tl.to("#h3", { opacity: 0, duration: 0.2, ease: "power1.in" }, 19.770);
+      tl.set("#h3", { visibility: "hidden" }, 19.970);
+      tl.set("#h4", { opacity: 0 }, 0);
+      tl.to("#h4", { opacity: 1, duration: 0.35, ease: "power1.out" }, 19.970);
+      tl.to("#h4", { opacity: 0, duration: 0.2, ease: "power1.in" }, 27.050);
+      tl.set("#h4", { visibility: "hidden" }, 27.250);
+      tl.set("#h5", { opacity: 0 }, 0);
+      tl.to("#h5", { opacity: 1, duration: 0.35, ease: "power1.out" }, 27.250);
+      tl.to("#h5", { opacity: 0, duration: 0.2, ease: "power1.in" }, 32.000);
+      tl.set("#h5", { visibility: "hidden" }, 32.200);
+      tl.set("#end", { opacity: 0 }, 0);
+      tl.to("#end", { opacity: 1, duration: 0.35, ease: "power1.out" }, 32.200);
+      tl.set("#s0", { opacity: 0 }, 0);
+      tl.set("#s0", { opacity: 1 }, 0.010);
+      tl.set("#w0-0", { opacity: 0.0 }, 0);
+      tl.set("#w0-0", { opacity: 1 }, 0.020);
+      tl.set("#w0-1", { opacity: 0.0 }, 0);
+      tl.set("#w0-1", { opacity: 1 }, 0.330);
+      tl.set("#w0-2", { opacity: 0.0 }, 0);
+      tl.set("#w0-2", { opacity: 1 }, 0.490);
+      tl.set("#w0-3", { opacity: 0.0 }, 0);
+      tl.set("#w0-3", { opacity: 1 }, 0.890);
+      tl.set("#w0-4", { opacity: 0.0 }, 0);
+      tl.set("#w0-4", { opacity: 1 }, 1.130);
+      tl.set("#w0-5", { opacity: 0.0 }, 0);
+      tl.set("#w0-5", { opacity: 1 }, 1.210);
+      tl.set("#w0-6", { opacity: 0.0 }, 0);
+      tl.set("#w0-6", { opacity: 1 }, 1.370);
+      tl.set("#s0", { opacity: 0, visibility: "hidden" }, 1.680);
+      tl.set("#s1", { opacity: 0 }, 0);
+      tl.set("#s1", { opacity: 1 }, 1.680);
+      tl.set("#w1-0", { opacity: 0.0 }, 0);
+      tl.set("#w1-0", { opacity: 1 }, 1.690);
+      tl.set("#w1-1", { opacity: 0.0 }, 0);
+      tl.set("#w1-1", { opacity: 1 }, 1.850);
+      tl.set("#w1-2", { opacity: 0.0 }, 0);
+      tl.set("#w1-2", { opacity: 1 }, 2.250);
+      tl.set("#w1-3", { opacity: 0.0 }, 0);
+      tl.set("#w1-3", { opacity: 1 }, 2.570);
+      tl.set("#w1-4", { opacity: 0.0 }, 0);
+      tl.set("#w1-4", { opacity: 1 }, 2.650);
+      tl.set("#s1", { opacity: 0, visibility: "hidden" }, 2.720);
+      tl.set("#s2", { opacity: 0 }, 0);
+      tl.set("#s2", { opacity: 1 }, 2.720);
+      tl.set("#w2-0", { opacity: 0.0 }, 0);
+      tl.set("#w2-0", { opacity: 1 }, 2.730);
+      tl.set("#w2-1", { opacity: 0.0 }, 0);
+      tl.set("#w2-1", { opacity: 1 }, 3.290);
+      tl.set("#w2-2", { opacity: 0.0 }, 0);
+      tl.set("#w2-2", { opacity: 1 }, 3.450);
+      tl.set("#w2-3", { opacity: 0.0 }, 0);
+      tl.set("#w2-3", { opacity: 1 }, 3.850);
+      tl.set("#s2", { opacity: 0, visibility: "hidden" }, 4.780);
+      tl.set("#s3", { opacity: 0 }, 0);
+      tl.set("#s3", { opacity: 1 }, 4.780);
+      tl.set("#w3-0", { opacity: 0.0 }, 0);
+      tl.set("#w3-0", { opacity: 1 }, 4.790);
+      tl.set("#w3-1", { opacity: 0.0 }, 0);
+      tl.set("#w3-1", { opacity: 1 }, 5.030);
+      tl.set("#w3-2", { opacity: 0.0 }, 0);
+      tl.set("#w3-2", { opacity: 1 }, 5.190);
+      tl.set("#w3-3", { opacity: 0.0 }, 0);
+      tl.set("#w3-3", { opacity: 1 }, 5.430);
+      tl.set("#w3-4", { opacity: 0.0 }, 0);
+      tl.set("#w3-4", { opacity: 1 }, 5.510);
+      tl.set("#w3-5", { opacity: 0.0 }, 0);
+      tl.set("#w3-5", { opacity: 1 }, 5.750);
+      tl.set("#w3-6", { opacity: 0.0 }, 0);
+      tl.set("#w3-6", { opacity: 1 }, 5.910);
+      tl.set("#s3", { opacity: 0, visibility: "hidden" }, 5.980);
+      tl.set("#s4", { opacity: 0 }, 0);
+      tl.set("#s4", { opacity: 1 }, 5.980);
+      tl.set("#w4-0", { opacity: 0.0 }, 0);
+      tl.set("#w4-0", { opacity: 1 }, 5.990);
+      tl.set("#w4-1", { opacity: 0.0 }, 0);
+      tl.set("#w4-1", { opacity: 1 }, 6.470);
+      tl.set("#w4-2", { opacity: 0.0 }, 0);
+      tl.set("#w4-2", { opacity: 1 }, 6.550);
+      tl.set("#s4", { opacity: 0, visibility: "hidden" }, 7.100);
+      tl.set("#s5", { opacity: 0 }, 0);
+      tl.set("#s5", { opacity: 1 }, 7.100);
+      tl.set("#w5-0", { opacity: 0.0 }, 0);
+      tl.set("#w5-0", { opacity: 1 }, 7.110);
+      tl.set("#w5-1", { opacity: 0.0 }, 0);
+      tl.set("#w5-1", { opacity: 1 }, 7.270);
+      tl.set("#w5-2", { opacity: 0.0 }, 0);
+      tl.set("#w5-2", { opacity: 1 }, 7.350);
+      tl.set("#w5-3", { opacity: 0.0 }, 0);
+      tl.set("#w5-3", { opacity: 1 }, 7.590);
+      tl.set("#w5-4", { opacity: 0.0 }, 0);
+      tl.set("#w5-4", { opacity: 1 }, 7.830);
+      tl.set("#s5", { opacity: 0, visibility: "hidden" }, 8.760);
+      tl.set("#s6", { opacity: 0 }, 0);
+      tl.set("#s6", { opacity: 1 }, 8.860);
+      tl.set("#w6-0", { opacity: 0.0 }, 0);
+      tl.set("#w6-0", { opacity: 1 }, 8.870);
+      tl.set("#w6-1", { opacity: 0.0 }, 0);
+      tl.set("#w6-1", { opacity: 1 }, 9.110);
+      tl.set("#s6", { opacity: 0, visibility: "hidden" }, 9.900);
+      tl.set("#s7", { opacity: 0 }, 0);
+      tl.set("#s7", { opacity: 1 }, 9.900);
+      tl.set("#w7-0", { opacity: 0.0 }, 0);
+      tl.set("#w7-0", { opacity: 1 }, 9.910);
+      tl.set("#w7-1", { opacity: 0.0 }, 0);
+      tl.set("#w7-1", { opacity: 1 }, 10.150);
+      tl.set("#w7-2", { opacity: 0.0 }, 0);
+      tl.set("#w7-2", { opacity: 1 }, 10.310);
+      tl.set("#s7", { opacity: 0, visibility: "hidden" }, 10.780);
+      tl.set("#s8", { opacity: 0 }, 0);
+      tl.set("#s8", { opacity: 1 }, 10.780);
+      tl.set("#w8-0", { opacity: 0.0 }, 0);
+      tl.set("#w8-0", { opacity: 1 }, 10.790);
+      tl.set("#w8-1", { opacity: 0.0 }, 0);
+      tl.set("#w8-1", { opacity: 1 }, 10.950);
+      tl.set("#w8-2", { opacity: 0.0 }, 0);
+      tl.set("#w8-2", { opacity: 1 }, 11.190);
+      tl.set("#w8-3", { opacity: 0.0 }, 0);
+      tl.set("#w8-3", { opacity: 1 }, 11.270);
+      tl.set("#w8-4", { opacity: 0.0 }, 0);
+      tl.set("#w8-4", { opacity: 1 }, 11.750);
+      tl.set("#w8-5", { opacity: 0.0 }, 0);
+      tl.set("#w8-5", { opacity: 1 }, 11.910);
+      tl.set("#s8", { opacity: 0, visibility: "hidden" }, 12.140);
+      tl.set("#s9", { opacity: 0 }, 0);
+      tl.set("#s9", { opacity: 1 }, 12.140);
+      tl.set("#w9-0", { opacity: 0.0 }, 0);
+      tl.set("#w9-0", { opacity: 1 }, 12.150);
+      tl.set("#w9-1", { opacity: 0.0 }, 0);
+      tl.set("#w9-1", { opacity: 1 }, 12.310);
+      tl.set("#w9-2", { opacity: 0.0 }, 0);
+      tl.set("#w9-2", { opacity: 1 }, 12.630);
+      tl.set("#w9-3", { opacity: 0.0 }, 0);
+      tl.set("#w9-3", { opacity: 1 }, 12.950);
+      tl.set("#w9-4", { opacity: 0.0 }, 0);
+      tl.set("#w9-4", { opacity: 1 }, 13.270);
+      tl.set("#s9", { opacity: 0, visibility: "hidden" }, 14.200);
+      tl.set("#s10", { opacity: 0 }, 0);
+      tl.set("#s10", { opacity: 1 }, 14.300);
+      tl.set("#w10-0", { opacity: 0.0 }, 0);
+      tl.set("#w10-0", { opacity: 1 }, 14.310);
+      tl.set("#w10-1", { opacity: 0.0 }, 0);
+      tl.set("#w10-1", { opacity: 1 }, 14.470);
+      tl.set("#w10-2", { opacity: 0.0 }, 0);
+      tl.set("#w10-2", { opacity: 1 }, 14.870);
+      tl.set("#w10-3", { opacity: 0.0 }, 0);
+      tl.set("#w10-3", { opacity: 1 }, 15.030);
+      tl.set("#w10-4", { opacity: 0.0 }, 0);
+      tl.set("#w10-4", { opacity: 1 }, 15.430);
+      tl.set("#w10-5", { opacity: 0.0 }, 0);
+      tl.set("#w10-5", { opacity: 1 }, 15.910);
+      tl.set("#s10", { opacity: 0, visibility: "hidden" }, 16.060);
+      tl.set("#s11", { opacity: 0 }, 0);
+      tl.set("#s11", { opacity: 1 }, 16.060);
+      tl.set("#w11-0", { opacity: 0.0 }, 0);
+      tl.set("#w11-0", { opacity: 1 }, 16.070);
+      tl.set("#w11-1", { opacity: 0.0 }, 0);
+      tl.set("#w11-1", { opacity: 1 }, 16.230);
+      tl.set("#w11-2", { opacity: 0.0 }, 0);
+      tl.set("#w11-2", { opacity: 1 }, 16.550);
+      tl.set("#w11-3", { opacity: 0.0 }, 0);
+      tl.set("#w11-3", { opacity: 1 }, 16.950);
+      tl.set("#w11-4", { opacity: 0.0 }, 0);
+      tl.set("#w11-4", { opacity: 1 }, 17.350);
+      tl.set("#w11-5", { opacity: 0.0 }, 0);
+      tl.set("#w11-5", { opacity: 1 }, 17.510);
+      tl.set("#w11-6", { opacity: 0.0 }, 0);
+      tl.set("#w11-6", { opacity: 1 }, 17.910);
+      tl.set("#s11", { opacity: 0, visibility: "hidden" }, 17.980);
+      tl.set("#s12", { opacity: 0 }, 0);
+      tl.set("#s12", { opacity: 1 }, 17.980);
+      tl.set("#w12-0", { opacity: 0.0 }, 0);
+      tl.set("#w12-0", { opacity: 1 }, 17.990);
+      tl.set("#w12-1", { opacity: 0.0 }, 0);
+      tl.set("#w12-1", { opacity: 1 }, 18.230);
+      tl.set("#s12", { opacity: 0, visibility: "hidden" }, 19.160);
+      tl.set("#s13", { opacity: 0 }, 0);
+      tl.set("#s13", { opacity: 1 }, 19.180);
+      tl.set("#w13-0", { opacity: 0.0 }, 0);
+      tl.set("#w13-0", { opacity: 1 }, 19.190);
+      tl.set("#w13-1", { opacity: 0.0 }, 0);
+      tl.set("#w13-1", { opacity: 1 }, 19.670);
+      tl.set("#w13-2", { opacity: 0.0 }, 0);
+      tl.set("#w13-2", { opacity: 1 }, 19.830);
+      tl.set("#w13-3", { opacity: 0.0 }, 0);
+      tl.set("#w13-3", { opacity: 1 }, 19.990);
+      tl.set("#w13-4", { opacity: 0.0 }, 0);
+      tl.set("#w13-4", { opacity: 1 }, 20.310);
+      tl.set("#w13-5", { opacity: 0.0 }, 0);
+      tl.set("#w13-5", { opacity: 1 }, 20.710);
+      tl.set("#s13", { opacity: 0, visibility: "hidden" }, 20.940);
+      tl.set("#s14", { opacity: 0 }, 0);
+      tl.set("#s14", { opacity: 1 }, 20.940);
+      tl.set("#w14-0", { opacity: 0.0 }, 0);
+      tl.set("#w14-0", { opacity: 1 }, 20.950);
+      tl.set("#w14-1", { opacity: 0.0 }, 0);
+      tl.set("#w14-1", { opacity: 1 }, 21.110);
+      tl.set("#w14-2", { opacity: 0.0 }, 0);
+      tl.set("#w14-2", { opacity: 1 }, 21.510);
+      tl.set("#w14-3", { opacity: 0.0 }, 0);
+      tl.set("#w14-3", { opacity: 1 }, 21.910);
+      tl.set("#w14-4", { opacity: 0.0 }, 0);
+      tl.set("#w14-4", { opacity: 1 }, 22.230);
+      tl.set("#s14", { opacity: 0, visibility: "hidden" }, 22.380);
+      tl.set("#s15", { opacity: 0 }, 0);
+      tl.set("#s15", { opacity: 1 }, 22.380);
+      tl.set("#w15-0", { opacity: 0.0 }, 0);
+      tl.set("#w15-0", { opacity: 1 }, 22.390);
+      tl.set("#w15-1", { opacity: 0.0 }, 0);
+      tl.set("#w15-1", { opacity: 1 }, 22.710);
+      tl.set("#w15-2", { opacity: 0.0 }, 0);
+      tl.set("#w15-2", { opacity: 1 }, 22.950);
+      tl.set("#s15", { opacity: 0, visibility: "hidden" }, 23.260);
+      tl.set("#s16", { opacity: 0 }, 0);
+      tl.set("#s16", { opacity: 1 }, 23.260);
+      tl.set("#w16-0", { opacity: 0.0 }, 0);
+      tl.set("#w16-0", { opacity: 1 }, 23.270);
+      tl.set("#w16-1", { opacity: 0.0 }, 0);
+      tl.set("#w16-1", { opacity: 1 }, 23.750);
+      tl.set("#w16-2", { opacity: 0.0 }, 0);
+      tl.set("#w16-2", { opacity: 1 }, 24.230);
+      tl.set("#s16", { opacity: 0, visibility: "hidden" }, 24.380);
+      tl.set("#s17", { opacity: 0 }, 0);
+      tl.set("#s17", { opacity: 1 }, 24.380);
+      tl.set("#w17-0", { opacity: 0.0 }, 0);
+      tl.set("#w17-0", { opacity: 1 }, 24.390);
+      tl.set("#w17-1", { opacity: 0.0 }, 0);
+      tl.set("#w17-1", { opacity: 1 }, 24.630);
+      tl.set("#s17", { opacity: 0, visibility: "hidden" }, 25.560);
+      tl.set("#s18", { opacity: 0 }, 0);
+      tl.set("#s18", { opacity: 1 }, 25.820);
+      tl.set("#w18-0", { opacity: 0.0 }, 0);
+      tl.set("#w18-0", { opacity: 1 }, 25.830);
+      tl.set("#w18-1", { opacity: 0.0 }, 0);
+      tl.set("#w18-1", { opacity: 1 }, 25.990);
+      tl.set("#w18-2", { opacity: 0.0 }, 0);
+      tl.set("#w18-2", { opacity: 1 }, 26.230);
+      tl.set("#w18-3", { opacity: 0.0 }, 0);
+      tl.set("#w18-3", { opacity: 1 }, 26.390);
+      tl.set("#w18-4", { opacity: 0.0 }, 0);
+      tl.set("#w18-4", { opacity: 1 }, 26.630);
+      tl.set("#s18", { opacity: 0, visibility: "hidden" }, 26.860);
+      tl.set("#s19", { opacity: 0 }, 0);
+      tl.set("#s19", { opacity: 1 }, 26.860);
+      tl.set("#w19-0", { opacity: 0.0 }, 0);
+      tl.set("#w19-0", { opacity: 1 }, 26.870);
+      tl.set("#w19-1", { opacity: 0.0 }, 0);
+      tl.set("#w19-1", { opacity: 1 }, 27.270);
+      tl.set("#w19-2", { opacity: 0.0 }, 0);
+      tl.set("#w19-2", { opacity: 1 }, 27.590);
+      tl.set("#w19-3", { opacity: 0.0 }, 0);
+      tl.set("#w19-3", { opacity: 1 }, 27.750);
+      tl.set("#s19", { opacity: 0, visibility: "hidden" }, 27.980);
+      tl.set("#s20", { opacity: 0 }, 0);
+      tl.set("#s20", { opacity: 1 }, 27.980);
+      tl.set("#w20-0", { opacity: 0.0 }, 0);
+      tl.set("#w20-0", { opacity: 1 }, 27.990);
+      tl.set("#w20-1", { opacity: 0.0 }, 0);
+      tl.set("#w20-1", { opacity: 1 }, 28.390);
+      tl.set("#w20-2", { opacity: 0.0 }, 0);
+      tl.set("#w20-2", { opacity: 1 }, 28.550);
+      tl.set("#s20", { opacity: 0, visibility: "hidden" }, 29.480);
+      tl.set("#s21", { opacity: 0 }, 0);
+      tl.set("#s21", { opacity: 1 }, 29.900);
+      tl.set("#w21-0", { opacity: 0.0 }, 0);
+      tl.set("#w21-0", { opacity: 1 }, 29.910);
+      tl.set("#w21-1", { opacity: 0.0 }, 0);
+      tl.set("#w21-1", { opacity: 1 }, 30.310);
+      tl.set("#w21-2", { opacity: 0.0 }, 0);
+      tl.set("#w21-2", { opacity: 1 }, 30.550);
+      tl.set("#w21-3", { opacity: 0.0 }, 0);
+      tl.set("#w21-3", { opacity: 1 }, 30.710);
+      tl.set("#w21-4", { opacity: 0.0 }, 0);
+      tl.set("#w21-4", { opacity: 1 }, 30.870);
+      tl.set("#w21-5", { opacity: 0.0 }, 0);
+      tl.set("#w21-5", { opacity: 1 }, 31.030);
+      tl.set("#s21", { opacity: 0, visibility: "hidden" }, 31.100);
+      tl.set("#s22", { opacity: 0 }, 0);
+      tl.set("#s22", { opacity: 1 }, 31.100);
+      tl.set("#w22-0", { opacity: 0.0 }, 0);
+      tl.set("#w22-0", { opacity: 1 }, 31.110);
+      tl.set("#w22-1", { opacity: 0.0 }, 0);
+      tl.set("#w22-1", { opacity: 1 }, 31.190);
+      tl.set("#w22-2", { opacity: 0.0 }, 0);
+      tl.set("#w22-2", { opacity: 1 }, 31.430);
+      tl.set("#w22-3", { opacity: 0.0 }, 0);
+      tl.set("#w22-3", { opacity: 1 }, 31.750);
+      tl.set("#s22", { opacity: 0, visibility: "hidden" }, 32.200);
+      tl.set({}, {}, 33.200);
+      window.__timelines["main"] = tl;
+      tl.seek(0);
+    </script>
+  </body>
+</html>
