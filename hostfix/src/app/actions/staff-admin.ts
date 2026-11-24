@@ -22,7 +22,7 @@ import { startDemandTest } from "@/lib/leads/demand-test";
 import { launchMarket } from "@config/markets";
 import { AccountExistsError } from "@/lib/auth/users";
 import { findTrade, trades } from "@config/trades";
-import { hourlyRates, saveHourlyRate } from "@/lib/jobs/rates";
+import { clearHourlyRate, hourlyRates, saveHourlyRate } from "@/lib/jobs/rates";
 import { createTradie, TradieError } from "@/lib/tradies/service";
 
 /**
@@ -141,12 +141,17 @@ export async function saveMarketSettings(_previous: FormState, formData: FormDat
     depositSpots: spots(formData, "depositSpots", errors),
     depositTerms: text(formData, "depositTerms").split(/\r?\n/).map((line) => line.trim()).filter(Boolean),
   };
-  // The fixed hourly rates for extra work, per trade (DECISIONS.md, 2026-11-20, third entry).
+  // Hourly rates for extra work, per trade (DECISIONS.md, 2026-11-20, third entry; confirmed 2026-11-24, second entry).
+  // A box left empty takes away a rate saved here: the trade goes back to its default, or to the tradie's own price.
   const rates: { trade: string; cents: number }[] = [];
+  const noRate: string[] = [];
   for (const trade of trades) {
     const name = `rate-${trade.key}`;
     const raw = text(formData, name);
-    if (!raw) continue;
+    if (!raw) {
+      noRate.push(trade.key);
+      continue;
+    }
     const cents = dollarsToCents(raw);
     if (cents === null || cents < 1000 || cents > 100_000) errors[name] = "An hourly rate from 10 to 1000, or leave it empty.";
     else rates.push({ trade: trade.key, cents });
@@ -156,6 +161,7 @@ export async function saveMarketSettings(_previous: FormState, formData: FormDat
     const db = await getDb();
     const current = await hourlyRates(db, slug);
     for (const rate of rates) if (current[rate.trade] !== rate.cents) await saveHourlyRate(db, slug, rate.trade, rate.cents, staff.actor);
+    for (const trade of noRate) if (current[trade] !== undefined) await clearHourlyRate(db, slug, trade, staff.actor);
     await updateMarket(db, slug, patch, staff.actor);
   } catch (error) {
     if (error instanceof AdminInputError) return problem(formData, `${error.message} Nothing was saved.`);

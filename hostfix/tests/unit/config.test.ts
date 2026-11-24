@@ -109,11 +109,12 @@ describe("the Queenstown menu file", () => {
     expect(typeof menu.placeholderPrices).toBe("boolean");
   });
 
-  it("holds real prices, not placeholders: 92 researched jobs with unique codes", () => {
+  it("holds real prices, not placeholders: 110 researched jobs with unique codes", () => {
     // Nothing may be shown to an owner as a price unless this is false (DECISIONS.md).
-    // 60 researched on 16 Nov 2026, and 32 for the new trades on 24 Nov 2026 (DECISIONS.md, 2026-11-24).
+    // 60 researched on 16 Nov 2026, 32 for the new trades on 24 Nov 2026 (DECISIONS.md, 2026-11-24), and 18 sizes
+    // and one-room cleans the same day (DECISIONS.md, 2026-11-24, second entry: 10 cleans, 3 window cleans, 5 garden jobs).
     expect(menu.placeholderPrices).toBe(false);
-    expect(items).toHaveLength(92);
+    expect(items).toHaveLength(110);
     const codes = items.map((item) => item.code);
     expect(new Set(codes).size).toBe(codes.length);
   });
@@ -122,18 +123,20 @@ describe("the Queenstown menu file", () => {
     expect(item.ownerPriceDollars).toBe(5 * Math.round(item.tradiePayoutDollars / 0.85 / 5));
   });
 
-  it("loads the jobs priced without a local figure, and the two add-ons, switched off", () => {
+  it("loads the jobs priced without a local figure, and the add-ons, switched off", () => {
     // Ring a local and confirm each price before an owner can book one. An add-on cannot be booked by itself.
-    // The first five from 16 Nov 2026 (PV-04 is now SP-02), and eleven of the 24 Nov 2026 jobs (DECISIONS.md, 2026-11-24).
+    // The first five from 16 Nov 2026 (PV-04 is now SP-02), ten of the first 24 Nov 2026 jobs (DECISIONS.md, 2026-11-24),
+    // and the two-storey window cleans and the two window add-ons (second entry). WC-03 is now single storey and on.
     const needQuote = items.filter((item) => item.needsLocalQuote).map((item) => item.code);
     expect(needQuote.sort()).toEqual([
-      "CC-02", "CC-03", "CC-04", "DS-02", "DS-03", "GD-01", "OD-03", "PC-01", "PC-02", "PC-03", "PV-01", "PV-02", "SP-02", "SP-03", "WC-02", "WC-03",
+      "CC-02", "CC-03", "CC-04", "DS-02", "DS-03", "GD-01", "OD-03", "PC-01", "PC-02", "PC-03", "PV-01", "PV-02", "SP-02", "SP-03", "WC-02", "WC-04", "WC-05", "WC-06",
     ]);
     const addOns = items.filter((item) => item.isAddOn).map((item) => item.code);
-    expect(addOns.sort()).toEqual(["HP-01", "PV-03"]);
+    expect(addOns.sort()).toEqual(["HP-01", "PV-03", "WC-05", "WC-06"]);
     const off = items.filter((item) => !startsOnTheMenu(item)).map((item) => item.code);
-    expect(off.sort()).toEqual([...needQuote, ...addOns].sort());
-    expect(items.filter(startsOnTheMenu)).toHaveLength(92 - 16 - 2);
+    expect(off.sort()).toEqual([...new Set([...needQuote, ...addOns])].sort());
+    // 18 waiting on a local quote, and HP-01 and PV-03 (the two window add-ons are in both lists): 110 - 18 - 2 = 90.
+    expect(items.filter(startsOnTheMenu)).toHaveLength(110 - 18 - 2);
   });
 
   it("keeps jobs an owner arranges off the form a guest sees", () => {
@@ -141,13 +144,14 @@ describe("the Queenstown menu file", () => {
     // What a guest in the house would report.
     expect(guest).toEqual(expect.arrayContaining(["Blocked toilet, sink or shower drain", "No hot water, first-hour diagnosis", "Lockout, business hours", "Wi-Fi router reset and smart TV setup"]));
     // What only an owner would book.
-    for (const name of ["Lawn mow and edges", "Gutter clean, single storey", "Lockbox or smart lock install", "Switchboard and RCD safety test"]) expect(guest).not.toContain(name);
+    for (const name of ["Lawn mow and edges, small (up to 200 square metres)", "Bathroom clean, one bathroom", "Gutter clean, single storey", "Lockbox or smart lock install", "Switchboard and RCD safety test"]) expect(guest).not.toContain(name);
   });
 
   it("records where each price for the new trades came from", () => {
     // DECISIONS.md, 2026-11-24: every job added or moved that day carries its source.
-    const sourced = items.filter((item) => ["CL", "WC", "CC", "RF", "BL", "PT", "PC", "DS"].includes(item.code.split("-")[0]!) || ["SP-01", "SP-02", "SP-03", "OD-01", "OD-02", "OD-07", "OD-08"].includes(item.code));
-    expect(sourced).toHaveLength(39);
+    const sourced = items.filter((item) => ["CL", "WC", "CC", "RF", "BL", "PT", "PC", "DS"].includes(item.code.split("-")[0]!) || ["SP-01", "SP-02", "SP-03", "OD-01", "OD-02", "OD-07", "OD-08", "OD-09", "OD-10", "OD-11", "OD-12", "OD-13"].includes(item.code));
+    // 39 from the first 24 Nov 2026 entry, and 13 more from the second (10 cleans, WC-04 to WC-06; OD-09 to OD-13).
+    expect(sourced).toHaveLength(39 + 18);
     for (const item of sourced) expect(((item as { source?: string }).source ?? "").length, item.code).toBeGreaterThan(30);
   });
 

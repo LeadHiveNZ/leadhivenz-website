@@ -279,9 +279,9 @@ export default async function MarketPage({ params, searchParams }: { params: Pro
           </div>
           <Checks label="Working days" name="workDays" options={WEEKDAY_OPTIONS} defaultValues={market.workDays} />
 
-          <p className="border-t border-line pt-4 text-sm font-bold tracking-wide text-muted uppercase">Hourly rates for extra work (to confirm before launch)</p>
+          <p className="border-t border-line pt-4 text-sm font-bold tracking-wide text-muted uppercase">Hourly rates for extra work</p>
           <p className="text-sm text-muted">
-            What the owner pays an hour, GST included. Extra work up to {formatMoney(HOURLY_LIMIT_CENTS, market.currency)} is quoted in quarter hours at this rate, and the tradie cannot type another. Above that, and for a trade with no rate, the tradie prices it their own way. The 15% fee comes off the labour, as on every quote.
+            What the owner pays an hour, GST included. Extra work up to {formatMoney(HOURLY_LIMIT_CENTS, market.currency)} is quoted in quarter hours at this rate, and the tradie cannot type another. Above that, and for a trade with no rate, the tradie prices it their own way and the owner approves it. Plumbers, electricians, gasfitters and handymen have a rate; every other trade is priced by the job, so leave its box empty. Emptying a box you changed puts the trade back to where it started. The 15% fee comes off the labour, as on every quote.
           </p>
           <div className="grid gap-4 sm:grid-cols-2">
             {trades.filter((trade) => trade.key !== "other").map((trade) => (

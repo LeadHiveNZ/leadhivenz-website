@@ -8,7 +8,8 @@ import { PATTERN_DAYS, PATTERN_PAIR_JOBS, PATTERN_TRADIE_CANCELS } from "@/lib/o
 import { formatMoney } from "@/lib/money";
 import { FEE_NOTICE_DAYS } from "@/lib/markets/admin";
 import { TRADIE_AGREEMENT_VERSION } from "@/lib/tradies/service";
-import { HOURLY_LIMIT_CENTS } from "@/lib/jobs/rates";
+import { DEFAULT_HOURLY_RATES, HOURLY_LIMIT_CENTS } from "@/lib/jobs/rates";
+import { findTrade } from "@config/trades";
 import { FAR_METRES, PROPOSAL_DAYS, WINDOW_HOURS } from "@/lib/jobs/arrival";
 import {
   FLAG_DAYS, FLAG_REVIEW, MIN_ARRIVALS, NO_SHOW_DAYS, NO_SHOW_REVIEW, ON_TIME_TARGET, RECENT_ARRIVALS, TRUSTED_FINISHED_JOBS,
@@ -30,6 +31,9 @@ const UPDATED = TRADIE_AGREEMENT_VERSION;
 export default function Page() {
   const n = brand.name;
   const money = (cents: number) => formatMoney(cents, launchMarket.currency);
+  // The trades with a fixed hourly rate (DECISIONS.md, 2026-11-24, second entry), from the code, so the page cannot drift.
+  const ratedTrades = Object.keys(DEFAULT_HOURLY_RATES).map((key) => (findTrade(key)?.label ?? key).toLowerCase());
+  const rated = `${ratedTrades.slice(0, -1).join(", ")} and ${ratedTrades.at(-1)}`;
   const fee = `${launchMarket.platformFeeBps / 100}%`;
   const ownFee = `${OWN_CLIENT_FEE_BPS / 100}%`;
   const guarantee = money(launchMarket.payoutGuaranteeCents);
@@ -152,7 +156,9 @@ export default function Page() {
         <p>
           <strong>How quotes are priced.</strong> Work up to {money(HOURLY_LIMIT_CENTS)} is quoted in hours, in quarter hours, at {n}&rsquo;s fixed hourly
           rate for your trade (shown on the quote screen; it is what the owner pays, GST included). You cannot use a different rate. Above{" "}
-          {money(HOURLY_LIMIT_CENTS)} you price the work your own way. The platform fee comes off the work, as on every job: {fee} of the first {line} of the
+          {money(HOURLY_LIMIT_CENTS)} you price the work your own way. Only {rated} work has a fixed hourly rate. <strong>Every other trade (cleaning,
+          gardening, building and the rest) has none: you quote extra work your own way, as one price for the work including GST, and the owner
+          approves it before it starts</strong> (their yes, or inside the limit they set for the property). The platform fee comes off the work, as on every job: {fee} of the first {line} of the
           job&rsquo;s price and {aboveFee} of the part above it ({ownFee} below the line for your own clients, section 10; section 6 has the detail). Parts are added on
           their own, below. <strong>If you need to come back, include the extra visit in your quote.</strong> There is no second call-out on the same job.
         </p>

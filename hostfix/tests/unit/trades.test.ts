@@ -18,6 +18,13 @@ import { auditActions, liveMarket, logJob, makeOwner, makeProperty, makeTradie, 
  *   Urgent adds NZ$50 (5000) to the owner and 5000 less 15% (750) = 4250 to the cleaner: owner 32000, cleaner 27250.
  *   BL-02 "Deck boards replaced, up to 3": owner NZ$245 (24500), builder NZ$210 (21000).
  *   Off the menu: the call-out, NZ$225 (22500) held on the card, NZ$190 (19000) to the tradie.
+ *
+ * Fixed prices by size (DECISIONS.md, 2026-11-24, second entry), from the same file:
+ *   CL-14 "Bedroom and bathroom clean, one of each": owner NZ$170 (17000), cleaner NZ$145 (14500).
+ *   CL-08 "Bathroom clean, one bathroom": owner NZ$140 (14000), cleaner NZ$120 (12000).
+ *   OD-09 "Lawn mow and edges, medium": owner NZ$165 (16500), gardener NZ$140 (14000); urgent: owner 16500 + 5000 = 21500,
+ *   gardener 14000 + 4250 = 18250.
+ *   WC-03 "Window clean, single storey, outside only, up to 3 bedrooms": owner NZ$140 (14000), window cleaner NZ$120 (12000).
  */
 
 const t = testDb();
@@ -53,6 +60,41 @@ describe("cleaning", () => {
     const urgent = await logJob(t.db, property, { code: "CL-02", urgent: true });
     expect(urgent).toMatchObject({ urgency: "urgent", ownerTotalCents: 27000 + 5000, tradieTotalCents: 23000 + 4250 });
     expect((await holds(urgent.id)).map((hold) => hold.amount_cents)).toEqual([32000]);
+  });
+});
+
+describe("fixed prices by size", () => {
+  it("prices a one-room clean as a visit on its own, and a common pair as one item", async () => {
+    const { property } = await member();
+    const cleaner = await makeTradie(t.db, { trades: ["cleaner"], licence: "none", slot: 1 });
+    const pair = await logJob(t.db, property, { code: "CL-14" });
+    expect(pair).toMatchObject({ trade: "cleaner", ownerTotalCents: 17000, tradieTotalCents: 14500 });
+    expect((await holds(pair.id)).map((hold) => hold.amount_cents)).toEqual([17000]);
+    expect((await offersFor(t.db, pair.id)).map((offer) => offer.tradie_id)).toEqual([cleaner.tradieId]);
+    const bathroom = await logJob(t.db, property, { code: "CL-08" });
+    expect(bathroom).toMatchObject({ ownerTotalCents: 14000, tradieTotalCents: 12000 });
+  });
+
+  it("prices a lawn by its size, with the urgent add-on on top", async () => {
+    const { property } = await member();
+    await makeTradie(t.db, { trades: ["gardener"], licence: "none", slot: 1 });
+    const lawn = await logJob(t.db, property, { code: "OD-09", urgent: true });
+    expect(lawn).toMatchObject({ trade: "gardener", ownerTotalCents: 16500 + 5000, tradieTotalCents: 14000 + 4250 });
+  });
+
+  it("lets an owner book a single-storey window clean, and keeps two-storey cleans and the add-ons off until a local prices them", async () => {
+    const { property } = await member();
+    await makeTradie(t.db, { trades: ["window_cleaner"], licence: "none", slot: 1 });
+    const windows = await logJob(t.db, property, { code: "WC-03" });
+    expect(windows).toMatchObject({ trade: "window_cleaner", ownerTotalCents: 14000, tradieTotalCents: 12000 });
+    const data = (await reportFormData(t.db, property, "owner"))!;
+    const names = data.items.map((item) => item.name);
+    expect(names).toEqual(expect.arrayContaining([
+      "Window clean, single storey, inside and out, up to 3 bedrooms", "Window clean, single storey, outside only, up to 3 bedrooms",
+      "Lawn mow and edges, small (up to 200 square metres)", "Lawn mow and edges, large (500 to 1,000 square metres)",
+      "Hedge trim, up to 10 metres, single-storey height", "Green waste removal, one trailer load", "Garden tidy and weeding, 1 hour",
+    ]));
+    for (const name of names.filter((candidate) => candidate.startsWith("Window clean"))) expect(name).not.toMatch(/two storey|add-on/);
   });
 });
 

@@ -77,8 +77,9 @@ export default function Page() {
             <strong>Jobs not on the menu</strong> cost a fixed call-out for a tradie to come and look, then a quote. You choose the trade, or
             &ldquo;Not sure&rdquo;: then our team reads what you wrote and chooses the trade before it is offered to anyone. Any quote over NZ$600, or over
             the limit you set for that property, stops until you say yes. When a quote goes ahead (your yes, or inside your limit), the call-out comes off
-            it, so you pay for the visit once. If you say no, the call-out is still charged. Extra work up to NZ$1,000 is quoted in hours at a fixed hourly rate for the trade,
-            which the tradie cannot change; bigger work the tradie prices. A return visit is part of the quote, never a second call-out.
+            it, so you pay for the visit once. If you say no, the call-out is still charged. For plumbing, electrical, gas and handyman work, extra work up to NZ$1,000 is quoted in
+            hours at a fixed hourly rate for the trade, which the tradie cannot change; bigger work the tradie prices. Every other trade (cleaning,
+            gardening and the rest) prices extra work as one amount, and it only starts once you have said yes or it is inside your limit. A return visit is part of the quote, never a second call-out.
           </li>
           <li>
             <strong>How {n} is paid.</strong> Our fee comes out of the price, never on top of it: {launchMarket.platformFeeBps / 100}% of the first{" "}

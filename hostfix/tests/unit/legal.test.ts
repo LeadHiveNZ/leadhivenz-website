@@ -155,6 +155,10 @@ describe("quotes and texts (DECISIONS.md, 2026-11-20, third entry)", () => {
     expect(agreement).toContain("That quote is only for work beyond the job described: you still do the job described, at its price.");
     expect(agreement).toContain("You are paid the call-out (NZ$190) once the owner approves your quote, or if they have not objected within 24 hours.");
     expect(agreement).toContain("Work up to NZ$1,000 is quoted in hours, in quarter hours");
+    // Only four trades have a fixed rate (DECISIONS.md, 2026-11-24, second entry); every other trade quotes its own way.
+    expect(agreement).toContain("Only plumber, electrician, gasfitter and handyman work has a fixed hourly rate.");
+    expect(agreement).toContain("Every other trade (cleaning, gardening, building and the rest) has none: you quote extra work your own way, as one price for the work including GST, and the owner approves it before it starts");
+    expect(text(TermsPage)).toContain("Every other trade (cleaning, gardening and the rest) prices extra work as one amount, and it only starts once you have said yes or it is inside your limit.");
     expect(agreement).toContain("If you need to come back, include the extra visit in your quote. There is no second call-out on the same job.");
     // 50000 quote, 22500 credit: owner 22500 + 50000 - 22500 = 50000; tradie 19000 + (27500 - 4125) = 42375.
     expect(agreement).toContain("A NZ$500 quote: the owner pays NZ$500 in all, and you get NZ$190 plus 85% of NZ$275 (NZ$233.75), NZ$423.75.");

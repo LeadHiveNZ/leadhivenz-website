@@ -5,7 +5,7 @@ import { addGoodwillCredit, applyPendingCredits, chargeDuePayments, chargeJob, f
 import { ownerStatement } from "@/lib/billing/statements";
 import { addHours, addMinutes, setTestNow } from "@/lib/clock";
 import { getMarket } from "@/lib/markets/store";
-import { saveHourlyRate } from "@/lib/jobs/rates";
+import { clearHourlyRate, hourlyRate, hourlyRates, saveHourlyRate } from "@/lib/jobs/rates";
 import { acceptOffer } from "@/lib/dispatch/cascade";
 import { runTick } from "@/lib/dispatch/tick";
 import { cancelJob } from "@/lib/jobs/create";
@@ -807,6 +807,23 @@ describe("off-menu work and quotes", () => {
     // 1.5 hours at NZ$150 = 22500; the tradie gets 85%: 19125.
     const result = await submitQuote(t.db, job.id, s.tradie.tradieId, { description: "Replace isolating valve", hours: 1.5, uploadIds: [] });
     expect(result.ok && result.quote).toMatchObject({ labourCents: 22500, rateCents: 15000, tradieTotalCents: 19125 });
+    // Emptying the box takes the saved rate away: the plumber goes back to the confirmed NZ$160.
+    await clearHourlyRate(t.db, "queenstown", "plumber", "admin:test");
+    expect(await hourlyRate(t.db, "queenstown", "plumber")).toBe(16000);
+    expect(await t.db.query("select 1 from public.audit_log where action = 'market.hourly_rate_cleared' and entity_id = 'queenstown'")).toHaveLength(1);
+  });
+
+  it("only plumbers, electricians, gasfitters and handymen have a fixed rate; every other trade quotes its own way (DECISIONS.md, 2026-11-24, second entry)", async () => {
+    const rates = await hourlyRates(t.db, "queenstown");
+    expect(rates).toEqual({ plumber: 16000, electrician: 16000, gasfitter: 17000, handyman: 11000 });
+    for (const trade of ["cleaner", "window_cleaner", "gardener", "painter", "roofer", "pest_control", "carpet_cleaner", "pool_spa", "builder", "drainage_septic", "appliance_tech", "heat_pump_tech", "locksmith"]) {
+      expect(await hourlyRate(t.db, "queenstown", trade), trade).toBeNull();
+    }
+    // A rate set for a trade and then emptied: back to no rate.
+    await saveHourlyRate(t.db, "queenstown", "cleaner", 7000, "admin:test");
+    expect(await hourlyRate(t.db, "queenstown", "cleaner")).toBe(7000);
+    await clearHourlyRate(t.db, "queenstown", "cleaner", "admin:test");
+    expect(await hourlyRate(t.db, "queenstown", "cleaner")).toBeNull();
   });
 
   it("small quotes cannot be stacked up past the limit without approval", async () => {

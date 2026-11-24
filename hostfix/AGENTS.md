@@ -38,7 +38,7 @@ it when you change one.
 | The tradie agreement agreed in the app, and a fee change's 30 days | `TRADIE_AGREEMENT_VERSION` in `src/lib/tradies/service.ts`, `applyScheduledFees` in `src/lib/markets/admin.ts` |
 | Arriving, quotes, finishing, "could not get in" | `src/lib/jobs/work.ts` |
 | "Not the job described", the owner's objection, Pay call-out / No call-out | `src/lib/jobs/not-described.ts` |
-| Fixed hourly rates for extra work, the NZ$1,000 line, the call-out credit | `src/lib/jobs/rates.ts`, `hourlyLabour` and `quoteAmounts` in `pricing.ts` |
+| Fixed hourly rates for extra work (four trades), the NZ$1,000 line, the call-out credit | `src/lib/jobs/rates.ts`, `hourlyLabour` and `quoteAmounts` in `pricing.ts` |
 | Quote rate and hours quoted per tradie | `src/lib/tradies/quote-rate.ts` |
 | Text, email or app notification; STOP; the first-text STOP line | `enqueue` in `src/lib/notify/outbox.ts`, `src/lib/notify/push.ts`, `src/lib/notify/inbound.ts` |
 | The offer cascade: first choice, backup, everyone, dispatcher; "Not sure" jobs and picking the trade | `src/lib/dispatch/cascade.ts` |
@@ -71,9 +71,12 @@ it when you change one.
 - **All times come from the app's clock** (`now()` in `src/lib/clock.ts`), never `new Date()` or the
   database's `now()`. The tests and the demo move that clock.
 - **Nothing tied to one town, currency or tax rate.** Those live on the market row in the database.
-- **The real prices are loaded.** `seed/menu-queenstown.json` is the 92 researched Queenstown jobs (60 on 16 Nov 2026,
-  32 for the new trades on 24 Nov 2026, each new one with a `source`; 16 with no local figure load switched off,
-  `needsLocalQuote`). It only fills an empty database: after that, prices change on the admin screen. The prices sit at local market
+- **The real prices are loaded.** `seed/menu-queenstown.json` is the 110 researched Queenstown jobs (60 on 16 Nov 2026,
+  32 for the new trades and 18 sizes and one-room cleans on 24 Nov 2026, each new one with a `source`; 18 with no local
+  figure load switched off, `needsLocalQuote`, and 4 add-ons, `isAddOn`, because a job holds one menu item). Prices are
+  fixed by size, never by the hour (DECISIONS.md, 2026-11-24, second entry): window cleans by storeys and bedrooms, lawns
+  by area, hedges by length, garden tidies in 1- and 2-hour blocks, one-room cleans as visits on their own with the
+  cleaner's travel and minimum in the price, and common pairs (bedroom and bathroom) as items of their own. It only fills an empty database: after that, prices change on the admin screen. The prices sit at local market
   rate, not above it, so nothing may tell an owner they pay a premium for price certainty. Money tests
   are worked out by hand from the menu file, never pasted from what the code returns.
 - **Every promise on a public page must be something the code does today**, or be tracked as owed in
@@ -201,8 +204,12 @@ it when you change one.
   menu price** (DECISIONS.md, 2026-11-20, third entry): menu jobs only, a photo and a one-line reason, the call-out
   instead of the menu price, paid only when the owner approves the quote or has not objected in
   `not_described_hours`; until then the payout is held and the owner not charged; an objection goes to the team.
-  Extra work up to NZ$1,000 is quarter hours at the market's fixed rate (the tradie cannot type another); over it,
-  their own price. An off-menu job's call-out comes off its first quote that goes ahead, for both sides in
+  For plumbers, electricians, gasfitters and handymen, extra work up to NZ$1,000 is quarter hours at the market's fixed
+  rate (`DEFAULT_HOURLY_RATES`, NZ$160/160/170/110, confirmed 2026-11-24, second entry; the tradie cannot type another);
+  over it, their own price. **Every other trade has no fixed rate**: its extra work is the tradie's own price, approved by
+  the owner (their yes, or their limit). "Plumbers and sparkies have a fixed hourly rate; cleaners and the like are priced
+  by the job." A rate set on More > Markets overrides a default; emptying the box takes it away. The tradie agreement
+  (section 5) names the rated trades from `DEFAULT_HOURLY_RATES`. An off-menu job's call-out comes off its first quote that goes ahead, for both sides in
   proportion. No second call-out on a job. A tradie's quote rate over 25% and over twice the market average flags
   them for a conversation; declines never count.
 - **Every text fits one 160-character GSM-7 message with "Reply STOP to opt out" added** (tested with long,

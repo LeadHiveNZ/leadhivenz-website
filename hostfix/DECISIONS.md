@@ -9,6 +9,113 @@ price, a fee or a promise, add a line here saying what and why.
 
 ---
 
+## 2026-11-24 (second entry) — Fixed prices by size, not hours; hourly rates only for plumbers, electricians, gasfitters and handymen, confirmed
+
+(Decided by the founder on 24 Nov 2026, NZ time. No migration. Tests: `tests/unit/trades.test.ts` ("fixed prices by size", amounts worked
+by hand from the menu file), `tests/unit/config.test.ts`, `tests/unit/demand-test.test.ts`, `tests/unit/money-flow.test.ts`,
+`tests/unit/legal.test.ts`, `tests/unit/status.test.ts`.
+**The tradie agreement and owner terms were edited in place, still dated 23 November 2026, with no version bump**: nothing is in production
+yet and no tradie has agreed to the earlier text, so nobody needs to agree again. There is no production database either, so the menu
+change is a seed edit.)
+
+**1. Fixed prices by size, not hours** (`seed/menu-queenstown.json`: 110 jobs, 90 on the menu at first). The owner picks the size; the price
+is fixed. Every new or changed job has a `source`. Owner price = tradie payout / 0.85 to the nearest NZ$5, as before. Searched 24 Nov 2026:
+- **Gardening** has a local published rate: Doug the Gardener, Wānaka (dougthegardener.com/services): NZ$80 + GST (NZ$92) per gardener
+  per hour, minimum 1 hour of labour, tools, truck and trailer included, travel charged at the hourly rate. Tip fees from QLDC's transfer
+  station schedule (from 1 July 2026, GST incl.): green waste small load NZ$8.50, NZ$85 a tonne. Cross-checks: two Queenstown Airtasker
+  lawn jobs at NZ$100 (Nov 2025); Crew Cut NZ 2026 guide (regular rounds, cheaper than one-off visits). Queenstown gardeners' wages
+  (SEEK, NZ$26-31 an hour) back a business rate of that size. These load **on**.
+- **Cleaning** stays on the one Queenstown published rate: Cleaning Mama, one-off NZ$60 + GST (NZ$69) an hour with a 3-hour minimum,
+  regular NZ$50 + GST with a 2-hour minimum. **Each one-room clean is a visit on its own, so its price carries the cleaner's travel and a
+  minimum: assumed 2 hours at the one-off rate** (NZ$138; the regular minimum, because a HostFix cleaner goes back to the same houses),
+  stated in every `source`. Cross-checks: Airtasker NZ fridge-clean tasks NZ$80-100; GrabOne oven and fridge deals NZ$69-89 (Christchurch,
+  which has no travel to Queenstown in it). These load **on**.
+- **Window cleaning**: no Queenstown, Wānaka or Central Otago window cleaner publishes a price (SS Property Care, Queenstown, water-fed
+  pole: quotes only). NZ deal listings (GrabOne: NZ$89 single storey 2 bedrooms inside and out, NZ$179 two storey 4-5 bedrooms) and
+  Australian guides (AU$180-330 single, AU$330-500+ two storey) are references only. The single-storey cleans need no ladder, so they are
+  priced at the Queenstown cleaning rate and load **on**; two-storey cleans (ladders or a water-fed pole: specialist work) and the add-ons
+  load **off** until a local is rung.
+
+| Code | Job | Owner | Tradie | Loads | Where the price came from |
+| --- | --- | --- | --- | --- | --- |
+| WC-01 | Window clean, single storey, inside and out, up to 3 bedrooms (was "inside and out, up to 2 bedrooms", NZ$190) | 205 | 175 | on | Cleaning Mama one-off, about 3 h (NZ$207) |
+| WC-02 | Window clean, two storey, inside and out, up to 3 bedrooms (was "inside and out, 3 or 4 bedrooms", NZ$305, off) | 310 | 265 | off | about 4.5 h at NZ$69; no local price |
+| WC-03 | Window clean, single storey, outside only, up to 3 bedrooms (was "outside only, up to 4 bedrooms", NZ$200, off) | 140 | 120 | on | Cleaning Mama, 2-hour minimum (NZ$138) |
+| WC-04 | Window clean, two storey, outside only, up to 3 bedrooms | 240 | 205 | off | about 3.5 h at NZ$69; no local price |
+| WC-05 | Window clean add-on: each extra bedroom or large glass area | 35 | 30 | off (add-on) | about 30 min at NZ$69 |
+| WC-06 | Window clean add-on: skylights or balcony glass | 55 | 45 | off (add-on) | about 45 min at NZ$69 |
+| OD-01 | Lawn mow and edges, small (up to 200 square metres) (was "Lawn mow and edges") | 120 | 100 | on | unchanged; Doug, about 1 h with travel; Airtasker Queenstown NZ$100 |
+| OD-09 | Lawn mow and edges, medium (200 to 500 square metres) | 165 | 140 | on | Doug, about 1.75 h with travel (NZ$161) |
+| OD-10 | Lawn mow and edges, large (500 to 1,000 square metres) | 255 | 215 | on | Doug, about 2.75 h with travel (NZ$253) |
+| OD-11 | Garden tidy and weeding, 1 hour | 120 | 100 | on | Doug, 1 h plus travel (NZ$115) |
+| OD-02 | Garden tidy and weeding, 2 hours (was "Garden tidy, seasonal", NZ$260) | 205 | 175 | on | Doug, 2 h plus travel (NZ$207) |
+| OD-07 | Hedge trim, up to 10 metres, single-storey height (was "up to 20 metres", NZ$225) | 170 | 145 | on | Doug, about 1.75 h (NZ$161) + small green-waste load (NZ$8.50) |
+| OD-12 | Hedge trim, 10 to 20 metres, single-storey height | 310 | 265 | on | Doug, about 3.25 h (NZ$299) + about 175 kg of green waste (NZ$15) |
+| OD-13 | Green waste removal, one trailer load | 175 | 150 | on | Doug, about 1.5 h to load, drive and tip (NZ$138) + about 400 kg at NZ$85 a tonne (NZ$34) |
+| OD-08 | Leaf and storm debris clear-up, up to 2 hours (was NZ$155) | 210 | 180 | on | in step with OD-02, plus a small green-waste load |
+| CL-08 | Bathroom clean, one bathroom | 140 | 120 | on | 2-hour minimum (NZ$138) |
+| CL-09 | Bedroom clean, one bedroom | 140 | 120 | on | 2-hour minimum (NZ$138) |
+| CL-10 | Bedroom clean, two bedrooms | 170 | 145 | on | about 2.5 h with travel (NZ$172.50) |
+| CL-11 | Kitchen clean: benches, appliances outside, floors | 170 | 145 | on | about 2.5 h with travel |
+| CL-12 | Fridge clean, inside and out | 140 | 120 | on | 2-hour minimum; Airtasker NZ NZ$80-100 |
+| CL-13 | Living area clean: lounge and dining | 140 | 120 | on | 2-hour minimum |
+| CL-14 | Bedroom and bathroom clean, one of each | 170 | 145 | on | about 2.5 h with travel |
+| CL-15 | Kitchen and bathroom clean, one bathroom | 205 | 175 | on | about 3 h with travel (NZ$207, the one-off minimum) |
+| CL-16 | Kitchen and living area clean | 205 | 175 | on | about 3 h with travel |
+| CL-17 | Oven and fridge clean | 170 | 145 | on | about 2.5 h with travel; GrabOne NZ$69-89 |
+
+- **Codes kept stable where the job is the same kind**: WC-01 stays the single-storey inside-and-out clean, WC-02 the bigger inside-and-out
+  clean (now two storey), WC-03 the outside-only clean (now single storey); WC-04 to WC-06 are new. OD-01 (NZ$120) became the **small**
+  lawn, unchanged; OD-02 became the 2-hour garden block; OD-07 became the first 10 metres of hedge; OD-09 to OD-13 are new.
+- **A job carries one menu item.** `jobs.menu_item_id` is a single item, and the menu file already says "the app cannot attach an add-on to a
+  job yet"; the urgent and after-hours add-ons are surcharges on the job, not menu items, so they cannot carry a second clean. No bundling
+  was built. Instead the common pairs are items of their own (CL-14 to CL-17), each priced as one visit, and the window add-ons (WC-05,
+  WC-06) load off as `isAddOn` like HP-01 and PV-03. An owner who wants three rooms books the nearest pair or a turnover clean, or "Something
+  else". The CL-05 oven clean is kept as it was.
+- **Naming**: every sized job reads "<job>, <size>", as the gutters, carpets and turnover cleans already did; those were left alone.
+  "square metres" rather than "m²", because menu names go into texts and "²" is not a GSM-7 character.
+- **A size hint on the owner's job form was not added.** The form's only per-job note is "Worth trying first" (`tryFirst`), which is the
+  wrong words for "pick the two-storey option"; the sizes are in the job names instead. The single-storey window descriptions say "No
+  ladders: single-storey houses only."
+- Every job is still under the NZ$600 approval limit (the dearest is still DS-03 at NZ$575).
+
+**2. Fixed hourly rates stay for four trades, confirmed; every other trade is priced by the job** (`src/lib/jobs/rates.ts`).
+The founder: "plumbers and sparkies should have a fixed hourly rate; cleaners and the like are priced by the job." So
+`DEFAULT_HOURLY_RATES` is kept exactly as it was: **plumber NZ$160, electrician NZ$160, gasfitter NZ$170, handyman NZ$110** an hour, what
+the owner pays, GST included. These are now **confirmed** (no longer "to confirm before launch"), checked against Queenstown 2026 sources on
+24 Nov 2026: plumbers NZ$90-150 an hour + GST (callatradie.co.nz/costs/plumbers-in-queenstown; queenstownplumbing.co.nz/our-rates),
+electricians NZ$125-150 an hour + GST in Queenstown (tradietools.nz/jobs/electrician-cost-per-hour). NZ$160 including GST is NZ$139
+before GST, inside both ranges.
+- **Every other trade** (cleaner, window cleaner, gardener, painter, roofer, pest control, carpet cleaner, pool and spa, builder, drainage
+  and septic, appliance repair, heat pump, locksmith) has no rate, as before: extra work is the tradie's own price, approved by the owner
+  (their yes, or inside their limit). Nothing changed in that path; a test now pins which trades have a rate.
+- The setup checklist's "Hourly rates for extra work" item is now **done** ("Confirmed 24 Nov 2026 ...", `src/lib/status.ts`). The Markets
+  screen heading lost "(to confirm before launch)" and says which trades have a rate.
+- **New, small**: emptying an hourly-rate box on More > Markets now takes away a rate saved there (`clearHourlyRate`, audited
+  `market.hourly_rate_cleared`): the trade goes back to its default, or to the tradie's own price. Before, an empty box was ignored, so a
+  rate set for a cleaner by mistake could never be removed.
+- **Words**: the tradie agreement section 5 keeps its hourly wording for the four trades and now says, naming them from
+  `DEFAULT_HOURLY_RATES`, that only plumber, electrician, gasfitter and handyman work has a fixed hourly rate and that every other trade
+  quotes extra work its own way, one price including GST, approved by the owner before it starts. Owner terms section 2 says the same. The
+  tradie landing page has a new question, "What if there's more work than the job described?". Both legal texts are edited in place, still
+  dated 23 November 2026, with no version bump: nothing is in production and no tradie has agreed yet.
+- **(Superseded the same day.)** An earlier version of this decision removed all four rates; the founder reversed that before it was
+  committed, so nothing of it shipped.
+
+**Decided while building, to confirm with Joe:**
+- The 2-hour minimum for a one-room clean (between Cleaning Mama's 2-hour regular and 3-hour one-off minimums). At 3 hours every one-room
+  clean would be NZ$205 or more. Ring two Queenstown cleaners.
+- Single-storey window cleans are on at the cleaning rate although no window cleaner publishes a price; the two-storey ones wait.
+- "Large" lawn is capped at 1,000 square metres (a quarter acre): a fixed price for any size above 500 cannot hold.
+- The gardening rate is one Wānaka operator's; the Queenstown figures found are wages and one Airtasker post.
+- OD-02 went down (NZ$260 to NZ$205) and OD-07, OD-08 went up, all to the same published hourly rate.
+- With add-ons off, a 4-bedroom house has no window clean on the menu yet.
+
+**Not done:** the outreach PDFs and PNGs are not regenerated; the public sign-up form (`hostfix-landing/lovable/join`) still carries the 21 Nov
+agreement text.
+
+---
+
 ## 2026-11-24 — Every trade a holiday home needs, cleaning first; building work only for an LBP; "Not sure" goes to a person
 
 (Decided by the founder on 24 Nov 2026, NZ time: "add all the trades holiday-home owners need, cleaning first ... imagine how important an
@@ -37,7 +144,8 @@ the site, the owner's off-menu choice, hourly-rate boxes on More > Markets) read
 - The tradie's home page warns a builder with no LBP number; the staff tradie page lists it among the checks; the offer page says
   "Building work: only for a tradie with an LBP number on file"; the job page marks candidates "no LBP number: cannot be assigned".
 - New trades have no fixed hourly rate for extra work (`DEFAULT_HOURLY_RATES` covers four trades): their extra work is priced the
-  tradie's own way until a rate is set on More > Markets. **To decide:** rates for cleaning, gardening and building.
+  tradie's own way until a rate is set on More > Markets. **To decide:** rates for cleaning, gardening and building. *(Decided the same day,
+  second entry above: the four defaults are confirmed; every other trade, these included, is priced by the job.)*
 
 **2. The menu: 92 jobs** (`seed/menu-queenstown.json`, which only fills an empty database; there is no production database yet). 32 new
 jobs, and 7 moved off the handyman to the trade that does them. Every new or moved job has a `source` field saying where its price came
@@ -485,7 +593,8 @@ the queue, after their next quote) when over 25% (`QUOTE_RATE_FLOOR`) and over 2
 average (the average rate of the market's tradies with 10 or more such jobs). Shown on the admin tradie page with the
 average. Nothing changes on their account.
 
-**3. Fixed hourly rates for extra work up to NZ$1,000** (`src/lib/jobs/rates.ts`, `hourlyLabour` in `pricing.ts`).
+**3. Fixed hourly rates for extra work up to NZ$1,000** (`src/lib/jobs/rates.ts`, `hourlyLabour` in `pricing.ts`). *(The four defaults
+were confirmed on 24 Nov 2026, second entry, with Queenstown sources; every other trade is priced the tradie's own way.)*
 Per market and trade, what the owner pays an hour, GST included, edited on the admin Markets screen (`trade_rates`;
 a trade with no row uses the default). **Defaults, NOT finally confirmed by the founder, to confirm before launch**
 (also on the setup checklist): plumber NZ$160, electrician NZ$160, gasfitter NZ$170, handyman NZ$110. Other trades have

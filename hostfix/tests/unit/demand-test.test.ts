@@ -235,14 +235,16 @@ describe("the price list", () => {
 
   it("is every job that can be booked, at the owner's price, leaving out prices still waiting on a local quote", async () => {
     const list = await priceListFor(t.db, "queenstown");
-    // 92 researched jobs (60 on 16 Nov 2026, 32 for the new trades on 24 Nov 2026), less the 16 priced without a
-    // local figure that wait on a local quote (DECISIONS.md: GD-01, PV-01, PV-02, SP-02, OD-03 from the first menu;
-    // WC-02, WC-03, CC-02, CC-03, CC-04, PC-01, PC-02, PC-03, SP-03, DS-02, DS-03 from the second) and the two
-    // add-ons that only go on another job (HP-01 each extra heat pump, PV-03 filter clean between guests): 92 - 16 - 2 = 74.
-    expect(seed.items).toHaveLength(92);
-    expect(list.count).toBe(74);
+    // 110 researched jobs (60 on 16 Nov 2026, 32 for the new trades and 18 sizes and one-room cleans on 24 Nov 2026), less
+    // the 18 priced without a local figure that wait on a local quote (DECISIONS.md: GD-01, PV-01, PV-02, SP-02, OD-03
+    // from the first menu; CC-02, CC-03, CC-04, PC-01, PC-02, PC-03, SP-03, DS-02, DS-03 from the second; WC-02, WC-04
+    // and the add-ons WC-05, WC-06 from the third) and the two other add-ons that only go on another job (HP-01 each
+    // extra heat pump, PV-03 filter clean between guests): 110 - 18 - 2 = 90.
+    expect(seed.items).toHaveLength(110);
+    expect(list.count).toBe(90);
     const codes = list.groups.flatMap((group) => group.items.map((item) => item.code));
-    for (const code of ["GD-01", "PV-01", "PV-02", "SP-02", "OD-03", "HP-01", "PV-03", "WC-02", "DS-03"]) expect(codes).not.toContain(code);
+    for (const code of ["GD-01", "PV-01", "PV-02", "SP-02", "OD-03", "HP-01", "PV-03", "WC-02", "WC-04", "WC-05", "WC-06", "DS-03"]) expect(codes).not.toContain(code);
+    for (const code of ["WC-01", "WC-03", "CL-08", "CL-14", "OD-09", "OD-13"]) expect(codes).toContain(code);
     // Cleaning is its own group on the list, at the price in the menu file.
     const cleaning = list.groups.find((group) => group.group === "Cleaning");
     expect(cleaning?.items.find((item) => item.code === "CL-02")).toMatchObject({ name: "Turnover, entry or exit clean, 2 or 3 bedrooms", ownerPriceCents: 27000 });

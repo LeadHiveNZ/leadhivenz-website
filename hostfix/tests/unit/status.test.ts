@@ -13,9 +13,9 @@ describe("the setup checklist", () => {
     expect(keys).toEqual(["database", "email", "sms", "payments", "timer", "photos", "address-lookup", "map-pictures", "push", "hourly-rates", "pixel", "capi", "analytics", "copy", "legal"]);
   });
 
-  it("lists app notifications as still to do until the three VAPID settings are set, and the hourly rates as to confirm (DECISIONS.md, 2026-11-20, third entry)", async () => {
+  it("lists app notifications as still to do until the three VAPID settings are set, and the hourly rates as confirmed (DECISIONS.md, 2026-11-24, second entry)", async () => {
     expect(await statusOf("push")).toMatchObject({ state: "todo", detail: expect.stringContaining("VAPID_PUBLIC_KEY") });
-    expect(await statusOf("hourly-rates")).toMatchObject({ state: "todo", detail: expect.stringContaining("To confirm before launch") });
+    expect(await statusOf("hourly-rates")).toMatchObject({ state: "ok", detail: expect.stringContaining("Confirmed 24 Nov 2026: plumber NZ$160, electrician NZ$160, gasfitter NZ$170, handyman NZ$110") });
     process.env.VAPID_PUBLIC_KEY = "public";
     process.env.VAPID_PRIVATE_KEY = "private";
     process.env.VAPID_SUBJECT = "mailto:hello@example.com";
@@ -44,8 +44,9 @@ describe("the setup checklist", () => {
 
   it("marks nothing that needs a key or an account as ready on a fresh install", async () => {
     const items = await setupStatus();
-    // Only the page copy can be done without any outside account: the words and the brand details are in the code.
-    expect(items.filter((item) => item.state === "ok").map((item) => item.key)).toEqual(["copy"]);
+    // Only what is decided in the code is done without any outside account: the hourly rates, confirmed 24 Nov 2026
+    // (DECISIONS.md, 2026-11-24, second entry), and the page copy (the words and the brand details).
+    expect(items.filter((item) => item.state === "ok").map((item) => item.key)).toEqual(["hourly-rates", "copy"]);
   });
 
   it("never claims the legal pages are done until a person has reviewed them", async () => {
