@@ -312,6 +312,37 @@ export const markets: Market[] = [
       ],
     },
   }),
+  // Wānaka (DECISIONS.md, 2026-11-24, third entry): the follow-up straight after Queenstown. The same prices,
+  // fees and settings as Queenstown, its menu and parts list loaded from Queenstown's files (SHARED_SEED in
+  // src/lib/db/seed-core.ts), and its own tradies. Starts on the waitlist; switch it to live on Admin > Markets.
+  defineMarket({
+    slug: "wanaka",
+    name: "Wānaka",
+    country: "NZ",
+    timezone: "Pacific/Auckland",
+    mapCentre: { lat: -44.6998, lng: 169.1324 },
+    tiers: [
+      {
+        key: "essential",
+        name: "Essential",
+        monthlyPriceCents: 0,
+        blurb: "Free to join. Fixed prices, charged only when something is fixed. A tradie on site within 24 hours, or 4 when it's urgent.",
+      },
+      {
+        key: "portfolio",
+        name: "Portfolio",
+        monthlyPriceCents: 60000,
+        billingBasis: "per_account",
+        bands: [
+          { from: 10, to: 24, cents: 60000 },
+          { from: 25, to: 49, cents: 90000 },
+          { from: 50, to: 99, cents: 120000 },
+          { from: 100, to: null, cents: null },
+        ],
+        blurb: "For managers with 10 or more properties. One monthly retainer for the whole portfolio, plus the same fixed job prices.",
+      },
+    ],
+  }),
 ];
 
 /** The market the public landing pages sell when no town is named in the link. */

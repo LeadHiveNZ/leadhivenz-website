@@ -61,8 +61,20 @@ function cents(dollars: number, what: string): number {
   return value;
 }
 
+/**
+ * Markets that load another market's menu and parts list instead of a file of their own.
+ * Wānaka charges Queenstown's prices (DECISIONS.md, 2026-11-24, third entry): one file, so the two cannot drift
+ * at set-up. After set-up each market's prices live in the database and are edited on the admin screen.
+ */
+export const SHARED_SEED: Record<string, string> = { wanaka: "queenstown" };
+
+function seedSlug(seedDir: string, kind: "menu" | "parts", slug: string): string {
+  const shared = SHARED_SEED[slug];
+  return shared && !fs.existsSync(path.join(seedDir, `${kind}-${slug}.json`)) ? shared : slug;
+}
+
 export function readMenuSeed(seedDir: string, slug: string): MenuSeed | null {
-  const file = path.join(seedDir, `menu-${slug}.json`);
+  const file = path.join(seedDir, `menu-${seedSlug(seedDir, "menu", slug)}.json`);
   if (!fs.existsSync(file)) return null;
   const parsed = JSON.parse(fs.readFileSync(file, "utf8")) as MenuSeed;
   if (!Array.isArray(parsed.items)) throw new Error(`${file} has no "items" list.`);
@@ -176,7 +188,7 @@ export async function insertMenu(db: SeedTarget, slug: string, items: MenuSeedIt
 export type PartsSeedItem = { code: string; name: string; priceDollars: number; source: string };
 
 export function readPartsSeed(seedDir: string, slug: string): PartsSeedItem[] | null {
-  const file = path.join(seedDir, `parts-${slug}.json`);
+  const file = path.join(seedDir, `parts-${seedSlug(seedDir, "parts", slug)}.json`);
   if (!fs.existsSync(file)) return null;
   const parsed = JSON.parse(fs.readFileSync(file, "utf8")) as { items?: PartsSeedItem[] };
   if (!Array.isArray(parsed.items)) throw new Error(`${file} has no "items" list.`);

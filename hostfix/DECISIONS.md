@@ -9,6 +9,16 @@ price, a fee or a promise, add a line here saying what and why.
 
 ---
 
+## 2026-11-24 (third entry) — Wānaka as its own market, at Queenstown's prices
+
+Joe: "I am launching Queenstown but following up straight away in Wānaka", and "Wānaka and Queenstown prices should be
+the same". Wānaka is a second market in `config/markets.ts` (slug `wanaka`, map centre the town), starting on the
+waitlist. Its menu and parts list are Queenstown's files (`SHARED_SEED` in `src/lib/db/seed-core.ts`), so the 110 jobs,
+the hourly rates, the surcharges, the fee and every setting start identical. Tradies, owners and jobs are separate per
+market: a Wānaka job is only offered to tradies on the Wānaka market. After set-up each market's prices are edited on
+Admin > Markets, one market at a time: change a price in both if it should stay the same. Going live is switching
+Wānaka's stage to live there.
+
 ## 2026-11-24 (second entry) — Fixed prices by size, not hours; hourly rates only for plumbers, electricians, gasfitters and handymen, confirmed
 
 (Decided by the founder on 24 Nov 2026, NZ time. No migration. Tests: `tests/unit/trades.test.ts` ("fixed prices by size", amounts worked

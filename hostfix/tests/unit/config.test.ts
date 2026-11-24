@@ -34,7 +34,8 @@ describe("markets", () => {
       expect(tier.quarterlyCheck).toBe(false);
     }
     expect(Number.isInteger(market.foundingDeposit.amountCents)).toBe(true);
-    expect(market.foundingDeposit.amountCents).toBeGreaterThanOrEqual(100);
+    // A deposit on offer has a real amount. Wānaka never had one (the deposit ended 2026-11-17, before it existed).
+    if (market.foundingDeposit.enabled) expect(market.foundingDeposit.amountCents).toBeGreaterThanOrEqual(100);
   });
 
   it("the launch market is Queenstown: Essential free to join, Portfolio from NZ$600, on site in 24 hours, 4 hours when urgent", () => {
@@ -191,5 +192,22 @@ describe("the Queenstown menu file", () => {
     expect(menu.offMenu.diagnosisFeeDollars).toBe(5 * Math.round(menu.offMenu.diagnosisTradiePayoutDollars / 0.85 / 5));
     // The limit sits above every job on the menu, so being asked means something unusual was found.
     expect(Math.max(...items.map((item) => item.ownerPriceDollars))).toBeLessThan(menu.offMenu.ownerApprovalAboveDollars);
+  });
+});
+
+describe("Wānaka", () => {
+  it("loads Queenstown's menu and parts list, so the two start at the same prices (DECISIONS.md, 2026-11-24, third entry)", async () => {
+    const path = await import("node:path");
+    const { readMenuSeed, readPartsSeed } = await import("@/lib/db/seed-core");
+    const dir = path.join(process.cwd(), "seed");
+    expect(readMenuSeed(dir, "wanaka")).toEqual(readMenuSeed(dir, "queenstown"));
+    expect(readMenuSeed(dir, "wanaka")!.items.length).toBe(110);
+    expect(readPartsSeed(dir, "wanaka")).toEqual(readPartsSeed(dir, "queenstown"));
+    const wanaka = markets.find((m) => m.slug === "wanaka")!;
+    const queenstown = markets.find((m) => m.slug === "queenstown")!;
+    expect(wanaka.stage).toBe("waitlist");
+    const { slug: _a, name: _b, mapCentre: _c, foundingDeposit: _d, ...w } = wanaka;
+    const { slug: _e, name: _f, mapCentre: _g, foundingDeposit: _h, ...q } = queenstown;
+    expect(w).toEqual(q);
   });
 });
