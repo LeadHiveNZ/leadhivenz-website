@@ -1,8 +1,8 @@
-import AGREEMENT_TEXT from "@/content/tradie-agreement-21-nov-2026.md?raw";
+import AGREEMENT_TEXT from "@/content/tradie-agreement-24-nov-2026.md?raw";
 
 /** Shared rules for /tradies/join: used by the form (for friendly errors) and the server (the real check). */
 export { AGREEMENT_TEXT };
-export const AGREEMENT_VERSION = "21 November 2026";
+export const AGREEMENT_VERSION = "24 November 2026";
 export const TRADES: [string, string][] = [
   ["plumber", "Plumber"],
   ["electrician", "Electrician"],
