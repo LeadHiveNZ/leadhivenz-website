@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en-NZ">
+<head>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --plum:#3b1e3f; --plum-d:#2a132d; --lime:#d4f23a; --sand:#f7f2ea; --ink:#24122a; --muted:#6a5b70; --tint:#ebe3f0; --line:#e2d9e6; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:#999; font-family:Inter, sans-serif; color:var(--ink); }
+  .slide { width:1080px; height:1350px; position:relative; overflow:hidden; padding:90px 88px; display:flex; flex-direction:column; margin:0 0 20px; }
+  .plum { background:var(--plum); color:#fff; }
+  .sand { background:var(--sand); }
+  .lime { background:var(--lime); color:var(--plum-d); }
+  h1,h2,.big { font-family:'Bricolage Grotesque', sans-serif; letter-spacing:-0.035em; line-height:0.98; font-weight:800; }
+  h1 { font-size:112px; }
+  h2 { font-size:88px; }
+  .mark { color:var(--lime); }
+  .plum-mark { color:var(--plum); background:var(--lime); padding:0 14px; border-radius:14px; }
+  .kicker { font-weight:700; font-size:30px; letter-spacing:0.08em; text-transform:uppercase; opacity:.75; margin-bottom:34px; }
+  p.lead { font-size:40px; line-height:1.32; margin-top:40px; font-weight:500; }
+  .top { display:flex; justify-content:space-between; align-items:center; }
+  .logo { display:flex; align-items:center; gap:14px; font-family:'Bricolage Grotesque'; font-weight:800; font-size:40px; letter-spacing:-0.04em; }
+  .count { font-size:26px; font-weight:600; opacity:.6; }
+  .grow { flex:1; display:flex; flex-direction:column; justify-content:center; }
+  .swipe { font-size:30px; font-weight:600; display:flex; align-items:center; gap:14px; }
+  .pill { display:inline-block; background:var(--lime); color:var(--plum-d); font-weight:700; font-size:30px; padding:14px 26px; border-radius:999px; }
+  .bubble { background:#fff; color:var(--ink); border-radius:30px; padding:30px 36px; font-size:36px; line-height:1.3; font-weight:500; box-shadow:0 10px 30px rgba(0,0,0,.18); max-width:760px; }
+  .bubble small { display:block; font-size:24px; color:var(--muted); font-weight:600; margin-bottom:8px; }
+  .x { color:#c0392b; font-weight:800; }
+  ul.checks { list-style:none; margin-top:50px; }
+  ul.checks li { font-size:42px; font-weight:600; padding:26px 0; border-bottom:2px solid rgba(255,255,255,.15); display:flex; gap:26px; align-items:flex-start; line-height:1.2; }
+  .sand ul.checks li { border-color:var(--line); }
+  .tick { flex:none; width:58px; height:58px; border-radius:50%; background:var(--lime); color:var(--plum-d); display:flex; align-items:center; justify-content:center; font-size:34px; font-weight:800; }
+  .steps { margin-top:46px; display:flex; flex-direction:column; gap:26px; }
+  .step { display:flex; gap:30px; align-items:center; background:#fff; border-radius:30px; padding:30px 34px; }
+  .num { flex:none; width:86px; height:86px; border-radius:24px; background:var(--plum); color:var(--lime); font-family:'Bricolage Grotesque'; font-weight:800; font-size:50px; display:flex; align-items:center; justify-content:center; }
+  .step b { display:block; font-size:40px; letter-spacing:-0.01em; }
+  .step span { font-size:30px; color:var(--muted); line-height:1.3; }
+  .prices { margin-top:40px; background:var(--plum-d); border-radius:36px; padding:18px 44px; }
+  .row { display:flex; justify-content:space-between; align-items:baseline; padding:20px 0; border-bottom:2px solid rgba(255,255,255,.12); font-size:40px; font-weight:500; }
+  .row:last-child { border:none; }
+  .row b { font-family:'Bricolage Grotesque'; font-size:58px; color:var(--lime); font-weight:800; letter-spacing:-0.02em; }
+  .note { margin-top:34px; font-size:32px; font-weight:600; opacity:.85; }
+  .cta { margin-top:56px; display:inline-flex; align-items:center; gap:18px; background:var(--plum); color:#fff; font-weight:700; font-size:44px; padding:30px 46px; border-radius:999px; align-self:flex-start; }
+  .lime .cta { background:var(--plum-d); }
+  .foot { font-size:28px; font-weight:600; opacity:.7; }
+  .ring { position:absolute; border-radius:50%; border:3px solid rgba(212,242,58,.25); }
+</style>
+</head>
+<body><style>
+.job{display:flex;justify-content:space-between;align-items:center;background:#fff;border-radius:26px;padding:26px 30px;margin-top:20px}
+.job b{display:block;font-size:34px;letter-spacing:-0.01em}
+.job span{font-size:26px;color:var(--muted)}
+.st{font-size:24px;font-weight:700;padding:10px 18px;border-radius:999px;white-space:nowrap}
+.st.go{background:var(--lime);color:var(--plum-d)}
+.st.done{background:var(--plum);color:var(--lime)}
+.st.wait{background:var(--tint);color:var(--plum)}
+.phone{margin-top:46px;background:#fff;border-radius:44px;padding:40px;color:var(--ink);box-shadow:0 20px 50px rgba(0,0,0,.25);max-width:760px}
+.phone small{font-size:24px;color:var(--muted);font-weight:600}
+.field{margin-top:18px;border:2px solid var(--line);border-radius:20px;padding:20px 24px;font-size:32px}
+.photo{margin-top:18px;height:150px;border-radius:20px;background:repeating-linear-gradient(45deg,#ebe3f0,#ebe3f0 14px,#f7f2ea 14px,#f7f2ea 28px);display:flex;align-items:center;justify-content:center;font-size:28px;color:var(--muted);font-weight:600}
+.btn{margin-top:22px;background:var(--plum);color:#fff;border-radius:999px;padding:22px;text-align:center;font-size:32px;font-weight:700}
+</style><section class="slide plum" id="s1" ><div class="top"><div class="logo"><svg width="46" height="46" viewBox="0 0 64 64" aria-hidden="true"><rect x="11" y="6" width="26" height="52" rx="4" fill="currentColor"/><path d="M37 6 L53 13 V51 L37 58 Z" fill="#d4f23a" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/><circle cx="47" cy="33" r="2.6" fill="currentColor"/></svg>HostFix</div><div class="count">1 / 7</div></div><div class="ring" style="width:900px;height:900px;right:-380px;top:-300px"></div>
+<div class="grow"><div class="kicker">Property managers · Queenstown &amp; Wānaka</div>
+<h1 style="font-size:104px">Managing 30 holiday homes?<br>Your phone shouldn't be the <span class="mark">maintenance system.</span></h1></div>
+<div class="swipe">There's a better way <span style="color:var(--lime)">→</span></div></section>
+<section class="slide sand" id="s2" ><div class="top"><div class="logo"><svg width="46" height="46" viewBox="0 0 64 64" aria-hidden="true"><rect x="11" y="6" width="26" height="52" rx="4" fill="currentColor"/><path d="M37 6 L53 13 V51 L37 58 Z" fill="#d4f23a" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/><circle cx="47" cy="33" r="2.6" fill="currentColor"/></svg>HostFix</div><div class="count">2 / 7</div></div><div class="grow"><div class="kicker" style="color:var(--plum)">Sound familiar?</div>
+<h2>Every week, the <span class="plum-mark">same chaos.</span></h2>
+<ul class="checks" style="margin-top:56px">
+<li><span class="tick" style="background:var(--plum);color:var(--lime)">✕</span>Cleaners texting you photos at 9pm</li>
+<li><span class="tick" style="background:var(--plum);color:var(--lime)">✕</span>Ringing round tradies who are booked out</li>
+<li><span class="tick" style="background:var(--plum);color:var(--lime)">✕</span>Owners asking "so what happened with the heat pump?"</li>
+<li><span class="tick" style="background:var(--plum);color:var(--lime)">✕</span>Splitting tradie invoices across owners</li></ul></div>
+<div class="swipe" style="color:var(--plum)">Here's HostFix <span>→</span></div></section>
+<section class="slide lime" id="s3" ><div class="top"><div class="logo"><svg width="46" height="46" viewBox="0 0 64 64" aria-hidden="true"><rect x="11" y="6" width="26" height="52" rx="4" fill="currentColor"/><path d="M37 6 L53 13 V51 L37 58 Z" fill="#d4f23a" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/><circle cx="47" cy="33" r="2.6" fill="currentColor"/></svg>HostFix</div><div class="count">3 / 7</div></div><div class="grow"><h2>Your cleaners report it, right from the turnover.</h2>
+<div class="phone"><small>Kelvin Heights House · your team link</small>
+<div class="field">Shower is draining really slowly</div>
+<div class="photo">📷 photo attached</div>
+<div class="btn">Send to my manager</div></div>
+<p class="lead" style="font-size:34px;margin-top:36px">Each cleaner gets their own link. No app to download, no account. Choose whether jobs go straight out or wait for your yes.</p></div>
+<div class="swipe">Then you see everything <span>→</span></div></section>
+<section class="slide sand" id="s4" ><div class="top"><div class="logo"><svg width="46" height="46" viewBox="0 0 64 64" aria-hidden="true"><rect x="11" y="6" width="26" height="52" rx="4" fill="currentColor"/><path d="M37 6 L53 13 V51 L37 58 Z" fill="#d4f23a" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/><circle cx="47" cy="33" r="2.6" fill="currentColor"/></svg>HostFix</div><div class="count">4 / 7</div></div><div class="grow" style="background:transparent"><div class="kicker" style="color:var(--plum)">Your dashboard</div>
+<h2>Every job. Every property. <span class="plum-mark">One place.</span></h2>
+<div style="margin-top:40px">
+<div class="job"><div><b>Kelvin Heights House</b><span>Slow shower drain · Plumber</span></div><div class="st go">On the way · 2–4pm</div></div>
+<div class="job"><div><b>Frankton Apartment 3</b><span>Heat pump fault · Heat pump tech</span></div><div class="st done">Done ✓ photos</div></div>
+<div class="job"><div><b>Arthurs Point Chalet</b><span>Light not working · Electrician</span></div><div class="st go">Accepted · tomorrow</div></div>
+<div class="job"><div><b>Lake Hayes Cottage</b><span>Extra work quoted · $340</span></div><div class="st wait">Waiting for your yes</div></div>
+</div></div>
+<div class="swipe" style="color:var(--plum)">No quotes to chase <span>→</span></div></section>
+<section class="slide plum" id="s5" ><div class="top"><div class="logo"><svg width="46" height="46" viewBox="0 0 64 64" aria-hidden="true"><rect x="11" y="6" width="26" height="52" rx="4" fill="currentColor"/><path d="M37 6 L53 13 V51 L37 58 Z" fill="#d4f23a" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/><circle cx="47" cy="33" r="2.6" fill="currentColor"/></svg>HostFix</div><div class="count">5 / 7</div></div><div class="grow"><div class="kicker">Fixed prices, your limits</div>
+<h2>No quotes. No <span class="mark">surprises.</span></h2>
+<ul class="checks">
+<li><span class="tick">✓</span>Fixed menu prices, call-out included: tap $235, blocked drain $245</li>
+<li><span class="tick">✓</span>Set a limit per property. Anything over it waits for your yes</li>
+<li><span class="tick">✓</span>Insured, licence-checked, record-checked local tradies</li>
+<li><span class="tick">✓</span>On site within 24 hours, or 4 if it's urgent</li></ul></div>
+<div class="swipe">And for your owners <span style="color:var(--lime)">→</span></div></section>
+<section class="slide sand" id="s6" ><div class="top"><div class="logo"><svg width="46" height="46" viewBox="0 0 64 64" aria-hidden="true"><rect x="11" y="6" width="26" height="52" rx="4" fill="currentColor"/><path d="M37 6 L53 13 V51 L37 58 Z" fill="#d4f23a" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/><circle cx="47" cy="33" r="2.6" fill="currentColor"/></svg>HostFix</div><div class="count">6 / 7</div></div><div class="grow" ><div class="kicker" style="color:var(--plum)">For your owners</div>
+<h2>Proof of every job, <span class="plum-mark">ready to send.</span></h2>
+<ul class="checks">
+<li><span class="tick">✓</span>Before and after photos on every job</li>
+<li><span class="tick">✓</span>An invoice for every job, plus a monthly statement</li>
+<li><span class="tick">✓</span>Add all your properties at once: paste your spreadsheet</li>
+<li><span class="tick">✓</span>Bring your own go-to tradies onto the app</li></ul></div>
+<div class="swipe" style="color:var(--plum)">Getting started <span>→</span></div></section>
+<section class="slide plum" id="s7" ><div class="top"><div class="logo"><svg width="46" height="46" viewBox="0 0 64 64" aria-hidden="true"><rect x="11" y="6" width="26" height="52" rx="4" fill="currentColor"/><path d="M37 6 L53 13 V51 L37 58 Z" fill="#d4f23a" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/><circle cx="47" cy="33" r="2.6" fill="currentColor"/></svg>HostFix</div><div class="count">7 / 7</div></div><div class="ring" style="width:1000px;height:1000px;left:-420px;bottom:-460px"></div>
+<div class="grow"><div class="pill" style="align-self:flex-start;margin-bottom:44px">Free to join</div>
+<h1 style="font-size:100px">Spend your time on guests, not <span class="mark">tradies.</span></h1>
+<p class="lead">Launching in Queenstown, with Wānaka straight after. Managers get set up personally.</p>
+<div class="cta" style="background:var(--lime);color:var(--plum-d)">Book a walkthrough · hostfix.co.nz</div></div>
+<div class="foot">Link in bio · HostFix, fixed-price repairs for holiday homes</div></section>
+</body></html>
