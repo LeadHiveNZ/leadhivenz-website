@@ -220,7 +220,7 @@ export async function setupStatus(): Promise<StatusItem[]> {
   // The fixed hourly rates for extra work, confirmed by the founder on 24 Nov 2026 (DECISIONS.md, 2026-11-24, second entry).
   items.push({
     key: "hourly-rates", label: "Hourly rates for extra work", state: "ok",
-    detail: "Confirmed 24 Nov 2026: plumber NZ$160, electrician NZ$160, gasfitter NZ$170, handyman NZ$110 an hour (what the owner pays, GST included; NZ$160 is NZ$139 before GST, inside Queenstown's 2026 plumber NZ$90-150 and electrician NZ$125-150 + GST). Every other trade has no rate: the tradie prices extra work and the owner approves it. Change them on the Markets screen.",
+    detail: "Confirmed 24 Nov 2026: plumber NZ$160, electrician NZ$160, gasfitter NZ$170, handyman NZ$110 an hour by default; Queenstown and Wānaka NZ$10 more (25 Nov 2026), set on the Markets screen (what the owner pays, GST included; NZ$160 is NZ$139 before GST, inside Queenstown's 2026 plumber NZ$90-150 and electrician NZ$125-150 + GST). Every other trade has no rate: the tradie prices extra work and the owner approves it. Change them on the Markets screen.",
   });
 
   // Meta

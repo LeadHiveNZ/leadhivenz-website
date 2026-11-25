@@ -9,6 +9,16 @@ price, a fee or a promise, add a line here saying what and why.
 
 ---
 
+## 2026-11-25 — Queenstown and Wānaka hourly rates up NZ$10
+
+After a call with a Queenstown electrician (normal rate NZ$165 + GST; Queenstown electricians NZ$125-150 + GST for small
+jobs; up to 40 minutes each way across town in traffic), Joe raised the owner's hourly rate by NZ$10 in Queenstown and
+Wānaka: plumber and electrician NZ$170, gasfitter NZ$180, handyman NZ$120 (GST included; the tradie gets 85%: NZ$144.50,
+NZ$144.50, NZ$153, NZ$102, about NZ$10-20 an hour under a tradie's own rate, which Joe judges fair for jobs that come
+with no quoting, invoicing or chasing). Saved per market in `trade_rates` (migration
+`20261205000000_qt_wanaka_hourly_rates.sql`); the code defaults (`DEFAULT_HOURLY_RATES`) are unchanged for other towns.
+Menu prices are unchanged. Travel time across town is still an open question.
+
 ## 2026-11-24 (fourth entry) — Tradie agreement approved with changes; invoices on the tradie's behalf; record checks noted; light jobs
 
 Joe went through the tradie agreement and approved it with these changes (version **24 November 2026**, `TRADIE_AGREEMENT_VERSION`;

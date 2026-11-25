@@ -15,7 +15,7 @@ describe("the setup checklist", () => {
 
   it("lists app notifications as still to do until the three VAPID settings are set, and the hourly rates as confirmed (DECISIONS.md, 2026-11-24, second entry)", async () => {
     expect(await statusOf("push")).toMatchObject({ state: "todo", detail: expect.stringContaining("VAPID_PUBLIC_KEY") });
-    expect(await statusOf("hourly-rates")).toMatchObject({ state: "ok", detail: expect.stringContaining("Confirmed 24 Nov 2026: plumber NZ$160, electrician NZ$160, gasfitter NZ$170, handyman NZ$110") });
+    expect(await statusOf("hourly-rates")).toMatchObject({ state: "ok", detail: expect.stringContaining("Queenstown and Wānaka NZ$10 more") });
     process.env.VAPID_PUBLIC_KEY = "public";
     process.env.VAPID_PRIVATE_KEY = "private";
     process.env.VAPID_SUBJECT = "mailto:hello@example.com";
