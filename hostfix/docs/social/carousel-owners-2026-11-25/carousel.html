@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en-NZ">
+<head>
+<meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --plum:#3b1e3f; --plum-d:#2a132d; --lime:#d4f23a; --sand:#f7f2ea; --ink:#24122a; --muted:#6a5b70; --tint:#ebe3f0; --line:#e2d9e6; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:#999; font-family:Inter, sans-serif; color:var(--ink); }
+  .slide { width:1080px; height:1350px; position:relative; overflow:hidden; padding:90px 88px; display:flex; flex-direction:column; margin:0 0 20px; }
+  .plum { background:var(--plum); color:#fff; }
+  .sand { background:var(--sand); }
+  .lime { background:var(--lime); color:var(--plum-d); }
+  h1,h2,.big { font-family:'Bricolage Grotesque', sans-serif; letter-spacing:-0.035em; line-height:0.98; font-weight:800; }
+  h1 { font-size:112px; }
+  h2 { font-size:88px; }
+  .mark { color:var(--lime); }
+  .plum-mark { color:var(--plum); background:var(--lime); padding:0 14px; border-radius:14px; }
+  .kicker { font-weight:700; font-size:30px; letter-spacing:0.08em; text-transform:uppercase; opacity:.75; margin-bottom:34px; }
+  p.lead { font-size:40px; line-height:1.32; margin-top:40px; font-weight:500; }
+  .top { display:flex; justify-content:space-between; align-items:center; }
+  .logo { display:flex; align-items:center; gap:14px; font-family:'Bricolage Grotesque'; font-weight:800; font-size:40px; letter-spacing:-0.04em; }
+  .count { font-size:26px; font-weight:600; opacity:.6; }
+  .grow { flex:1; display:flex; flex-direction:column; justify-content:center; }
+  .swipe { font-size:30px; font-weight:600; display:flex; align-items:center; gap:14px; }
+  .pill { display:inline-block; background:var(--lime); color:var(--plum-d); font-weight:700; font-size:30px; padding:14px 26px; border-radius:999px; }
+  .bubble { background:#fff; color:var(--ink); border-radius:30px; padding:30px 36px; font-size:36px; line-height:1.3; font-weight:500; box-shadow:0 10px 30px rgba(0,0,0,.18); max-width:760px; }
+  .bubble small { display:block; font-size:24px; color:var(--muted); font-weight:600; margin-bottom:8px; }
+  .x { color:#c0392b; font-weight:800; }
+  ul.checks { list-style:none; margin-top:50px; }
+  ul.checks li { font-size:42px; font-weight:600; padding:26px 0; border-bottom:2px solid rgba(255,255,255,.15); display:flex; gap:26px; align-items:flex-start; line-height:1.2; }
+  .sand ul.checks li { border-color:var(--line); }
+  .tick { flex:none; width:58px; height:58px; border-radius:50%; background:var(--lime); color:var(--plum-d); display:flex; align-items:center; justify-content:center; font-size:34px; font-weight:800; }
+  .steps { margin-top:46px; display:flex; flex-direction:column; gap:26px; }
+  .step { display:flex; gap:30px; align-items:center; background:#fff; border-radius:30px; padding:30px 34px; }
+  .num { flex:none; width:86px; height:86px; border-radius:24px; background:var(--plum); color:var(--lime); font-family:'Bricolage Grotesque'; font-weight:800; font-size:50px; display:flex; align-items:center; justify-content:center; }
+  .step b { display:block; font-size:40px; letter-spacing:-0.01em; }
+  .step span { font-size:30px; color:var(--muted); line-height:1.3; }
+  .prices { margin-top:40px; background:var(--plum-d); border-radius:36px; padding:18px 44px; }
+  .row { display:flex; justify-content:space-between; align-items:baseline; padding:20px 0; border-bottom:2px solid rgba(255,255,255,.12); font-size:40px; font-weight:500; }
+  .row:last-child { border:none; }
+  .row b { font-family:'Bricolage Grotesque'; font-size:58px; color:var(--lime); font-weight:800; letter-spacing:-0.02em; }
+  .note { margin-top:34px; font-size:32px; font-weight:600; opacity:.85; }
+  .cta { margin-top:56px; display:inline-flex; align-items:center; gap:18px; background:var(--plum); color:#fff; font-weight:700; font-size:44px; padding:30px 46px; border-radius:999px; align-self:flex-start; }
+  .lime .cta { background:var(--plum-d); }
+  .foot { font-size:28px; font-weight:600; opacity:.7; }
+  .ring { position:absolute; border-radius:50%; border:3px solid rgba(212,242,58,.25); }
+</style>
+</head>
+<body>
+
+<!-- 1 HOOK -->
+<section class="slide plum" id="s1">
+  <div class="ring" style="width:900px;height:900px;right:-380px;top:-300px"></div>
+  <div class="top"><div class="logo"><svg width="46" height="46" viewBox="0 0 64 64" aria-hidden="true"><rect x="11" y="6" width="26" height="52" rx="4" fill="currentColor"/><path d="M37 6 L53 13 V51 L37 58 Z" fill="#d4f23a" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/><circle cx="47" cy="33" r="2.6" fill="currentColor"/></svg>HostFix</div><div class="count">1 / 7</div></div>
+  <div class="grow">
+    <div class="kicker">Queenstown &amp; Wānaka holiday homes</div>
+    <h1>Guest checks in at <span class="mark">3pm.</span><br>The toilet's running.</h1>
+    <div style="margin-top:60px; display:flex; flex-direction:column; gap:22px;">
+      <div class="bubble"><small>You, 11:42am</small>Hey mate, any chance you can come today?</div>
+      <div class="bubble" style="align-self:flex-end; background:var(--tint)"><small>Plumber</small><span class="x">Read 11:43am</span> · no reply</div>
+    </div>
+  </div>
+  <div class="swipe">There's an easier way <span style="color:var(--lime)">→</span></div>
+</section>
+
+<!-- 2 PROBLEM -->
+<section class="slide sand" id="s2">
+  <div class="top"><div class="logo"><svg width="46" height="46" viewBox="0 0 64 64" aria-hidden="true"><rect x="11" y="6" width="26" height="52" rx="4" fill="currentColor"/><path d="M37 6 L53 13 V51 L37 58 Z" fill="#d4f23a" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/><circle cx="47" cy="33" r="2.6" fill="currentColor"/></svg>HostFix</div><div class="count">2 / 7</div></div>
+  <div class="grow">
+    <div class="kicker" style="color:var(--plum)">Sound familiar?</div>
+    <h2>Fixing one tap shouldn't take <span class="plum-mark">five phone calls.</span></h2>
+    <ul class="checks" style="margin-top:56px">
+      <li><span class="tick" style="background:var(--plum);color:var(--lime)">✕</span>Ringing round tradies who are booked out</li>
+      <li><span class="tick" style="background:var(--plum);color:var(--lime)">✕</span>Waiting on a quote for a 20-minute job</li>
+      <li><span class="tick" style="background:var(--plum);color:var(--lime)">✕</span>Letting someone in when you're not even in town</li>
+      <li><span class="tick" style="background:var(--plum);color:var(--lime)">✕</span>A surprise invoice two weeks later</li>
+    </ul>
+  </div>
+  <div class="swipe" style="color:var(--plum)">Here's how HostFix works <span>→</span></div>
+</section>
+
+<!-- 3 HOW IT WORKS -->
+<section class="slide sand" id="s3" style="background:var(--tint)">
+  <div class="top"><div class="logo"><svg width="46" height="46" viewBox="0 0 64 64" aria-hidden="true"><rect x="11" y="6" width="26" height="52" rx="4" fill="currentColor"/><path d="M37 6 L53 13 V51 L37 58 Z" fill="#d4f23a" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/><circle cx="47" cy="33" r="2.6" fill="currentColor"/></svg>HostFix</div><div class="count">3 / 7</div></div>
+  <div class="grow">
+    <h2>How it works</h2>
+    <div class="steps">
+      <div class="step"><div class="num">1</div><div><b>Report it in 30 seconds</b><span>You, your cleaner or your guest. A photo and a line.</span></div></div>
+      <div class="step"><div class="num">2</div><div><b>See the fixed price</b><span>Before anyone's booked. Call-out included.</span></div></div>
+      <div class="step"><div class="num">3</div><div><b>A local tradie is there</b><span>Within 24 hours, or 4 if it's urgent. They let themselves in.</span></div></div>
+      <div class="step"><div class="num">4</div><div><b>Before and after photos</b><span>Charged only once it's fixed. Invoice in your inbox.</span></div></div>
+    </div>
+  </div>
+  <div class="swipe" style="color:var(--plum)">So what does it cost? <span>→</span></div>
+</section>
+
+<!-- 4 PRICES -->
+<section class="slide plum" id="s4">
+  <div class="top"><div class="logo"><svg width="46" height="46" viewBox="0 0 64 64" aria-hidden="true"><rect x="11" y="6" width="26" height="52" rx="4" fill="currentColor"/><path d="M37 6 L53 13 V51 L37 58 Z" fill="#d4f23a" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/><circle cx="47" cy="33" r="2.6" fill="currentColor"/></svg>HostFix</div><div class="count">4 / 7</div></div>
+  <div class="grow">
+    <div class="kicker">The actual price list</div>
+    <h2>No quotes.<br>No <span class="mark">surprises.</span></h2>
+    <div class="prices">
+      <div class="row">Dripping tap <b>$235</b></div>
+      <div class="row">Blocked toilet or drain <b>$245</b></div>
+      <div class="row">Power point or switch <b>$225</b></div>
+      <div class="row">Heat pump fault <b>$245</b></div>
+      <div class="row">Light bulbs (up to 5) <b>$165</b></div>
+    </div>
+    <div class="note">Call-out included · GST included · 100+ jobs on the full list</div><div style="height:30px"></div>
+  </div>
+  <div class="swipe">Who comes to your place? <span style="color:var(--lime)">→</span></div>
+</section>
+
+<!-- 5 TRUST -->
+<section class="slide sand" id="s5">
+  <div class="top"><div class="logo"><svg width="46" height="46" viewBox="0 0 64 64" aria-hidden="true"><rect x="11" y="6" width="26" height="52" rx="4" fill="currentColor"/><path d="M37 6 L53 13 V51 L37 58 Z" fill="#d4f23a" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/><circle cx="47" cy="33" r="2.6" fill="currentColor"/></svg>HostFix</div><div class="count">5 / 7</div></div>
+  <div class="grow">
+    <div class="kicker" style="color:var(--plum)">Who comes to your place</div>
+    <h2>Local tradies, <span class="plum-mark">checked by a person.</span></h2>
+    <ul class="checks">
+      <li><span class="tick">✓</span>Public liability insurance on file</li>
+      <li><span class="tick">✓</span>Licence checked on the public register</li>
+      <li><span class="tick">✓</span>Ministry of Justice record check</li>
+      <li><span class="tick">✓</span>Your lockbox code only goes to the tradie who takes the job</li>
+    </ul>
+  </div>
+  <div class="swipe" style="color:var(--plum)">And your cleaner can report it too <span>→</span></div>
+</section>
+
+<!-- 6 TEAM / GUEST -->
+<section class="slide lime" id="s6">
+  <div class="top"><div class="logo"><svg width="46" height="46" viewBox="0 0 64 64" aria-hidden="true"><rect x="11" y="6" width="26" height="52" rx="4" fill="currentColor"/><path d="M37 6 L53 13 V51 L37 58 Z" fill="#d4f23a" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/><circle cx="47" cy="33" r="2.6" fill="currentColor"/></svg>HostFix</div><div class="count">6 / 7</div></div>
+  <div class="grow">
+    <h2>You're not even there. That's fine.</h2>
+    <p class="lead">Your cleaner reports a problem from their phone during the turnover. Your guest scans the QR card on the fridge. You get a text and say yes.</p>
+    <p class="lead" style="margin-top:30px">Managing 10, 30 or 60 properties? Every job, every property, in one place.</p>
+  </div>
+  <div class="swipe">One more thing <span>→</span></div>
+</section>
+
+<!-- 7 CTA -->
+<section class="slide plum" id="s7">
+  <div class="ring" style="width:1000px;height:1000px;left:-420px;bottom:-460px"></div>
+  <div class="top"><div class="logo"><svg width="46" height="46" viewBox="0 0 64 64" aria-hidden="true"><rect x="11" y="6" width="26" height="52" rx="4" fill="currentColor"/><path d="M37 6 L53 13 V51 L37 58 Z" fill="#d4f23a" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/><circle cx="47" cy="33" r="2.6" fill="currentColor"/></svg>HostFix</div><div class="count">7 / 7</div></div>
+  <div class="grow">
+    <div class="pill" style="align-self:flex-start; margin-bottom:44px">Free to join</div>
+    <h1 style="font-size:104px">No monthly fee.<br>You only pay when something's <span class="mark">fixed.</span></h1>
+    <p class="lead">Launching in Queenstown, with Wānaka straight after.</p>
+    <div class="cta" style="background:var(--lime); color:var(--plum-d)">Get the price list · hostfix.co.nz</div>
+  </div>
+  <div class="foot">Link in bio · HostFix, fixed-price repairs for holiday homes</div>
+</section>
+
+</body>
+</html>
