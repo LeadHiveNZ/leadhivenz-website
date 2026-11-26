@@ -9,6 +9,17 @@ price, a fee or a promise, add a line here saying what and why.
 
 ---
 
+## 2026-11-26 — Compliance certificates on a job
+
+From a call with a Queenstown electrician: prescribed electrical work needs a Certificate of Compliance (and often an
+Electrical Safety Certificate) given to the owner, and gas and some plumbing work have their own. The tradie who did a
+job can now attach certificates to it (`src/lib/jobs/certificates.ts`, upload kind `certificate`, PDF/JPG/PNG, with a
+label from `CERTIFICATE_LABELS`), from Arrived until `CERTIFICATE_DAYS_AFTER` (60) days after Job done. They are kept with
+the job and the property; the owner sees and downloads them on the job page and is emailed when one is added; who may
+open the file follows the usual rule for a job's files (staff, the owner, the tradie). Migration
+`20261206000000_job_certificates.sql`. Not enforced: the app does not refuse Job done without a certificate (the law puts
+that duty on the tradie); the tradie agreement will say to add them when the law needs one, at the next version.
+
 ## 2026-11-25 — Queenstown and Wānaka hourly rates up NZ$10
 
 After a call with a Queenstown electrician (normal rate NZ$165 + GST; Queenstown electricians NZ$125-150 + GST for small

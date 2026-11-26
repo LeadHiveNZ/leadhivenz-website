@@ -12,7 +12,7 @@ import type { Db } from "@/lib/db/types";
  */
 
 /** "before" is the tradie's photo at Arrived; "completion" is the "after" photo at Job done (DECISIONS.md, 2026-11-19). */
-export type UploadKind = "property" | "report" | "before" | "completion" | "quote" | "receipt" | "licence" | "insurance_certificate" | "dispute";
+export type UploadKind = "property" | "report" | "before" | "completion" | "quote" | "receipt" | "licence" | "insurance_certificate" | "dispute" | "certificate";
 
 export type Upload = {
   id: string;
@@ -35,12 +35,14 @@ export type Upload = {
   takenAt: Date | null;
   /** A fingerprint of the file's bytes, so the same receipt is noticed if it is sent twice. */
   sha256: string | null;
+  /** A compliance certificate's name, chosen by the tradie (DECISIONS.md, 2026-11-26). Null for everything else. */
+  label: string | null;
 };
 
 type UploadRow = {
   id: string; created_at: Date; kind: UploadKind; storage_key: string; content_type: string; bytes: number;
   property_id: string | null; job_id: string | null; tradie_id: string | null; lead_id?: string | null; uploaded_by: string; attached: boolean;
-  lat?: number | string | null; lng?: number | string | null; taken_at?: Date | null; sha256?: string | null;
+  lat?: number | string | null; lng?: number | string | null; taken_at?: Date | null; sha256?: string | null; label?: string | null;
 };
 
 function rowToUpload(row: UploadRow): Upload {
@@ -50,6 +52,7 @@ function rowToUpload(row: UploadRow): Upload {
     lat: row.lat === null || row.lat === undefined ? null : Number(row.lat), lng: row.lng === null || row.lng === undefined ? null : Number(row.lng),
     takenAt: row.taken_at ? new Date(row.taken_at) : null,
     sha256: row.sha256 ?? null,
+    label: row.label ?? null,
   };
 }
 
@@ -75,7 +78,7 @@ const CERTIFICATE_TYPES = ["application/pdf", "image/jpeg", "image/png"];
  */
 export function checkFile(kind: UploadKind, contentType: string, bytes: Uint8Array): { ok: true; ext: string } | { ok: false; reason: string } {
   const type = TYPES[contentType];
-  if (kind === "insurance_certificate") {
+  if (kind === "insurance_certificate" || kind === "certificate") {
     if (!type || !CERTIFICATE_TYPES.includes(contentType)) return { ok: false, reason: "Please send the certificate as a PDF, JPG or PNG file." };
     if (bytes.byteLength === 0) return { ok: false, reason: "That file is empty." };
     if (bytes.byteLength > MAX_UPLOAD_BYTES) return { ok: false, reason: "That file is too big. The limit is 4 MB." };

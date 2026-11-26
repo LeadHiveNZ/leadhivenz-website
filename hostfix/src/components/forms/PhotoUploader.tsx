@@ -7,7 +7,7 @@ import { Icon } from "../ui/Icon";
 type Photo = { id: string; url: string; pdf: boolean };
 
 type Props = {
-  kind: "property" | "report" | "before" | "completion" | "quote" | "receipt" | "licence" | "dispute";
+  kind: "property" | "report" | "before" | "completion" | "quote" | "receipt" | "licence" | "dispute" | "certificate";
   /** The name the photo ids are sent under when the form is submitted. */
   name?: string;
   label: string;

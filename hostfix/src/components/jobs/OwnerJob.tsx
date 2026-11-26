@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { OwnerCertificates } from "./Certificates";
 import { answerLater, answerQuote, cancelOwnerJob, confirmJob, goAhead, objectNotDescribed, reportProblem, tradieNotHere } from "@/app/actions/owner";
 import { ActionForm, Area } from "@/components/forms/ActionForm";
 import { SubmitButton } from "@/components/forms/SubmitButton";
@@ -427,6 +428,8 @@ export function OwnerJob({ view, now, code, flash = {}, prices }: Props) {
           )}
         </Panel>
       )}
+
+      <OwnerCertificates certificates={view.certificates} query={photoQuery} timeZone={market.timezone} />
 
       {(job.status !== "cancelled" || money.payment) && view.lines.length > 0 && (
         <Panel title="The cost">

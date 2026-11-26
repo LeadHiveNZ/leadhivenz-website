@@ -20,10 +20,10 @@ import { findTeamLink } from "@/lib/team/service";
  * sent, and only the person who uploaded it can attach it.
  */
 
-const KINDS: UploadKind[] = ["property", "report", "before", "completion", "quote", "receipt", "licence", "dispute"];
+const KINDS: UploadKind[] = ["property", "report", "before", "completion", "quote", "receipt", "licence", "dispute", "certificate"];
 const OWNER_KINDS: UploadKind[] = ["property", "report", "dispute"];
 // The insurance certificate is not sent here: it may be a PDF, so it goes with the profile or sign-up form itself.
-const TRADIE_KINDS: UploadKind[] = ["before", "completion", "quote", "receipt", "licence"];
+const TRADIE_KINDS: UploadKind[] = ["before", "completion", "quote", "receipt", "licence", "certificate"];
 // A tradie's before and after photos carry where the phone was and when the photo says it was taken (DECISIONS.md, 2026-11-19).
 const STAMPED: UploadKind[] = ["before", "completion"];
 

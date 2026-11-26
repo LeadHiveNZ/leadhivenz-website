@@ -188,7 +188,7 @@ export async function logJob(db: Db, property: Property, overrides: Partial<NewJ
 
 /** A photo the tradie has uploaded, ready to attach when they arrive ("before") or finish ("completion", the after photo). */
 export async function photo(
-  db: Db, uploadedBy: string, kind: "before" | "completion" | "report" | "quote" | "receipt" = "completion",
+  db: Db, uploadedBy: string, kind: "before" | "completion" | "report" | "quote" | "receipt" | "certificate" = "completion",
   stamp: { lat?: number | null; lng?: number | null; takenAt?: Date | null; sha256?: string | null } = {},
 ): Promise<string> {
   const upload = await recordUpload(db, { kind, storageKey: `${kind}/test/${randomUUID()}.jpg`, contentType: "image/jpeg", bytes: 1234, uploadedBy, sha256: randomUUID().replace(/-/g, ""), ...stamp });

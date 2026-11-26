@@ -23,6 +23,7 @@ import { FAR_METRES } from "@/lib/jobs/arrival";
 import { flagWords, type CheckFlag } from "@/lib/jobs/checks";
 import { BeforeAfter, CostLines, Deadline, History, JobStatus, Panel, PhotoGrid } from "./JobParts";
 import { ArrivedButton, LocatedButton } from "./TradieClient";
+import { TradieCertificates } from "./Certificates";
 
 export type TradieJobFlash = { yours?: boolean; here?: boolean; quoted?: "wait" | "go" | null; done?: boolean; parts?: "wait" | "go" | null };
 
@@ -269,6 +270,10 @@ export function TradieJob({ view, now, code, flash = {}, propertyPhotos, priceLi
             </ActionForm>
           </Card>
         </>
+      )}
+
+      {(job.status === "on_site" || job.status === "awaiting_approval" || job.status === "completed") && job.outcome !== "no_access" && (
+        <TradieCertificates which={which} code={code} certificates={view.certificates} query={photoQuery} timeZone={market.timezone} />
       )}
 
       {(job.status === "on_site" || job.status === "awaiting_approval") && (

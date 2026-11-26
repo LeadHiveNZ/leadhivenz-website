@@ -59,6 +59,8 @@ export type JobView = {
   /** Taken at Arrived and at Job done, shown side by side (DECISIONS.md, 2026-11-19). */
   beforePhotos: Upload[];
   afterPhotos: Upload[];
+  /** Compliance certificates the tradie attached (DECISIONS.md, 2026-11-26). */
+  certificates: Upload[];
   history: HistoryEntry[];
   money: JobMoney;
   /** The owner's chosen tradie has suggested a later time and is waiting for the owner's answer. */
@@ -265,6 +267,7 @@ export async function loadJobView(db: Db, job: Job, audience: Audience): Promise
     workPhotos: uploads.filter((upload) => upload.kind === "completion" || upload.kind === "quote"),
     beforePhotos: uploads.filter((upload) => upload.kind === "before"),
     afterPhotos: uploads.filter((upload) => upload.kind === "completion"),
+    certificates: uploads.filter((upload) => upload.kind === "certificate"),
     history,
     money: {
       payment: p ? { status: p.status, amountCents: p.amount_cents, refundedCents: p.refunded_cents, paidAt: p.paid_at ? new Date(p.paid_at) : null, lastError: p.last_error, attempts: p.attempts } : null,

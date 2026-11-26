@@ -17,6 +17,7 @@ import { getJobForStaff, getJobForTradie, getOffer } from "@/lib/jobs/store";
 import type { Job, Offer } from "@/lib/jobs/types";
 import { completeJob, markArrived, markEnRoute, reportHazard, reportNoAccess, submitQuote } from "@/lib/jobs/work";
 import { addParts, attachReceipt, PART_ROWS } from "@/lib/jobs/parts";
+import { addCertificates } from "@/lib/jobs/certificates";
 import { getMarket } from "@/lib/markets/store";
 import { now } from "@/lib/clock";
 import { paymentsFor } from "@/lib/payments";
@@ -236,6 +237,18 @@ export async function addReceiptAction(_previous: FormState, formData: FormData)
   if (!result.ok) return problem(formData, result.message);
   revalidatePath(who.back);
   return { done: result.flags.length > 0 ? "Receipt added. Our team will look at it before your payment goes." : "Receipt added. Thank you." };
+}
+
+/** A compliance certificate on a job (DECISIONS.md, 2026-11-26). */
+export async function addCertificateAction(_previous: FormState, formData: FormData): Promise<FormState> {
+  const db = await getDb();
+  const who = await whoAndJob(db, formData);
+  if (!who) return problem(formData, NO_JOB);
+  const result = await addCertificates(db, who.job.id, who.tradieId, { uploadIds: list(formData, "certificateUploadIds"), label: text(formData, "label") }, now());
+  await sendQueued(db);
+  if (!result.ok) return problem(formData, result.message);
+  revalidatePath(who.back);
+  return { done: "Certificate added. The owner has it on the job page." };
 }
 
 export async function finishJob(_previous: FormState, formData: FormData): Promise<FormState> {
