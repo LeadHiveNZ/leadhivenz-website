@@ -36,7 +36,29 @@ import type { Market } from "@config/markets";
  *  - Work that takes a job over NZ$1,000 takes a 50% deposit (depositFor).
  */
 
-export type LineKind = "menu" | "diagnosis" | "urgent" | "after_hours" | "quote" | "parts" | "no_access" | "adjustment";
+export type LineKind = "menu" | "diagnosis" | "urgent" | "emergency" | "after_hours" | "quote" | "parts" | "no_access" | "adjustment";
+
+/**
+ * How soon (DECISIONS.md, 2026-11-26, third entry): standard (within 24 hours, no extra), urgent (within 4 hours,
+ * NZ$50 more) or emergency (within 1 hour, NZ$150 more). Urgent and emergency both have a deadline and are paid only
+ * if the tradie arrives by it; either can carry the after-hours call-out as well.
+ */
+export type Urgency = "standard" | "urgent" | "emergency";
+
+/** True for the two levels with a deadline instead of an arrival window: urgent and emergency. */
+export function isRush(urgency: Urgency): boolean {
+  return urgency === "urgent" || urgency === "emergency";
+}
+
+/** What the chip on a job says: "Urgent" or "Emergency". Standard has no chip. */
+export function urgencyName(urgency: Urgency): string {
+  return urgency === "emergency" ? "Emergency" : urgency === "urgent" ? "Urgent" : "Standard";
+}
+
+/** The urgency a form or caller asked for: emergency wins over urgent. */
+export function urgencyOf(choice: { urgent?: boolean; emergency?: boolean }): Urgency {
+  return choice.emergency ? "emergency" : choice.urgent ? "urgent" : "standard";
+}
 
 export type Line = {
   kind: LineKind;
@@ -59,6 +81,7 @@ type PricingMarket = Pick<
   | "platformFeeBps"
   | "urgentSurchargeCents"
   | "afterHoursSurchargeCents"
+  | "emergencySurchargeCents"
   | "diagnosisFeeCents"
   | "diagnosisPayoutCents"
   | "approvalThresholdCents"
@@ -186,7 +209,7 @@ export function callOutPayout(market: Pick<Market, "diagnosisFeeCents" | "diagno
  * Any other line is left as it is.
  */
 export function ownClientLines<T extends Pick<Line, "kind" | "ownerCents" | "tradieCents">>(
-  market: Pick<Market, "urgentSurchargeCents" | "afterHoursSurchargeCents" | "diagnosisFeeCents">, lines: T[], feeBps: number = OWN_CLIENT_FEE_BPS,
+  market: Pick<Market, "urgentSurchargeCents" | "afterHoursSurchargeCents" | "diagnosisFeeCents"> & Partial<Pick<Market, "emergencySurchargeCents">>, lines: T[], feeBps: number = OWN_CLIENT_FEE_BPS,
 ): T[] {
   return lines.map((line) => {
     switch (line.kind) {
@@ -195,6 +218,8 @@ export function ownClientLines<T extends Pick<Line, "kind" | "ownerCents" | "tra
         return { ...line, tradieCents: line.ownerCents - platformFee(line.ownerCents, feeBps) };
       case "urgent":
         return { ...line, tradieCents: surchargeShare(line.ownerCents > 0 ? line.ownerCents : market.urgentSurchargeCents, feeBps) };
+      case "emergency":
+        return { ...line, tradieCents: surchargeShare(line.ownerCents > 0 ? line.ownerCents : (market.emergencySurchargeCents ?? 0), feeBps) };
       case "after_hours":
         return { ...line, tradieCents: surchargeShare(line.ownerCents > 0 ? line.ownerCents : market.afterHoursSurchargeCents, feeBps) };
       default:
@@ -250,10 +275,32 @@ export type InitialJob = {
   /** The menu item, or null for off-menu work. */
   item: { name: string; ownerPriceCents: number; tradiePayoutCents: number } | null;
   urgent: boolean;
+  /** Within the hour (DECISIONS.md, 2026-11-26, third entry). Takes the place of urgent; never included in a membership. */
+  emergency?: boolean;
   afterHours: boolean;
   /** True when the property's tier covers the urgent surcharge for this job. */
   urgentIncluded: boolean;
 };
+
+/** The urgent line: NZ$50 to the owner (or nothing when their membership includes it), NZ$42.50 to the tradie. */
+export function urgentLine(market: Pick<PricingMarket, "urgentSurchargeCents" | "platformFeeBps">, included: boolean): Line {
+  const surcharge = market.urgentSurchargeCents;
+  return {
+    kind: "urgent",
+    label: included ? "Urgent response (included in your membership)" : "Urgent response",
+    ownerCents: included ? 0 : surcharge,
+    tradieCents: surchargeShare(surcharge, market.platformFeeBps),
+  };
+}
+
+/**
+ * The emergency line (DECISIONS.md, 2026-11-26, third entry): NZ$150 to the owner, NZ$150 less 15% (NZ$127.50) to
+ * the tradie, kept only if they tap Arrived within the hour. A paid extra: no membership includes it.
+ */
+export function emergencyLine(market: Pick<PricingMarket, "emergencySurchargeCents" | "platformFeeBps">): Line {
+  const surcharge = whole(market.emergencySurchargeCents, "Emergency surcharge");
+  return { kind: "emergency", label: "Emergency response, within the hour", ownerCents: surcharge, tradieCents: surchargeShare(surcharge, market.platformFeeBps) };
+}
 
 /** The lines a job starts with, before any quote or parts. */
 export function initialLines(market: PricingMarket, job: InitialJob): Line[] {
@@ -276,15 +323,8 @@ export function initialLines(market: PricingMarket, job: InitialJob): Line[] {
       tradieCents: market.diagnosisPayoutCents,
     });
   }
-  if (job.urgent) {
-    const surcharge = market.urgentSurchargeCents;
-    lines.push({
-      kind: "urgent",
-      label: job.urgentIncluded ? "Urgent response (included in your membership)" : "Urgent response",
-      ownerCents: job.urgentIncluded ? 0 : surcharge,
-      tradieCents: surchargeShare(surcharge, market.platformFeeBps),
-    });
-  }
+  if (job.emergency) lines.push(emergencyLine(market));
+  else if (job.urgent) lines.push(urgentLine(market, job.urgentIncluded));
   if (job.afterHours) {
     const surcharge = market.afterHoursSurchargeCents;
     lines.push({
@@ -431,6 +471,19 @@ export function partsApproval(
   return { needsApproval: false, reason: null };
 }
 
+/** The surcharges: urgent, emergency and after hours. They stay when the job itself turns into a call-out. */
+export function isSurcharge(kind: LineKind): boolean {
+  return kind === "urgent" || kind === "emergency" || kind === "after_hours";
+}
+
+/**
+ * The step-down (DECISIONS.md, 2026-11-26, third entry): an emergency nobody accepted becomes urgent when the owner
+ * taps "within 4 hours instead". What they save is the emergency surcharge less the urgent one: NZ$150 - NZ$50 = NZ$100.
+ */
+export function stepDownSaving(market: Pick<PricingMarket, "emergencySurchargeCents" | "urgentSurchargeCents">): number {
+  return Math.max(0, market.emergencySurchargeCents - market.urgentSurchargeCents);
+}
+
 /**
  * The tradie got there and could not get in. The job's own price is replaced
  * by the call-out fee (never more than the job would have cost). Surcharges
@@ -438,7 +491,7 @@ export function partsApproval(
  */
 export function noAccessLines(market: PricingMarket, lines: Line[], feeBps?: number | null): Line[] {
   const base = lines.find((line) => line.kind === "menu" || line.kind === "diagnosis");
-  const kept = lines.filter((line) => line.kind === "urgent" || line.kind === "after_hours");
+  const kept = lines.filter((line) => isSurcharge(line.kind));
   const ownerCents = Math.min(market.diagnosisFeeCents, base?.ownerCents ?? market.diagnosisFeeCents);
   const payout = callOutPayout(market, feeBps);
   const tradieCents = Math.min(payout, base?.tradieCents ?? payout, ownerCents);
@@ -453,7 +506,7 @@ export function noAccessLines(market: PricingMarket, lines: Line[], feeBps?: num
  */
 export function cancelledOnSiteLines(market: PricingMarket, lines: Line[], feeBps?: number | null): Line[] {
   const base = lines.find((line) => line.kind === "menu" || line.kind === "diagnosis");
-  const kept = lines.filter((line) => line.kind === "urgent" || line.kind === "after_hours");
+  const kept = lines.filter((line) => isSurcharge(line.kind));
   const ownerCents = Math.min(market.diagnosisFeeCents, base?.ownerCents ?? market.diagnosisFeeCents);
   const payout = callOutPayout(market, feeBps);
   const tradieCents = Math.min(payout, ownerCents);

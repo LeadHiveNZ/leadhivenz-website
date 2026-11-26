@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { saveTradieAreas, saveTradieLicence, saveTradieProfile, setPaused, setUpPayouts } from "@/app/actions/tradie";
 import { ActionForm, CheckList, Checks, Field, FileInput, Tick } from "@/components/forms/ActionForm";
+import { HoursFields } from "@/components/forms/HoursFields";
 import { CERTIFICATE_ACCEPT } from "@/components/forms/Fields";
 import { CertificateList } from "@/components/ui/CertificateList";
 import { SubmitButton } from "@/components/forms/SubmitButton";
@@ -108,8 +109,13 @@ export default async function TradieProfilePage({ searchParams }: { searchParams
             defaultValues={tradie.trades}
             options={trades.filter((trade) => trade.key !== "other").map((trade) => ({ key: trade.key, label: trade.label, detail: trade.licenceRequired ? "Needs a licence on file" : trade.lbpRequired ? "Needs an LBP number on file" : undefined }))}
           />
-          <Checks label="Days you work" name="daysAvailable" options={WEEKDAY_OPTIONS} defaultValues={tradie.daysAvailable} hint="Urgent jobs are only offered on your working days." />
-          <Tick name="afterHours" label="I take after-hours call-outs" hint={`Outside ${workingHours(market)}. You get ${formatMoney(surchargeShare(market.afterHoursSurchargeCents, market.platformFeeBps), market.currency)} on top of the job's pay when you arrive outside those hours: the after-hours surcharge less the platform fee.`} defaultChecked={tradie.afterHours} />
+          <Checks label="Days you work" name="daysAvailable" options={WEEKDAY_OPTIONS} defaultValues={tradie.daysAvailable} hint="We only send you jobs on these days." />
+          <HoursFields
+            legend="Send me jobs from __ to __"
+            from={tradie.hoursFrom}
+            to={tradie.hoursTo}
+            hint={`No jobs, texts or notifications outside these hours. Standard, urgent and emergency jobs all follow them. Arrive outside ${workingHours(market)} and you get ${formatMoney(surchargeShare(market.afterHoursSurchargeCents, market.platformFeeBps), market.currency)} on top of the job's pay: the after-hours surcharge less the platform fee.`}
+          />
           <Tick name="gstRegistered" label={`I am registered for ${market.taxName}`} defaultChecked={tradie.gstRegistered} />
           <Field label={`${market.taxName} number (if registered)`} name="gstNumber" maxLength={20} defaultValue={tradie.gstNumber ?? ""} />
           <Field

@@ -11,7 +11,7 @@ import { acceptOffer, passOffer, suggestLaterTime, windowsForAccepting } from "@
 import { baseUrl } from "@/lib/env";
 import { getFileStore } from "@/lib/files/store";
 import { checkFile } from "@/lib/files/uploads";
-import { dollarsToCents, list, problem, text, ticked, type FormState } from "@/lib/forms";
+import { dollarsToCents, hourChoice, list, problem, text, ticked, type FormState } from "@/lib/forms";
 import { isUuid } from "@/lib/ids";
 import { getJobForStaff, getJobForTradie, getOffer } from "@/lib/jobs/store";
 import type { Job, Offer } from "@/lib/jobs/types";
@@ -292,7 +292,8 @@ export async function saveTradieProfile(_previous: FormState, formData: FormData
       businessName: text(formData, "businessName"),
       trades: list(formData, "trades"),
       daysAvailable: list(formData, "daysAvailable"),
-      afterHours: ticked(formData, "afterHours"),
+      hoursFrom: hourChoice(formData, "hoursFrom"),
+      hoursTo: hourChoice(formData, "hoursTo"),
       gstRegistered: ticked(formData, "gstRegistered"),
       gstNumber: text(formData, "gstNumber") || null,
       insuranceExpiresOn: insurance || null,

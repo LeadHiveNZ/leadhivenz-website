@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   description: `How ${brand.name} works for property owners: free to join, fixed prices, charged when a job is done.`,
 };
 
-const UPDATED = "24 November 2026";
+const UPDATED = "26 November 2026";
 
 /**
  * The hours in section 4 come from the launch market's settings (config/markets.ts), so the page cannot say
@@ -28,6 +28,7 @@ const UPDATED = "24 November 2026";
  */
 const notTaken = launchMarket.unacceptedAlertHours;
 const answerHours = launchMarket.counterOfferHours;
+const emergencyWithin = launchMarket.emergencyResponseMinutes === 60 ? "1 hour" : `${launchMarket.emergencyResponseMinutes} minutes`;
 const quiet = `${formatHourOfDay(TEXTING_ENDS)} and ${formatHourOfDay(TEXTING_STARTS)}`;
 // The checks on every finished job (DECISIONS.md, 2026-11-19), from the same settings and constants the app uses.
 const minMinutes = launchMarket.minMinutesOnSite;
@@ -73,10 +74,14 @@ export default function Page() {
             If none of them can take it, it goes to our team, as when nobody accepts a job (section 4).
           </li>
           <li>
-            <strong>Urgent</strong> (on site within 4 hours: the tradie drops what they are doing) adds a surcharge, and an urgent job asked for
-            before 7am, after 4:30pm or at the weekend adds an after-hours surcharge. The amount of each is on the price list and shown before you
-            choose it, and like the rest of the price it is fixed: nothing is added on the day. You pay each surcharge only for what actually
-            happened (section 4).
+            <strong>How soon.</strong> You choose when you log the job. <strong>Standard</strong>: on site within 24 hours, no extra.{" "}
+            <strong>Urgent</strong>: on site within 4 hours (the tradie drops what they are doing), {money(launchMarket.urgentSurchargeCents)} more.{" "}
+            <strong>Emergency</strong>: on site within {emergencyWithin}, {money(launchMarket.emergencySurchargeCents)} more; it goes to every
+            tradie who is working at that moment, at once. An urgent or emergency job asked for before 7am, after 4:30pm or at the weekend also
+            carries the after-hours call-out ({money(launchMarket.afterHoursSurchargeCents)}), on top. Each amount is shown before you choose it,
+            and like the rest of the price it is fixed: nothing is added on the day. You pay each surcharge only for what actually happened
+            (section 4). Urgent and emergency are only offered when at least one tradie who could take the job is working right now; if nobody
+            is, the form says when the first one starts, and a standard job is sent to them then. No membership includes emergency.
           </li>
           <li>
             <strong>Jobs not on the menu</strong> cost a fixed call-out for a tradie to come and look, then a quote. You choose the trade, or
@@ -110,8 +115,8 @@ export default function Page() {
 
       <Section n={4} title="Our promise, and what happens if we miss it">
         <p>
-          We aim to have a tradie on site within 24 hours of a job being sent out, or within 4 hours for an urgent job, counting nights and
-          weekends. &ldquo;On site&rdquo; is the tradie&rsquo;s own tap of &ldquo;I have arrived&rdquo; at your door. You only ever pay for what was
+          We aim to have a tradie on site within 24 hours of a job being sent out, within 4 hours for an urgent job, or within {emergencyWithin}{" "}
+          for an emergency, counting nights and weekends. &ldquo;On site&rdquo; is the tradie&rsquo;s own tap of &ldquo;I have arrived&rdquo; at your door. You only ever pay for what was
           actually delivered:
         </p>
         <ul>
@@ -129,8 +134,24 @@ export default function Page() {
             not charged. The rest of the job is charged as normal.
           </li>
           <li>
+            <strong>An emergency reached late.</strong> If the tradie taps &ldquo;I have arrived&rdquo; more than {emergencyWithin} after the job was
+            sent out, the {money(launchMarket.emergencySurchargeCents)} emergency surcharge is not charged. The rest of the job is charged as normal.
+          </li>
+          <li>
+            <strong>Nobody free within the hour.</strong> If no tradie has taken an emergency {launchMarket.emergencyStepDownMinutes} minutes after
+            it was sent out, we text you a link. On the job page one button switches it to urgent (within 4 hours from then) for{" "}
+            {money(launchMarket.emergencySurchargeCents - launchMarket.urgentSurchargeCents)} less: the urgent surcharge replaces the emergency one.
+            If you do nothing, we keep looking for someone within the hour and our team rings round.
+          </li>
+          <li>
             <strong>After hours.</strong> The after-hours surcharge is charged only if the tradie arrives before 7am, after 4:30pm or at the weekend.
-            If they come within working hours, it is not charged.
+            If they come within working hours, it is not charged. It is separate from the urgent or emergency surcharge: at 9pm an emergency
+            carries both, and each is charged only if its own rule is met.
+          </li>
+          <li>
+            <strong>Tradies&rsquo; own hours.</strong> Each tradie tells us the hours and days they want jobs. A job is only offered to tradies who
+            are inside their hours at that moment. A standard job logged when nobody is working waits, and goes out when the first tradie&rsquo;s
+            hours begin.
           </li>
           <li>
             <strong>Your usual tradie can&rsquo;t make it in time.</strong> Our first-choice or backup tradie may suggest a later time instead, up to{" "}
@@ -138,6 +159,7 @@ export default function Page() {
             have not answered within {answerHours} hours we send it on. On a normal job we do not send that text between {quiet}, and the {answerHours}{" "}
             hours count only the time between {formatHourOfDay(TEXTING_STARTS)} and {formatHourOfDay(TEXTING_ENDS)}; on an urgent job they run at any
             time. If you wait, that later time becomes the promise, and an urgent job stops being urgent, so the urgent surcharge is not charged.
+            (An emergency goes to everyone at once, so this does not happen on an emergency.)
           </li>
           <li>
             <strong>The tradie isn&rsquo;t there.</strong> If the app says the tradie has arrived and nobody is there, press &ldquo;The tradie isn&rsquo;t
@@ -204,8 +226,8 @@ export default function Page() {
           team told (a guest&rsquo;s report waits for your yes, as always).
         </p>
         <p>
-          <strong>A hold on your card.</strong> When a job is sent out, we hold the price you saw on your card: the menu price with GST and any urgent or
-          after-hours charge, or for a job not on the menu the {money(launchMarket.diagnosisFeeCents)} call-out. A hold is not a charge. If your card declines
+          <strong>A hold on your card.</strong> When a job is sent out, we hold the price you saw on your card: the menu price with GST and any urgent,
+          emergency or after-hours charge, or for a job not on the menu the {money(launchMarket.diagnosisFeeCents)} call-out. A hold is not a charge. If your card declines
           the hold, the job is not sent, and we ask you to update your card. A card lets go of a hold after a few days, so for a job that is still open we
           place a fresh hold before the old one runs out, and let the old one go. For a visit booked further ahead, the hold is placed a day before it.
         </p>

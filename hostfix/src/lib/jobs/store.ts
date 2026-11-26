@@ -1,6 +1,6 @@
 import { isUuid } from "@/lib/uuid";
 import type { Db } from "@/lib/db/types";
-import type { Line, LineKind } from "./pricing";
+import type { Line, LineKind, Urgency } from "./pricing";
 import { taxPortion, tierRelief, totals } from "./pricing";
 import type { ArrivalCheck, ConfirmStatus, Job, JobLine, JobOutcome, JobStatus, Offer, OfferStatus, Quote, QuoteStatus, ReportedBy } from "./types";
 
@@ -16,7 +16,7 @@ import type { ArrivalCheck, ConfirmStatus, Job, JobLine, JobOutcome, JobStatus, 
 export type JobRow = {
   id: string; number: number; created_at: Date; property_id: string; owner_id: string; market: string;
   menu_item_id: string | null; off_menu: boolean; trade: string; licence_required: boolean; title: string; description: string;
-  urgency: "standard" | "urgent"; after_hours: boolean; reported_by: ReportedBy; reporter_name: string | null;
+  urgency: Urgency; after_hours: boolean; reported_by: ReportedBy; reporter_name: string | null;
   reporter_phone: string | null; status: JobStatus; stage: number; offer_round: number; tradie_id: string | null;
   tier_key: string | null; response_hours: number; dispatched_at: Date | null; respond_by: Date | null;
   accepted_at: Date | null; en_route_at: Date | null; arrived_at: Date | null; completed_at: Date | null;
@@ -32,6 +32,7 @@ export type JobRow = {
   card_hold?: Job["cardHold"]; guest_staying?: Job["guestStaying"]; guest_name?: string | null; guest_phone?: string | null; may_let_in?: boolean | null;
   not_described_at?: Date | null; not_described_reason?: string | null; not_described_status?: Job["notDescribedStatus"]; not_described_by?: Date | null;
   hold_due_at?: Date | null; platform_fee_bps?: number | null; tier_relief_cents?: number | null;
+  step_down_offered_at?: Date | null; stepped_down_at?: Date | null; waiting_for_hours_at?: Date | null;
 };
 
 const num = (value: number | string | null | undefined) => (value === null || value === undefined ? null : Number(value));
@@ -66,6 +67,8 @@ export function rowToJob(row: JobRow): Job {
     notDescribedAt: d(row.not_described_at ?? null), notDescribedReason: row.not_described_reason ?? null,
     notDescribedStatus: row.not_described_status ?? null, notDescribedBy: d(row.not_described_by ?? null),
     holdDueAt: d(row.hold_due_at ?? null), platformFeeBps: num(row.platform_fee_bps),
+    stepDownOfferedAt: d(row.step_down_offered_at ?? null), steppedDownAt: d(row.stepped_down_at ?? null),
+    waitingForHoursAt: d(row.waiting_for_hours_at ?? null),
   };
 }
 
@@ -244,11 +247,11 @@ export async function listOffers(db: Db, jobId: string): Promise<OfferWithTradie
   return rows.map((row) => ({ ...rowToOffer(row), tradieName: row.tradie_name }));
 }
 
-export type OfferForTradie = Offer & { jobNumber: number; title: string; suburb: string; urgency: "standard" | "urgent"; respondBy: Date | null; jobStatus: JobStatus };
+export type OfferForTradie = Offer & { jobNumber: number; title: string; suburb: string; urgency: Urgency; respondBy: Date | null; jobStatus: JobStatus };
 
 /** Offers waiting for this tradie's answer, soonest to run out first. */
 export async function listLiveOffersForTradie(db: Db, tradieId: string, at: Date): Promise<OfferForTradie[]> {
-  const rows = await db.query<OfferRow & { job_number: number; title: string; suburb: string; urgency: "standard" | "urgent"; respond_by: Date | null; job_status: JobStatus }>(
+  const rows = await db.query<OfferRow & { job_number: number; title: string; suburb: string; urgency: Urgency; respond_by: Date | null; job_status: JobStatus }>(
     `select o.*, j.number as job_number, j.title, p.suburb, j.urgency, j.respond_by, j.status as job_status
        from public.offers o
        join public.jobs j on j.id = o.job_id

@@ -41,14 +41,20 @@ type OfferWords = {
   title: string; suburb: string; payoutCents: number; currency: string; deadline: string; minutes: number; urgent: boolean; link: string;
   /** Urgent only: the tradie's share of the urgent surcharge, paid only if they are on site by the deadline. */
   urgentShareCents?: number | null;
+  /** Within the hour (DECISIONS.md, 2026-11-26, third entry): said as EMERGENCY; urgentShareCents is then the emergency share. */
+  emergency?: boolean;
 };
 
 function offerHead(o: OfferWords): string {
   const pay = money(o.payoutCents, o.currency);
+  if (o.emergency && o.urgentShareCents) {
+    return `${B} EMERGENCY ${clip(o.title, 10)} ${clip(o.suburb || "local", 8)}: ${pay} (${money(o.urgentShareCents, o.currency)} if there by ${o.deadline})`;
+  }
   if (o.urgent && o.urgentShareCents) {
     return `${B} URGENT ${clip(o.title, 18)} ${clip(o.suburb || "local", 10)}: ${pay} (${money(o.urgentShareCents, o.currency)} if there by ${o.deadline})`;
   }
-  return `${B}${o.urgent ? " URGENT" : ""}: ${clip(o.title, 24)}, ${clip(o.suburb || "local", 12)}: ${pay}, by ${o.deadline}.`;
+  const label = o.emergency ? " EMERGENCY" : o.urgent ? " URGENT" : "";
+  return `${B}${label}: ${clip(o.title, o.emergency ? 21 : 24)}, ${clip(o.suburb || "local", 12)}: ${pay}, by ${o.deadline}.`;
 }
 
 export const texts = {
@@ -57,7 +63,7 @@ export const texts = {
   // ---- to tradies -------------------------------------------------------
   // An urgent offer says the urgent share is only paid if they are there by the deadline (DECISIONS.md, 2026-11-18).
   // An urgent offer leaves out the minutes to fit one text: the offer page shows how long is left.
-  offer: (o: OfferWords) => (o.urgent && o.urgentShareCents ? `${offerHead(o)} ${o.link}` : `${offerHead(o)} ${o.minutes} min: ${o.link}`),
+  offer: (o: OfferWords) => ((o.urgent || o.emergency) && o.urgentShareCents ? `${offerHead(o)} ${o.link}` : `${offerHead(o)} ${o.minutes} min: ${o.link}`),
 
   offerOpen: (o: OfferWords) => `${offerHead(o)} Open: ${o.link}`,
 
@@ -170,6 +176,13 @@ export const texts = {
     `${B}: ${clip(o.tradie, 20)} has arrived at ${clip(o.property, 20)}. Not there? Tell us: ${o.link}`,
 
   stillArranging: (o: { property: string }) => `${B}: we are still arranging a tradie for ${clip(o.property, 28)}. Our team is on it and will text you once someone is booked.`,
+
+  /**
+   * An emergency nobody has taken in 10 minutes (DECISIONS.md, 2026-11-26, third entry). The link opens the job
+   * page, where one button makes it urgent for less: opening the link changes nothing.
+   */
+  emergencyStepDown: (o: { property: string; hours: number; savingCents: number; currency: string; link: string }) =>
+    `${B}: nobody free within the hour for ${clip(o.property, 14)}. Switch to within ${o.hours}h and save ${money(o.savingCents, o.currency)}? ${o.link}`,
 
   notTakenYet: (o: { property: string; link: string }) =>
     `${B}: no tradie for ${clip(o.property, 16)} yet. We're ringing round. No charge unless it's done. ${o.link}`,

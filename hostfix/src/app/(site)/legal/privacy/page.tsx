@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   description: `What ${brand.name} holds about you, why, who sees it, and how to ask for it or have it removed.`,
 };
 
-const UPDATED = "24 November 2026";
+const UPDATED = "26 November 2026";
 
 export default function Page() {
   const n = brand.name;

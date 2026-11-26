@@ -10,11 +10,13 @@ import { getDb } from "@/lib/db";
 import type { Db } from "@/lib/db/types";
 import { baseUrl } from "@/lib/env";
 import { attachUploads } from "@/lib/files/uploads";
-import { dollarsToCents, list, problem, text, ticked, type FormState } from "@/lib/forms";
+import { dollarsToCents, list, problem, text, ticked, urgencyChoice, type FormState } from "@/lib/forms";
+import { rushRefusal } from "@/lib/tradies/cover";
+import { now } from "@/lib/clock";
 import { approveGuestReport, cancelJob, createJob } from "@/lib/jobs/create";
 import { getJobForOwner, getQuote } from "@/lib/jobs/store";
 import type { Job } from "@/lib/jobs/types";
-import { answerLaterTime } from "@/lib/dispatch/cascade";
+import { answerLaterTime, switchToUrgent } from "@/lib/dispatch/cascade";
 import { ownerObjects } from "@/lib/jobs/not-described";
 import { answerQuote as answerQuoteWithCharge, reportTradieAbsent } from "@/lib/jobs/work";
 import { confirmFixed } from "@/lib/jobs/confirm";
@@ -265,11 +267,15 @@ export async function logOwnerJob(_previous: FormState, formData: FormData): Pro
 
   const guest = guestFromForm(formData, "NZ");
   if (!guest.ok) return problem(formData, guest.message, { guestPhone: guest.message });
+  // Urgent and Emergency only when someone who could take it is inside their hours (DECISIONS.md, 2026-11-26, third entry).
+  const how = urgencyChoice(formData);
+  const refused = await rushRefusal(db, property, { menuItemId: choice === OFF_MENU ? null : choice, offMenuTrade: text(formData, "offMenuTrade"), ...how }, now());
+  if (refused) return problem(formData, refused);
   const result = await createJob(db, {
     ...guest.guest,
     property, reportedBy: "owner", reporterName: null, reporterPhone: null,
     menuItemId: choice === OFF_MENU ? null : choice, offMenuTrade: text(formData, "offMenuTrade"), offMenuTitle: text(formData, "offMenuTitle"),
-    description: text(formData, "description"), urgent: ticked(formData, "urgent"), uploadIds: list(formData, "uploadIds"),
+    description: text(formData, "description"), ...how, uploadIds: list(formData, "uploadIds"),
     uploader: `owner:${viewer.ownerId}`, actor: `owner:${viewer.ownerId}`,
   }, gatewayFor(db));
   await sendQueued(db);
@@ -303,7 +309,8 @@ export async function goAhead(_previous: FormState, formData: FormData): Promise
   const db = await getDb();
   const found = await ownersJob(db, formData);
   if (!found) return { message: NOT_FOUND };
-  const approved = await approveGuestReport(db, found.job.id, { urgent: text(formData, "how") === "urgent" }, found.actor, gatewayFor(db));
+  const how = text(formData, "how");
+  const approved = await approveGuestReport(db, found.job.id, { urgent: how === "urgent", emergency: how === "emergency" }, found.actor, gatewayFor(db));
   await sendQueued(db);
   if (!approved.ok) return { message: approved.message };
   redirect(`${found.back}?sent=1`);
@@ -355,6 +362,20 @@ export async function reportProblem(_previous: FormState, formData: FormData): P
   await sendQueued(db);
   if (!result.ok) return problem(formData, result.message, { reason: result.message });
   redirect(`${found.back}?told=1`);
+}
+
+/**
+ * "Switch to within 4 hours" on an emergency nobody has taken yet (DECISIONS.md, 2026-11-26, third entry). A button on
+ * the job page, never the link in the text: opening the link changes nothing.
+ */
+export async function stepDownToUrgent(_previous: FormState, formData: FormData): Promise<FormState> {
+  const db = await getDb();
+  const found = await ownersJob(db, formData);
+  if (!found) return { message: NOT_FOUND };
+  const result = await db.tx((tx) => switchToUrgent(tx, found.job.id, found.actor));
+  await sendQueued(db);
+  if (!result.ok) return { message: result.message };
+  redirect(`${found.back}?stepped=1`);
 }
 
 /** The owner's chosen tradie suggested a later time: wait for them, or send it to another tradie now. Buttons only, never a link. */

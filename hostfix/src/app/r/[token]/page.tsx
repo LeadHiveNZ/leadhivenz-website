@@ -235,6 +235,9 @@ async function TeamHouseReport({ db, token, house, many }: { db: Db; token: stri
         urgentIncluded={data.urgentIncluded}
         afterHoursNow={data.afterHoursNow}
         afterHoursCents={data.afterHoursCents}
+        emergencyMinutes={data.emergencyMinutes}
+        emergencyCents={data.emergencyCents}
+        cover={data.cover}
         uploadToken={token}
       />
     </div>
@@ -286,6 +289,9 @@ async function PropertyReport({ db, token, property, via }: { db: Db; token: str
         urgentIncluded={data.urgentIncluded}
         afterHoursNow={data.afterHoursNow}
         afterHoursCents={data.afterHoursCents}
+        emergencyMinutes={data.emergencyMinutes}
+        emergencyCents={data.emergencyCents}
+        cover={data.cover}
         uploadToken={token}
       />
       {via === "team" && <p className="text-center text-sm text-muted">Tip: add this page to your phone&apos;s home screen so it is one tap away next time.</p>}

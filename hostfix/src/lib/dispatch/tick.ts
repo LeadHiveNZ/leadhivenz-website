@@ -18,7 +18,7 @@ import { savePayoutAccount } from "@/lib/tradies/service";
 import { baseUrl } from "@/lib/env";
 import { randomToken } from "@/lib/ids";
 import { dateKey, formatDate } from "@/lib/time";
-import { alertNotTakenYet, expireDueOffers, expireLaterTimes } from "./cascade";
+import { alertNotTakenYet, expireDueOffers, expireLaterTimes, offerWaitingJobs, stepDownEmergencies } from "./cascade";
 import { settleUnansweredChecks } from "@/lib/jobs/confirm";
 import { settleNotDescribed } from "@/lib/jobs/not-described";
 import { refundMissingReceipts } from "@/lib/jobs/parts";
@@ -31,6 +31,10 @@ import { fillMissingPins } from "@/lib/properties/pin";
  * button:
  *
  *   offers that have run out          on to the next tradie
+ *   a standard job nobody was inside  offered as soon as a tradie's own hours
+ *     their hours for                 begin
+ *   an emergency nobody took in 10    the owner offered "within 4 hours
+ *     minutes                         instead", for less
  *   a later time the owner has not    on to the next tradie
  *     answered in time
  *   a normal job nobody has taken     the owner told, the team asked to ring round
@@ -325,6 +329,8 @@ export async function runTick(db: Db, deps: TickDeps): Promise<TickReport> {
   };
 
   await step("offers_moved_on", () => expireDueOffers(db));
+  await step("waiting_for_hours", () => offerWaitingJobs(db));
+  await step("emergency_step_down", () => stepDownEmergencies(db));
   await step("later_times_sent_on", () => expireLaterTimes(db));
   await step("not_taken_yet", () => alertNotTakenYet(db));
   await step("guest_reports", () => chaseGuestReports(db));

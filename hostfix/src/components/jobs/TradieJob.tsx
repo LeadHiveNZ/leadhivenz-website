@@ -24,6 +24,7 @@ import { flagWords, type CheckFlag } from "@/lib/jobs/checks";
 import { BeforeAfter, CostLines, Deadline, History, JobStatus, Panel, PhotoGrid } from "./JobParts";
 import { ArrivedButton, LocatedButton } from "./TradieClient";
 import { TradieCertificates } from "./Certificates";
+import { urgencyName } from "@/lib/jobs/pricing";
 
 export type TradieJobFlash = { yours?: boolean; here?: boolean; quoted?: "wait" | "go" | null; done?: boolean; parts?: "wait" | "go" | null };
 
@@ -136,7 +137,7 @@ export function TradieJob({ view, now, code, flash = {}, propertyPhotos, priceLi
       <Card className="sm:p-6">
         <div className="flex flex-wrap items-center gap-2">
           <JobStatus job={job} audience="tradie" />
-          {job.urgency === "urgent" && <Chip tone="alert">Urgent</Chip>}
+          {job.urgency !== "standard" && <Chip tone="alert">{urgencyName(job.urgency)}</Chip>}
           {job.afterHours && <Chip tone="brand">After hours</Chip>}
           <span className="tabular text-sm text-muted">Job {job.number}</span>
         </div>

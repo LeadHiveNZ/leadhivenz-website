@@ -163,6 +163,8 @@ describe("placeholders", () => {
       after_hours: "NZ$140",
       urgent_share: "NZ$42.50",
       after_hours_share: "NZ$119",
+      emergency: "NZ$150",
+      emergency_share: "NZ$127.50",
       platform_fee: "15%",
       callout: "NZ$225",
       approval_limit: "NZ$600",
@@ -237,7 +239,7 @@ describe("the real landing page files", () => {
     const card = pricing?.blocks[0];
     expect(card?.type === "card" && plainText(card.title)).toBe("Free to join. Pay per job.");
     // Urgent NZ$50 (DECISIONS.md, 2026-11-18) and after hours NZ$140. They no longer go to the tradie in full.
-    expect(JSON.stringify(card)).toContain("Need someone within 4 hours? Add NZ$50 on the day and the tradie drops what they are doing, plus NZ$140 when they come outside working hours.");
+    expect(JSON.stringify(card)).toContain("Need someone within 4 hours? Add NZ$50 on the day and the tradie drops what they are doing. An emergency, within the hour, is NZ$150 more, offered whenever a tradie is working. Either way, add NZ$140 when they come outside working hours.");
     expect(JSON.stringify(card)).not.toContain("in full");
     expect(JSON.stringify(pricing)).not.toContain("Managing 10 or more?");
   });
@@ -300,7 +302,7 @@ describe("the real landing page files", () => {
   it("the tradie page shows the tradie's share of each surcharge, not the owner's price", () => {
     // DECISIONS.md, 2026-11-18: urgent 5000 less 15% (750) is 4250; after hours 14000 less 15% (2100) is 11900.
     const text = JSON.stringify(loadLanding("tradie", launchMarket));
-    expect(text).toContain("Urgent adds NZ$42.50 to your pay when you're on site by the deadline, and after hours adds NZ$119 when you come outside working hours: the surcharge less our 15%, like the rest of the price");
+    expect(text).toContain("Urgent adds NZ$42.50 to your pay when you're on site by the deadline, an emergency (within the hour) adds NZ$127.50 when you're there in time, and after hours adds NZ$119 when you come outside working hours: the surcharge less our 15%, like the rest of the price");
     expect(text).not.toContain("in full");
   });
 

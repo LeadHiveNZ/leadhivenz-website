@@ -115,7 +115,7 @@ describe("the areas a tradie covers", () => {
 });
 
 describe("who is offered a job, by area", () => {
-  const criteria = { market: "queenstown", trade: "plumber", licenceRequired: true, afterHours: false, urgent: false, today: "2026-11-16", weekday: "mon" };
+  const criteria = { market: "queenstown", trade: "plumber", licenceRequired: true, today: "2026-11-16", weekday: "mon", hour: null };
   const today = { market: "queenstown", trade: "plumber", licenceRequired: true, today: "2026-11-16" };
 
   async function twoTradies() {

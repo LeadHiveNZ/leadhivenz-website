@@ -31,6 +31,7 @@ import { getPropertyForStaff } from "@/lib/properties/service";
 import { formatDeadline, formatHourOfDay } from "@/lib/time";
 import { feeWords, payTiming, tierLineWords } from "@/lib/markets/display";
 import { brand } from "@config/brand";
+import { urgencyName } from "@/lib/jobs/pricing";
 
 export const metadata: Metadata = { title: "Job offer", robots: { index: false, follow: false } };
 
@@ -115,7 +116,7 @@ async function Opened({ params, searchParams }: { params: Params; searchParams: 
   const late = offer.status === "expired" || offer.expiresAt.getTime() <= at.getTime();
   // A normal job: the tradie picks when they will be there, inside the promise (DECISIONS.md, 2026-11-18).
   const windows = windowsForAccepting(job, market, at);
-  const urgentLine = lines.find((line) => line.kind === "urgent" && line.status === "active");
+  const urgentLine = lines.find((line) => (line.kind === "urgent" || line.kind === "emergency") && line.status === "active");
   const afterHoursLine = lines.find((line) => line.kind === "after_hours" && line.status === "active");
   const canSuggest = canSuggestLater(offer, job);
   const later = canSuggest && job.respondBy ? laterWindows(market, job.respondBy, at) : [];
@@ -127,7 +128,7 @@ async function Opened({ params, searchParams }: { params: Params; searchParams: 
         <h1 className="display mt-1 text-4xl text-ink">{job.title}</h1>
         <p className="mt-1 flex flex-wrap items-center gap-2 text-lg text-muted">
           <Icon name="market" size={18} /> {property?.suburb ?? market.name}
-          {job.urgency === "urgent" && <Chip tone="alert">Urgent</Chip>}
+          {job.urgency !== "standard" && <Chip tone="alert">{urgencyName(job.urgency)}</Chip>}
           {job.afterHours && <Chip tone="brand">After hours</Chip>}
         </p>
       </div>
@@ -139,7 +140,7 @@ async function Opened({ params, searchParams }: { params: Params; searchParams: 
             <p className="display tabular text-5xl text-ink">{formatMoney(offer.payoutCents, job.currency)}</p>
           </div>
           <div className="text-right">
-            <p className="text-sm font-semibold text-muted">{job.urgency === "urgent" ? "Be on site by" : "Promised on site by"}</p>
+            <p className="text-sm font-semibold text-muted">{job.urgency !== "standard" ? "Be on site by" : "Promised on site by"}</p>
             <p className="text-lg font-bold text-ink">{job.respondBy ? formatDeadline(job.respondBy, at, market.timezone) : "As soon as you can"}</p>
           </div>
         </div>
@@ -158,8 +159,8 @@ async function Opened({ params, searchParams }: { params: Params; searchParams: 
           <ul className="mt-3 space-y-1 text-sm text-muted">
             {urgentLine && job.respondBy && (
               <li>
-                The urgent share ({formatMoney(urgentLine.tradieCents, job.currency)}) is paid only if you tap Arrived by {formatDeadline(job.respondBy, at, market.timezone)}. After that, the
-                urgent fee is not charged to anyone.
+                The {urgentLine.kind === "emergency" ? "emergency" : "urgent"} share ({formatMoney(urgentLine.tradieCents, job.currency)}) is paid only if you tap Arrived by {formatDeadline(job.respondBy, at, market.timezone)}. After that, the
+                {urgentLine.kind === "emergency" ? " emergency" : " urgent"} fee is not charged to anyone.
               </li>
             )}
             {afterHoursLine && (
@@ -216,7 +217,7 @@ async function Opened({ params, searchParams }: { params: Params; searchParams: 
                 />
                 <p className="text-sm text-muted">
                   We ask the owner whether to wait for you or send it to another tradie now. If they wait, the job is yours at that time
-                  {job.urgency === "urgent" ? " and is no longer urgent, so there is no urgent share" : ""}. Like passing, this never counts against you.
+                  {job.urgency !== "standard" ? " and is no longer urgent, so there is no urgent or emergency share" : ""}. Like passing, this never counts against you.
                 </p>
                 <SubmitButton variant="secondary" pendingLabel="Asking the owner...">
                   Suggest this time

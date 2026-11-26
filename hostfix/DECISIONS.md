@@ -9,6 +9,67 @@ price, a fee or a promise, add a line here saying what and why.
 
 ---
 
+## 2026-11-26 (third entry) — Emergency within the hour; each tradie's own hours instead of an after-hours tick
+
+Approved by the founder. Migration `20261208000000_emergency_and_tradie_hours.sql`. Tests: `tests/unit/emergency.test.ts`
+(amounts worked by hand), `tests/unit/cascade.test.ts`, `tests/unit/legal.test.ts`, `tests/unit/messages.test.ts`.
+**`TRADIE_AGREEMENT_VERSION` is not bumped here**: the lead bumps it once, after merging the other branch in flight.
+
+**1. A third level, Emergency: on site within 1 hour, NZ$150 more.** Standard (24 hours, no extra), Urgent (4 hours,
+NZ$50) and now Emergency (`markets.emergency_surcharge_cents` 15000, `emergency_response_minutes` 60,
+`emergency_step_down_minutes` 10; defaults in `defineMarket`, editable on Admin > Markets). `jobs.urgency` takes
+`'emergency'` and a job line of kind `'emergency'` (`emergencyLine` in `src/lib/jobs/pricing.ts`).
+- **Charged upfront, priced before the owner sends it** (the report form shows all three, with the after-hours call-out on
+  top when it applies). PL-01 as an emergency: owner 22500 + 15000 = 37500, tradie 19000 + 12750 = 31750; at 9pm also
+  + 14000 / 11900 = 51500 / 43650.
+- **Same rule as urgent**: the tradie's share (NZ$150 less 15% = NZ$127.50) is paid, and the owner charged the NZ$150, only
+  if the tradie taps Arrived by the deadline (sent out + 60 minutes, `respond_by`, measured exactly like urgent in
+  `surchargeVerdict`). Late: the emergency line is void for everyone; the rest of the job is normal.
+- **Stacks with after hours**, which keeps its own rule (charged only if the tap is outside working hours).
+- **Never included in a membership** (`urgentIncluded` covers urgent only). Kept a paid extra: including it would make the
+  NZ$127.50 tradie share a cost to HostFix on every emergency.
+- **Sent to everyone at once.** Urgent goes first choice, backup, then everyone (15 minutes each). An emergency skips
+  that: one offer to every eligible tradie at once, first choice and backup included, in one wave (no later wave for
+  slipping records), first to accept wins. The offer window stays the market's 15 minutes; accepting after it still
+  works while nobody else has.
+- **Step-down.** No acceptance within `emergency_step_down_minutes` (10): the timer (`stepDownEmergencies`, in the tick)
+  texts and emails the owner once (`emergency_step_down`): "nobody free within the hour ... Switch to within 4h and save
+  NZ$100?" with the job link. Opening the link changes nothing; the button on the job page (`stepDownToUrgent` ->
+  `switchToUrgent`) voids the emergency line, adds the urgent line (NZ$100 less), sets the promise to 4 hours from the
+  tap, audits `job.stepped_down`, and starts the offers again as urgent (first choice first, new round). The after-hours
+  line stays. The card hold is not re-placed: it stays at the old amount and only the lower price is taken from it at Job
+  done, the rest let go. No tap: it keeps looking as an emergency, and the usual "nobody accepted" queue item and
+  "still arranging" text apply when offers run out.
+
+**Why charge upfront rather than try first and then upsell**: offering an emergency as a normal job and asking for more
+only when nobody bites wastes the critical minutes; it teaches owners and tradies that urgent is free if you wait; the
+tradies who already passed will not come back for the same job; and it feels like bait-and-switch. Asking once, with the
+price, and stepping *down* (cheaper) when nobody is free is honest in both directions.
+
+**2. Each tradie's own hours instead of "takes after-hours call-outs".** The founder: "don't do an opt-in for
+emergencies, do it for every single tradie... just do a time frame that they normally work." `tradies.after_hours` is
+gone; `tradies.hours_from` / `hours_to` (half hours, 7 and 16.5 like the market) plus the existing days. The migration
+gave tradies who took after-hours work 6am to 10pm and everyone else their market's working hours. Edited with two
+selects ("Send me jobs from __ to __") on the tradie's profile, the admin tradie page and Add a tradie.
+- **Eligibility** (`eligibleTradies`, one extra condition): an offer, and so its text and app notification, only goes to
+  a tradie for whom now, in the market's time, is inside their hours on one of their days. The same for standard, urgent,
+  emergency and after-hours. No emergency opt-in anywhere. `canStillTake` is unchanged: a tradie who was offered a job
+  inside their hours can still accept it a few minutes after their hours end, and staff can assign anyone.
+- **A standard job with nobody in their hours waits** (`jobs.waiting_for_hours_at`, audit `job.waiting_for_hours`):
+  the cascade does not go to the dispatcher while someone who could take it later exists; the timer
+  (`offerWaitingJobs`, every minute) offers it the moment someone's hours begin. The 3-hour "not taken yet" alert still
+  applies. Urgent and emergency never wait: nobody in their hours sends them to the dispatcher, as before.
+
+**3. Urgent and Emergency only offered when someone is on** (the founder: there may be times nobody works after hours).
+The report form (and the owner's go-ahead on a guest report) offers Urgent and Emergency only when at least one
+tradie who could take that trade (approved, insured, licensed where needed) is inside their hours right now
+(`coverNow`/`coverByTrade` in `src/lib/tradies/cover.ts`). Otherwise both are hidden and a plain line says "No one is on
+right now. We'll send this to tradies from 7am tomorrow." (the earliest start among those tradies, in the market's time).
+Standard can always be booked. The owner and team actions check the same on the server (`rushRefusal`); staff logging
+a job are not stopped. The check also counts only tradies who cover the property's area (second entry). Admin >
+Markets shows **After-hours cover** per trade: how many approved tradies' hours reach before the market's start or
+after its end, or onto a non-working day, and on which days; 0 in red.
+
 ## 2026-11-26 (second entry) — Service areas, no travel charge
 
 From the same Queenstown electrician: some properties are 40 minutes each way (Glenorchy, Gibbston, Cardrona). Joe decided:

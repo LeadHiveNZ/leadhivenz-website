@@ -36,6 +36,8 @@ export default function Page() {
   const rated = `${ratedTrades.slice(0, -1).join(", ")} and ${ratedTrades.at(-1)}`;
   const fee = `${launchMarket.platformFeeBps / 100}%`;
   const ownFee = `${OWN_CLIENT_FEE_BPS / 100}%`;
+  const emergencyWithin = launchMarket.emergencyResponseMinutes === 60 ? "1 hour" : `${launchMarket.emergencyResponseMinutes} minutes`;
+  const emergencyShare = money(launchMarket.emergencySurchargeCents - Math.round((launchMarket.emergencySurchargeCents * launchMarket.platformFeeBps) / 10_000));
   const guarantee = money(launchMarket.payoutGuaranteeCents);
   // The tiered fee (DECISIONS.md, 2026-11-23, second entry): the fee on the first NZ$1,000 of a job's price, 3% above it.
   const line = money(launchMarket.tierThresholdCents);
@@ -108,6 +110,15 @@ export default function Page() {
           cannot do it.
         </p>
         <p>
+          <strong>An emergency</strong> (the owner needs someone on site within {emergencyWithin}) is offered to every tradie in the trade who is
+          inside their hours, all at once, first choice and backup included. The first to accept has it.
+        </p>
+        <p>
+          <strong>Your hours.</strong> You tell us the days and the hours you want jobs (&ldquo;send me jobs from 7am to 4:30pm&rdquo;) on your
+          profile, and change them whenever you like. We only offer you jobs, and only text or notify you about offers, inside those hours on
+          those days. That goes for standard, urgent and emergency jobs alike; there is nothing extra to opt in to.
+        </p>
+        <p>
           <strong>You choose the areas you cover</strong>, on your profile (for example Frankton, Arrowtown or Glenorchy). You start with every area
           ticked; untick the ones you do not want. You are only offered jobs at properties in the areas you have ticked, and at properties whose area
           we have not set yet. <strong>There is no travel charge</strong>: a job pays the same wherever the property is, so only tick the areas you are
@@ -131,16 +142,21 @@ export default function Page() {
 
       <Section n={4} title="What accepting commits you to">
         <ul>
-          <li>Being on site by the end of the window you chose for a normal job, or by the deadline for an urgent one (within 4 hours).</li>
+          <li>Being on site by the end of the window you chose for a normal job, or by the deadline for an urgent one (within 4 hours) or an emergency (within {emergencyWithin}).</li>
           <li>
             Taking at least one <strong>before</strong> photo in the app and tapping <strong>I have arrived</strong> at the door, with your phone&rsquo;s
-            location on. That tap is how we measure the time, and it decides whether the urgent and after-hours shares are paid. The owner can tell us if
+            location on. That tap is how we measure the time, and it decides whether the urgent, emergency and after-hours shares are paid. The owner can tell us if
             you are not there.
           </li>
           <li>Doing the job described, to a tradesperson&rsquo;s standard, and tidying up after yourself.</li>
           <li>
             Taking at least one <strong>after</strong> photo of the finished work in the app, writing what you did, and tapping <strong>Job done</strong> at
             the property, with your location on. The app will not let you arrive without a before photo or finish without an after photo.
+          </li>
+          <li>
+            <strong>Certificates.</strong> When the law needs one for the work (for example a Certificate of Compliance or Electrical Safety
+            Certificate for electrical work, or a gas certificate), adding it to the job in the app, as a PDF or a photo, within 60 days of Job done. The
+            owner sees and downloads it there.
           </li>
           <li>
             <strong>The checks.</strong> Your location at Arrived and at Job done is compared with the property&rsquo;s map pin. A tap with no location, or more
@@ -224,7 +240,7 @@ export default function Page() {
             {money(exampleCents - launchMarket.tierThresholdCents)} is {money(exampleFee)}, so you get {money(exampleCents - exampleFee)}. Your job page, the offer
             and your Pay page show the fee.
           </li>
-          <li>Your share is the amount in the offer. On an urgent or after-hours job, your share of the surcharge is in that amount, like the rest of the price: the surcharge less the {fee} platform fee ({ownFee} for your own clients). Parts are paid as in section 5: your price less {PART_FEE_BPS / 100}% (parts added before 23 November 2026: the list price less 3%, or what you paid plus 17%).</li>
+          <li>Your share is the amount in the offer. On an urgent, emergency or after-hours job, your share of the surcharge is in that amount, like the rest of the price: the surcharge less the {fee} platform fee ({ownFee} for your own clients). Parts are paid as in section 5: your price less {PART_FEE_BPS / 100}% (parts added before 23 November 2026: the list price less 3%, or what you paid plus 17%).</li>
           <li>
             <strong>The job&rsquo;s price is held on the owner&rsquo;s card when the job is sent out</strong>, and the charge is taken from that hold when you finish. Anything
             approved on top (parts, more work) is charged then too.
@@ -232,15 +248,22 @@ export default function Page() {
           <li>
             <strong>If the owner cancels before you tap I have arrived</strong>, even after you tapped On my way, they pay nothing and you are not paid: the travel is yours.
             <strong> If they cancel after you tap I have arrived</strong>, they are charged the call-out and you are paid your share of it, as for a call-out
-            ({money(launchMarket.diagnosisPayoutCents)}, plus your share of any urgent or after-hours surcharge).
+            ({money(launchMarket.diagnosisPayoutCents)}, plus your share of any urgent, emergency or after-hours surcharge).
           </li>
           <li>
             <strong>The urgent share is paid only if you tap I have arrived by the urgent deadline</strong> shown in the offer. After the deadline the
             urgent surcharge is not charged to the owner at all, so there is no share of it to pay. The rest of the job is paid as normal.
           </li>
           <li>
+            <strong>The emergency share ({emergencyShare}) is paid only if you tap I have arrived within {emergencyWithin}</strong> of the job being
+            sent out, the deadline shown in the offer. After it, the {money(launchMarket.emergencySurchargeCents)} emergency surcharge is not charged to
+            the owner, so there is no share of it to pay. The rest of the job is paid as normal. If nobody takes an emergency in{" "}
+            {launchMarket.emergencyStepDownMinutes} minutes the owner may switch it to urgent; it is then offered again as an urgent job.
+          </li>
+          <li>
             <strong>The after-hours share is paid only if you arrive outside working hours</strong> (before 7am, after 4:30pm, or at the weekend). If you
-            come within working hours, the after-hours surcharge is not charged, and the rest of the job is paid as normal.
+            come within working hours, the after-hours surcharge is not charged, and the rest of the job is paid as normal. It is paid on top of an
+            urgent or emergency share when both rules are met.
           </li>
           <li>
             Your payment is sent 24 hours after the job finishes and reaches your bank about 5 to 6 working days after the job. We will never

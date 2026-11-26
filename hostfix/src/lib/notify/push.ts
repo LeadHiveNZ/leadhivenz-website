@@ -74,7 +74,7 @@ export function pushPayload(body: string): { title: string; body: string; url: s
   }
   const words = body
     .replace(/(https?:\/\/[^\s]+)/g, "")
-    .replace(new RegExp(`^${brand.name}( URGENT)?:?\\s*`), (match) => (match.includes("URGENT") ? "URGENT: " : ""))
+    .replace(new RegExp(`^${brand.name}( URGENT| EMERGENCY)?:?\\s*`), (match) => (match.includes("EMERGENCY") ? "EMERGENCY: " : match.includes("URGENT") ? "URGENT: " : ""))
     .replace(/\s+([.:,])/g, "$1")
     .replace(/[:\s]+$/, "")
     .trim();

@@ -59,6 +59,7 @@ export function ownerJobUrl(job: Pick<Job, "number" | "id">): string {
 }
 
 /** Today's date and weekday on the wall in the market. */
-export function marketToday(market: Pick<Market, "timezone">, at: Date): { today: string; weekday: string } {
-  return { today: dateKey(at, market.timezone), weekday: localParts(at, market.timezone).weekday };
+export function marketToday(market: Pick<Market, "timezone">, at: Date): { today: string; weekday: string; hour: number } {
+  const parts = localParts(at, market.timezone);
+  return { today: dateKey(at, market.timezone), weekday: parts.weekday, hour: parts.hour + parts.minute / 60 };
 }

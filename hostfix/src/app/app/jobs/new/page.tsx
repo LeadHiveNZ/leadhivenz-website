@@ -108,6 +108,9 @@ export default async function NewJobPage({ searchParams }: { searchParams: Searc
           urgentIncluded={data.urgentIncluded}
           afterHoursNow={data.afterHoursNow}
           afterHoursCents={data.afterHoursCents}
+          emergencyMinutes={data.emergencyMinutes}
+          emergencyCents={data.emergencyCents}
+          cover={data.cover}
         />
       )}
     </div>

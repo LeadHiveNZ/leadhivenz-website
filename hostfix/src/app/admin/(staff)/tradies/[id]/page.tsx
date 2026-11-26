@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { inviteTradie, recordCheckSeen, staffSaveLicence, staffSaveTradie, staffSaveTradieAreas, staffSetTradieStatus, staffUploadCertificate, verifyLicence } from "@/app/actions/staff";
 import { ActionForm, Area, CheckList, Checks, Field, FileInput, Tick } from "@/components/forms/ActionForm";
+import { HoursFields } from "@/components/forms/HoursFields";
 import { CERTIFICATE_ACCEPT } from "@/components/forms/Fields";
 import { CertificateList } from "@/components/ui/CertificateList";
 import { SubmitButton } from "@/components/forms/SubmitButton";
@@ -389,7 +390,7 @@ export default async function StaffTradiePage({ params, searchParams }: { params
             options={trades.filter((trade) => trade.key !== "other").map((trade) => ({ key: trade.key, label: trade.label, detail: trade.licenceRequired ? "Needs a licence on file" : trade.lbpRequired ? "Needs an LBP number on file" : undefined }))}
           />
           <Checks label="Days they work" name="daysAvailable" options={WEEKDAY_OPTIONS} defaultValues={tradie.daysAvailable} />
-          <Tick name="afterHours" label="Takes after-hours call-outs" defaultChecked={tradie.afterHours} />
+          <HoursFields legend="Send them jobs from __ to __" from={tradie.hoursFrom} to={tradie.hoursTo} hint="Every offer, standard, urgent or emergency, goes only inside these hours on their days." />
           <Tick name="gstRegistered" label={`Registered for ${market.taxName}`} defaultChecked={tradie.gstRegistered} />
           <Field label={`${market.taxName} number`} name="gstNumber" maxLength={20} defaultValue={tradie.gstNumber ?? ""} />
           <Field label="Public liability insurer" name="insurer" maxLength={120} defaultValue={tradie.insurer ?? ""} />

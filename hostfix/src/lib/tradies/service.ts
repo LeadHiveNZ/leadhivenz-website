@@ -3,7 +3,7 @@ import { findTrade, needsLbp, trades as tradeList } from "@config/trades";
 import { audit } from "@/lib/audit";
 import { createUser, type User } from "@/lib/auth/users";
 import { now } from "@/lib/clock";
-import { dateKey } from "@/lib/time";
+import { dateKey, localParts } from "@/lib/time";
 import { allAreaKeys, cleanAreaKeys } from "@/lib/markets/areas";
 import { getMarket } from "@/lib/markets/store";
 import type { Db } from "@/lib/db/types";
@@ -40,7 +40,12 @@ export type Tradie = {
   status: TradieStatus;
   approvedAt: Date | null;
   daysAvailable: string[];
-  afterHours: boolean;
+  /**
+   * The hours they want jobs on their days, in the market's time (7 and 16.5 is 7am to 4:30pm): they are offered,
+   * texted and notified about jobs only inside them (DECISIONS.md, 2026-11-26, third entry).
+   */
+  hoursFrom: number;
+  hoursTo: number;
   gstRegistered: boolean;
   gstNumber: string | null;
   /** Public liability insurance: who insures them, the policy number and when it runs out ("2027-03-31"). */
@@ -79,14 +84,14 @@ export type Licence = {
 type TradieRow = {
   id: string; created_at: Date; user_id: string; name: string; phone: string | null; email: string | null; market: string;
   business_name: string; trades: string[]; status: TradieStatus; approved_at: Date | null; days_available: string[];
-  after_hours: boolean; gst_registered: boolean; gst_number: string | null; insurance_expires_on: string | null;
+  hours_from: number | string; hours_to: number | string; gst_registered: boolean; gst_number: string | null; insurance_expires_on: string | null;
   insurer: string | null; insurance_policy_number: string | null; insurance_certificate_id: string | null; lbp_number: string | null;
   payout_provider: Provider | null; payout_account_id: string | null; payouts_enabled: boolean; notes: string;
   agreement_version?: string | null; agreed_at?: Date | null; record_check_seen_at?: Date | null; record_check_seen_by?: string | null; areas?: string[] | null;
 };
 
 const TRADIE_SELECT = `select t.id, t.created_at, t.user_id, u.name, u.phone, u.email, t.market, t.business_name, t.trades, t.status,
-                              t.approved_at, t.days_available, t.after_hours, t.gst_registered, t.gst_number, t.insurance_expires_on,
+                              t.approved_at, t.days_available, t.hours_from, t.hours_to, t.gst_registered, t.gst_number, t.insurance_expires_on,
                               t.insurer, t.insurance_policy_number, t.lbp_number, t.payout_provider, t.payout_account_id, t.payouts_enabled, t.notes,
                               t.agreement_version, t.agreed_at, t.record_check_seen_at, t.record_check_seen_by, t.areas,
                               (select x.id from public.uploads x
@@ -98,7 +103,8 @@ function rowToTradie(row: TradieRow): Tradie {
   return {
     id: row.id, createdAt: new Date(row.created_at), userId: row.user_id, name: row.name, phone: row.phone, email: row.email,
     market: row.market, businessName: row.business_name, trades: row.trades, status: row.status,
-    approvedAt: row.approved_at ? new Date(row.approved_at) : null, daysAvailable: row.days_available, afterHours: row.after_hours,
+    approvedAt: row.approved_at ? new Date(row.approved_at) : null, daysAvailable: row.days_available,
+    hoursFrom: Number(row.hours_from), hoursTo: Number(row.hours_to),
     gstRegistered: row.gst_registered, gstNumber: row.gst_number,
     insurer: row.insurer ?? null, insurancePolicyNumber: row.insurance_policy_number ?? null,
     insuranceExpiresOn: row.insurance_expires_on ? String(row.insurance_expires_on).slice(0, 10) : null,
@@ -130,7 +136,9 @@ export type TradieApplication = {
   businessName: string;
   trades: string[];
   daysAvailable: string[];
-  afterHours: boolean;
+  /** Their hours (DECISIONS.md, 2026-11-26, third entry). Left out: the market's working hours. */
+  hoursFrom?: number | null;
+  hoursTo?: number | null;
   gstRegistered: boolean;
   gstNumber?: string | null;
   /** Licensed Building Practitioner number, optional. Taken from the lead when there is one and this is not given. */
@@ -145,17 +153,24 @@ export type TradieApplication = {
 export async function createTradie(db: Db, input: TradieApplication): Promise<{ user: User; tradieId: string }> {
   const chosen = validTrades(input.trades);
   if (chosen.length === 0) throw new TradieError("Choose at least one trade.");
+  const given = input.hoursFrom !== undefined && input.hoursFrom !== null && input.hoursTo !== undefined && input.hoursTo !== null;
+  if (given) checkWorkingHours(input.hoursFrom!, input.hoursTo!);
   return db.tx(async (tx) => {
     const user = await createUser(tx, { name: input.name, email: input.email, phone: input.phone });
+    // With no hours given they start on the market's working hours, and change them on their profile.
     const rows = await tx.query<{ id: string }>(
       `insert into public.tradies
-         (created_at, user_id, market, business_name, trades, days_available, after_hours, gst_registered, gst_number, lead_id, lbp_number)
-       values ($1::timestamptz, $2::uuid, $3, $4, $5::text[], $6::text[], $7, $8, $9, $10::uuid,
-               coalesce($11::text, (select l.lbp_number from public.leads l where l.id = $10::uuid)))
+         (created_at, user_id, market, business_name, trades, days_available, hours_from, hours_to, gst_registered, gst_number, lead_id, lbp_number)
+       values ($1::timestamptz, $2::uuid, $3, $4, $5::text[], $6::text[],
+               coalesce($7::real, (select m.hours_start from public.markets m where m.slug = $3), 7),
+               coalesce($8::real, (select m.hours_end from public.markets m where m.slug = $3), 16.5),
+               $9, $10, $11::uuid,
+               coalesce($12::text, (select l.lbp_number from public.leads l where l.id = $11::uuid)))
        returning id`,
       [
         now().toISOString(), user.id, input.market, input.businessName.trim() || input.name.trim(), chosen, input.daysAvailable,
-        input.afterHours, input.gstRegistered, input.gstNumber?.trim() || null, input.leadId ?? null, cleanLbp(input.lbpNumber),
+        given ? input.hoursFrom : null, given ? input.hoursTo : null,
+        input.gstRegistered, input.gstNumber?.trim() || null, input.leadId ?? null, cleanLbp(input.lbpNumber),
       ],
     );
     const tradieId = rows[0]!.id;
@@ -202,7 +217,8 @@ export type TradiePatch = {
   businessName?: string;
   trades?: string[];
   daysAvailable?: string[];
-  afterHours?: boolean;
+  hoursFrom?: number;
+  hoursTo?: number;
   gstRegistered?: boolean;
   gstNumber?: string | null;
   insurer?: string | null;
@@ -210,6 +226,24 @@ export type TradiePatch = {
   insuranceExpiresOn?: string | null;
   lbpNumber?: string | null;
 };
+
+/**
+ * A tradie's hours must start before they end, on the hour or half hour, between midnight and midnight. No overnight
+ * window: someone who takes jobs until 2am says 6am to midnight.
+ */
+export function checkWorkingHours(from: number, to: number): void {
+  const half = (value: number) => Number.isFinite(value) && Number.isInteger(value * 2);
+  if (!half(from) || !half(to) || from < 0 || to > 24 || to <= from) {
+    throw new TradieError("Choose the hours you want jobs: a start time before the finish time.");
+  }
+}
+
+/** True when that moment is inside the tradie's own hours, on one of their days, in the market's time. */
+export function insideWorkingHours(tradie: Pick<Tradie, "daysAvailable" | "hoursFrom" | "hoursTo">, at: Date, timeZone: string): boolean {
+  const parts = localParts(at, timeZone);
+  const hour = parts.hour + parts.minute / 60;
+  return tradie.daysAvailable.includes(parts.weekday) && tradie.hoursFrom <= hour && hour < tradie.hoursTo;
+}
 
 /** An LBP number as typed, tidied: trimmed, at most 40 characters, null when blank. */
 function cleanLbp(value: string | null | undefined): string | null {
@@ -246,20 +280,23 @@ export async function updateTradie(db: Db, tradieId: string, patch: TradiePatch,
   const chosen = patch.trades ? validTrades(patch.trades) : current.trades;
   if (chosen.length === 0) throw new TradieError("Choose at least one trade.");
   const lbpNumber = patch.lbpNumber === undefined ? current.lbpNumber : cleanLbp(patch.lbpNumber);
+  const hoursFrom = patch.hoursFrom ?? current.hoursFrom;
+  const hoursTo = patch.hoursTo ?? current.hoursTo;
+  if (patch.hoursFrom !== undefined || patch.hoursTo !== undefined) checkWorkingHours(hoursFrom, hoursTo);
   return db.tx(async (tx) => {
     await tx.query(
-      `update public.tradies set business_name = $2, trades = $3::text[], days_available = $4::text[], after_hours = $5,
+      `update public.tradies set business_name = $2, trades = $3::text[], days_available = $4::text[], hours_from = $5::real, hours_to = $12::real,
               gst_registered = $6, gst_number = $7, insurance_expires_on = $8::date, insurer = $9, insurance_policy_number = $10,
               lbp_number = $11
         where id = $1::uuid`,
       [
         tradieId, patch.businessName?.trim() || current.businessName, chosen, patch.daysAvailable ?? current.daysAvailable,
-        patch.afterHours ?? current.afterHours, patch.gstRegistered ?? current.gstRegistered,
+        hoursFrom, patch.gstRegistered ?? current.gstRegistered,
         patch.gstNumber === undefined ? current.gstNumber : patch.gstNumber?.trim() || null,
         patch.insuranceExpiresOn === undefined ? current.insuranceExpiresOn : patch.insuranceExpiresOn || null,
         patch.insurer === undefined ? current.insurer : patch.insurer?.trim().slice(0, 120) || null,
         patch.insurancePolicyNumber === undefined ? current.insurancePolicyNumber : patch.insurancePolicyNumber?.trim().slice(0, 80) || null,
-        lbpNumber,
+        lbpNumber, hoursTo,
       ],
     );
     // A slot for a trade they no longer do is given up.
@@ -450,13 +487,14 @@ export type OfferCriteria = {
   market: string;
   trade: string;
   licenceRequired: boolean;
-  /** The job needs someone outside normal hours. */
-  afterHours: boolean;
-  /** The job needs someone today. */
-  urgent: boolean;
   /** Today's date and weekday in the market's own time. */
   today: string;
   weekday: string;
+  /**
+   * The time of day now in the market's own time (16.5 is 4:30pm). Only tradies whose own hours include it, on one
+   * of their days, are offered the job (DECISIONS.md, 2026-11-26, third entry). Null: at any time of day.
+   */
+  hour: number | null;
   /** The property's service area (DECISIONS.md, 2026-11-26). Only tradies who cover it qualify. Null or left out: no area, everyone qualifies. */
   area?: string | null;
 };
@@ -468,8 +506,8 @@ export type OfferCriteria = {
  *  - public liability insurance on file (insurer, policy number, certificate uploaded) that has not expired
  *  - if the job needs a licence: has one for this trade that has not expired
  *  - if the trade is building work: has an LBP number on file (DECISIONS.md, 2026-11-24)
- *  - if it is after hours: has said they take after-hours work
- *  - if it is urgent: works today
+ *  - inside their own hours now: today is one of their days, and the time is from their "from" to their "to"
+ *    (DECISIONS.md, 2026-11-26, third entry). The same for every job, standard, urgent or emergency. No opt-in.
  *  - if the property has a service area: covers that area
  */
 export async function eligibleTradies(db: Db, criteria: OfferCriteria): Promise<Candidate[]> {
@@ -483,7 +521,7 @@ export async function eligibleTradies(db: Db, criteria: OfferCriteria): Promise<
         and u.disabled_at is null
         and u.phone is not null
         and t.payouts_enabled
-        and t.agreement_version = $8
+        and t.agreement_version = $7
         and char_length(coalesce(t.insurer, '')) >= 1
         and char_length(coalesce(t.insurance_policy_number, '')) >= 1
         and t.insurance_expires_on >= $6::date
@@ -493,12 +531,11 @@ export async function eligibleTradies(db: Db, criteria: OfferCriteria): Promise<
                where l.tradie_id = t.id and l.trade = $2
                  and char_length(l.licence_number) >= 2
                  and l.expires_on >= $6::date))
-        and (not $9::boolean or char_length(coalesce(t.lbp_number, '')) >= 2)
-        and (not $4::boolean or t.after_hours)
-        and (not $5::boolean or $7 = any(t.days_available))
-        and ($10::text is null or $10 = any(t.areas))
+        and (not $8::boolean or char_length(coalesce(t.lbp_number, '')) >= 2)
+        and ($4::real is null or ($5 = any(t.days_available) and t.hours_from <= $4::real and $4::real < t.hours_to))
+        and ($9::text is null or $9 = any(t.areas))
       order by slot_rank nulls last, t.created_at`,
-    [criteria.market, criteria.trade, criteria.licenceRequired, criteria.afterHours, criteria.urgent, criteria.today, criteria.weekday, TRADIE_AGREEMENT_VERSION, needsLbp(criteria.trade), criteria.area ?? null],
+    [criteria.market, criteria.trade, criteria.licenceRequired, criteria.hour, criteria.weekday, criteria.today, TRADIE_AGREEMENT_VERSION, needsLbp(criteria.trade), criteria.area ?? null],
   );
   return rows.map((row) => ({
     tradieId: row.id, userId: row.user_id, name: row.name, businessName: row.business_name, phone: row.phone,
@@ -639,7 +676,7 @@ export async function coverage(db: Db, market: string, today: string): Promise<C
  * Change this when the agreement changes, and the page's date with it
  * (tests/unit/legal.test.ts).
  */
-export const TRADIE_AGREEMENT_VERSION = "24 November 2026";
+export const TRADIE_AGREEMENT_VERSION = "26 November 2026";
 
 /*
  * The 12-month no-direct-dealing rule and its NZ$250 release (DECISIONS.md, 2026-11-20) were dropped on

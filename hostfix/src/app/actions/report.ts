@@ -7,7 +7,9 @@ import { audit } from "@/lib/audit";
 import { checkCode, issueCode } from "@/lib/auth/codes";
 import { getDb } from "@/lib/db";
 import { appSecret, baseUrl, demoModeAllowed } from "@/lib/env";
-import { list, problem, text, ticked, type FormState } from "@/lib/forms";
+import { list, problem, text, urgencyChoice, type FormState } from "@/lib/forms";
+import { rushRefusal } from "@/lib/tradies/cover";
+import { now } from "@/lib/clock";
 import { guestFromForm } from "@/lib/jobs/guest-form";
 import { createJob } from "@/lib/jobs/create";
 import { getMarket } from "@/lib/markets/store";
@@ -89,7 +91,7 @@ export async function sendReport(_previous: FormState, formData: FormData): Prom
     offMenuTrade: text(formData, "offMenuTrade"),
     offMenuTitle: text(formData, "offMenuTitle"),
     description: text(formData, "description"),
-    urgent: ticked(formData, "urgent"),
+    ...urgencyChoice(formData),
     uploadIds: list(formData, "uploadIds"),
     uploader: `report:${property.id}`,
     actor: `${via}:${name.slice(0, 40)}`,
@@ -120,6 +122,10 @@ async function sendTeamReport(formData: FormData, token: string): Promise<FormSt
 
   const guest = guestFromForm(formData, "NZ");
   if (!guest.ok) return problem(formData, guest.message, { guestPhone: guest.message });
+  // Urgent and Emergency only when someone who could take it is inside their hours (DECISIONS.md, 2026-11-26, third entry).
+  const how = urgencyChoice(formData);
+  const refused = house.dispatch === "ask" ? null : await rushRefusal(db, house.property, { menuItemId: choice === "off-menu" ? null : choice, offMenuTrade: text(formData, "offMenuTrade"), ...how }, now());
+  if (refused) return problem(formData, refused);
   const result = await createJob(db, {
     ...guest.guest,
     property: house.property,
@@ -130,7 +136,7 @@ async function sendTeamReport(formData: FormData, token: string): Promise<FormSt
     offMenuTrade: text(formData, "offMenuTrade"),
     offMenuTitle: text(formData, "offMenuTitle"),
     description: text(formData, "description"),
-    urgent: ticked(formData, "urgent"),
+    ...how,
     uploadIds: list(formData, "uploadIds"),
     uploader: `team:${link.id}`,
     actor: `team:${house.memberId}`,

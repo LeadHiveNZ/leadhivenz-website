@@ -10,7 +10,9 @@ import { SubmitButton } from "../forms/SubmitButton";
 import { labelClass } from "../forms/styles";
 import { Icon } from "../ui/Icon";
 
-export type ReportItem = { id: string; name: string; tradeLabel: string; ownerCents: number; tryFirst: string };
+export type ReportItem = { id: string; name: string; trade: string; tradeLabel: string; ownerCents: number; tryFirst: string };
+
+type Urgency = "standard" | "urgent" | "emergency";
 
 type Props = {
   action: (previous: FormState, formData: FormData) => Promise<FormState>;
@@ -30,6 +32,14 @@ type Props = {
   /** True when it is outside working hours right now, so an urgent job also carries the after-hours surcharge. */
   afterHoursNow: boolean;
   afterHoursCents: number;
+  /** Emergency (DECISIONS.md, 2026-11-26, third entry): on site within this many minutes, for this much more. Never included. */
+  emergencyMinutes: number;
+  emergencyCents: number;
+  /**
+   * By trade: is anyone who could take it inside their own hours right now? If not, Urgent and Emergency are not
+   * offered for that trade and `words` says when tradies' hours begin. Standard can always be booked.
+   */
+  cover: Record<string, { onNow: boolean; words: string | null }>;
   /** The report link, for people who are not signed in, so their photos are accepted. */
   uploadToken?: string;
   /** A team member on their own link: the report is signed with this name, so they are not asked for it. */
@@ -76,7 +86,7 @@ export function ReportForm(props: Props) {
   const [choice, setChoice] = useState<string>("");
   /** Which kind of problem is opened up: a trade's label, or "off-menu". */
   const [open, setOpen] = useState<string>("");
-  const [urgent, setUrgent] = useState(false);
+  const [chosenUrgency, setUrgency] = useState<Urgency>("standard");
   // Guests in the house (DECISIONS.md, 2026-11-20, second entry). The let-in answer follows the guest answer until it is changed by hand.
   const [guest, setGuest] = useState<"" | "yes" | "no" | "not_sure">("");
   const [letIn, setLetIn] = useState<boolean | null>(null);
@@ -85,9 +95,17 @@ export function ReportForm(props: Props) {
   const [offTrade, setOffTrade] = useState<string>(props.offMenuTrades.some((trade) => trade.key === NOT_SURE_TRADE) ? NOT_SURE_TRADE : (props.offMenuTrades[0]?.key ?? NOT_SURE_TRADE));
   const showPrices = audience !== "guest";
   const selected = items.find((item) => item.id === choice) ?? null;
+  // Who is on right now for this trade (DECISIONS.md, 2026-11-26, third entry). Nobody: only Standard is offered.
+  const trade = selected?.trade ?? (choice === OFF_MENU ? offTrade : null);
+  const cover = trade ? props.cover[trade] : undefined;
+  const rushOffered = !cover || cover.onNow;
+  const urgency: Urgency = audience === "guest" || rushOffered ? chosenUrgency : "standard";
+  const urgent = urgency !== "standard";
   const base = choice === OFF_MENU ? props.diagnosisCents : (selected?.ownerCents ?? 0);
-  const urgentExtra = (props.urgentIncluded ? 0 : props.urgentCents) + (props.afterHoursNow ? props.afterHoursCents : 0);
-  const total = base + (urgent ? urgentExtra : 0);
+  const afterHoursExtra = props.afterHoursNow ? props.afterHoursCents : 0;
+  const urgentExtra = (props.urgentIncluded ? 0 : props.urgentCents) + afterHoursExtra;
+  const emergencyExtra = props.emergencyCents + afterHoursExtra;
+  const total = base + (urgency === "urgent" ? urgentExtra : urgency === "emergency" ? emergencyExtra : 0);
 
   const groups = new Map<string, ReportItem[]>();
   for (const item of items) groups.set(item.tradeLabel, [...(groups.get(item.tradeLabel) ?? []), item]);
@@ -100,6 +118,7 @@ export function ReportForm(props: Props) {
       {/* What has been chosen, sent with the form. */}
       <input type="hidden" name="menuItemId" value={choice} />
       <input type="hidden" name="urgent" value={urgent ? "on" : ""} />
+      <input type="hidden" name="urgency" value={urgency} />
       <input type="hidden" name="offMenuTrade" value={offTrade} />
 
       <fieldset>
@@ -189,7 +208,7 @@ export function ReportForm(props: Props) {
       )}
 
       {audience === "guest" ? (
-        <Choice kind="checkbox" on={urgent} onPick={() => setUrgent(!urgent)}>
+        <Choice kind="checkbox" on={urgent} onPick={() => setUrgency(urgent ? "standard" : "urgent")}>
           <span>
             <span className="block font-semibold text-ink">This is urgent</span>
             <span className="block text-sm text-muted">No water, no power, flooding, or you cannot lock the door.</span>
@@ -199,28 +218,48 @@ export function ReportForm(props: Props) {
         <fieldset>
           <legend className="display text-2xl text-ink">How soon?</legend>
           <div className="mt-3 space-y-2" role="radiogroup" aria-label="How soon?">
-            <Choice on={!urgent} onPick={() => setUrgent(false)}>
+            <Choice on={urgency === "standard"} onPick={() => setUrgency("standard")}>
               <span className="flex-1">
                 <span className="block font-semibold text-ink">Standard</span>
                 <span className="block text-sm text-muted">A tradie on site within {props.standardHours} hours. They tell you when, as they accept.</span>
               </span>
               <span className="shrink-0 text-sm font-semibold text-muted">No extra</span>
             </Choice>
-            <Choice on={urgent} onPick={() => setUrgent(true)}>
-              <span className="flex-1">
-                <span className="block font-semibold text-ink">Get someone there within {props.urgentHours} hours</span>
-                <span className="block text-sm text-muted">
-                  The tradie drops what they are doing to come.{" "}
-                  {props.urgentIncluded ? "Included in your membership." : `${formatMoney(props.urgentCents, currency)} more, not charged if they get there late.`}
-                </span>
-                {props.afterHoursNow && (
-                  <span className="block text-sm text-muted">
-                    It is outside working hours now, so the after-hours call-out adds {formatMoney(props.afterHoursCents, currency)}, charged only if the tradie arrives outside working hours.
+            {rushOffered ? (
+              <>
+                <Choice on={urgency === "urgent"} onPick={() => setUrgency("urgent")}>
+                  <span className="flex-1">
+                    <span className="block font-semibold text-ink">Urgent: within {props.urgentHours} hours</span>
+                    <span className="block text-sm text-muted">
+                      The tradie drops what they are doing to come.{" "}
+                      {props.urgentIncluded ? "Included in your membership." : `${formatMoney(props.urgentCents, currency)} more, not charged if they get there late.`}
+                    </span>
+                    {props.afterHoursNow && (
+                      <span className="block text-sm text-muted">
+                        It is outside working hours now, so the after-hours call-out adds {formatMoney(props.afterHoursCents, currency)}, charged only if the tradie arrives outside working hours.
+                      </span>
+                    )}
                   </span>
-                )}
-              </span>
-              <span className="tabular shrink-0 text-right text-sm font-bold text-ink">{urgentExtra === 0 ? "Included" : `+${formatMoney(urgentExtra, currency)}`}</span>
-            </Choice>
+                  <span className="tabular shrink-0 text-right text-sm font-bold text-ink">{urgentExtra === 0 ? "Included" : `+${formatMoney(urgentExtra, currency)}`}</span>
+                </Choice>
+                <Choice on={urgency === "emergency"} onPick={() => setUrgency("emergency")}>
+                  <span className="flex-1">
+                    <span className="block font-semibold text-ink">Emergency: within {props.emergencyMinutes === 60 ? "1 hour" : `${props.emergencyMinutes} minutes`}</span>
+                    <span className="block text-sm text-muted">
+                      Flooding, no power, can&rsquo;t lock up. Sent to every tradie who is on, at once. {formatMoney(props.emergencyCents, currency)} more, not charged if they get there late.
+                    </span>
+                    {props.afterHoursNow && (
+                      <span className="block text-sm text-muted">
+                        Plus the after-hours call-out, {formatMoney(props.afterHoursCents, currency)}, charged only if the tradie arrives outside working hours.
+                      </span>
+                    )}
+                  </span>
+                  <span className="tabular shrink-0 text-right text-sm font-bold text-ink">+{formatMoney(emergencyExtra, currency)}</span>
+                </Choice>
+              </>
+            ) : (
+              <p className="rounded-xl bg-tint px-4 py-3 text-ink">{cover?.words ?? "No one is on right now."} Standard can still be booked now.</p>
+            )}
           </div>
         </fieldset>
       )}

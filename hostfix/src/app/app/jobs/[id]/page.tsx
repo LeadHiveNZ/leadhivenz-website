@@ -5,7 +5,7 @@ import { PageTitle } from "@/components/ui/Bits";
 import { requireOwner } from "@/lib/auth/current";
 import { now } from "@/lib/clock";
 import { getDb } from "@/lib/db";
-import { previewPrice } from "@/lib/jobs/create";
+import { goAheadPrices } from "@/lib/jobs/report-data";
 import { getJobForOwner } from "@/lib/jobs/store";
 import { loadJobView } from "@/lib/jobs/view";
 
@@ -24,10 +24,7 @@ export default async function OwnerJobPage({ params, searchParams }: { params: P
   const view = await loadJobView(db, job, "owner");
   const prices =
     job.status === "awaiting_owner"
-      ? {
-          standard: await previewPrice(db, view.property, { menuItemId: job.menuItemId, urgent: false }),
-          urgent: await previewPrice(db, view.property, { menuItemId: job.menuItemId, urgent: true }),
-        }
+      ? await goAheadPrices(db, view.property, job)
       : undefined;
 
   return (
@@ -37,7 +34,7 @@ export default async function OwnerJobPage({ params, searchParams }: { params: P
         view={view}
         now={now()}
         prices={prices}
-        flash={{ sent: Boolean(query.sent), already: Boolean(query.already), cancelled: Boolean(query.cancelled), answered: Boolean(query.answered), told: Boolean(query.told), waiting: Boolean(query.waiting), absent: Boolean(query.absent), confirmed: Boolean(query.confirmed) }}
+        flash={{ sent: Boolean(query.sent), already: Boolean(query.already), cancelled: Boolean(query.cancelled), answered: Boolean(query.answered), told: Boolean(query.told), waiting: Boolean(query.waiting), absent: Boolean(query.absent), confirmed: Boolean(query.confirmed), stepped: Boolean(query.stepped) }}
       />
     </div>
   );

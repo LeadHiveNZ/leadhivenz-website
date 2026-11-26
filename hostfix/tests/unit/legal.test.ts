@@ -204,14 +204,14 @@ describe("the hold on the card, cancelling, the payout guarantee, own clients an
     expect(launchMarket.platformFeeBps).toBe(1500);
     expect(launchMarket.diagnosisPayoutCents).toBe(19000);
     expect([PATTERN_PAIR_JOBS, PATTERN_TRADIE_CANCELS, PATTERN_DAYS]).toEqual([2, 3, 90]);
-    expect(TRADIE_AGREEMENT_VERSION).toBe("24 November 2026");
+    expect(TRADIE_AGREEMENT_VERSION).toBe("26 November 2026");
   });
 
   it("the tradie agreement says the hold, the free cancel before Arrived (the travel is theirs), and the call-out after it", () => {
     const agreement = text(TradieAgreementPage);
     expect(agreement).toContain("The job's price is held on the owner's card when the job is sent out");
     expect(agreement).toContain("If the owner cancels before you tap I have arrived , even after you tapped On my way, they pay nothing and you are not paid: the travel is yours.");
-    expect(agreement).toContain("If they cancel after you tap I have arrived , they are charged the call-out and you are paid your share of it, as for a call-out (NZ$190, plus your share of any urgent or after-hours surcharge).");
+    expect(agreement).toContain("If they cancel after you tap I have arrived , they are charged the call-out and you are paid your share of it, as for a call-out (NZ$190, plus your share of any urgent, emergency or after-hours surcharge).");
   });
 
   it("the tradie agreement says the guarantee up to NZ$1,000, and the rest waiting until it is paid", () => {
@@ -271,11 +271,27 @@ describe("the tiered fee and big work's 50% deposit (DECISIONS.md, 2026-11-23, s
   it("the owner terms say the hold at booking, 'You're only charged once it's fixed', the free cancel before Arrived and the call-out after", () => {
     const terms = text(TermsPage);
     expect(terms).toContain("When the job is sent out we hold its price on your saved card. You're only charged once it's fixed.");
-    expect(terms).toContain("When a job is sent out, we hold the price you saw on your card: the menu price with GST and any urgent or after-hours charge, or for a job not on the menu the NZ$225 call-out.");
+    expect(terms).toContain("When a job is sent out, we hold the price you saw on your card: the menu price with GST and any urgent, emergency or after-hours charge, or for a job not on the menu the NZ$225 call-out.");
     expect(terms).toContain("If your card declines the hold, the job is not sent");
     expect(terms).toContain("Until the tradie taps “I have arrived”, even when they are on the way, it is free: the hold is let go and you pay nothing.");
     expect(terms).toContain("After they have arrived, cancelling charges the call-out");
     const privacy = text(PrivacyPage);
     expect(privacy).toContain("If a tradie invites you as their client, or an owner invites their own tradie");
+  });
+
+  it("say what Emergency costs, that it is charged and paid only on time, stacks with after hours, steps down, and the tradie's own hours (DECISIONS.md, 2026-11-26, third entry)", () => {
+    const terms = text(TermsPage);
+    expect(terms).toContain("Emergency : on site within 1 hour, NZ$150 more");
+    expect(terms).toContain("more than 1 hour after the job was sent out, the NZ$150 emergency surcharge is not charged");
+    expect(terms).toContain(`If no tradie has taken an emergency ${launchMarket.emergencyStepDownMinutes} minutes after it was sent out`);
+    expect(terms).toContain("for NZ$100 less: the urgent surcharge replaces the emergency one");
+    expect(terms).toContain("at 9pm an emergency carries both");
+    expect(terms).toContain("No membership includes emergency.");
+    expect(terms).toContain("A job is only offered to tradies who are inside their hours at that moment.");
+    const agreement = text(TradieAgreementPage);
+    expect(agreement).toContain("The emergency share (NZ$127.50) is paid only if you tap I have arrived within 1 hour");
+    expect(agreement).toContain("is offered to every tradie in the trade who is inside their hours, all at once");
+    expect(agreement).toContain("We only offer you jobs, and only text or notify you about offers, inside those hours on those days.");
+    expect(agreement).toContain("there is nothing extra to opt in to");
   });
 });

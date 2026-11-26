@@ -1,13 +1,14 @@
 import Link from "next/link";
 import { OwnerCertificates } from "./Certificates";
-import { answerLater, answerQuote, cancelOwnerJob, confirmJob, goAhead, objectNotDescribed, reportProblem, tradieNotHere } from "@/app/actions/owner";
+import { answerLater, answerQuote, cancelOwnerJob, confirmJob, goAhead, objectNotDescribed, reportProblem, stepDownToUrgent, tradieNotHere } from "@/app/actions/owner";
 import { ActionForm, Area } from "@/components/forms/ActionForm";
 import { SubmitButton } from "@/components/forms/SubmitButton";
 import { buttonClass, secondaryButtonClass } from "@/components/forms/styles";
 import { Card, Chip, Facts, Notice, SectionTitle } from "@/components/ui/Bits";
 import { Icon } from "@/components/ui/Icon";
 import { Reveal } from "@/components/ui/Reveal";
-import type { PricePreview } from "@/lib/jobs/create";
+import type { GoAheadPrices } from "@/lib/jobs/report-data";
+import { stepDownSaving } from "@/lib/jobs/pricing";
 import type { JobView } from "@/lib/jobs/view";
 import type { JobPart } from "@/lib/jobs/parts";
 import { partsWords } from "@/lib/markets/display";
@@ -21,8 +22,9 @@ import { brand } from "@config/brand";
 import { formatDateTime, formatDeadline, formatHourOfDay } from "@/lib/time";
 import { ownerCheckWords, type CheckFlag } from "@/lib/jobs/checks";
 import { BeforeAfter, CostLines, Deadline, History, JobStatus, Panel, PhotoGrid } from "./JobParts";
+import { urgencyName } from "@/lib/jobs/pricing";
 
-export type OwnerJobFlash = { sent?: boolean; already?: boolean; cancelled?: boolean; answered?: boolean; told?: boolean; waiting?: boolean; absent?: boolean; confirmed?: boolean };
+export type OwnerJobFlash = { sent?: boolean; already?: boolean; cancelled?: boolean; answered?: boolean; told?: boolean; waiting?: boolean; absent?: boolean; confirmed?: boolean; stepped?: boolean };
 
 type Props = {
   view: JobView;
@@ -31,7 +33,7 @@ type Props = {
   code?: string;
   flash?: OwnerJobFlash;
   /** What it would cost to send a tradie now, for a guest's report that is waiting for a yes. */
-  prices?: { standard: PricePreview | null; urgent: PricePreview | null };
+  prices?: GoAheadPrices;
 };
 
 function explain(view: JobView): string {
@@ -123,6 +125,11 @@ export function OwnerJob({ view, now, code, flash = {}, prices }: Props) {
           A person on our team will call you back. You are not charged for anything that was not done.
         </Notice>
       )}
+      {flash.stepped && (
+        <Notice tone="good" title="Switched to urgent">
+          We are offering it now as urgent. The emergency fee is off.
+        </Notice>
+      )}
       {flash.confirmed && (
         <Notice tone="good" title="Thanks for confirming">
           The tradie will be paid as normal.
@@ -137,7 +144,7 @@ export function OwnerJob({ view, now, code, flash = {}, prices }: Props) {
       <Card className="sm:p-6">
         <div className="flex flex-wrap items-center gap-2">
           <JobStatus job={job} audience="owner" />
-          {job.urgency === "urgent" && <Chip tone="alert">Urgent</Chip>}
+          {job.urgency !== "standard" && <Chip tone="alert">{urgencyName(job.urgency)}</Chip>}
           <span className="tabular text-sm text-muted">Job {job.number}</span>
         </div>
         <p className="mt-3 text-lg text-ink">{explain(view)}</p>
@@ -207,13 +214,42 @@ export function OwnerJob({ view, now, code, flash = {}, prices }: Props) {
               Yes, send a tradie{prices?.standard ? ` · ${fmt(prices.standard.ownerCents)}` : ""}
             </SubmitButton>
             <p className="text-center text-sm text-muted">On site within {prices?.standard?.responseHours ?? job.responseHours} hours.</p>
-            <SubmitButton name="how" value="urgent" variant="secondary" pendingLabel="Sending..." className="w-full">
-              Yes, and it is urgent{prices?.urgent ? ` · ${fmt(prices.urgent.ownerCents)}` : ""}
+            {prices?.noCover ? (
+              <p className="text-center text-sm text-muted">{prices.noCover} Urgent and emergency are not available until then.</p>
+            ) : (
+              <>
+                <SubmitButton name="how" value="urgent" variant="secondary" pendingLabel="Sending..." className="w-full">
+                  Yes, and it is urgent{prices?.urgent ? ` · ${fmt(prices.urgent.ownerCents)}` : ""}
+                </SubmitButton>
+                <p className="text-center text-sm text-muted">
+                  On site within {prices?.urgent?.responseHours ?? 4} hours. If the tradie is later than that, the urgent fee is not charged.
+                  {prices?.urgent?.afterHours ? ` The after-hours call-out is charged only if they arrive before ${formatHourOfDay(market.hoursStart)}, after ${formatHourOfDay(market.hoursEnd)} or on a non-working day.` : ""}
+                </p>
+                <SubmitButton name="how" value="emergency" variant="secondary" pendingLabel="Sending..." className="w-full">
+                  Yes, it is an emergency{prices?.emergency ? ` · ${fmt(prices.emergency.ownerCents)}` : ""}
+                </SubmitButton>
+                <p className="text-center text-sm text-muted">
+                  On site within {market.emergencyResponseMinutes === 60 ? "1 hour" : `${market.emergencyResponseMinutes} minutes`}: {fmt(market.emergencySurchargeCents)} more, not charged if they are later than that.
+                  {prices?.emergency?.afterHours ? " The after-hours call-out is on top, charged only if they arrive outside working hours." : ""}
+                </p>
+              </>
+            )}
+          </ActionForm>
+        </Card>
+      )}
+
+      {job.urgency === "emergency" && job.stepDownOfferedAt && !job.tradieId && (job.status === "offering" || job.status === "unfilled") && (
+        <Card className="border-brand/30 sm:p-6">
+          <SectionTitle>No one is free within the hour yet</SectionTitle>
+          <p className="text-lg text-ink">
+            Switch to within {market.tiers.find((tier) => tier.key === job.tierKey)?.urgentResponseHours ?? 4} hours and we&rsquo;ll take {fmt(stepDownSaving(market))} off?
+          </p>
+          <ActionForm action={stepDownToUrgent} className="mt-4 space-y-2.5">
+            {which}
+            <SubmitButton pendingLabel="Switching..." className="w-full">
+              Switch to within {market.tiers.find((tier) => tier.key === job.tierKey)?.urgentResponseHours ?? 4} hours · {fmt(Math.max(0, activeTotal - stepDownSaving(market)))}
             </SubmitButton>
-            <p className="text-center text-sm text-muted">
-              On site within {prices?.urgent?.responseHours ?? 4} hours. If the tradie is later than that, the urgent fee is not charged.
-              {prices?.urgent?.afterHours ? ` The after-hours call-out is charged only if they arrive before ${formatHourOfDay(market.hoursStart)}, after ${formatHourOfDay(market.hoursEnd)} or on a non-working day.` : ""}
-            </p>
+            <p className="text-center text-sm text-muted">If you do nothing, we keep looking for someone within the hour, and our team is ringing round.</p>
           </ActionForm>
         </Card>
       )}
@@ -234,7 +270,7 @@ export function OwnerJob({ view, now, code, flash = {}, prices }: Props) {
               Send it to another {brand.name} tradie now
             </SubmitButton>
             <p className="text-center text-sm text-muted">
-              {job.urgency === "urgent" ? "If you wait, the job is no longer urgent and the urgent fee is not charged. " : ""}
+              {job.urgency !== "standard" ? "If you wait, the job is no longer urgent and its urgent or emergency fee is not charged. " : ""}
               If you have not answered by {formatDeadline(view.laterTime.answerBy, now, market.timezone)}, we send it to another tradie.
             </p>
           </ActionForm>

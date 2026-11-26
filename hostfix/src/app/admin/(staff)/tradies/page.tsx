@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { addTradie, staffSetSlot, staffSwapSlots } from "@/app/actions/staff";
 import { ActionForm, CheckList, Checks, Field, Select, Tick } from "@/components/forms/ActionForm";
+import { HoursFields } from "@/components/forms/HoursFields";
 import { SubmitButton } from "@/components/forms/SubmitButton";
 import { Card, Chip, EmptyState, Notice, PageTitle, SectionTitle } from "@/components/ui/Bits";
 import { Reveal } from "@/components/ui/Reveal";
@@ -222,7 +223,7 @@ export default async function TradiesPage({ searchParams }: { searchParams: Sear
           {market.areas.length > 0 && (
             <Checks label="Areas they cover" name="areas" options={market.areas.map((area) => ({ key: area.key, label: area.name }))} defaultValues={market.areas.map((area) => area.key)} hint="Offers only come for properties in these areas. Leave them all ticked for the whole market." />
           )}
-          <Tick name="afterHours" label="Takes after-hours call-outs" />
+          <HoursFields legend="Send them jobs from __ to __" from={market.hoursStart} to={market.hoursEnd} hint="Every offer, standard, urgent or emergency, goes only inside these hours on their days." />
           <Tick name="gstRegistered" label={`Registered for ${market.taxName}`} />
           <SubmitButton pendingLabel="Adding...">Add tradie</SubmitButton>
         </ActionForm>

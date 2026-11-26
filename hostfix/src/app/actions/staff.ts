@@ -13,7 +13,7 @@ import { getDb } from "@/lib/db";
 import { assignTradie, chooseTrade, reoffer } from "@/lib/dispatch/cascade";
 import { findTrade } from "@config/trades";
 import { baseUrl } from "@/lib/env";
-import { dollarsToCents, list, problem, text, ticked, type FormState } from "@/lib/forms";
+import { dollarsToCents, hourChoice, list, problem, text, ticked, urgencyChoice, type FormState } from "@/lib/forms";
 import { approveGuestReport, cancelJob, createJob } from "@/lib/jobs/create";
 import { getQuote } from "@/lib/jobs/store";
 import { answerQuote } from "@/lib/jobs/work";
@@ -145,7 +145,8 @@ export async function staffGoAhead(_previous: FormState, formData: FormData): Pr
   const staff = await requireStaff();
   const jobId = text(formData, "jobId");
   const db = await getDb();
-  const approved = await approveGuestReport(db, jobId, { urgent: text(formData, "how") === "urgent" }, `${staff.actor} for the owner`, gatewayFor(db));
+  const how = text(formData, "how");
+  const approved = await approveGuestReport(db, jobId, { urgent: how === "urgent", emergency: how === "emergency" }, `${staff.actor} for the owner`, gatewayFor(db));
   await sendQueued(db);
   if (!approved.ok) return { message: approved.message };
   redirect(`${jobPath(jobId)}?did=sent_out`);
@@ -319,7 +320,7 @@ export async function staffLogJob(_previous: FormState, formData: FormData): Pro
     ...guest.guest,
     property, reportedBy: "staff", reporterName: staff.name, reporterPhone: null,
     menuItemId: choice === "off-menu" ? null : choice, offMenuTrade: text(formData, "offMenuTrade"), offMenuTitle: text(formData, "offMenuTitle"),
-    description: text(formData, "description"), urgent: ticked(formData, "urgent"), uploadIds: list(formData, "uploadIds"),
+    description: text(formData, "description"), ...urgencyChoice(formData), uploadIds: list(formData, "uploadIds"),
     uploader: staff.actor, actor: staff.actor,
   }, gatewayFor(db));
   await sendQueued(db);
@@ -352,7 +353,8 @@ export async function addTradie(_previous: FormState, formData: FormData): Promi
     const created = await createTradie(db, {
       name, phone: phone!.e164, email: text(formData, "email").toLowerCase() || null, market: market.slug,
       businessName: text(formData, "businessName") || name, trades: list(formData, "trades"),
-      daysAvailable: list(formData, "daysAvailable"), afterHours: ticked(formData, "afterHours"), gstRegistered: ticked(formData, "gstRegistered"),
+      daysAvailable: list(formData, "daysAvailable"), hoursFrom: hourChoice(formData, "hoursFrom"), hoursTo: hourChoice(formData, "hoursTo"),
+      gstRegistered: ticked(formData, "gstRegistered"),
       licences: [], leadId: isUuid(text(formData, "leadId")) ? text(formData, "leadId") : null,
       // The areas ticked on the form; none ticked (or a market without areas) means every area.
       areas: list(formData, "areas").length > 0 ? list(formData, "areas") : null,
@@ -418,7 +420,8 @@ export async function staffSaveTradie(_previous: FormState, formData: FormData):
   try {
     const saved = await updateTradie(db, tradieId, {
       businessName: text(formData, "businessName"), trades: list(formData, "trades"), daysAvailable: list(formData, "daysAvailable"),
-      afterHours: ticked(formData, "afterHours"), gstRegistered: ticked(formData, "gstRegistered"), gstNumber: text(formData, "gstNumber") || null,
+      hoursFrom: hourChoice(formData, "hoursFrom"), hoursTo: hourChoice(formData, "hoursTo"),
+      gstRegistered: ticked(formData, "gstRegistered"), gstNumber: text(formData, "gstNumber") || null,
       insuranceExpiresOn: /^\d{4}-\d{2}-\d{2}$/.test(insurance) ? insurance : null,
       insurer: text(formData, "insurer") || null,
       insurancePolicyNumber: text(formData, "insurancePolicyNumber") || null,

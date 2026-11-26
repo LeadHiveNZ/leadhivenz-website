@@ -24,6 +24,7 @@ import { getTradie, listLicences } from "@/lib/tradies/service";
 import { AgreementCard } from "@/components/jobs/AgreementCard";
 import { Notifications } from "@/components/ui/Notifications";
 import { dateKey, formatDeadline } from "@/lib/time";
+import { urgencyName } from "@/lib/jobs/pricing";
 
 export const metadata: Metadata = { title: "Offers" };
 
@@ -119,7 +120,7 @@ export default async function TradieHome({ searchParams }: { searchParams: Searc
                   <p className="display tabular shrink-0 text-2xl text-ink">{formatMoney(offer.payoutCents, market?.currency ?? "NZD")}</p>
                 </div>
                 <p className="mt-2 flex flex-wrap items-center gap-2 text-sm font-semibold text-brand">
-                  {offer.urgency === "urgent" && <Chip tone="alert">Urgent</Chip>}
+                  {offer.urgency !== "standard" && <Chip tone="alert">{urgencyName(offer.urgency)}</Chip>}
                   <span>
                     Held for you for <Countdown until={offer.expiresAt.toISOString()} fallback="a few minutes" done="a moment longer" />
                   </span>
