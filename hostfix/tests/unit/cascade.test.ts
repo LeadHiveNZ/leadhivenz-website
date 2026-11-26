@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { addMinutes, setTestNow } from "@/lib/clock";
-import { acceptOffer, advanceCascade, assignTradie, expireDueOffers, passOffer, reoffer } from "@/lib/dispatch/cascade";
+import { acceptOffer, advanceCascade, assignTradie, expireDueOffers, offerWaitingJobs, passOffer, reoffer } from "@/lib/dispatch/cascade";
 import { approveGuestReport, cancelJob, createJob } from "@/lib/jobs/create";
 import { getJobForStaff } from "@/lib/jobs/store";
 import { listExceptions, raiseException } from "@/lib/ops/exceptions";
@@ -522,7 +522,7 @@ describe("the LBP number (optional)", () => {
 });
 
 describe("only staff approve (DECISIONS.md, 2026-11-17)", () => {
-  const criteria = { market: "queenstown", trade: "plumber", licenceRequired: true, afterHours: false, urgent: false, today: "2026-11-16", weekday: "mon" };
+  const criteria = { market: "queenstown", trade: "plumber", licenceRequired: true, today: "2026-11-16", weekday: "mon", hour: 10 };
   const job = { market: "queenstown", trade: "plumber", licenceRequired: true, today: "2026-11-16" };
 
   it("never offers a job to a tradie waiting for approval, however perfect their insurance and licences", async () => {
@@ -597,10 +597,21 @@ describe("who is offered a job", () => {
     expect((await offersFor(t.db, job.id)).map((o) => o.tradie_id)).toEqual([monday.tradieId]);
   });
 
-  it("offers a normal job whatever day it is, because it can be done tomorrow", async () => {
+  it("holds a normal job for a tradie who is not on today, and offers it when their day starts (DECISIONS.md, 2026-11-26, second entry)", async () => {
     const { property } = await member();
-    const tuesdays = await makeTradie(t.db, { slot: 1, days: ["tue"] });
+    const tuesdays = await makeTradie(t.db, { slot: 1, days: ["tue"], hours: [7, 16.5] });
     const job = await logJob(t.db, property);
+    // Monday 10am: nobody is inside their hours, so nothing is sent and nothing goes to the dispatcher yet.
+    expect(await offersFor(t.db, job.id)).toEqual([]);
+    expect((await status(job.id)).status).toBe("offering");
+    expect(await auditActions(t.db, job.id)).toContain("job.waiting_for_hours");
+    expect(await openExceptions(t.db, job.id)).not.toContain("nobody_accepted");
+    expect(await offerWaitingJobs(t.db)).toBe(0);
+    // Tuesday 6:59am: still not on. 7am: their hours begin and the timer offers it.
+    setTestNow(addMinutes(MONDAY_10AM, 20 * 60 + 59));
+    expect(await offerWaitingJobs(t.db)).toBe(0);
+    setTestNow(addMinutes(MONDAY_10AM, 21 * 60));
+    expect(await offerWaitingJobs(t.db)).toBe(1);
     expect((await offersFor(t.db, job.id)).map((o) => o.tradie_id)).toEqual([tuesdays.tradieId]);
   });
 });

@@ -1,4 +1,6 @@
-import type { LineKind } from "./pricing";
+import type { LineKind, Urgency } from "./pricing";
+
+export type { Urgency };
 
 /** The shapes of a job and the things attached to it. */
 
@@ -40,7 +42,7 @@ export type Job = {
   licenceRequired: boolean;
   title: string;
   description: string;
-  urgency: "standard" | "urgent";
+  urgency: Urgency;
   afterHours: boolean;
   reportedBy: ReportedBy;
   reporterName: string | null;
@@ -116,6 +118,11 @@ export type Job = {
   tradieTotalCents: number;
   /** What the lower fee above NZ$1,000 adds to the tradie's share (DECISIONS.md, 2026-11-23, second entry). In tradieTotalCents. */
   tierReliefCents: number;
+  /** An emergency nobody took in time: when the owner was offered "within 4 hours instead", and when they took it. */
+  stepDownOfferedAt?: Date | null;
+  steppedDownAt?: Date | null;
+  /** A standard job waiting because no tradie is inside their hours right now (DECISIONS.md, 2026-11-26, second entry). */
+  waitingForHoursAt?: Date | null;
   taxCents: number;
   /** The owner's team member who reported it from their own team link, if one did. */
   teamMemberId?: string | null;

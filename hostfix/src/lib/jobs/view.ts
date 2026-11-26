@@ -8,6 +8,7 @@ import { formatDeadline } from "@/lib/time";
 import { waitingLaterTime, type LaterTime } from "@/lib/dispatch/cascade";
 import { brand } from "@config/brand";
 import { windowBetween } from "./arrival";
+import { isRush } from "./pricing";
 import { flagWords, ownerCheckWords, type CheckFlag } from "./checks";
 import { loadContext } from "./context";
 import { listLines, listOffers, listQuotes, type OfferWithTradie } from "./store";
@@ -98,7 +99,7 @@ function describe(row: AuditRow, audience: Audience, job: Job, market: Market): 
       return entry(`Reported by ${who}`, "quiet", d.needs_owner ? "Waiting for the owner's go-ahead before anyone is sent." : null);
     }
     case "job.approved_by_owner":
-      return entry(audience === "owner" ? "You gave the go-ahead" : "The owner gave the go-ahead", "active", d.urgent ? "As an urgent job." : null);
+      return entry(audience === "owner" ? "You gave the go-ahead" : "The owner gave the go-ahead", "active", d.emergency ? "As an emergency, within the hour." : d.urgent ? "As an urgent job." : null);
     case "job.dispatched":
       return audience === "tradie" ? null : entry("Sent out to tradies", "waiting", d.respond_by ? `Promised on site by ${formatDeadline(new Date(str(d.respond_by)), row.at, market.timezone)}.` : null);
     case "job.offered":
@@ -123,8 +124,8 @@ function describe(row: AuditRow, audience: Audience, job: Job, market: Market): 
     case "job.not_taken_yet":
       return audience === "tradie" ? null : entry(audience === "owner" ? "No tradie has taken it yet: our team is ringing round" : "Nobody has taken it yet: ring round", "alert", audience === "owner" ? "You pay nothing unless a tradie does the job." : null);
     case "job.surcharge_dropped": {
-      const parts = [d.urgent ? "urgent" : null, d.after_hours ? "after-hours" : null].filter(Boolean).join(" and ");
-      const why = d.urgent ? "the tradie arrived after the urgent deadline" : "the tradie arrived inside working hours";
+      const parts = [d.urgent ? "urgent" : null, d.emergency ? "emergency" : null, d.after_hours ? "after-hours" : null].filter(Boolean).join(" and ");
+      const why = d.emergency ? "the tradie arrived after the hour" : d.urgent ? "the tradie arrived after the urgent deadline" : "the tradie arrived inside working hours";
       return entry(`No ${parts} fee`, "done", audience === "tradie" ? `Not paid, because ${why.replace("the tradie", "you")}.` : `Not charged, because ${why}.`);
     }
     case "job.owner_says_absent":
@@ -133,10 +134,16 @@ function describe(row: AuditRow, audience: Audience, job: Job, market: Market): 
       return audience === "staff" ? entry("No-show: the tradie was not there by the promised time", "alert") : null;
     case "job.unfilled":
       return audience === "staff" ? entry("Nobody accepted", "alert", "Sent to the dispatcher's queue.") : audience === "owner" ? entry("Our team is arranging a tradie", "waiting") : null;
+    case "job.step_down_offered":
+      return audience === "tradie" ? null : entry(audience === "owner" ? "Nobody free within the hour yet: we offered you within 4 hours, for less" : "Nobody took the emergency yet: the owner was offered urgent instead", "alert");
+    case "job.stepped_down":
+      return audience === "tradie" ? null : entry(audience === "owner" ? "You switched it to urgent" : "The owner switched it to urgent", "active", `${formatMoney(Number(d.saving_cents ?? 0), job.currency)} less. Promised on site within ${String(d.hours ?? 4)} hours.`);
+    case "job.waiting_for_hours":
+      return audience === "tradie" ? null : entry(audience === "owner" ? "Waiting for a tradie's working hours to start" : "No tradie inside their hours yet: it goes out when one's hours start", "waiting");
     case "job.reoffered":
       return audience === "staff" ? entry("Offers started again", "waiting") : null;
     case "job.accepted": {
-      const when = job.urgency !== "urgent" && d.window_start && d.window_end
+      const when = !isRush(job.urgency) && d.window_start && d.window_end
         ? `On site ${windowBetween({ start: new Date(str(d.window_start)), end: new Date(str(d.window_end)) }, row.at, market.timezone)}.`
         : null;
       return entry(

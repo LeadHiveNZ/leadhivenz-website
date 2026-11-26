@@ -119,6 +119,7 @@ export async function markEnRoute(db: Db, jobId: string, tradieId: string): Prom
  *
  *   urgent, after the deadline   the urgent line comes off: 0 for the owner,
  *                                0 for the tradie, 0 for us
+ *   emergency, after the hour    the emergency line comes off the same way
  *   after hours, but the tap is  the after-hours line comes off, the same way
  *   inside working hours
  *
@@ -178,7 +179,8 @@ export async function markArrived(
         actor: "system", action: "job.surcharge_dropped", entity: "job", entityId: jobId,
         amount: dropped.reduce((total, line) => total + line.ownerCents, 0), currency: job.currency,
         detail: {
-          urgent: dropped.some((line) => line.kind === "urgent"), after_hours: dropped.some((line) => line.kind === "after_hours"),
+          urgent: dropped.some((line) => line.kind === "urgent"), emergency: dropped.some((line) => line.kind === "emergency"),
+          after_hours: dropped.some((line) => line.kind === "after_hours"),
           owner_off: dropped.reduce((total, line) => total + line.ownerCents, 0), tradie_off: dropped.reduce((total, line) => total + line.tradieCents, 0),
           owner_now: sum.ownerCents, tradie_now: sum.tradieCents,
           deadline: job.respondBy?.toISOString() ?? null,

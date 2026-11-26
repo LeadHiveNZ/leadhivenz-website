@@ -93,6 +93,15 @@ export type Market = {
   /** Both carry the platform fee: the tradie gets the surcharge less the fee (DECISIONS.md, 2026-11-18). */
   urgentSurchargeCents: number;
   afterHoursSurchargeCents: number;
+  /**
+   * Emergency (DECISIONS.md, 2026-11-26, second entry): a tradie on site within emergencyResponseMinutes (60) for
+   * this much more (NZ$150). Like urgent it carries the platform fee, and it is charged to the owner and paid to the
+   * tradie only if they tap Arrived in time. It stacks with the after-hours call-out. Never included in a membership.
+   */
+  emergencySurchargeCents: number;
+  emergencyResponseMinutes: number;
+  /** An emergency nobody has accepted after this many minutes: the owner is offered "within 4 hours instead", for less. */
+  emergencyStepDownMinutes: number;
   /** Off-menu work: the fee to come and look, and what the tradie gets of it. */
   diagnosisFeeCents: number;
   diagnosisPayoutCents: number;
@@ -218,6 +227,9 @@ export function defineMarket(input: MarketInput): Market {
     // starts from them too. Why each one: DECISIONS.md.
     urgentSurchargeCents: 5000,
     afterHoursSurchargeCents: 14000,
+    emergencySurchargeCents: 15000,
+    emergencyResponseMinutes: 60,
+    emergencyStepDownMinutes: 10,
     diagnosisFeeCents: 22500,
     diagnosisPayoutCents: 19000,
     approvalThresholdCents: 60000,

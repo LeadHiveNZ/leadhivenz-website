@@ -232,7 +232,7 @@ export function TradieLanding({ data }: { data: PublicMarket }) {
         items.length > 0
           ? {
               title: "What the jobs pay",
-              note: `What you are paid for each job, shown in the text before you accept. Urgent adds ${formatMoney(surchargeShare(market.urgentSurchargeCents, market.platformFeeBps), market.currency)} to your pay when you're on site by the deadline, and after hours adds ${formatMoney(surchargeShare(market.afterHoursSurchargeCents, market.platformFeeBps), market.currency)} when you come outside working hours: the surcharge less our ${market.platformFeeBps / 100}%, like the rest of the price.`,
+              note: `What you are paid for each job, shown in the text before you accept. Urgent adds ${formatMoney(surchargeShare(market.urgentSurchargeCents, market.platformFeeBps), market.currency)} to your pay when you're on site by the deadline, an emergency (within ${market.emergencyResponseMinutes === 60 ? "the hour" : `${market.emergencyResponseMinutes} minutes`}) adds ${formatMoney(surchargeShare(market.emergencySurchargeCents, market.platformFeeBps), market.currency)} when you're there in time, and after hours adds ${formatMoney(surchargeShare(market.afterHoursSurchargeCents, market.platformFeeBps), market.currency)} when you come outside working hours: the surcharge less our ${market.platformFeeBps / 100}%, like the rest of the price.`,
               currency: market.currency,
               showPrices: true,
               priceLabel: "What you are paid",

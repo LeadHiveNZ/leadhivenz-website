@@ -102,7 +102,7 @@ async function tradie(
 ) {
   const created = await createTradie(ctx.db, {
     name: input.name, phone: input.phone, email: input.email, market: MARKET, businessName: input.business, trades: input.trades,
-    daysAvailable: EVERY_DAY, afterHours: input.afterHours, gstRegistered: true, gstNumber: "123-456-789", licences: [],
+    daysAvailable: EVERY_DAY, hoursFrom: input.afterHours ? 6 : 7, hoursTo: input.afterHours ? 22 : 16.5, gstRegistered: true, gstNumber: "123-456-789", licences: [],
   });
   for (const [trade, expiresOn] of Object.entries(input.licences ?? {})) {
     await saveLicence(ctx.db, created.tradieId, { trade, licenceNumber: `${trade.slice(0, 2).toUpperCase()}${Math.abs(hash(input.phone + trade)) % 90000 + 10000}`, expiresOn }, "admin");

@@ -194,11 +194,11 @@ describe("the after-hours surcharge", () => {
   it("the verdict itself, as plain sums", async () => {
     const market = (await getMarket(t.db, "queenstown"))!;
     const urgent = { urgency: "urgent" as const, respondBy: MONDAY_2PM };
-    expect(surchargeVerdict(urgent, MONDAY_2PM, market)).toEqual({ dropUrgent: false, dropAfterHours: true });
-    expect(surchargeVerdict(urgent, addMinutes(MONDAY_2PM, 1), market)).toEqual({ dropUrgent: true, dropAfterHours: true });
-    expect(surchargeVerdict(urgent, MONDAY_9PM, market)).toEqual({ dropUrgent: true, dropAfterHours: false });
+    expect(surchargeVerdict(urgent, MONDAY_2PM, market)).toEqual({ dropUrgent: false, dropEmergency: false, dropAfterHours: true });
+    expect(surchargeVerdict(urgent, addMinutes(MONDAY_2PM, 1), market)).toEqual({ dropUrgent: true, dropEmergency: false, dropAfterHours: true });
+    expect(surchargeVerdict(urgent, MONDAY_9PM, market)).toEqual({ dropUrgent: true, dropEmergency: false, dropAfterHours: false });
     const lines = [{ kind: "menu" as const }, { kind: "urgent" as const }, { kind: "after_hours" as const }];
-    expect(linesToDrop(lines, { dropUrgent: true, dropAfterHours: false })).toEqual([{ kind: "urgent" }]);
+    expect(linesToDrop(lines, { dropUrgent: true, dropEmergency: false, dropAfterHours: false })).toEqual([{ kind: "urgent" }]);
   });
 });
 
@@ -383,6 +383,8 @@ describe("a normal job nobody has taken in 3 hours", () => {
 /** Builds a history for a tradie through the app itself: handyman jobs only they do, each at its own house, arrived on time or late. */
 async function history(owner: { ownerId: string }, tradieId: string, onTime: number, late: number) {
   const start = MONDAY_10AM;
+  // The history runs over every day of the week: the tradie works them all, so each job is offered to them.
+  await t.db.query("update public.tradies set days_available = '{mon,tue,wed,thu,fri,sat,sun}' where id = $1::uuid", [tradieId]);
   let n = 0;
   for (const arrivesLate of [...Array(onTime).fill(false), ...Array(late).fill(true)] as boolean[]) {
     setTestNow(addHours(start, -24 * 60 + n * 30));

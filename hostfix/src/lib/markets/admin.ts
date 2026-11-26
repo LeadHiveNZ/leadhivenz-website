@@ -47,6 +47,9 @@ export type MarketPatch = Partial<{
   platformFeeBps: number;
   urgentSurchargeCents: number;
   afterHoursSurchargeCents: number;
+  emergencySurchargeCents: number;
+  emergencyResponseMinutes: number;
+  emergencyStepDownMinutes: number;
   diagnosisFeeCents: number;
   diagnosisPayoutCents: number;
   approvalThresholdCents: number;
@@ -76,7 +79,8 @@ export type MarketPatch = Partial<{
 const COLUMNS: Record<keyof MarketPatch, string> = {
   name: "name", stage: "stage", timezone: "timezone", taxRate: "tax_rate", taxName: "tax_name", taxRegistered: "tax_registered",
   taxNumber: "tax_number", platformFeeBps: "platform_fee_bps", urgentSurchargeCents: "urgent_surcharge_cents",
-  afterHoursSurchargeCents: "after_hours_surcharge_cents", diagnosisFeeCents: "diagnosis_fee_cents",
+  afterHoursSurchargeCents: "after_hours_surcharge_cents", emergencySurchargeCents: "emergency_surcharge_cents",
+  emergencyResponseMinutes: "emergency_response_minutes", emergencyStepDownMinutes: "emergency_step_down_minutes", diagnosisFeeCents: "diagnosis_fee_cents",
   diagnosisPayoutCents: "diagnosis_payout_cents", approvalThresholdCents: "approval_threshold_cents",
   partsIncludedCents: "parts_included_cents", partsApprovalCents: "parts_approval_cents", payoutGuaranteeCents: "payout_guarantee_cents", offerMinutes: "offer_minutes",
   hoursStart: "hours_start", hoursEnd: "hours_end", workDays: "work_days", payoutHoldHours: "payout_hold_hours",
@@ -95,12 +99,18 @@ function checkMarket(patch: MarketPatch, current: { hoursStart: number; hoursEnd
   if (patch.platformFeeBps !== undefined && (!Number.isInteger(patch.platformFeeBps) || patch.platformFeeBps < 0 || patch.platformFeeBps > 5000)) {
     throw new AdminInputError("The platform fee must be between 0% and 50%.");
   }
-  for (const key of ["urgentSurchargeCents", "afterHoursSurchargeCents", "diagnosisFeeCents", "diagnosisPayoutCents", "approvalThresholdCents", "partsIncludedCents", "partsApprovalCents", "payoutGuaranteeCents", "referralRewardCents", "depositCents"] as const) {
+  for (const key of ["urgentSurchargeCents", "afterHoursSurchargeCents", "emergencySurchargeCents", "diagnosisFeeCents", "diagnosisPayoutCents", "approvalThresholdCents", "partsIncludedCents", "partsApprovalCents", "payoutGuaranteeCents", "referralRewardCents", "depositCents"] as const) {
     if (patch[key] !== undefined) cents(patch[key]!, "That amount");
   }
   const fee = patch.diagnosisFeeCents ?? current.diagnosisFeeCents;
   const payout = patch.diagnosisPayoutCents ?? current.diagnosisPayoutCents;
   if (payout > fee) throw new AdminInputError("The diagnosis payout cannot be more than the diagnosis fee.");
+  if (patch.emergencyResponseMinutes !== undefined && (!Number.isInteger(patch.emergencyResponseMinutes) || patch.emergencyResponseMinutes < 15 || patch.emergencyResponseMinutes > 240)) {
+    throw new AdminInputError("The emergency promise must be between 15 and 240 minutes.");
+  }
+  if (patch.emergencyStepDownMinutes !== undefined && (!Number.isInteger(patch.emergencyStepDownMinutes) || patch.emergencyStepDownMinutes < 1 || patch.emergencyStepDownMinutes > 60)) {
+    throw new AdminInputError("The minutes before an emergency nobody took is offered as urgent must be between 1 and 60.");
+  }
   if (patch.offerMinutes !== undefined && (!Number.isInteger(patch.offerMinutes) || patch.offerMinutes < 1 || patch.offerMinutes > 240)) {
     throw new AdminInputError("The offer window must be between 1 and 240 minutes.");
   }
@@ -451,6 +461,12 @@ export async function createMarket(db: Db, input: NewMarket, actor: string): Pro
         template?.tierThresholdCents ?? 100000, template?.aboveTierFeeBps ?? 300,
       ],
     );
+    if (template) {
+      await tx.query(
+        "update public.markets set emergency_surcharge_cents = $2, emergency_response_minutes = $3, emergency_step_down_minutes = $4 where slug = $1",
+        [slug, template.emergencySurchargeCents, template.emergencyResponseMinutes, template.emergencyStepDownMinutes],
+      );
+    }
     let copiedTiers = 0;
     let copiedMenu = 0;
     if (template) {

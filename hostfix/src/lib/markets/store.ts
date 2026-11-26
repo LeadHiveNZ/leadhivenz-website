@@ -28,6 +28,7 @@ type MarketRow = {
   slug: string; name: string; country: CountryCode; currency: CurrencyCode; timezone: string; stage: MarketStage;
   tax_rate: number; tax_name: string; tax_registered: boolean; tax_number: string | null;
   platform_fee_bps: number; platform_fee_bps_next?: number | null; platform_fee_from?: Date | string | null; urgent_surcharge_cents: number; after_hours_surcharge_cents: number;
+  emergency_surcharge_cents?: number | null; emergency_response_minutes?: number | null; emergency_step_down_minutes?: number | null;
   diagnosis_fee_cents: number; diagnosis_payout_cents: number; approval_threshold_cents: number;
   parts_included_cents: number; parts_approval_cents: number; payout_guarantee_cents?: number | null; tier_threshold_cents?: number | null; above_tier_fee_bps?: number | null;
   offer_minutes: number; hours_start: number; hours_end: number; work_days: string[]; payout_hold_hours: number;
@@ -103,6 +104,9 @@ function rowToMarket(row: MarketRow, tiers: Tier[]): Market {
         : { bps: Number(row.platform_fee_bps_next), from: new Date(row.platform_fee_from) },
     urgentSurchargeCents: row.urgent_surcharge_cents,
     afterHoursSurchargeCents: row.after_hours_surcharge_cents,
+    emergencySurchargeCents: Number(row.emergency_surcharge_cents ?? 15000),
+    emergencyResponseMinutes: Number(row.emergency_response_minutes ?? 60),
+    emergencyStepDownMinutes: Number(row.emergency_step_down_minutes ?? 10),
     diagnosisFeeCents: row.diagnosis_fee_cents,
     diagnosisPayoutCents: row.diagnosis_payout_cents,
     approvalThresholdCents: row.approval_threshold_cents,

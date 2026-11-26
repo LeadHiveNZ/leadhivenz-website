@@ -19,7 +19,7 @@ export function JobStatus({ job, audience }: { job: Job; audience: Audience }) {
 export function Deadline({ job, now, timeZone }: { job: Job; now: Date; timeZone: string }) {
   if (!job.respondBy || job.status === "cancelled") return null;
   // A normal job's tradie chose a window when they accepted: that is what on time means (DECISIONS.md, 2026-11-18).
-  const windowed = job.urgency !== "urgent" && job.arrivalWindowStart && job.arrivalWindowEnd;
+  const windowed = job.urgency === "standard" && job.arrivalWindowStart && job.arrivalWindowEnd;
   if (job.arrivedAt) {
     const onTime = arrivedOnTime(job, job.arrivedAt);
     return (

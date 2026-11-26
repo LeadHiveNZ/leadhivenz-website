@@ -14,9 +14,10 @@ import { raiseException, resolveExceptionsFor } from "@/lib/ops/exceptions";
 import { cardProblem, cardProblemWords } from "@/lib/owners/service";
 import { baseUrl } from "@/lib/env";
 import type { Property } from "@/lib/properties/service";
-import { isAfterHours, monthBounds, monthKey } from "@/lib/time";
+import { isAfterHours } from "@/lib/time";
+import { urgentIsIncluded } from "./included";
 import { loadContext, ownerJobUrl } from "./context";
-import { cancelledOnSiteLines, initialLines, type Line } from "./pricing";
+import { cancelledOnSiteLines, initialLines, isRush, urgencyOf, type Line, type Urgency } from "./pricing";
 import { insertLines, listLines, lockJob, recalcTotals, rowToJob, type JobRow } from "./store";
 import type { Job, ReportedBy } from "./types";
 
@@ -37,6 +38,8 @@ export type NewJob = {
   offMenuTitle?: string | null;
   description: string;
   urgent: boolean;
+  /** Within the hour (DECISIONS.md, 2026-11-26, second entry). Wins over `urgent`. */
+  emergency?: boolean;
   uploadIds: string[];
   /** Who sent the photos, as recorded when they were uploaded. */
   uploader: string;
@@ -69,32 +72,23 @@ export type NewJobResult =
   | { ok: true; job: Job; needsOwner: boolean }
   | { ok: false; reason: "not_member" | "market_closed" | "unknown_item" | "duplicate" | "invalid" | "card"; message: string; existingJobId?: string };
 
-/** How many included urgent call-outs this property has already used this calendar month. */
-async function includedUrgentUsed(db: Db, propertyId: string, month: string, timeZone: string): Promise<number> {
-  const { start, end } = monthBounds(month, timeZone);
-  const rows = await db.query<{ count: number }>(
-    `select count(*) as count
-       from public.jobs j
-      where j.property_id = $1::uuid and j.status <> 'cancelled'
-        and j.created_at >= $2::timestamptz and j.created_at < $3::timestamptz
-        and exists (select 1 from public.job_lines l where l.job_id = j.id and l.kind = 'urgent' and l.owner_cents = 0 and l.status = 'active')`,
-    [propertyId, start.toISOString(), end.toISOString()],
-  );
-  return Number(rows[0]?.count ?? 0);
-}
+export { urgentIsIncluded };
 
-/** Whether the owner's tier covers the urgent surcharge for a job logged now. */
-export async function urgentIsIncluded(db: Db, property: Property, tier: Tier | null, timeZone: string, at: Date): Promise<boolean> {
-  if (!tier?.urgentIncluded) return false;
-  if (tier.urgentIncludedPerMonth === null) return true;
-  return (await includedUrgentUsed(db, property.id, monthKey(at, timeZone), timeZone)) < tier.urgentIncludedPerMonth;
-}
+export type PricePreview = {
+  lines: Line[]; ownerCents: number; tradieCents: number; afterHours: boolean; urgentIncluded: boolean; responseHours: number;
+  /** An emergency's promise in minutes (60). Null for standard and urgent, which are promised in hours. */
+  responseMinutes: number | null;
+};
 
-export type PricePreview = { lines: Line[]; ownerCents: number; tradieCents: number; afterHours: boolean; urgentIncluded: boolean; responseHours: number };
+/** The promise in whole hours, as kept on the job: an emergency's 60 minutes is 1 (the exact minutes are on the market). */
+export function promiseHours(urgency: Urgency, tier: Pick<Tier, "responseHours" | "urgentResponseHours"> | null, emergencyMinutes: number): number {
+  if (urgency === "emergency") return Math.max(1, Math.ceil(emergencyMinutes / 60));
+  return urgency === "urgent" ? (tier?.urgentResponseHours ?? 4) : (tier?.responseHours ?? 24);
+}
 
 /** What a job would cost if logged right now. Used to show the price before the person commits. */
 export async function previewPrice(
-  db: Db, property: Property, input: { menuItemId: string | null; urgent: boolean },
+  db: Db, property: Property, input: { menuItemId: string | null; urgent: boolean; emergency?: boolean },
 ): Promise<PricePreview | null> {
   const market = await getMarket(db, property.market);
   if (!market) return null;
@@ -102,17 +96,19 @@ export async function previewPrice(
   const item = input.menuItemId ? await getMenuItem(db, input.menuItemId) : null;
   if (input.menuItemId && (!item || item.market !== market.slug || !item.active)) return null;
   const at = now();
-  const afterHours = input.urgent && isAfterHours(at, market);
-  const urgentIncluded = input.urgent && (await urgentIsIncluded(db, property, tier, market.timezone, at));
+  const urgency = urgencyOf(input);
+  const afterHours = isRush(urgency) && isAfterHours(at, market);
+  const urgentIncluded = urgency === "urgent" && (await urgentIsIncluded(db, property, tier, market.timezone, at));
   const lines = initialLines(market, {
     item: item ? { name: item.name, ownerPriceCents: item.ownerPriceCents, tradiePayoutCents: item.tradiePayoutCents } : null,
-    urgent: input.urgent, afterHours, urgentIncluded,
+    urgent: urgency === "urgent", emergency: urgency === "emergency", afterHours, urgentIncluded,
   });
   return {
     lines, afterHours, urgentIncluded,
     ownerCents: lines.reduce((sum, line) => sum + line.ownerCents, 0),
     tradieCents: lines.reduce((sum, line) => sum + line.tradieCents, 0),
-    responseHours: input.urgent ? (tier?.urgentResponseHours ?? 4) : (tier?.responseHours ?? 24),
+    responseHours: promiseHours(urgency, tier, market.emergencyResponseMinutes),
+    responseMinutes: urgency === "emergency" ? market.emergencyResponseMinutes : null,
   };
 }
 
@@ -272,13 +268,16 @@ async function createJobRecord(db: Db, input: NewJob): Promise<(NewJobResult & {
     const mayLetIn = input.mayLetIn ?? defaultMayLetIn(guestStaying);
     // A guest, or a team member waiting on the owner, cannot commit the owner to a surcharge.
     // Their job starts as standard and the owner chooses when they give the go-ahead.
-    const urgent = input.reportedBy === "guest" || teamAsks ? false : input.urgent;
+    const asked = urgencyOf(input);
+    const urgency: Urgency = input.reportedBy === "guest" || teamAsks ? "standard" : asked;
+    const urgent = isRush(urgency);
     const afterHours = urgent && isAfterHours(at, market);
-    const urgentIncluded = urgent && (await urgentIsIncluded(tx, property, tier, market.timezone, at));
-    const lines = initialLines(market, { item, urgent, afterHours, urgentIncluded });
-    const responseHours = urgent ? (tier?.urgentResponseHours ?? 4) : (tier?.responseHours ?? 24);
-    const urgentNote = input.reportedBy === "guest" ? "Guest says this is urgent." : `${input.reporterName?.trim() || "Your team"} says this is urgent.`;
-    const description = ((input.reportedBy === "guest" || teamAsks) && input.urgent ? `${urgentNote} ${input.description}` : input.description).trim().slice(0, 2000);
+    const urgentIncluded = urgency === "urgent" && (await urgentIsIncluded(tx, property, tier, market.timezone, at));
+    const lines = initialLines(market, { item, urgent: urgency === "urgent", emergency: urgency === "emergency", afterHours, urgentIncluded });
+    const responseHours = promiseHours(urgency, tier, market.emergencyResponseMinutes);
+    const what = asked === "emergency" ? "an emergency" : "urgent";
+    const urgentNote = input.reportedBy === "guest" ? `Guest says this is ${what}.` : `${input.reporterName?.trim() || "Your team"} says this is ${what}.`;
+    const description = ((input.reportedBy === "guest" || teamAsks) && isRush(asked) ? `${urgentNote} ${input.description}` : input.description).trim().slice(0, 2000);
 
     const rows = await tx.query<JobRow>(
       `insert into public.jobs
@@ -290,7 +289,7 @@ async function createJobRecord(db: Db, input: NewJob): Promise<(NewJobResult & {
        returning *`,
       [
         at.toISOString(), property.id, property.ownerId, market.slug, input.menuItemId, !input.menuItemId, trade, licenceRequired, title,
-        description, urgent ? "urgent" : "standard", afterHours, input.reportedBy, input.reporterName?.trim().slice(0, 80) || null,
+        description, urgency, afterHours, input.reportedBy, input.reporterName?.trim().slice(0, 80) || null,
         // Every job waits here first: for the owner, for their card, or (going straight out) for the hold on the card.
         input.reporterPhone, "awaiting_owner", tier?.key ?? null, responseHours, market.currency,
         input.reportedBy === "team" ? (input.teamMemberId ?? null) : null,
@@ -304,7 +303,7 @@ async function createJobRecord(db: Db, input: NewJob): Promise<(NewJobResult & {
     await audit(tx, {
       actor: input.actor, action: "job.created", entity: "job", entityId: job.id, amount: sum.ownerCents, currency: market.currency,
       detail: {
-        number: job.number, title, reported_by: input.reportedBy, urgent, after_hours: afterHours, needs_owner: needsOwner,
+        number: job.number, title, reported_by: input.reportedBy, urgent, ...(urgency === "emergency" ? { emergency: true } : {}), after_hours: afterHours, needs_owner: needsOwner,
         ...(input.reportedBy === "team" && input.teamMemberId ? { team_member: input.teamMemberId, reporter: input.reporterName ?? null } : {}),
       },
     });
@@ -353,7 +352,7 @@ async function createJobRecord(db: Db, input: NewJob): Promise<(NewJobResult & {
  * The owner says yes to a guest's report, choosing standard or urgent. The job then goes to tradies, once the hold
  * on the owner's card is in place (sendOut). A declined hold: the owner is told, and the job waits for their card.
  */
-export async function approveGuestReport(db: Db, jobId: string, choice: { urgent: boolean }, actor: string, gatewayFor: GatewayFor): Promise<{ ok: true; job: Job } | { ok: false; message: string }> {
+export async function approveGuestReport(db: Db, jobId: string, choice: { urgent: boolean; emergency?: boolean }, actor: string, gatewayFor: GatewayFor): Promise<{ ok: true; job: Job } | { ok: false; message: string }> {
   const approved = await approveGuestReportRecord(db, jobId, choice, actor);
   if (!approved.ok) return approved;
   const sent = await sendOut(db, gatewayFor, jobId, actor);
@@ -361,7 +360,7 @@ export async function approveGuestReport(db: Db, jobId: string, choice: { urgent
   return { ok: true, job: (await lockJob(db, jobId))! };
 }
 
-async function approveGuestReportRecord(db: Db, jobId: string, choice: { urgent: boolean }, actor: string): Promise<{ ok: true; job: Job } | { ok: false; message: string }> {
+async function approveGuestReportRecord(db: Db, jobId: string, choice: { urgent: boolean; emergency?: boolean }, actor: string): Promise<{ ok: true; job: Job } | { ok: false; message: string }> {
   return db.tx(async (tx) => {
     const job = await lockJob(tx, jobId);
     if (!job || job.status !== "awaiting_owner" || job.cardHold) return { ok: false, message: "This job has already been dealt with." };
@@ -372,19 +371,23 @@ async function approveGuestReportRecord(db: Db, jobId: string, choice: { urgent:
     const problem = await cardProblem(tx, job.ownerId, market.country, at, market.timezone);
     if (problem) return { ok: false, message: cardProblemWords(problem) };
     const item = job.menuItemId ? await getMenuItem(tx, job.menuItemId) : null;
-    const afterHours = choice.urgent && isAfterHours(at, market);
-    const urgentIncluded = choice.urgent && (await urgentIsIncluded(tx, property, tier, market.timezone, at));
+    const urgency = urgencyOf(choice);
+    const afterHours = isRush(urgency) && isAfterHours(at, market);
+    const urgentIncluded = urgency === "urgent" && (await urgentIsIncluded(tx, property, tier, market.timezone, at));
     const lines = initialLines(market, {
       item: item ? { name: item.name, ownerPriceCents: item.ownerPriceCents, tradiePayoutCents: item.tradiePayoutCents } : null,
-      urgent: choice.urgent, afterHours, urgentIncluded,
+      urgent: urgency === "urgent", emergency: urgency === "emergency", afterHours, urgentIncluded,
     });
     await tx.query("update public.job_lines set status = 'void' where job_id = $1::uuid and status = 'active'", [jobId]);
     await insertLines(tx, jobId, lines, { at });
     await tx.query("update public.jobs set urgency = $2, after_hours = $3, response_hours = $4 where id = $1::uuid", [
-      jobId, choice.urgent ? "urgent" : "standard", afterHours, choice.urgent ? (tier?.urgentResponseHours ?? 4) : (tier?.responseHours ?? 24),
+      jobId, urgency, afterHours, promiseHours(urgency, tier, market.emergencyResponseMinutes),
     ]);
     const sum = await recalcTotals(tx, jobId, market.taxRate, market.taxRegistered);
-    await audit(tx, { actor, action: "job.approved_by_owner", entity: "job", entityId: jobId, amount: sum.ownerCents, currency: market.currency, detail: { urgent: choice.urgent, after_hours: afterHours } });
+    await audit(tx, {
+      actor, action: "job.approved_by_owner", entity: "job", entityId: jobId, amount: sum.ownerCents, currency: market.currency,
+      detail: { urgent: isRush(urgency), ...(urgency === "emergency" ? { emergency: true } : {}), after_hours: afterHours },
+    });
     // Next: the hold on the card, then out to tradies (sendOut).
     await tx.query("update public.jobs set card_hold = 'placing' where id = $1::uuid", [jobId]);
     return { ok: true, job: (await lockJob(tx, jobId))! };

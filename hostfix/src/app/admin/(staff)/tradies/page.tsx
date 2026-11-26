@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { addTradie, staffSetSlot, staffSwapSlots } from "@/app/actions/staff";
 import { ActionForm, CheckList, Checks, Field, Select, Tick } from "@/components/forms/ActionForm";
+import { HoursFields } from "@/components/forms/HoursFields";
 import { SubmitButton } from "@/components/forms/SubmitButton";
 import { Card, Chip, EmptyState, Notice, PageTitle, SectionTitle } from "@/components/ui/Bits";
 import { Reveal } from "@/components/ui/Reveal";
@@ -219,7 +220,7 @@ export default async function TradiesPage({ searchParams }: { searchParams: Sear
           </div>
           <CheckList name="trades" legend="Work they do" options={trades.filter((trade) => trade.key !== "other").map((trade) => ({ key: trade.key, label: trade.label, detail: trade.licenceRequired ? "Needs a licence on file" : trade.lbpRequired ? "Needs an LBP number on file" : undefined }))} />
           <Checks label="Days they work" name="daysAvailable" options={WEEKDAY_OPTIONS} defaultValues={["mon", "tue", "wed", "thu", "fri"]} />
-          <Tick name="afterHours" label="Takes after-hours call-outs" />
+          <HoursFields legend="Send them jobs from __ to __" from={market.hoursStart} to={market.hoursEnd} hint="Every offer, standard, urgent or emergency, goes only inside these hours on their days." />
           <Tick name="gstRegistered" label={`Registered for ${market.taxName}`} />
           <SubmitButton pendingLabel="Adding...">Add tradie</SubmitButton>
         </ActionForm>

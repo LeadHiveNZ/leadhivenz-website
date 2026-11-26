@@ -23,7 +23,7 @@ One place for every trade your holiday home needs. A checked local tradie on sit
 
 ### Free to join. Pay per job.
 
-A tradie on site within 24 hours, at the fixed menu price. Need someone within 4 hours? Add {{urgent}} on the day and the tradie drops what they are doing, plus {{after_hours}} when they come outside working hours.
+A tradie on site within 24 hours, at the fixed menu price. Need someone within 4 hours? Add {{urgent}} on the day and the tradie drops what they are doing. An emergency, within the hour, is {{emergency}} more, offered whenever a tradie is working. Either way, add {{after_hours}} when they come outside working hours.
 
 ---
 
@@ -31,7 +31,7 @@ Jobs are charged at the fixed price when the job is done, GST included. Small pa
 
 ## You only pay for what you got
 
-> Urgent, and the tradie gets there after the 4 hours? The urgent fee isn't charged. After-hours rate, but they came in working hours? Not charged either. Nobody has taken your job after 3 hours? We text you and ring round, and you pay nothing unless a tradie does the job.
+> Urgent, and the tradie gets there after the 4 hours? The urgent fee isn't charged. Emergency, and they take longer than the hour? No emergency fee. After-hours rate, but they came in working hours? Not charged either. Nobody has taken your job after 3 hours? We text you and ring round, and you pay nothing unless a tradie does the job.
 
 ## Who this is not for
 

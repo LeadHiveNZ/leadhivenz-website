@@ -238,3 +238,14 @@ export function addTextingHours(from: Date, hours: number, timeZone: string): Da
   }
   return cursor;
 }
+
+/** Every half hour from midnight to midnight, for "Send me jobs from __ to __" (a tradie's own hours). */
+export const HOUR_OPTIONS: { key: string; label: string }[] = Array.from({ length: 49 }, (_, index) => {
+  const value = index / 2;
+  return { key: String(value), label: value === 0 ? "midnight (start of the day)" : value === 24 ? "midnight (end of the day)" : formatHourOfDay(value) };
+});
+
+/** A tradie's hours as people say them: "7am to 4:30pm". */
+export function hoursLabel(from: number, to: number): string {
+  return `${formatHourOfDay(from)} to ${formatHourOfDay(to)}`;
+}

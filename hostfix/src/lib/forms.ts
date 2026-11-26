@@ -62,3 +62,20 @@ export function centsToDollars(cents: number): string {
   const rest = Math.abs(cents % 100);
   return rest === 0 ? String(whole) : `${whole}.${String(rest).padStart(2, "0")}`;
 }
+
+/** A number from a select ("16.5"), or undefined when nothing was chosen. */
+export function hourChoice(formData: FormData, name: string): number | undefined {
+  const raw = text(formData, name);
+  if (raw === "") return undefined;
+  const value = Number(raw);
+  return Number.isFinite(value) ? value : undefined;
+}
+
+/** How soon, from the report form's "urgency" field (standard, urgent or emergency), or the older "urgent" tick. */
+export function urgencyChoice(formData: FormData): { urgent: boolean; emergency: boolean } {
+  const chosen = text(formData, "urgency");
+  if (chosen === "emergency") return { urgent: false, emergency: true };
+  if (chosen === "urgent") return { urgent: true, emergency: false };
+  if (chosen === "standard") return { urgent: false, emergency: false };
+  return { urgent: ticked(formData, "urgent"), emergency: false };
+}

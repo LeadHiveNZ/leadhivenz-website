@@ -8,7 +8,7 @@ import { PlainShell } from "@/components/ui/PlainShell";
 import { jobFromOwnerLink } from "@/lib/access/links";
 import { now } from "@/lib/clock";
 import { getDb } from "@/lib/db";
-import { previewPrice } from "@/lib/jobs/create";
+import { goAheadPrices } from "@/lib/jobs/report-data";
 import { loadJobView } from "@/lib/jobs/view";
 
 export const metadata: Metadata = { title: "Your job", robots: { index: false, follow: false } };
@@ -52,10 +52,7 @@ async function LinkedJob({ params, searchParams }: { params: Params; searchParam
   const view = await loadJobView(db, job, "owner");
   const prices =
     job.status === "awaiting_owner"
-      ? {
-          standard: await previewPrice(db, view.property, { menuItemId: job.menuItemId, urgent: false }),
-          urgent: await previewPrice(db, view.property, { menuItemId: job.menuItemId, urgent: true }),
-        }
+      ? await goAheadPrices(db, view.property, job)
       : undefined;
 
   return (
@@ -67,7 +64,7 @@ async function LinkedJob({ params, searchParams }: { params: Params; searchParam
         now={now()}
         code={code}
         prices={prices}
-        flash={{ sent: Boolean(query.sent), cancelled: Boolean(query.cancelled), answered: Boolean(query.answered), told: Boolean(query.told), waiting: Boolean(query.waiting), absent: Boolean(query.absent), confirmed: Boolean(query.confirmed) }}
+        flash={{ sent: Boolean(query.sent), cancelled: Boolean(query.cancelled), answered: Boolean(query.answered), told: Boolean(query.told), waiting: Boolean(query.waiting), absent: Boolean(query.absent), confirmed: Boolean(query.confirmed), stepped: Boolean(query.stepped) }}
       />
       <p className="mt-6 text-center text-sm text-muted">
         <Link href="/sign-in?next=/app" className="font-semibold text-brand underline underline-offset-2">

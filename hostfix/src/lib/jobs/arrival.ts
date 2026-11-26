@@ -1,7 +1,7 @@
 import type { Market } from "@config/markets";
 import { MINUTE } from "@/lib/clock";
 import { formatClock, formatDeadline, isAfterHours, localParts, zonedInstant } from "@/lib/time";
-import type { Line } from "./pricing";
+import { isRush, type Line } from "./pricing";
 import type { ArrivalCheck, Job } from "./types";
 
 /**
@@ -12,6 +12,9 @@ import type { ArrivalCheck, Job } from "./types";
  *                    by the end of it. An urgent job's window is its deadline.
  *   urgent           arrived after the urgent deadline: the urgent line is not
  *                    charged to anyone (owner pays 0, tradie gets 0, we keep 0).
+ *   emergency        the same, measured the same way, against the emergency's
+ *                    deadline (the hour from being sent out): late, and the
+ *                    emergency line is charged to nobody and paid to nobody.
  *   after hours      charged only if the Arrived tap is outside working hours.
  *   location         an Arrived tap with no location, or more than 300 m from
  *                    the property's map pin (or, with no pin, from where
@@ -109,7 +112,7 @@ export function windowBetween(window: Window, from: Date, timeZone: string): str
 
 /** How a booked job's arrival time is said to the owner and the reporter: the window, or "by 4:15pm today". */
 export function bookedWhen(job: Pick<Job, "arrivalWindowStart" | "arrivalWindowEnd" | "respondBy" | "urgency">, from: Date, timeZone: string): string {
-  if (job.urgency !== "urgent" && job.arrivalWindowStart && job.arrivalWindowEnd) {
+  if (!isRush(job.urgency) && job.arrivalWindowStart && job.arrivalWindowEnd) {
     return windowBetween({ start: job.arrivalWindowStart, end: job.arrivalWindowEnd }, from, timeZone);
   }
   return job.respondBy ? `by ${formatDeadline(job.respondBy, from, timeZone)}` : "soon";
@@ -118,21 +121,27 @@ export function bookedWhen(job: Pick<Job, "arrivalWindowStart" | "arrivalWindowE
 export type SurchargeVerdict = {
   /** An urgent job reached after its deadline: the urgent line is dropped for everyone. */
   dropUrgent: boolean;
+  /** An emergency reached after its deadline (the hour): the emergency line is dropped for everyone. */
+  dropEmergency: boolean;
   /** The Arrived tap was inside working hours: the after-hours line is dropped for everyone. */
   dropAfterHours: boolean;
 };
 
 /** What the Arrived time decides about the surcharges. */
 export function surchargeVerdict(job: Pick<Job, "urgency" | "respondBy">, arrivedAt: Date, market: Hours): SurchargeVerdict {
+  const late = job.respondBy !== null && arrivedAt.getTime() > job.respondBy.getTime();
   return {
-    dropUrgent: job.urgency === "urgent" && job.respondBy !== null && arrivedAt.getTime() > job.respondBy.getTime(),
+    dropUrgent: job.urgency === "urgent" && late,
+    dropEmergency: job.urgency === "emergency" && late,
     dropAfterHours: !isAfterHours(arrivedAt, market),
   };
 }
 
 /** The surcharge lines the verdict takes off the job. Every other line is charged and paid as normal. */
 export function linesToDrop<T extends Pick<Line, "kind">>(lines: T[], verdict: SurchargeVerdict): T[] {
-  return lines.filter((line) => (line.kind === "urgent" && verdict.dropUrgent) || (line.kind === "after_hours" && verdict.dropAfterHours));
+  return lines.filter(
+    (line) => (line.kind === "urgent" && verdict.dropUrgent) || (line.kind === "emergency" && verdict.dropEmergency) || (line.kind === "after_hours" && verdict.dropAfterHours),
+  );
 }
 
 // ---------------------------------------------------------------------------

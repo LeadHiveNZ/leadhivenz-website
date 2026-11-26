@@ -122,6 +122,12 @@ export type TradieOptions = {
   /** A licence for the first trade: "valid" (default for licensed trades), "expired" or "none". */
   licence?: "valid" | "expired" | "none";
   slot?: 1 | 2 | null;
+  /**
+   * The tradie's own hours (DECISIONS.md, 2026-11-26, second entry). Default: all day (midnight to midnight), so a
+   * test's clock never matters. `afterHours: false` is the market's working hours (7am to 4:30pm), as the migration
+   * gives a tradie who did not take after-hours work; `afterHours: true` is all day.
+   */
+  hours?: [number, number];
   afterHours?: boolean;
   days?: string[];
   approved?: boolean;
@@ -139,7 +145,9 @@ export async function makeTradie(db: Db, options: TradieOptions = {}) {
   const { user, tradieId } = await createTradie(db, {
     name: options.name ?? `Tane Tradie ${n}`, phone: `+642210${String(10000 + n)}`, email: null, market: "queenstown",
     businessName: options.name ?? `Tradie ${n} Ltd`, trades, daysAvailable: options.days ?? ["mon", "tue", "wed", "thu", "fri", "sat"],
-    afterHours: options.afterHours ?? false, gstRegistered: true, licences: [],
+    hoursFrom: (options.hours ?? (options.afterHours === false ? [7, 16.5] : [0, 24]))[0],
+    hoursTo: (options.hours ?? (options.afterHours === false ? [7, 16.5] : [0, 24]))[1],
+    gstRegistered: true, licences: [],
   });
   const licence = options.licence ?? "valid";
   if (licence !== "none") {

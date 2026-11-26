@@ -4,7 +4,8 @@ We send you fixed-price maintenance jobs at holiday homes, straight to your phon
 
 - Paid automatically, in your bank about {{payout_days}} after the job
 - You see what you'll be paid before you accept
-- Urgent adds {{urgent_share}} to your pay when you're on site by the deadline, and after hours adds {{after_hours_share}} when you come outside working hours: the surcharge less our {{platform_fee}}, like the rest of the price
+- Urgent adds {{urgent_share}} to your pay when you're on site by the deadline, an emergency (within the hour) adds {{emergency_share}} when you're there in time, and after hours adds {{after_hours_share}} when you come outside working hours: the surcharge less our {{platform_fee}}, like the rest of the price
+- Jobs only in your hours: set the days and times you work. Don't want anything after 5pm? Set it, and nothing comes after 5pm
 
 ## Why tradies join
 

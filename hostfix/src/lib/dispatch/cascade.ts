@@ -5,16 +5,18 @@ import { addHours, addMinutes, now } from "@/lib/clock";
 import type { Db } from "@/lib/db/types";
 import { loadContext, marketToday, offerUrl, ownerJobUrl, type JobContext } from "@/lib/jobs/context";
 import { arrivalWindows, bookedWhen, laterWindows, pickWindow, windowBetween, type Window } from "@/lib/jobs/arrival";
-import { getOffer, listLines, lockJob, recalcTotals, rowToOffer, type OfferRow } from "@/lib/jobs/store";
+import { getOffer, insertLines, listLines, lockJob, recalcTotals, rowToOffer, type OfferRow } from "@/lib/jobs/store";
 import type { Job, Offer } from "@/lib/jobs/types";
 import { texts } from "@/lib/notify/messages";
+import { formatMoney } from "@/lib/money";
 import { enqueue } from "@/lib/notify/outbox";
 import { raiseException, resolveExceptionsFor } from "@/lib/ops/exceptions";
 import { laterWave, onTimeRecords } from "@/lib/tradies/reliability";
 import { canStillTake, eligibleTradies, getTradie, type Candidate } from "@/lib/tradies/service";
 import { addTextingHours, formatDeadline, isQuietHours, nextTextingTime } from "@/lib/time";
 import { activePair, applyOwnClientFee, pairedTradieIds } from "@/lib/clients/own-clients";
-import { ownClientLines } from "@/lib/jobs/pricing";
+import { isRush, ownClientLines, stepDownSaving, urgentLine } from "@/lib/jobs/pricing";
+import { urgentIsIncluded } from "@/lib/jobs/included";
 
 /**
  * THE OFFER CASCADE.
@@ -43,6 +45,18 @@ import { ownClientLines } from "@/lib/jobs/pricing";
  * The owner chooses: wait for them, or send it on now. No answer within the
  * market's hours (2 by default) sends it on.
  *
+ * An emergency (within the hour, DECISIONS.md, 2026-11-26, second entry)
+ * skips the first choice and backup: it goes to every eligible tradie at once,
+ * first choice and backup included, in one wave, and the first to accept has
+ * it. Nobody accepting in the market's step-down minutes (10) offers the owner
+ * "within 4 hours instead", for less (stepDownEmergencies, switchToUrgent).
+ *
+ * Every offer, of every kind, goes only to tradies inside their own hours right
+ * now, on one of their days (eligibleTradies). A standard job with nobody
+ * inside their hours waits (jobs.waiting_for_hours_at) and the timer offers it
+ * as soon as someone's hours begin (offerWaitingJobs). Urgent and emergency
+ * jobs never wait: nobody in their hours sends them to the dispatcher.
+ *
  * A stage with nobody in it is skipped straight away. A pass moves on at once.
  * No reply moves on when the 15 minutes run out. Licensed work is only ever
  * offered to a tradie with a licence on file that has not expired.
@@ -59,12 +73,13 @@ async function offerTo(db: Db, context: JobContext, candidates: Candidate[], sta
   const expiresAt = addMinutes(at, market.offerMinutes);
   const created: Offer[] = [];
   const active = (await listLines(db, job.id)).filter((line) => line.status === "active");
-  // An urgent job's urgent share is only paid if the tradie is on site by the deadline. The offer says so.
-  const urgentLine = job.urgency === "urgent" ? active.find((line) => line.kind === "urgent") : undefined;
+  // An urgent (or emergency) job's share of that surcharge is only paid if the tradie is on site by the deadline. The offer says so.
+  const rushKind = job.urgency === "emergency" ? "emergency" : "urgent";
+  const rushLine = isRush(job.urgency) ? active.find((line) => line.kind === rushKind) : undefined;
   // The tradie of an own-client pair is offered the job at the own-client fee (DECISIONS.md, 2026-11-23).
   const ownLines = ownClientLines(market, active);
   const ownPayout = Math.max(0, ownLines.reduce((sum, line) => sum + line.tradieCents, 0));
-  const ownUrgent = job.urgency === "urgent" ? ownLines.find((line) => line.kind === "urgent") : undefined;
+  const ownUrgent = isRush(job.urgency) ? ownLines.find((line) => line.kind === rushKind) : undefined;
   for (const candidate of candidates) {
     const own = paired.has(candidate.tradieId);
     const rows = await db.query<OfferRow>(
@@ -81,7 +96,8 @@ async function offerTo(db: Db, context: JobContext, candidates: Candidate[], sta
       body: words({
         title: job.title, suburb: property.suburb, payoutCents: own ? ownPayout : job.tradieTotalCents, currency: job.currency,
         deadline: job.respondBy ? formatDeadline(job.respondBy, at, market.timezone) : "as soon as you can",
-        minutes: market.offerMinutes, urgent: job.urgency === "urgent", urgentShareCents: (own ? ownUrgent : urgentLine)?.tradieCents ?? null, link: offerUrl(offer),
+        minutes: market.offerMinutes, urgent: job.urgency === "urgent", emergency: job.urgency === "emergency",
+        urgentShareCents: (own ? ownUrgent : rushLine)?.tradieCents ?? null, link: offerUrl(offer),
       }),
       dedupeKey: `offer:${offer.id}`,
       // With app notifications on, the offer goes by notification first; the text follows only if it is still unopened.
@@ -123,10 +139,8 @@ export async function advanceCascade(db: Db, jobId: string): Promise<CascadeOutc
     });
     return "unfilled";
   }
-  const all = await eligibleTradies(db, {
-    market: job.market, trade: job.trade, licenceRequired: job.licenceRequired, afterHours: job.afterHours,
-    urgent: job.urgency === "urgent", ...marketToday(market, at),
-  });
+  // Only tradies inside their own hours right now (DECISIONS.md, 2026-11-26, second entry).
+  const all = await eligibleTradies(db, { market: job.market, trade: job.trade, licenceRequired: job.licenceRequired, ...marketToday(market, at) });
   const already = new Set(
     (await db.query<{ tradie_id: string }>("select tradie_id from public.offers where job_id = $1::uuid and round = $2", [jobId, job.offerRound])).map((row) => row.tradie_id),
   );
@@ -142,15 +156,17 @@ export async function advanceCascade(db: Db, jobId: string): Promise<CascadeOutc
   const slipped = (candidate: Candidate) => candidate.slotRank === null && laterWave(records.get(candidate.tradieId));
 
   // Stage 3 can run again: its second wave, or someone who has become able to take it since.
-  for (let stage = Math.min(job.stage + 1, 3); stage <= 3; stage += 1) {
+  // An emergency goes to everyone at once, first choice and backup included, in one wave: the fastest to accept has it.
+  const emergency = job.urgency === "emergency";
+  for (let stage = emergency ? 3 : Math.min(job.stage + 1, 3); stage <= 3; stage += 1) {
     let candidates = stage === 3 ? fresh : fresh.filter((candidate) => candidate.slotRank === stage);
-    if (stage === 3) {
+    if (stage === 3 && !emergency) {
       const first = candidates.filter((candidate) => !slipped(candidate));
       if (first.length > 0) candidates = first;
     }
     if (candidates.length === 0) continue;
     const offers = await offerTo(db, context, candidates, stage, at, paired);
-    await db.query("update public.jobs set stage = $2 where id = $1::uuid", [jobId, stage]);
+    await db.query("update public.jobs set stage = $2, waiting_for_hours_at = null where id = $1::uuid", [jobId, stage]);
     await audit(db, {
       actor: "system", action: "job.offered", entity: "job", entityId: jobId,
       detail: {
@@ -161,8 +177,22 @@ export async function advanceCascade(db: Db, jobId: string): Promise<CascadeOutc
     return "offered";
   }
 
+  // A standard job with nobody inside their hours right now, but someone who could take it later: it waits, and the
+  // timer offers it when their hours begin (offerWaitingJobs). The 3-hour "not taken yet" alert still applies.
+  if (job.urgency === "standard") {
+    const later = (await eligibleTradies(db, { market: job.market, trade: job.trade, licenceRequired: job.licenceRequired, ...marketToday(market, at), hour: null }))
+      .filter((candidate) => !already.has(candidate.tradieId));
+    if (later.length > 0) {
+      if (!job.waitingForHoursAt) {
+        await db.query("update public.jobs set waiting_for_hours_at = $2::timestamptz where id = $1::uuid", [jobId, at.toISOString()]);
+        await audit(db, { actor: "system", action: "job.waiting_for_hours", entity: "job", entityId: jobId, detail: { round: job.offerRound, tradies: later.map((c) => c.businessName) } });
+      }
+      return "waiting";
+    }
+  }
+
   // Nobody left to offer it to. A trade nobody in the market does at all is said plainly, so the team can pick another trade.
-  await db.query("update public.jobs set status = 'unfilled', stage = 4 where id = $1::uuid", [jobId]);
+  await db.query("update public.jobs set status = 'unfilled', stage = 4, waiting_for_hours_at = null where id = $1::uuid", [jobId]);
   const anyone = already.size > 0 || (await db.query(
     "select 1 from public.tradies where market = $1 and status = 'approved' and $2 = any(trades) limit 1", [job.market, job.trade],
   )).length > 0;
@@ -189,12 +219,14 @@ export async function startDispatch(db: Db, jobId: string, actor: string): Promi
   const job = await lockJob(db, jobId);
   if (!job) return "not_offering";
   const at = now();
-  const respondBy = new Date(at.getTime() + job.responseHours * 60 * 60 * 1000);
+  // An emergency's promise is in minutes (the market's 60), every other job's in hours.
+  const emergencyMinutes = job.urgency === "emergency" ? (await loadContext(db, job)).market.emergencyResponseMinutes : null;
+  const respondBy = new Date(at.getTime() + (emergencyMinutes ?? job.responseHours * 60) * 60 * 1000);
   await db.query(
     "update public.jobs set status = 'offering', stage = 0, dispatched_at = $2::timestamptz, respond_by = $3::timestamptz where id = $1::uuid",
     [jobId, at.toISOString(), respondBy.toISOString()],
   );
-  await audit(db, { actor, action: "job.dispatched", entity: "job", entityId: jobId, detail: { respond_by: respondBy.toISOString(), hours: job.responseHours } });
+  await audit(db, { actor, action: "job.dispatched", entity: "job", entityId: jobId, detail: { respond_by: respondBy.toISOString(), hours: job.responseHours, ...(emergencyMinutes ? { minutes: emergencyMinutes } : {}) } });
   return advanceCascade(db, jobId);
 }
 
@@ -211,7 +243,7 @@ export type AcceptChoice = {
 
 /** The arrival windows a tradie can choose from if they accept this normal job now. Urgent jobs have none: their window is the deadline. */
 export function windowsForAccepting(job: Pick<Job, "urgency" | "respondBy">, market: Parameters<typeof arrivalWindows>[0], at: Date): Window[] {
-  if (job.urgency === "urgent" || !job.respondBy) return [];
+  if (isRush(job.urgency) || !job.respondBy) return [];
   return arrivalWindows(market, at, job.respondBy);
 }
 
@@ -247,7 +279,7 @@ export async function acceptOffer(db: Db, offerId: string, via: "link" | "text" 
   let window: Window | null = null;
   if (choice.agreed) window = choice.agreed;
   // An urgent job's window is simply its deadline, counted from when it was sent out.
-  else if (job.urgency === "urgent" && job.respondBy) window = { start: job.dispatchedAt ?? at, end: job.respondBy };
+  else if (isRush(job.urgency) && job.respondBy) window = { start: job.dispatchedAt ?? at, end: job.respondBy };
   else if (choice.windowEnd) {
     window = pickWindow(windowsForAccepting(job, market, at), choice.windowEnd);
     if (!window) return { result: "window_gone", job };
@@ -472,7 +504,7 @@ export async function suggestLaterTime(db: Db, offerId: string, windowEnd: strin
 
   await db.query("update public.offers set status = 'superseded', responded_at = $2::timestamptz, responded_via = $3 where id = $1::uuid", [offerId, at.toISOString(), via]);
   // On a normal job the owner's answer clock counts only 7am to 9pm, and the text waits for 7am. Urgent jobs run on the plain clock, any time.
-  const urgent = job.urgency === "urgent";
+  const urgent = isRush(job.urgency);
   const answerBy = urgent ? addHours(at, market.counterOfferHours) : addTextingHours(at, market.counterOfferHours, market.timezone);
   const rows = await db.query<{ id: string }>(
     `insert into public.arrival_proposals (created_at, job_id, offer_id, tradie_id, window_start, window_end, answer_by)
@@ -521,9 +553,9 @@ export async function answerLaterTime(db: Db, proposalId: string, wait: boolean,
   const context = await loadContext(db, job);
   const { market } = context;
   await db.query("update public.arrival_proposals set status = 'accepted', decided_at = $2::timestamptz, decided_by = $3 where id = $1::uuid", [proposal.id, at.toISOString(), actor]);
-  const wasUrgent = job.urgency === "urgent";
+  const wasUrgent = isRush(job.urgency);
   if (wasUrgent) {
-    await db.query("update public.job_lines set status = 'void' where job_id = $1::uuid and kind in ('urgent', 'after_hours') and status = 'active'", [job.id]);
+    await db.query("update public.job_lines set status = 'void' where job_id = $1::uuid and kind in ('urgent', 'emergency', 'after_hours') and status = 'active'", [job.id]);
     await db.query("update public.jobs set urgency = 'standard', after_hours = false where id = $1::uuid", [job.id]);
     await recalcTotals(db, job.id, market.taxRate, market.taxRegistered);
   }
@@ -621,4 +653,115 @@ export async function alertNotTakenYet(db: Db): Promise<number> {
     });
   }
   return alerted;
+}
+
+// ---------------------------------------------------------------------------
+// A STANDARD JOB WAITING FOR SOMEONE'S HOURS (DECISIONS.md, 2026-11-26, second entry)
+// ---------------------------------------------------------------------------
+
+/**
+ * Run by the timer: a standard job that nobody inside their hours could be offered (advanceCascade left it waiting)
+ * is tried again, so it goes out the minute a tradie's hours begin. Nothing changes while nobody's hours have begun.
+ */
+export async function offerWaitingJobs(db: Db): Promise<number> {
+  const rows = await db.query<{ id: string }>(
+    "select id from public.jobs where status = 'offering' and waiting_for_hours_at is not null order by waiting_for_hours_at limit 100",
+  );
+  let offered = 0;
+  for (const row of rows) {
+    const outcome = await db.tx((tx) => advanceCascade(tx, row.id));
+    if (outcome === "offered") offered += 1;
+  }
+  return offered;
+}
+
+// ---------------------------------------------------------------------------
+// EMERGENCY STEP-DOWN (DECISIONS.md, 2026-11-26, second entry)
+// ---------------------------------------------------------------------------
+
+/** True while the owner can still switch this emergency to urgent: nobody has taken it yet. */
+export function canStepDown(job: Pick<Job, "urgency" | "status" | "tradieId">): boolean {
+  return job.urgency === "emergency" && (job.status === "offering" || job.status === "unfilled") && job.tradieId === null;
+}
+
+/**
+ * Run by the timer: an emergency nobody has accepted within the market's step-down minutes (10) of being sent out.
+ * The owner is texted (and emailed) once, with a link to the job page, where one button makes it urgent for less.
+ * Opening the link changes nothing. Without an answer the job keeps looking as an emergency, and the dispatcher's
+ * "nobody accepted" alert still comes as it always did.
+ */
+export async function stepDownEmergencies(db: Db): Promise<number> {
+  const at = now();
+  const rows = await db.query<{ id: string }>(
+    `select j.id from public.jobs j join public.markets m on m.slug = j.market
+      where j.urgency = 'emergency' and j.status in ('offering', 'unfilled') and j.tradie_id is null and j.step_down_offered_at is null
+        and j.dispatched_at is not null and j.dispatched_at + (m.emergency_step_down_minutes * interval '1 minute') <= $1::timestamptz
+      order by j.dispatched_at limit 100`,
+    [at.toISOString()],
+  );
+  let offered = 0;
+  for (const row of rows) {
+    await db.tx(async (tx) => {
+      const job = await lockJob(tx, row.id);
+      if (!job || !canStepDown(job) || job.stepDownOfferedAt) return;
+      const { market, owner, property, tier } = await loadContext(tx, job);
+      await tx.query("update public.jobs set step_down_offered_at = $2::timestamptz where id = $1::uuid", [job.id, at.toISOString()]);
+      const hours = tier?.urgentResponseHours ?? 4;
+      const saving = stepDownSaving(market);
+      await audit(tx, { actor: "system", action: "job.step_down_offered", entity: "job", entityId: job.id, amount: saving, currency: job.currency, detail: { minutes: market.emergencyStepDownMinutes, hours } });
+      const link = ownerJobUrl(job);
+      if (owner.phone) {
+        await enqueue(tx, {
+          channel: "sms", to: owner.phone, template: "emergency_step_down", audience: "owner", jobId: job.id, userId: owner.userId,
+          body: texts.emergencyStepDown({ property: property.name, hours, savingCents: saving, currency: job.currency, link }), dedupeKey: `emergency_step_down:${job.id}`,
+        });
+      }
+      if (owner.email) {
+        await enqueue(tx, {
+          channel: "email", to: owner.email, template: "emergency_step_down", audience: "owner", jobId: job.id, userId: owner.userId,
+          subject: `${brand.name}: nobody is free within the hour`,
+          body: `Hi ${owner.name.split(" ")[0]},\n\nNo one is free within the hour for "${job.title}" at ${property.name}. Switch to within ${hours} hours and we'll take ${formatMoney(saving, job.currency)} off?\n\nOne tap on the job page: ${link}\n\nIf you do nothing, we keep looking for someone within the hour.\n\n${brand.name}`,
+          dedupeKey: `emergency_step_down_email:${job.id}`,
+        });
+      }
+      offered += 1;
+    });
+  }
+  return offered;
+}
+
+export type StepDownResult = { ok: true; job: Job; savingCents: number } | { ok: false; message: string };
+
+/**
+ * The owner taps "Switch to within 4 hours" on an emergency nobody has taken (DECISIONS.md, 2026-11-26, second
+ * entry). The emergency line comes off and the urgent line goes on (NZ$150 out, NZ$50 in: NZ$100 less), the promise
+ * becomes 4 hours from now, and the job is offered again from the top as an urgent job, first choice first. The
+ * after-hours line stays as it was (still charged only if the tradie arrives outside working hours). The hold on the
+ * card stays at the old amount; only the lower price is taken from it when the job is done, and the rest let go.
+ * Must be called inside a database step.
+ */
+export async function switchToUrgent(db: Db, jobId: string, actor: string): Promise<StepDownResult> {
+  const job = await lockJob(db, jobId);
+  if (!job) return { ok: false, message: "We could not find that job." };
+  if (job.urgency !== "emergency" || job.steppedDownAt) return { ok: false, message: "This job is not an emergency any more." };
+  if (!canStepDown(job)) return { ok: false, message: "A tradie has already taken this job, so it stays as it is." };
+  const at = now();
+  const { market, property, tier } = await loadContext(db, job);
+  const before = job.ownerTotalCents;
+  await db.query("update public.job_lines set status = 'void' where job_id = $1::uuid and kind = 'emergency' and status = 'active'", [job.id]);
+  await insertLines(db, job.id, [urgentLine(market, await urgentIsIncluded(db, property, tier, market.timezone, at))], { at });
+  const hours = tier?.urgentResponseHours ?? 4;
+  await db.query(
+    `update public.jobs set urgency = 'urgent', response_hours = $2, respond_by = $3::timestamptz, stepped_down_at = $4::timestamptz,
+            at_risk_flagged_at = null where id = $1::uuid`,
+    [job.id, hours, addHours(at, hours).toISOString(), at.toISOString()],
+  );
+  const sum = await recalcTotals(db, job.id, market.taxRate, market.taxRegistered);
+  await audit(db, {
+    actor, action: "job.stepped_down", entity: "job", entityId: job.id, amount: sum.ownerCents, currency: job.currency,
+    detail: { from: "emergency", to: "urgent", hours, before_cents: before, after_cents: sum.ownerCents, saving_cents: before - sum.ownerCents },
+  });
+  await resolveExceptionsFor(db, job.id, ["nobody_accepted"], "Switched to urgent: offered again");
+  await reoffer(db, job.id, actor);
+  return { ok: true, job: (await lockJob(db, job.id))!, savingCents: before - sum.ownerCents };
 }

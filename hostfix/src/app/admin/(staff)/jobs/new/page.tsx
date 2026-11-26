@@ -43,6 +43,9 @@ export default async function StaffNewJobPage({ searchParams }: { searchParams: 
           urgentIncluded={data.urgentIncluded}
           afterHoursNow={data.afterHoursNow}
           afterHoursCents={data.afterHoursCents}
+          emergencyMinutes={data.emergencyMinutes}
+          emergencyCents={data.emergencyCents}
+          cover={data.cover}
         />
       )}
     </div>

@@ -53,6 +53,9 @@ const samples: Record<string, string> = {
   laterTimeAccepted: texts.laterTimeAccepted({ number: 104237, when, link }),
   laterTimeSentOn: texts.laterTimeSentOn({ number: 104237 }),
   stillArranging: texts.stillArranging({ property: longProperty }),
+  emergencyStepDown: texts.emergencyStepDown({ property: longProperty, hours: 4, savingCents: 10000, currency: "NZD", link: jobLink }),
+  offerEmergency: texts.offer({ title: longTitle, suburb: "Arthurs Point", payoutCents: 63250, currency: "NZD", deadline: "12:15pm today", minutes: 15, urgent: false, emergency: true, urgentShareCents: 12750, link }),
+  offerOpenEmergency: texts.offerOpen({ title: longTitle, suburb: "Arthurs Point", payoutCents: 123250, currency: "NZD", deadline: "12:15pm today", minutes: 15, urgent: false, emergency: true, urgentShareCents: 12750, link }),
   quoteNeedsApproval: texts.quoteNeedsApproval({ tradie: business, amountCents: big, currency: "NZD", property: longProperty, link: jobLink }),
   quoteGoingAhead: texts.quoteGoingAhead({ tradie: business, amountCents: big, currency: "NZD", property: longProperty, link: jobLink }),
   notDescribed: texts.notDescribed({ tradie: business, property: longProperty, amountCents: big, currency: "NZD", link: jobLink }),
@@ -91,7 +94,7 @@ const samples: Record<string, string> = {
 
 describe("every text the product sends", () => {
   it("has a sample here, so a new text cannot skip these checks", () => {
-    const names = new Set(Object.keys(samples).map((name) => name.replace(/(Urgent|One|Paid)$/, "")));
+    const names = new Set(Object.keys(samples).map((name) => name.replace(/(Urgent|Emergency|One|Paid)$/, "")));
     expect([...names].sort()).toEqual(Object.keys(texts).sort());
   });
 

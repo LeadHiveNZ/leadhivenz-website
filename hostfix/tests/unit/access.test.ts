@@ -509,7 +509,7 @@ describe("insurance certificates", () => {
 
     const { tradieId } = await createTradie(t.db, {
       name: "Lena Lead", phone: "+64220009999", email: null, market: "queenstown", businessName: "Lena Builds", trades: ["handyman"],
-      daysAvailable: ["mon"], afterHours: false, gstRegistered: false, licences: [], leadId: lead,
+      daysAvailable: ["mon"], gstRegistered: false, licences: [], leadId: lead,
     });
     const tradie = (await getTradie(t.db, tradieId))!;
     expect(tradie).toMatchObject({ lbpNumber: "BP998877", insuranceCertificateId: saved.uploadId, status: "applied" });

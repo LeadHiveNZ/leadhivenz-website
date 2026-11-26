@@ -19,11 +19,17 @@ import { formatMoney } from "@/lib/money";
 import { smsSettings } from "@/lib/notify/sms";
 import { paymentsProblem } from "@/lib/payments";
 import { coverage } from "@/lib/tradies/service";
+import { marketAfterHoursCover } from "@/lib/tradies/cover";
 import { HOURLY_LIMIT_CENTS, hourlyRates } from "@/lib/jobs/rates";
 import { dateKey, formatDate } from "@/lib/time";
 import { WEEKDAY_OPTIONS } from "@/lib/weekdays";
 
 export const metadata: Metadata = { title: "Market" };
+
+/** The trades with a job on the menu, switched on. */
+function usedTradesFor(menu: MenuItem[]): Set<string> {
+  return new Set(menu.filter((item) => item.active).map((item) => item.trade));
+}
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -180,6 +186,8 @@ export default async function MarketPage({ params, searchParams }: { params: Pro
   const menu = await listMenu(db, market.slug, { includeInactive: true });
   const priceList = await listPriceList(db, market.slug, { includeInactive: true });
   const cover = await coverage(db, market.slug, dateKey(now(), market.timezone));
+  // After-hours cover (DECISIONS.md, 2026-11-26, second entry): whose own hours reach outside the market's working hours.
+  const lateCover = (await marketAfterHoursCover(db, market)).filter((row) => usedTradesFor(menu).has(row.trade));
   const money = (cents: number) => formatMoney(cents, market.currency);
   const usedTrades = new Set(menu.filter((item) => item.active).map((item) => item.trade));
   const thin = cover.filter((row) => usedTrades.has(row.trade) && row.ready === 0);
@@ -242,6 +250,24 @@ export default async function MarketPage({ params, searchParams }: { params: Pro
       </Card>
 
       <Card className="sm:p-6">
+        <SectionTitle>After-hours cover</SectionTitle>
+        <p className="mb-3 text-sm text-muted">
+          Approved tradies whose own hours reach before {clockText(market.hoursStart)} or after {clockText(market.hoursEnd)}, or onto a day that is not a working day. Urgent and emergency jobs out of hours only go to them. 0 means nobody: the report form does not offer urgent or emergency for that trade then.
+        </p>
+        <ul className="space-y-1.5">
+          {lateCover.map((row) => (
+            <li key={row.trade} className="flex flex-wrap items-baseline justify-between gap-x-4 text-sm">
+              <span className="font-semibold text-ink">{row.label}</span>
+              <span className={row.tradies === 0 ? "font-bold text-alert" : "text-muted"}>
+                {row.tradies} {row.tradies === 1 ? "tradie" : "tradies"}
+                {row.tradies > 0 ? ` · ${row.days.map((day) => WEEKDAY_OPTIONS.find((option) => option.key === day)?.label ?? day).join(", ")}` : ""}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </Card>
+
+      <Card className="sm:p-6">
         <SectionTitle>Settings</SectionTitle>
         <ActionForm action={saveMarketSettings} className="space-y-5">
           <input type="hidden" name="slug" value={market.slug} />
@@ -255,6 +281,9 @@ export default async function MarketPage({ params, searchParams }: { params: Pro
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Our share of off-menu work (%)" name="platformFee" required inputMode="decimal" maxLength={5} defaultValue={String((market.platformFeeNext?.bps ?? market.platformFeeBps) / 100)} hint={`Also taken from the urgent and after-hours surcharges. Menu jobs use the two prices on each job instead. Once the market has tradies, a change starts 30 days after you save it, and every tradie here is texted.${market.platformFeeNext ? ` Now ${market.platformFeeBps / 100}%; ${market.platformFeeNext.bps / 100}% from ${formatDate(market.platformFeeNext.from, market.timezone)}. Put ${market.platformFeeBps / 100} back to call it off.` : ""}`} />
             <Field label="Urgent surcharge" name="urgentSurcharge" required inputMode="decimal" maxLength={8} defaultValue={centsToDollars(market.urgentSurchargeCents)} hint="The tradie drops what they are doing. They get it less our share, like the rest of the price." />
+            <Field label="Emergency surcharge" name="emergencySurcharge" required inputMode="decimal" maxLength={8} defaultValue={centsToDollars(market.emergencySurchargeCents)} hint="Within the hour. Charged, and paid to the tradie less our share, only if they tap Arrived in time. Never included in a membership." />
+            <Field label="Emergency promise (minutes)" name="emergencyResponseMinutes" required inputMode="numeric" maxLength={3} defaultValue={String(market.emergencyResponseMinutes)} hint="Sent to every tradie who is on, at once." />
+            <Field label="Minutes before we offer urgent instead" name="emergencyStepDownMinutes" required inputMode="numeric" maxLength={2} defaultValue={String(market.emergencyStepDownMinutes)} hint="An emergency nobody has taken by then: the owner is texted a one-tap switch to urgent, for the difference less." />
             <Field label="After-hours surcharge" name="afterHoursSurcharge" required inputMode="decimal" maxLength={8} defaultValue={centsToDollars(market.afterHoursSurchargeCents)} hint="The tradie gets it less our share, like the rest of the price." />
             <Field label="Call-out fee for off-menu work" name="diagnosisFee" required inputMode="decimal" maxLength={8} defaultValue={centsToDollars(market.diagnosisFeeCents)} hint="What the owner pays for a tradie to come and look." />
             <Field label="What the tradie gets of that call-out" name="diagnosisPayout" required inputMode="decimal" maxLength={8} defaultValue={centsToDollars(market.diagnosisPayoutCents)} />

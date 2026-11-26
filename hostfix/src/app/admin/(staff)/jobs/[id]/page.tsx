@@ -31,6 +31,7 @@ import { displayPhone } from "@/lib/phone";
 import { addressLine } from "@/lib/properties/service";
 import { listLicences, listTradies } from "@/lib/tradies/service";
 import { dateKey, formatClock, formatDateTime } from "@/lib/time";
+import { urgencyName } from "@/lib/jobs/pricing";
 
 export const metadata: Metadata = { title: "Job" };
 
@@ -176,7 +177,7 @@ export default async function StaffJobPage({ params, searchParams }: { params: P
       <Card className="sm:p-6">
         <div className="flex flex-wrap items-center gap-2">
           <JobStatus job={job} audience="staff" />
-          {job.urgency === "urgent" && <Chip tone="alert">Urgent</Chip>}
+          {job.urgency !== "standard" && <Chip tone="alert">{urgencyName(job.urgency)}</Chip>}
           {job.afterHours && <Chip tone="brand">After hours</Chip>}
           {job.offMenu && <Chip tone="brand">Off menu</Chip>}
           {job.licenceRequired && <Chip tone="brand">Licence needed</Chip>}
@@ -288,6 +289,9 @@ export default async function StaffJobPage({ params, searchParams }: { params: P
             </SubmitButton>
             <SubmitButton name="how" value="urgent" variant="secondary" pendingLabel="Sending...">
               Owner said yes, urgent
+            </SubmitButton>
+            <SubmitButton name="how" value="emergency" variant="secondary" pendingLabel="Sending...">
+              Owner said yes, emergency (within the hour)
             </SubmitButton>
           </ActionForm>
         </Card>

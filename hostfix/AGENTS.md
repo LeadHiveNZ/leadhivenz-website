@@ -42,6 +42,8 @@ it when you change one.
 | Quote rate and hours quoted per tradie | `src/lib/tradies/quote-rate.ts` |
 | Text, email or app notification; STOP; the first-text STOP line | `enqueue` in `src/lib/notify/outbox.ts`, `src/lib/notify/push.ts`, `src/lib/notify/inbound.ts` |
 | The offer cascade: first choice, backup, everyone, dispatcher; "Not sure" jobs and picking the trade | `src/lib/dispatch/cascade.ts` |
+| Emergency (within the hour, everyone at once), the step-down to urgent; each tradie's own hours, a standard job waiting for them | `stepDownEmergencies`/`switchToUrgent`/`offerWaitingJobs` in `src/lib/dispatch/cascade.ts`, `eligibleTradies` in `src/lib/tradies/service.ts` |
+| Who is on right now (Urgent and Emergency only offered then), after-hours cover per trade | `src/lib/tradies/cover.ts` |
 | The trades, which need a licence, which need an LBP number | `config/trades.ts` |
 | Everything the clock drives | `src/lib/dispatch/tick.ts`, called by `/api/cron/tick` |
 | Charging, paying tradies, credits, disputes, refunds | `src/lib/billing/settle.ts` |

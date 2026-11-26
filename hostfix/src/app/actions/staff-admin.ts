@@ -116,6 +116,9 @@ export async function saveMarketSettings(_previous: FormState, formData: FormDat
     taxRate: tax === undefined ? undefined : Math.round(tax * 100) / 10000,
     urgentSurchargeCents: amount(formData, "urgentSurcharge", errors),
     afterHoursSurchargeCents: amount(formData, "afterHoursSurcharge", errors),
+    emergencySurchargeCents: amount(formData, "emergencySurcharge", errors),
+    emergencyResponseMinutes: whole(formData, "emergencyResponseMinutes", errors),
+    emergencyStepDownMinutes: whole(formData, "emergencyStepDownMinutes", errors),
     diagnosisFeeCents: amount(formData, "diagnosisFee", errors),
     diagnosisPayoutCents: amount(formData, "diagnosisPayout", errors),
     approvalThresholdCents: amount(formData, "approvalThreshold", errors),
@@ -373,7 +376,7 @@ export async function tradieFromLead(_previous: FormState, formData: FormData): 
   try {
     const created = await createTradie(db, {
       name: lead.name, phone: lead.phone, email: lead.email, market: lead.market, businessName: lead.name, trades: [tradeKey],
-      daysAvailable: lead.daysAvailable ?? [], afterHours: false, gstRegistered: false, licences: [], leadId: lead.id,
+      daysAvailable: lead.daysAvailable ?? [], gstRegistered: false, licences: [], leadId: lead.id,
     });
     tradieId = created.tradieId;
   } catch (error) {
