@@ -12,6 +12,10 @@ clients/
     northland-handyman-master.html
     README.md                   routes, data sources, pre-launch checks
     screens/                    rendered previews of each page
+  manawatu-electrician/         Watchdog Security and Electrical (Duncan Hodges), Palmy to Kāpiti
+    manawatu-electrician-master.html
+    README.md                   routes, Lovable project, Google Ads build, pre-launch checks
+    screens/                    rendered previews of each page
 ```
 
 Preview any client file directly in a browser; add `?page=<key>` to view a service page.
