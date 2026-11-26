@@ -39,8 +39,7 @@ Screens of each page are in `screens/`.
 - **Google reviews**: trust strip says "Recommended locally". Swap for a real Google review
   count if he has one.
 - **Logo / photo**: blank, so initials "ME" and "D" render.
-- **Domain spelling**: Joe wrote "manawatuelctrician.co.nz". Confirm the registered spelling
-  before publishing and before ads go live.
+- **Domain**: Joe confirmed 26/11 he registered the correct spelling, manawatuelectrician.co.nz.
 
 ## Lovable
 
@@ -49,7 +48,9 @@ Remixed from Northland Handyman on 26/11/2026, then converted (5.5 credits).
 - Editor: https://lovable.dev/projects/962ccf69-6526-4825-bb85-bc82621495e8
 - Preview: https://id-preview--962ccf69-6526-4825-bb85-bc82621495e8.lovable.app
 - `src/lib/site-config.ts` holds this CONFIG with `form.endpoint` set to `/api/public/enquiry`.
-- Not published. `RESEND_API_KEY` must be re-entered in Project Settings → Secrets after the
+- Published 26/11/2026 at https://manawatu-electrician.lovable.app (custom domain not yet
+  connected; do that in Lovable → Settings → Domains). Live check: call buttons dial
+  +64 21 0845 9700. `RESEND_API_KEY` must be re-entered in Project Settings → Secrets after the
   remix, or the form returns a 503.
 - The Nimbata script in `__root.tsx` is still the one copied from Northland. Replace it with
   the Manawatū project's snippet if Nimbata snippets are per project.
@@ -65,5 +66,15 @@ Ad groups (all paused): Quote Intent 202463173357 ($9), Emergency Intent 2081228
 CCTV Cameras 201686970719 ($7), Alarms & Security 200195145817 ($7).
 Structure copied from Hamilton (CPA ~$32) and Wellington (CPA ~$40) Electrician, last 90 days.
 
-Still to add: keywords, RSAs, negatives, callouts, sitelinks, call asset (Nimbata number).
+Built 26/11/2026, everything paused:
+- Keywords (all PHRASE, paused): Quote Intent 20 (town + "electrician(s)", "electrician near me"),
+  Emergency Intent 12 ("emergency electrician near me", fault terms), CCTV 12, Alarms 12.
+- One RSA per ad group (15 headlines, 4 descriptions, paused), final URLs on manawatuelectrician.co.nz.
+- 41 campaign negatives (jobs/DIY/training, heat pumps/aircon/solar, retailers, and Wellington,
+  Porirua, Hutt, Whanganui, Masterton as phrase to protect neighbouring spots).
+- Callouts: Licensed Electricians, Free Security Quotes, CCTV & Alarm Installs, Local to Palmy & Kāpiti.
+- Sitelinks to the four service pages.
+
+Still to do: call asset with the Nimbata tracking number; at go-live enable the campaign,
+ad groups, ads and keywords (Windsor asks for a confirmation on each).
 Location option must be switched to "Presence" in the Google Ads UI (not settable via API).
