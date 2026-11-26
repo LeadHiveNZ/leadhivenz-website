@@ -1,5 +1,5 @@
 import { isUuid } from "@/lib/uuid";
-import { countryDefaults, type BillingBasis, type CountryCode, type CurrencyCode, type Market, type MarketStage, type MembershipTier, type RetainerBand } from "@config/markets";
+import { countryDefaults, type BillingBasis, type ServiceArea, type CountryCode, type CurrencyCode, type Market, type MarketStage, type MembershipTier, type RetainerBand } from "@config/markets";
 import type { Db } from "@/lib/db/types";
 
 /**
@@ -33,6 +33,7 @@ type MarketRow = {
   offer_minutes: number; hours_start: number; hours_end: number; work_days: string[]; payout_hold_hours: number;
   unaccepted_alert_hours?: number | null; counter_offer_hours?: number | null;
   min_minutes_on_site?: number | null; owner_confirm_hours?: number | null; not_described_hours?: number | null; offer_push_sms_minutes?: number | null; map_lat?: number | string | null; map_lng?: number | string | null;
+  areas?: ServiceArea[] | string | null;
   referral_reward_cents: number; referral_paid_months: number;
   deposit_enabled: boolean; deposit_cents: number; deposit_terms: string[]; deposit_spots: number | null; reply_by_text: boolean;
 };
@@ -52,6 +53,12 @@ function readBands(raw: TierRow["bands"]): RetainerBand[] {
     to: band.to === null || band.to === undefined ? null : Number(band.to),
     cents: band.cents === null || band.cents === undefined ? null : Number(band.cents),
   }));
+}
+
+/** The market's service areas as stored (DECISIONS.md, 2026-11-26), whichever way the database hands them over. */
+function readAreas(raw: MarketRow["areas"]): ServiceArea[] {
+  const list = typeof raw === "string" ? (JSON.parse(raw) as ServiceArea[]) : (raw ?? []);
+  return list.map((area) => ({ key: String(area.key), name: String(area.name), suburbs: (area.suburbs ?? []).map(String) }));
 }
 
 type MenuRow = {
@@ -123,6 +130,7 @@ function rowToMarket(row: MarketRow, tiers: Tier[]): Market {
     notDescribedHours: Number(row.not_described_hours ?? 24),
     offerPushSmsMinutes: Number(row.offer_push_sms_minutes ?? 3),
     mapCentre: row.map_lat === null || row.map_lat === undefined || row.map_lng === null || row.map_lng === undefined ? null : { lat: Number(row.map_lat), lng: Number(row.map_lng) },
+    areas: readAreas(row.areas),
     referralRewardCents: row.referral_reward_cents,
     referralPaidMonths: row.referral_paid_months,
     replyByText: row.reply_by_text,

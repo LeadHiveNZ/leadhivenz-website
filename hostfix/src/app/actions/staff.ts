@@ -26,9 +26,9 @@ import { texts } from "@/lib/notify/messages";
 import { enqueue } from "@/lib/notify/outbox";
 import { resolveException } from "@/lib/ops/exceptions";
 import { normalisePhone } from "@/lib/phone";
-import { getPropertyForStaff } from "@/lib/properties/service";
+import { getPropertyForStaff, PropertyError, setPropertyAreaForStaff } from "@/lib/properties/service";
 import {
-  createTradie, getTradie, markLicenceVerified, markRecordCheckSeen, saveLicence, setSlot, setTradieStatus, swapSlots, TradieError, updateTradie, type TradieStatus,
+  createTradie, getTradie, markLicenceVerified, markRecordCheckSeen, saveLicence, setSlot, setTradieAreas, setTradieStatus, swapSlots, TradieError, updateTradie, type TradieStatus,
 } from "@/lib/tradies/service";
 import { isUuid } from "@/lib/uuid";
 import { getFileStore } from "@/lib/files/store";
@@ -354,6 +354,8 @@ export async function addTradie(_previous: FormState, formData: FormData): Promi
       businessName: text(formData, "businessName") || name, trades: list(formData, "trades"),
       daysAvailable: list(formData, "daysAvailable"), afterHours: ticked(formData, "afterHours"), gstRegistered: ticked(formData, "gstRegistered"),
       licences: [], leadId: isUuid(text(formData, "leadId")) ? text(formData, "leadId") : null,
+      // The areas ticked on the form; none ticked (or a market without areas) means every area.
+      areas: list(formData, "areas").length > 0 ? list(formData, "areas") : null,
     });
     tradieId = created.tradieId;
   } catch (error) {
@@ -430,6 +432,40 @@ export async function staffSaveTradie(_previous: FormState, formData: FormData):
   await db.query("update public.tradies set notes = $2 where id = $1::uuid", [tradieId, text(formData, "notes").slice(0, 2000)]);
   revalidatePath(`/admin/tradies/${tradieId}`);
   return { done: "Saved." };
+}
+
+/** Staff change the areas a tradie covers (DECISIONS.md, 2026-11-26), for example after a phone call. */
+export async function staffSaveTradieAreas(_previous: FormState, formData: FormData): Promise<FormState> {
+  const staff = await requireStaff();
+  const tradieId = text(formData, "tradieId");
+  try {
+    const saved = await setTradieAreas(await getDb(), tradieId, list(formData, "areas"), staff.actor);
+    if (!saved) return { message: "We could not find that tradie." };
+  } catch (error) {
+    if (error instanceof TradieError) return problem(formData, error.message, { areas: error.message });
+    throw error;
+  }
+  revalidatePath(`/admin/tradies/${tradieId}`);
+  return { done: "Areas saved. Offers now come for those areas only." };
+}
+
+/** Staff set the service area of a property whose suburb did not match one (DECISIONS.md, 2026-11-26). */
+export async function staffSetPropertyArea(_previous: FormState, formData: FormData): Promise<FormState> {
+  const staff = await requireStaff();
+  const propertyId = text(formData, "propertyId");
+  let saved;
+  try {
+    const area = text(formData, "area");
+    saved = await setPropertyAreaForStaff(await getDb(), propertyId, area && area !== "none" ? area : null, staff.actor);
+  } catch (error) {
+    if (error instanceof PropertyError) return problem(formData, error.message);
+    throw error;
+  }
+  if (!saved) return { message: "We could not find that property." };
+  revalidatePath(`/admin/owners/${saved.ownerId}`);
+  const back = text(formData, "jobId");
+  if (isUuid(back)) revalidatePath(jobPath(back));
+  return { done: saved.area ? "Area saved. Its jobs go to tradies who cover it." : "Area cleared. Its jobs go to every tradie." };
 }
 
 /** Staff add a tradie's public liability certificate for them, for example one they emailed in. */

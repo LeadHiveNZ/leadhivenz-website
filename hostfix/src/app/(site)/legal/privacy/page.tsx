@@ -55,7 +55,7 @@ export default function Page() {
         </p>
         <p>
           <strong>If you are a tradie:</strong> your name, business name, mobile number, email address, the work you do, your licence numbers and
-          when they expire, your public liability insurance (insurer, policy number and expiry), your tax number, the days you work, and your
+          when they expire, your public liability insurance (insurer, policy number and expiry), your tax number, the days you work, the areas you cover, and your
           record with us (jobs offered, accepted, and whether you arrived on time). We also keep a record of our checks: who on our team checked
           each licence on the public register and when, and a note that they saw your criminal record check (never the record itself). Our team
           may write notes about you that you cannot see, for example after a call with an owner.

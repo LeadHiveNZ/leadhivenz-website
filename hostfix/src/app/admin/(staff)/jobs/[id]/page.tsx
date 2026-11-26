@@ -26,6 +26,8 @@ import { chargebacksForJob } from "@/lib/billing/chargebacks";
 import { cardProblemWords } from "@/lib/owners/service";
 import { GuestNote, HazardNote } from "@/components/jobs/SafetyNotes";
 import { TradeButtons } from "@/components/jobs/TradeButtons";
+import { PropertyAreaForm } from "@/components/properties/PropertyAreaForm";
+import { areaName } from "@/lib/markets/areas";
 import { listMessages } from "@/lib/notify/outbox";
 import { displayPhone } from "@/lib/phone";
 import { addressLine } from "@/lib/properties/service";
@@ -541,6 +543,14 @@ export default async function StaffJobPage({ params, searchParams }: { params: P
         <Panel title="Property">
           <p className="font-semibold text-ink">{property.name}</p>
           <p className="text-muted">{addressLine(property)}</p>
+          {market.areas.length > 0 && (property.area ? (
+            <p className="text-sm text-muted">Area: {areaName(market.areas, property.area)}</p>
+          ) : (
+            <div className="mt-3 rounded-xl bg-alert-soft px-4 py-3">
+              <p className="mb-2 text-sm font-semibold text-ink">No area set, so this property&apos;s jobs go to every tradie, wherever they work. Set its area:</p>
+              <PropertyAreaForm propertyId={property.id} area={null} areas={market.areas} jobId={job.id} />
+            </div>
+          ))}
           {property.accessNotes && (
             <div className="mt-3 rounded-xl bg-tint px-4 py-3">
               <p className="text-sm font-bold tracking-wide text-brand uppercase">How to get in</p>

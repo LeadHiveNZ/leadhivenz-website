@@ -5,6 +5,7 @@ import { now } from "@/lib/clock";
 import type { Db } from "@/lib/db/types";
 import { randomToken } from "@/lib/ids";
 import { taxPortion } from "@/lib/jobs/pricing";
+import { areaForSuburb } from "@/lib/markets/areas";
 import { getMarket, getTier, type Tier } from "@/lib/markets/store";
 import { texts } from "@/lib/notify/messages";
 import { enqueue } from "@/lib/notify/outbox";
@@ -63,6 +64,8 @@ export type Property = {
   pinLookupAt: Date | null;
   /** "Anything a tradie should know to stay safe?" From the owner, and hazards tradies have found (DECISIONS.md, 2026-11-20). */
   hazards: string;
+  /** The key of the market's service area it is in (DECISIONS.md, 2026-11-26). Null: none matched; offered to every tradie. */
+  area: string | null;
 };
 
 export type PinSource = "looked_up" | "owner_moved" | "none";
@@ -75,7 +78,7 @@ type PropertyRow = {
   team_token: string; guest_token: string; guest_auto_dispatch: boolean; spend_limit_cents: number | null; referrer_id: string | null;
   portfolio_id: string | null;
   pin_lat?: number | string | null; pin_lng?: number | string | null; pin_source?: PinSource | null;
-  pin_confirmed_at?: Date | null; pin_lookup_at?: Date | null; hazards?: string | null;
+  pin_confirmed_at?: Date | null; pin_lookup_at?: Date | null; hazards?: string | null; area?: string | null;
 };
 
 const date = (value: Date | null) => (value ? new Date(value) : null);
@@ -94,6 +97,7 @@ export function rowToProperty(row: PropertyRow): Property {
     pinConfirmedAt: date(row.pin_confirmed_at ?? null),
     pinLookupAt: date(row.pin_lookup_at ?? null),
     hazards: row.hazards ?? "",
+    area: row.area ?? null,
   };
 }
 
@@ -115,6 +119,8 @@ export type PropertyInput = {
   accessNotes: string;
   /** Anything a tradie should know to stay safe. */
   hazards?: string;
+  /** The service area chosen (a key of the market's areas). Left out or empty, it is worked out from the suburb. */
+  area?: string | null;
   tierId: string;
   /** A cleaner's or co-host's referral code, if the owner was sent by one. */
   referralCode?: string | null;
@@ -158,13 +164,14 @@ export async function createProperty(db: Db, ownerId: string, input: PropertyInp
     const rows = await tx.query<PropertyRow>(
       `insert into public.properties
          (created_at, owner_id, market, name, address_line1, address_line2, suburb, postcode, access_notes, tier_id, team_token, guest_token, referrer_id,
-          portfolio_id, status, member_since, hazards)
-       values ($1::timestamptz, $2::uuid, $3, $4, $5, $6, $7, $8, $9, $10::uuid, $11, $12, $13::uuid, $14::uuid, $15, $16::timestamptz, $17)
+          portfolio_id, status, member_since, hazards, area)
+       values ($1::timestamptz, $2::uuid, $3, $4, $5, $6, $7, $8, $9, $10::uuid, $11, $12, $13::uuid, $14::uuid, $15, $16::timestamptz, $17, $18)
        returning *`,
       [
         at, ownerId, market.slug, input.name.trim(), input.addressLine1.trim(), input.addressLine2?.trim() || null,
         input.suburb.trim(), input.postcode.trim(), input.accessNotes.trim(), portfolio?.tierId ?? input.tierId, randomToken(20), randomToken(20), referrerId,
         portfolio?.id ?? null, covered ?? "setup", covered ? at : null, (input.hazards ?? "").trim().slice(0, 3000),
+        chooseArea(market, input.area, input.suburb),
       ],
     );
     const property = rowToProperty(rows[0]!);
@@ -178,7 +185,30 @@ export async function createProperty(db: Db, ownerId: string, input: PropertyInp
   return created.property;
 }
 
-export type PropertyPatch = Partial<Pick<PropertyInput, "name" | "addressLine1" | "addressLine2" | "suburb" | "postcode" | "accessNotes" | "hazards">> & {
+/**
+ * The property's service area (DECISIONS.md, 2026-11-26): the one chosen if the
+ * market has it, otherwise worked out from the suburb, otherwise null.
+ */
+export function chooseArea(market: Pick<Market, "areas">, chosen: string | null | undefined, suburb: string): string | null {
+  if (chosen && market.areas.some((area) => area.key === chosen)) return chosen;
+  return areaForSuburb(market.areas, suburb);
+}
+
+/**
+ * Staff set (or clear) a property's service area from the admin owner page,
+ * for a suburb the list did not match. Null clears it: offered to everyone.
+ */
+export async function setPropertyAreaForStaff(db: Db, propertyId: string, area: string | null, actor: string): Promise<Property | null> {
+  const current = await getPropertyForStaff(db, propertyId);
+  if (!current) return null;
+  const market = await getMarket(db, current.market);
+  if (area !== null && !market?.areas.some((candidate) => candidate.key === area)) throw new PropertyError("That area is not in this property's market.");
+  const rows = await db.query<PropertyRow>("update public.properties set area = $2 where id = $1::uuid returning *", [propertyId, area]);
+  await audit(db, { actor, action: "property.area_set", entity: "property", entityId: propertyId, detail: { area, before: current.area } });
+  return rows[0] ? rowToProperty(rows[0]) : null;
+}
+
+export type PropertyPatch = Partial<Pick<PropertyInput, "name" | "addressLine1" | "addressLine2" | "suburb" | "postcode" | "accessNotes" | "hazards" | "area">> & {
   guestAutoDispatch?: boolean;
   spendLimitCents?: number | null;
 };
@@ -190,10 +220,18 @@ export async function updateProperty(db: Db, ownerId: string, propertyId: string
   const moved = (patch.addressLine1 !== undefined && patch.addressLine1.trim() !== current.addressLine1)
     || (patch.suburb !== undefined && patch.suburb.trim() !== current.suburb)
     || (patch.postcode !== undefined && patch.postcode.trim() !== current.postcode);
+  // The area: the one chosen; or, when none is chosen and the suburb changed, worked out again from the new suburb.
+  const suburb = patch.suburb?.trim() ?? current.suburb;
+  const suburbChanged = suburb !== current.suburb;
+  let area = current.area;
+  if (patch.area || suburbChanged) {
+    const market = await getMarket(db, current.market);
+    area = market ? chooseArea(market, patch.area, suburb) : current.area;
+  }
   const rows = await db.query<PropertyRow>(
     `update public.properties set
         name = $3, address_line1 = $4, address_line2 = $5, suburb = $6, postcode = $7, access_notes = $8,
-        guest_auto_dispatch = $9, spend_limit_cents = $10, hazards = $12,
+        guest_auto_dispatch = $9, spend_limit_cents = $10, hazards = $12, area = $13,
         pin_lat = case when $11::boolean then null else pin_lat end,
         pin_lng = case when $11::boolean then null else pin_lng end,
         pin_source = case when $11::boolean then 'none' else pin_source end,
@@ -213,6 +251,7 @@ export async function updateProperty(db: Db, ownerId: string, propertyId: string
       patch.spendLimitCents === undefined ? current.spendLimitCents : patch.spendLimitCents,
       moved,
       patch.hazards === undefined ? current.hazards : patch.hazards.trim().slice(0, 3000),
+      area,
     ],
   );
   await audit(db, { actor: `owner:${ownerId}`, action: "property.updated", entity: "property", entityId: propertyId, detail: { fields: Object.keys(patch), pin_cleared: moved && current.pin !== null } });

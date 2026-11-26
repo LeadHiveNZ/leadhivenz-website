@@ -3,6 +3,7 @@ import Link from "next/link";
 import { addProperty } from "@/app/actions/owner";
 import { ActionForm, Area, Field, RadioCards } from "@/components/forms/ActionForm";
 import { SubmitButton } from "@/components/forms/SubmitButton";
+import { AreaPicker } from "@/components/properties/AreaPicker";
 import { Card, Notice, PageTitle } from "@/components/ui/Bits";
 import { requireOwner } from "@/lib/auth/current";
 import { getDb } from "@/lib/db";
@@ -82,6 +83,7 @@ export default async function NewPropertyPage({ searchParams }: { searchParams: 
             <Field label="Suburb or town" name="suburb" required maxLength={60} autoComplete="address-level2" placeholder={market.name} />
             <Field label="Postcode" name="postcode" maxLength={10} inputMode="numeric" autoComplete="postal-code" />
           </div>
+          <AreaPicker areas={market.areas} />
           <Area
             label="How does a tradie get in?"
             name="accessNotes"

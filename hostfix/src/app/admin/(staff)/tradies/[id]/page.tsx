@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { inviteTradie, recordCheckSeen, staffSaveLicence, staffSaveTradie, staffSetTradieStatus, staffUploadCertificate, verifyLicence } from "@/app/actions/staff";
+import { inviteTradie, recordCheckSeen, staffSaveLicence, staffSaveTradie, staffSaveTradieAreas, staffSetTradieStatus, staffUploadCertificate, verifyLicence } from "@/app/actions/staff";
 import { ActionForm, Area, CheckList, Checks, Field, FileInput, Tick } from "@/components/forms/ActionForm";
 import { CERTIFICATE_ACCEPT } from "@/components/forms/Fields";
 import { CertificateList } from "@/components/ui/CertificateList";
@@ -256,6 +256,23 @@ export default async function StaffTradiePage({ params, searchParams }: { params
           </div>
         </div>
       </div>
+
+      {market.areas.length > 0 && (
+        <Card className="sm:p-6">
+          <SectionTitle>Areas they cover</SectionTitle>
+          <ActionForm action={staffSaveTradieAreas} className="space-y-4">
+            <input type="hidden" name="tradieId" value={tradie.id} />
+            <CheckList
+              name="areas"
+              legend="Offers only come for properties in these areas"
+              hint="A property with no area is offered to everyone. There is no travel charge."
+              defaultValues={tradie.areas}
+              options={market.areas.map((area) => ({ key: area.key, label: area.name }))}
+            />
+            <SubmitButton pendingLabel="Saving...">Save areas</SubmitButton>
+          </ActionForm>
+        </Card>
+      )}
 
       {hours.length > 0 && (
         <Card className="sm:p-6">

@@ -47,6 +47,8 @@ function propertyFields(formData: FormData) {
     postcode: text(formData, "postcode"),
     accessNotes: text(formData, "accessNotes"),
     hazards: text(formData, "hazards"),
+    // The service area picked (DECISIONS.md, 2026-11-26). Empty: worked out from the suburb.
+    area: text(formData, "area") || null,
   };
   const errors: Record<string, string> = {};
   if (fields.name.length < 1) errors.name = "Give the property a name you will recognise, like Lakeview Apartment.";

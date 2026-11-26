@@ -207,8 +207,9 @@ describe("Wānaka", () => {
     const wanaka = markets.find((m) => m.slug === "wanaka")!;
     const queenstown = markets.find((m) => m.slug === "queenstown")!;
     expect(wanaka.stage).toBe("waitlist");
-    const { slug: _a, name: _b, mapCentre: _c, foundingDeposit: _d, ...w } = wanaka;
-    const { slug: _e, name: _f, mapCentre: _g, foundingDeposit: _h, ...q } = queenstown;
+    // Each town has its own service areas (DECISIONS.md, 2026-11-26, second entry); everything else is the same.
+    const { slug: _a, name: _b, mapCentre: _c, foundingDeposit: _d, areas: _i, ...w } = wanaka;
+    const { slug: _e, name: _f, mapCentre: _g, foundingDeposit: _h, areas: _j, ...q } = queenstown;
     expect(w).toEqual(q);
   });
 });

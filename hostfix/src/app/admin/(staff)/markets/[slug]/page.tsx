@@ -18,7 +18,7 @@ import { getMarket, listMenu, listTiers, type MenuItem, type Tier } from "@/lib/
 import { formatMoney } from "@/lib/money";
 import { smsSettings } from "@/lib/notify/sms";
 import { paymentsProblem } from "@/lib/payments";
-import { coverage } from "@/lib/tradies/service";
+import { areaCoverage, coverage } from "@/lib/tradies/service";
 import { HOURLY_LIMIT_CENTS, hourlyRates } from "@/lib/jobs/rates";
 import { dateKey, formatDate } from "@/lib/time";
 import { WEEKDAY_OPTIONS } from "@/lib/weekdays";
@@ -183,6 +183,9 @@ export default async function MarketPage({ params, searchParams }: { params: Pro
   const money = (cents: number) => formatMoney(cents, market.currency);
   const usedTrades = new Set(menu.filter((item) => item.active).map((item) => item.trade));
   const thin = cover.filter((row) => usedTrades.has(row.trade) && row.ready === 0);
+  // Service areas (DECISIONS.md, 2026-11-26): approved tradies per area and trade.
+  const areaCounts = new Map((await areaCoverage(db, market.slug)).map((row) => [`${row.area}|${row.trade}`, row.tradies]));
+  const areaTrades = trades.filter((trade) => usedTrades.has(trade.key));
   const noPayments = paymentsProblem(market.country);
   const sms = smsSettings();
 
@@ -240,6 +243,45 @@ export default async function MarketPage({ params, searchParams }: { params: Pro
           </Link>
         </div>
       </Card>
+
+      {market.areas.length > 0 && (
+        <Card className="sm:p-6">
+          <SectionTitle>Who covers each area</SectionTitle>
+          <p className="mb-3 text-sm text-muted">
+            Approved tradies who have ticked each area, per trade on the menu. A job only goes to tradies who cover its property&apos;s area, so a 0 means
+            jobs there in that trade go straight to the queue. There is no travel charge.
+          </p>
+          <div className="overflow-x-auto rounded-2xl border border-line bg-surface">
+            <table className="w-full text-left text-sm">
+              <thead className="border-b border-line bg-tint/60 text-xs tracking-wide text-muted uppercase">
+                <tr>
+                  <th className="px-3 py-2 font-bold">Area</th>
+                  {areaTrades.map((trade) => (
+                    <th key={trade.key} className="px-3 py-2 text-right font-bold">
+                      {trade.label}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-line">
+                {market.areas.map((area) => (
+                  <tr key={area.key}>
+                    <td className="px-3 py-2 font-semibold text-ink">{area.name}</td>
+                    {areaTrades.map((trade) => {
+                      const count = areaCounts.get(`${area.key}|${trade.key}`) ?? 0;
+                      return (
+                        <td key={trade.key} className={`px-3 py-2 text-right ${count === 0 ? "font-bold text-alert" : "text-ink"}`}>
+                          {count}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      )}
 
       <Card className="sm:p-6">
         <SectionTitle>Settings</SectionTitle>

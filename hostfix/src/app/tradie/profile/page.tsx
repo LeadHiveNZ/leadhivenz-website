@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { saveTradieLicence, saveTradieProfile, setPaused, setUpPayouts } from "@/app/actions/tradie";
+import { saveTradieAreas, saveTradieLicence, saveTradieProfile, setPaused, setUpPayouts } from "@/app/actions/tradie";
 import { ActionForm, CheckList, Checks, Field, FileInput, Tick } from "@/components/forms/ActionForm";
 import { CERTIFICATE_ACCEPT } from "@/components/forms/Fields";
 import { CertificateList } from "@/components/ui/CertificateList";
@@ -81,6 +81,22 @@ export default async function TradieProfilePage({ searchParams }: { searchParams
           </ActionForm>
         )}
       </Card>
+
+      {market.areas.length > 0 && (
+        <Card className="sm:p-6" as="section">
+          <SectionTitle>Areas you cover</SectionTitle>
+          <ActionForm action={saveTradieAreas} className="space-y-4">
+            <CheckList
+              name="areas"
+              legend="Where you will go"
+              hint="You are only offered jobs at properties in the areas you tick. There is no travel charge, so only tick the areas you are happy to go to at the fixed price. Change them any time."
+              defaultValues={tradie.areas}
+              options={market.areas.map((area) => ({ key: area.key, label: area.name, detail: area.suburbs.filter((name) => name !== area.name).join(", ") || undefined }))}
+            />
+            <SubmitButton pendingLabel="Saving...">Save areas</SubmitButton>
+          </ActionForm>
+        </Card>
+      )}
 
       <Card className="sm:p-6" as="section">
         <SectionTitle>Your business</SectionTitle>

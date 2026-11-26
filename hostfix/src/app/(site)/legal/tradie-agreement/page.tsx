@@ -108,6 +108,12 @@ export default function Page() {
           cannot do it.
         </p>
         <p>
+          <strong>You choose the areas you cover</strong>, on your profile (for example Frankton, Arrowtown or Glenorchy). You start with every area
+          ticked; untick the ones you do not want. You are only offered jobs at properties in the areas you have ticked, and at properties whose area
+          we have not set yet. <strong>There is no travel charge</strong>: a job pays the same wherever the property is, so only tick the areas you are
+          happy to go to at that price. Our team may ring you about a job outside your areas; you can say no, and that is not counted against you.
+        </p>
+        <p>
           <strong>Declining a job never leads to removal or to fewer offers.</strong> Passing, or letting an offer run out, is not counted against
           you anywhere. You run your own business and choose your own work.
         </p>
@@ -150,7 +156,8 @@ export default function Page() {
       <Section n={5} title="The price is the price">
         <p>
           Every menu job has a fixed price, and your share is shown in the offer before you accept. <strong>By accepting, you accept that
-          amount for that job.</strong> You cannot ask the owner for more, charge them directly, or renegotiate on site.
+          amount for that job.</strong> You cannot ask the owner for more, charge them directly, or renegotiate on site. There is no travel
+          charge, wherever the property is (section 3: you choose your areas).
         </p>
         <p>
           <strong>Extra work on a menu job</strong> is quoted with <strong>Found more to do? Send a quote</strong>. That quote is only for work beyond the

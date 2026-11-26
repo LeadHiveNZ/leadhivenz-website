@@ -9,6 +9,34 @@ price, a fee or a promise, add a line here saying what and why.
 
 ---
 
+## 2026-11-26 (second entry) — Service areas, no travel charge
+
+From the same Queenstown electrician: some properties are 40 minutes each way (Glenorchy, Gibbston, Cardrona). Joe decided:
+**no travel charge, anywhere**. Instead each tradie chooses the areas they cover, and a job is only offered to tradies who cover
+its property's area. This settles "travel time across town" left open on 2026-11-25.
+
+- **Areas per market** (`ServiceArea` in `config/markets.ts`, saved as `markets.areas`, jsonb). Queenstown: Queenstown central
+  (Fernhill, Sunshine Bay, Queenstown Hill), Frankton (Quail Rise, Remarkables Park), Kelvin Heights, Jack's Point & Hanley's Farm,
+  Lake Hayes & Shotover Country (Lake Hayes Estate, Shotover Country, Lower Shotover), Arthurs Point, Arrowtown, Gibbston, Glenorchy &
+  Kinloch. Wānaka: Wānaka town, Albert Town, Lake Hāwea & Hāwea Flat, Luggate, Cardrona. A market with no areas is one area (every
+  tradie covers it); a market added on the admin screen starts with none. No admin screen edits the list yet: change it with a migration.
+- **A property's area** (`properties.area`): picked from a list on the add and edit forms, pre-selected from the suburb typed (ignoring
+  case, macrons and apostrophes, `areaForSuburb` in `src/lib/markets/areas.ts`). "Not sure" works it out from the suburb on saving. A
+  suburb that matches none leaves it empty: **the job is offered to every tradie**, and staff see a nudge on the job page and the owner
+  page to set it (`setPropertyAreaForStaff`). Existing properties were matched by suburb in the migration.
+- **A tradie's areas** (`tradies.areas`): every area of their market to start with, existing tradies too. They untick areas on their
+  profile; staff can change them on the admin tradie page and when adding a tradie. At least one must stay ticked. The public tradie
+  sign-up form (a lead) does not ask yet: a tradie made from a lead covers every area until they change it.
+- **Offers** (`eligibleTradies`, `canStillTake`, one extra `area` criterion passed from the cascade): only tradies who cover the
+  property's area. Checked again at accept. **Staff giving a job to a tradie by hand (Assign) skips the area rule**: the tradie has
+  agreed on the phone to go. Nobody covers it: the existing "nobody accepted" path (queue + the owner's "still arranging" text), and the
+  queue item says "no tradie covers <area>".
+- **Admin > Markets** shows a table of approved tradies per area and trade, so gaps show.
+- Words: the tradie agreement (section 3, section 5) and the terms (section 3) say tradies choose their areas, offers only come for
+  those areas, and there is no travel charge; privacy lists the areas kept. **The agreement was edited without bumping
+  `TRADIE_AGREEMENT_VERSION`: the lead bumps it after merging**, and every tradie agrees again.
+- Migration `20261207000000_service_areas.sql`. Tests: `tests/unit/areas.test.ts`.
+
 ## 2026-11-26 — Compliance certificates on a job
 
 From a call with a Queenstown electrician: prescribed electrical work needs a Certificate of Compliance (and often an

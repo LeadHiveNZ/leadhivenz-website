@@ -32,6 +32,7 @@ import { addressLine, getProperty } from "@/lib/properties/service";
 import { qrSvg } from "@/lib/qr";
 import { mapTiles } from "@/lib/maps/tiles";
 import { PinCard } from "@/components/properties/PinCard";
+import { AreaPicker } from "@/components/properties/AreaPicker";
 import { listGroups, listTeam } from "@/lib/team/service";
 import { formatDate } from "@/lib/time";
 import { BringYourOwnTradie } from "@/components/jobs/OwnClients";
@@ -431,6 +432,7 @@ export default async function PropertyPage({ params, searchParams }: { params: P
             <Field label="Suburb or town" name="suburb" required maxLength={60} defaultValue={property.suburb} />
             <Field label="Postcode" name="postcode" maxLength={10} defaultValue={property.postcode} />
           </div>
+          <AreaPicker areas={market.areas} defaultValue={property.area} />
           <Area label="How does a tradie get in?" name="accessNotes" rows={4} maxLength={1500} defaultValue={property.accessNotes} hint="Only shown to the tradie who takes a job, never before. If the tradie can't get in, the call-out is charged, so keep it right. Changing a code after a job is up to you." />
           <Area label="Anything a tradie should know to stay safe?" name="hazards" rows={3} maxLength={3000} defaultValue={property.hazards} placeholder="Steep drive, roof access, asbestos in an older home, a dog, a fragile deck..." hint="Shown to tradies before they accept, so they can come prepared. Under health and safety law we share the duty to warn them of hazards you know of. Hazards tradies find are added here too." />
           <Tick

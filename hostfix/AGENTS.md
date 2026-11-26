@@ -43,6 +43,7 @@ it when you change one.
 | Text, email or app notification; STOP; the first-text STOP line | `enqueue` in `src/lib/notify/outbox.ts`, `src/lib/notify/push.ts`, `src/lib/notify/inbound.ts` |
 | The offer cascade: first choice, backup, everyone, dispatcher; "Not sure" jobs and picking the trade | `src/lib/dispatch/cascade.ts` |
 | The trades, which need a licence, which need an LBP number | `config/trades.ts` |
+| Service areas (no travel charge): each market's areas, a property's area from its suburb, the areas a tradie covers | `src/lib/markets/areas.ts`, `areas` in `config/markets.ts`, `setTradieAreas` and the `area` criterion in `src/lib/tradies/service.ts` |
 | Everything the clock drives | `src/lib/dispatch/tick.ts`, called by `/api/cron/tick` |
 | Charging, paying tradies, credits, disputes, refunds | `src/lib/billing/settle.ts` |
 | Memberships and referrals | `src/lib/properties/service.ts` |

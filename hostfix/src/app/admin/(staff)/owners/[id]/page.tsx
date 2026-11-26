@@ -7,6 +7,7 @@ import { ActionForm, Field } from "@/components/forms/ActionForm";
 import { SubmitButton } from "@/components/forms/SubmitButton";
 import { smallButtonClass } from "@/components/forms/styles";
 import { JobRow } from "@/components/jobs/JobRow";
+import { PropertyAreaForm } from "@/components/properties/PropertyAreaForm";
 import { Card, Chip, Facts, PageTitle, SectionTitle } from "@/components/ui/Bits";
 import { Reveal } from "@/components/ui/Reveal";
 import { requireStaff } from "@/lib/auth/current";
@@ -145,6 +146,12 @@ export default async function StaffOwnerPage({ params }: { params: Promise<{ id:
                     {property.currentPeriodEnd && property.status === "active" ? ` · ${property.cancelAtPeriodEnd ? "ends" : "next payment"} ${formatDate(property.currentPeriodEnd, zone(property.market))}` : ""}
                   </p>
                   {property.accessNotes && <p className="mt-2 rounded-xl bg-tint px-3.5 py-2.5 text-sm whitespace-pre-line text-ink">{property.accessNotes}</p>}
+                  {market && market.areas.length > 0 && (
+                    <div className="mt-3">
+                      {!property.area && <p className="mb-2 text-sm font-semibold text-alert">No area set: &ldquo;{property.suburb}&rdquo; matched none, so its jobs go to every tradie. Set it below.</p>}
+                      <PropertyAreaForm propertyId={property.id} area={property.area} areas={market.areas} />
+                    </div>
+                  )}
                   <div className="mt-3 flex flex-wrap gap-2">
                     {property.status === "active" && (
                       <Link href={`/admin/jobs/new?property=${property.id}`} className={smallButtonClass}>

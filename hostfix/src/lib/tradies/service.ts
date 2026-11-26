@@ -4,6 +4,8 @@ import { audit } from "@/lib/audit";
 import { createUser, type User } from "@/lib/auth/users";
 import { now } from "@/lib/clock";
 import { dateKey } from "@/lib/time";
+import { allAreaKeys, cleanAreaKeys } from "@/lib/markets/areas";
+import { getMarket } from "@/lib/markets/store";
 import type { Db } from "@/lib/db/types";
 import type { Provider } from "@/lib/payments/gateway";
 
@@ -59,6 +61,8 @@ export type Tradie = {
   /** A person on the team has seen their Ministry of Justice record check: who and when (DECISIONS.md, 2026-11-24, fourth entry). */
   recordCheckSeenAt: Date | null;
   recordCheckSeenBy: string | null;
+  /** The keys of the service areas they cover (DECISIONS.md, 2026-11-26). Offers only come for properties in these areas. */
+  areas: string[];
 };
 
 export type Licence = {
@@ -78,13 +82,13 @@ type TradieRow = {
   after_hours: boolean; gst_registered: boolean; gst_number: string | null; insurance_expires_on: string | null;
   insurer: string | null; insurance_policy_number: string | null; insurance_certificate_id: string | null; lbp_number: string | null;
   payout_provider: Provider | null; payout_account_id: string | null; payouts_enabled: boolean; notes: string;
-  agreement_version?: string | null; agreed_at?: Date | null; record_check_seen_at?: Date | null; record_check_seen_by?: string | null;
+  agreement_version?: string | null; agreed_at?: Date | null; record_check_seen_at?: Date | null; record_check_seen_by?: string | null; areas?: string[] | null;
 };
 
 const TRADIE_SELECT = `select t.id, t.created_at, t.user_id, u.name, u.phone, u.email, t.market, t.business_name, t.trades, t.status,
                               t.approved_at, t.days_available, t.after_hours, t.gst_registered, t.gst_number, t.insurance_expires_on,
                               t.insurer, t.insurance_policy_number, t.lbp_number, t.payout_provider, t.payout_account_id, t.payouts_enabled, t.notes,
-                              t.agreement_version, t.agreed_at, t.record_check_seen_at, t.record_check_seen_by,
+                              t.agreement_version, t.agreed_at, t.record_check_seen_at, t.record_check_seen_by, t.areas,
                               (select x.id from public.uploads x
                                 where x.tradie_id = t.id and x.kind = 'insurance_certificate' and x.attached
                                 order by x.created_at desc, x.id desc limit 1) as insurance_certificate_id
@@ -102,6 +106,7 @@ function rowToTradie(row: TradieRow): Tradie {
     payoutProvider: row.payout_provider, payoutAccountId: row.payout_account_id, payoutsEnabled: row.payouts_enabled, notes: row.notes,
     agreementVersion: row.agreement_version ?? null, agreedAt: row.agreed_at ? new Date(row.agreed_at) : null,
     recordCheckSeenAt: row.record_check_seen_at ? new Date(row.record_check_seen_at) : null, recordCheckSeenBy: row.record_check_seen_by ?? null,
+    areas: row.areas ?? [],
   };
 }
 
@@ -132,6 +137,8 @@ export type TradieApplication = {
   lbpNumber?: string | null;
   licences: { trade: string; licenceNumber: string; expiresOn: string }[];
   leadId?: string | null;
+  /** The service areas they cover. Left out: every area of their market. */
+  areas?: string[] | null;
 };
 
 /** Creates the person and their tradie record. They are "applied" until a person approves them. */
@@ -152,6 +159,8 @@ export async function createTradie(db: Db, input: TradieApplication): Promise<{ 
       ],
     );
     const tradieId = rows[0]!.id;
+    // The areas they cover (DECISIONS.md, 2026-11-26): the ones ticked, or every area of their market.
+    await saveAreas(tx, tradieId, input.market, input.areas ?? null);
     // A certificate sent with the sign-up form moves from the lead to the tradie.
     if (input.leadId) {
       const moved = await tx.query<{ id: string }>(
@@ -378,6 +387,52 @@ export async function markLicenceVerified(db: Db, licenceId: string, actor: stri
 }
 
 // ---------------------------------------------------------------------------
+// THE AREAS A TRADIE COVERS (DECISIONS.md, 2026-11-26)
+// ---------------------------------------------------------------------------
+
+/** Saves the areas, kept to the market's own. Null: every area of the market. Returns what was saved. */
+async function saveAreas(db: Db, tradieId: string, marketSlug: string, keys: string[] | null): Promise<string[]> {
+  const market = await getMarket(db, marketSlug);
+  const areas = market?.areas ?? [];
+  const chosen = keys === null ? allAreaKeys(areas) : cleanAreaKeys(areas, keys);
+  if (keys !== null && areas.length > 0 && chosen.length === 0) throw new TradieError("Choose at least one area you cover.");
+  await db.query("update public.tradies set areas = $2::text[] where id = $1::uuid", [tradieId, chosen]);
+  return chosen;
+}
+
+/**
+ * The tradie (on their profile) or staff (on the admin tradie page) choose the
+ * areas they cover. Offers only come for properties in those areas; a property
+ * with no area is offered to everyone. There is no travel charge.
+ */
+export async function setTradieAreas(db: Db, tradieId: string, keys: string[], actor: string): Promise<Tradie | null> {
+  const current = await getTradie(db, tradieId);
+  if (!current) return null;
+  return db.tx(async (tx) => {
+    const saved = await saveAreas(tx, tradieId, current.market, keys);
+    await audit(tx, { actor, action: "tradie.areas_saved", entity: "tradie", entityId: tradieId, detail: { areas: saved, before: current.areas } });
+    return getTradie(tx, tradieId);
+  });
+}
+
+/**
+ * How many approved tradies cover each area, per trade, for the admin market
+ * page, so gaps show. Only pairs with at least one tradie are returned.
+ */
+export async function areaCoverage(db: Db, market: string): Promise<{ area: string; trade: string; tradies: number }[]> {
+  const rows = await db.query<{ area: string; trade: string; tradies: number | string }>(
+    `select a.area, tr.trade, count(distinct t.id) as tradies
+       from public.tradies t
+       cross join lateral unnest(t.areas) as a(area)
+       cross join lateral unnest(t.trades) as tr(trade)
+      where t.market = $1 and t.status = 'approved'
+      group by a.area, tr.trade`,
+    [market],
+  );
+  return rows.map((row) => ({ area: row.area, trade: row.trade, tradies: Number(row.tradies) }));
+}
+
+// ---------------------------------------------------------------------------
 // WHO CAN BE OFFERED A JOB
 // ---------------------------------------------------------------------------
 
@@ -402,6 +457,8 @@ export type OfferCriteria = {
   /** Today's date and weekday in the market's own time. */
   today: string;
   weekday: string;
+  /** The property's service area (DECISIONS.md, 2026-11-26). Only tradies who cover it qualify. Null or left out: no area, everyone qualifies. */
+  area?: string | null;
 };
 
 /**
@@ -413,6 +470,7 @@ export type OfferCriteria = {
  *  - if the trade is building work: has an LBP number on file (DECISIONS.md, 2026-11-24)
  *  - if it is after hours: has said they take after-hours work
  *  - if it is urgent: works today
+ *  - if the property has a service area: covers that area
  */
 export async function eligibleTradies(db: Db, criteria: OfferCriteria): Promise<Candidate[]> {
   const rows = await db.query<{ id: string; user_id: string; name: string; business_name: string; phone: string; slot_rank: number | null }>(
@@ -438,8 +496,9 @@ export async function eligibleTradies(db: Db, criteria: OfferCriteria): Promise<
         and (not $9::boolean or char_length(coalesce(t.lbp_number, '')) >= 2)
         and (not $4::boolean or t.after_hours)
         and (not $5::boolean or $7 = any(t.days_available))
+        and ($10::text is null or $10 = any(t.areas))
       order by slot_rank nulls last, t.created_at`,
-    [criteria.market, criteria.trade, criteria.licenceRequired, criteria.afterHours, criteria.urgent, criteria.today, criteria.weekday, TRADIE_AGREEMENT_VERSION, needsLbp(criteria.trade)],
+    [criteria.market, criteria.trade, criteria.licenceRequired, criteria.afterHours, criteria.urgent, criteria.today, criteria.weekday, TRADIE_AGREEMENT_VERSION, needsLbp(criteria.trade), criteria.area ?? null],
   );
   return rows.map((row) => ({
     tradieId: row.id, userId: row.user_id, name: row.name, businessName: row.business_name, phone: row.phone,
@@ -448,7 +507,7 @@ export async function eligibleTradies(db: Db, criteria: OfferCriteria): Promise<
 }
 
 /** True if this tradie may still take this job right now (checked again at the moment they accept). */
-export async function canStillTake(db: Db, tradieId: string, job: { market: string; trade: string; licenceRequired: boolean; today: string }): Promise<boolean> {
+export async function canStillTake(db: Db, tradieId: string, job: { market: string; trade: string; licenceRequired: boolean; today: string; area?: string | null }): Promise<boolean> {
   const rows = await db.query(
     `select 1 from public.tradies t join public.users u on u.id = t.user_id
       where t.id = $1::uuid and t.market = $2 and t.status = 'approved' and $3 = any(t.trades) and u.disabled_at is null
@@ -459,8 +518,9 @@ export async function canStillTake(db: Db, tradieId: string, job: { market: stri
         and (not $4::boolean or exists (
               select 1 from public.tradie_licences l
                where l.tradie_id = t.id and l.trade = $3 and char_length(l.licence_number) >= 2 and l.expires_on >= $5::date))
-        and (not $7::boolean or char_length(coalesce(t.lbp_number, '')) >= 2)`,
-    [tradieId, job.market, job.trade, job.licenceRequired, job.today, TRADIE_AGREEMENT_VERSION, needsLbp(job.trade)],
+        and (not $7::boolean or char_length(coalesce(t.lbp_number, '')) >= 2)
+        and ($8::text is null or $8 = any(t.areas))`,
+    [tradieId, job.market, job.trade, job.licenceRequired, job.today, TRADIE_AGREEMENT_VERSION, needsLbp(job.trade), job.area ?? null],
   );
   return rows.length > 0;
 }

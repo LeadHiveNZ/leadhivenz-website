@@ -67,6 +67,14 @@ export type MembershipTier = {
   blurb: string;
 };
 
+/**
+ * A service area (DECISIONS.md, 2026-11-26): a part of the market a tradie can
+ * choose to cover. A job is only offered to tradies who cover its property's
+ * area. There is no travel charge anywhere. `suburbs` are the names an owner may
+ * type for a property there; matching ignores case and macrons.
+ */
+export type ServiceArea = { key: string; name: string; suburbs: string[] };
+
 export type Market = {
   /** Short code used in the database and in links. Lowercase, no spaces. */
   slug: string;
@@ -153,6 +161,8 @@ export type Market = {
   offerPushSmsMinutes: number;
   /** Where the map opens for a property that has no pin yet. Null: the whole country. */
   mapCentre: { lat: number; lng: number } | null;
+  /** The areas tradies choose to cover. Empty: the market is one area and every tradie covers it. */
+  areas: ServiceArea[];
 
   referralRewardCents: number;
   referralPaidMonths: number;
@@ -240,6 +250,7 @@ export function defineMarket(input: MarketInput): Market {
     notDescribedHours: 24,
     offerPushSmsMinutes: 3,
     mapCentre: null,
+    areas: [],
     referralRewardCents: 10000,
     referralPaidMonths: 3,
     replyByText: false,
@@ -267,6 +278,19 @@ export const markets: Market[] = [
     timezone: "Pacific/Auckland",
     // The middle of town, where the map opens for a property with no pin yet.
     mapCentre: { lat: -45.0312, lng: 168.6626 },
+    // Service areas (DECISIONS.md, 2026-11-26). The same list is in migration 20261207000000_service_areas.sql
+    // for a database that already has the market; tests/unit/areas.test.ts checks the two agree.
+    areas: [
+      { key: "queenstown-central", name: "Queenstown central", suburbs: ["Queenstown", "Queenstown Central", "Fernhill", "Sunshine Bay", "Queenstown Hill"] },
+      { key: "frankton", name: "Frankton", suburbs: ["Frankton", "Quail Rise", "Remarkables Park"] },
+      { key: "kelvin-heights", name: "Kelvin Heights", suburbs: ["Kelvin Heights", "Kelvin Peninsula"] },
+      { key: "jacks-point", name: "Jack's Point & Hanley's Farm", suburbs: ["Jack's Point", "Jacks Point", "Hanley's Farm", "Hanleys Farm"] },
+      { key: "lake-hayes", name: "Lake Hayes & Shotover Country", suburbs: ["Lake Hayes", "Lake Hayes Estate", "Shotover Country", "Lower Shotover"] },
+      { key: "arthurs-point", name: "Arthurs Point", suburbs: ["Arthurs Point", "Arthur's Point"] },
+      { key: "arrowtown", name: "Arrowtown", suburbs: ["Arrowtown"] },
+      { key: "gibbston", name: "Gibbston", suburbs: ["Gibbston", "Gibbston Valley"] },
+      { key: "glenorchy", name: "Glenorchy & Kinloch", suburbs: ["Glenorchy", "Kinloch"] },
+    ],
     tiers: [
       // Essential, for owners. Free to join (DECISIONS.md, 2026-11-17, "Free
       // to join"): a property is covered as soon as a card is on file, and the
@@ -321,6 +345,13 @@ export const markets: Market[] = [
     country: "NZ",
     timezone: "Pacific/Auckland",
     mapCentre: { lat: -44.6998, lng: 169.1324 },
+    areas: [
+      { key: "wanaka-town", name: "Wānaka town", suburbs: ["Wānaka", "Wānaka town"] },
+      { key: "albert-town", name: "Albert Town", suburbs: ["Albert Town"] },
+      { key: "hawea", name: "Lake Hāwea & Hāwea Flat", suburbs: ["Lake Hāwea", "Hāwea", "Hāwea Flat"] },
+      { key: "luggate", name: "Luggate", suburbs: ["Luggate"] },
+      { key: "cardrona", name: "Cardrona", suburbs: ["Cardrona", "Cardrona Valley"] },
+    ],
     tiers: [
       {
         key: "essential",

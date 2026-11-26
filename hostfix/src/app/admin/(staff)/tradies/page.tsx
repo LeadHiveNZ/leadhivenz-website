@@ -219,6 +219,9 @@ export default async function TradiesPage({ searchParams }: { searchParams: Sear
           </div>
           <CheckList name="trades" legend="Work they do" options={trades.filter((trade) => trade.key !== "other").map((trade) => ({ key: trade.key, label: trade.label, detail: trade.licenceRequired ? "Needs a licence on file" : trade.lbpRequired ? "Needs an LBP number on file" : undefined }))} />
           <Checks label="Days they work" name="daysAvailable" options={WEEKDAY_OPTIONS} defaultValues={["mon", "tue", "wed", "thu", "fri"]} />
+          {market.areas.length > 0 && (
+            <Checks label="Areas they cover" name="areas" options={market.areas.map((area) => ({ key: area.key, label: area.name }))} defaultValues={market.areas.map((area) => area.key)} hint="Offers only come for properties in these areas. Leave them all ticked for the whole market." />
+          )}
           <Tick name="afterHours" label="Takes after-hours call-outs" />
           <Tick name="gstRegistered" label={`Registered for ${market.taxName}`} />
           <SubmitButton pendingLabel="Adding...">Add tradie</SubmitButton>

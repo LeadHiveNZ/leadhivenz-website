@@ -22,7 +22,7 @@ import { getMarket } from "@/lib/markets/store";
 import { now } from "@/lib/clock";
 import { paymentsFor } from "@/lib/payments";
 import { fileFromForm, saveInsuranceCertificate } from "@/lib/tradies/certificate";
-import { agreeToAgreement, getTradie, saveLicence, savePayoutAccount, setTradiePaused, TradieError, updateTradie } from "@/lib/tradies/service";
+import { agreeToAgreement, getTradie, saveLicence, savePayoutAccount, setTradieAreas, setTradiePaused, TradieError, updateTradie } from "@/lib/tradies/service";
 
 /**
  * EVERYTHING A TRADIE CAN DO. A tradie is known either by the link in the
@@ -313,6 +313,19 @@ export async function saveTradieProfile(_previous: FormState, formData: FormData
     return { done: "Saved, with your certificate." };
   }
   return { done: "Saved." };
+}
+
+/** The tradie ticks the areas they cover (DECISIONS.md, 2026-11-26). Offers only come for those areas. */
+export async function saveTradieAreas(_previous: FormState, formData: FormData): Promise<FormState> {
+  const viewer = await requireTradie("/tradie/profile", { whileWaiting: true });
+  try {
+    await setTradieAreas(await getDb(), viewer.tradieId, list(formData, "areas"), `tradie:${viewer.tradieId}`);
+  } catch (error) {
+    if (error instanceof TradieError) return problem(formData, error.message, { areas: error.message });
+    throw error;
+  }
+  revalidatePath("/tradie/profile");
+  return { done: "Saved. Offers now come for the areas you ticked." };
 }
 
 export async function saveTradieLicence(_previous: FormState, formData: FormData): Promise<FormState> {

@@ -11,6 +11,7 @@ import { texts } from "@/lib/notify/messages";
 import { enqueue } from "@/lib/notify/outbox";
 import { raiseException, resolveExceptionsFor } from "@/lib/ops/exceptions";
 import { laterWave, onTimeRecords } from "@/lib/tradies/reliability";
+import { areaName } from "@/lib/markets/areas";
 import { canStillTake, eligibleTradies, getTradie, type Candidate } from "@/lib/tradies/service";
 import { addTextingHours, formatDeadline, isQuietHours, nextTextingTime } from "@/lib/time";
 import { activePair, applyOwnClientFee, pairedTradieIds } from "@/lib/clients/own-clients";
@@ -125,7 +126,7 @@ export async function advanceCascade(db: Db, jobId: string): Promise<CascadeOutc
   }
   const all = await eligibleTradies(db, {
     market: job.market, trade: job.trade, licenceRequired: job.licenceRequired, afterHours: job.afterHours,
-    urgent: job.urgency === "urgent", ...marketToday(market, at),
+    urgent: job.urgency === "urgent", ...marketToday(market, at), area: property.area,
   });
   const already = new Set(
     (await db.query<{ tradie_id: string }>("select tradie_id from public.offers where job_id = $1::uuid and round = $2", [jobId, job.offerRound])).map((row) => row.tradie_id),
@@ -166,13 +167,24 @@ export async function advanceCascade(db: Db, jobId: string): Promise<CascadeOutc
   const anyone = already.size > 0 || (await db.query(
     "select 1 from public.tradies where market = $1 and status = 'approved' and $2 = any(trades) limit 1", [job.market, job.trade],
   )).length > 0;
-  await audit(db, { actor: "system", action: "job.unfilled", entity: "job", entityId: jobId, detail: { round: job.offerRound, offered_to: already.size, ...(anyone ? {} : { no_tradie_in_trade: true }) } });
+  // Tradies in the trade, but none who covers the property's area (DECISIONS.md, 2026-11-26): said plainly too.
+  const areaLabel = property.area ? areaName(market.areas, property.area) : null;
+  const noneInArea = anyone && already.size === 0 && property.area !== null && (await db.query(
+    "select 1 from public.tradies where market = $1 and status = 'approved' and $2 = any(trades) and $3 = any(areas) limit 1", [job.market, job.trade, property.area],
+  )).length === 0;
+  await audit(db, {
+    actor: "system", action: "job.unfilled", entity: "job", entityId: jobId,
+    detail: { round: job.offerRound, offered_to: already.size, ...(anyone ? {} : { no_tradie_in_trade: true }), ...(noneInArea ? { no_tradie_in_area: property.area } : {}) },
+  });
   const promised = job.respondBy ? `. Promised on site by ${formatDeadline(job.respondBy, at, market.timezone)}` : "";
+  const tradeLabel = findTrade(job.trade)?.label ?? job.trade;
   await raiseException(db, {
     kind: "nobody_accepted", market: job.market, jobId,
-    summary: anyone
-      ? `Job ${job.number}: nobody accepted "${job.title}" at ${property.name}${promised}.`
-      : `Job ${job.number}: no approved tradie in ${market.name} is down for "${findTrade(job.trade)?.label ?? job.trade}" yet, so "${job.title}" at ${property.name} was not offered to anyone. Find one, or pick another trade on the job page${promised}.`,
+    summary: !anyone
+      ? `Job ${job.number}: no approved tradie in ${market.name} is down for "${tradeLabel}" yet, so "${job.title}" at ${property.name} was not offered to anyone. Find one, or pick another trade on the job page${promised}.`
+      : noneInArea
+        ? `Job ${job.number}: no tradie covers ${areaLabel} for "${tradeLabel}", so "${job.title}" at ${property.name} was not offered to anyone. Ring round, or give it to a tradie who will go there${promised}.`
+        : `Job ${job.number}: nobody accepted "${job.title}" at ${property.name}${promised}.`,
     dedupeKey: `nobody_accepted:${jobId}`,
   });
   if (owner.phone) {
@@ -238,7 +250,9 @@ export async function acceptOffer(db: Db, offerId: string, via: "link" | "text" 
   const at = now();
   const context = await loadContext(db, job);
   const { market, property, owner } = context;
-  if (!(await canStillTake(db, current.tradieId, { market: job.market, trade: job.trade, licenceRequired: job.licenceRequired, today: marketToday(market, at).today }))) {
+  // The area rule (DECISIONS.md, 2026-11-26) is for offers; a tradie our team gives the job to ("staff") has agreed to go.
+  const area = via === "staff" ? null : property.area;
+  if (!(await canStillTake(db, current.tradieId, { market: job.market, trade: job.trade, licenceRequired: job.licenceRequired, today: marketToday(market, at).today, area }))) {
     return { result: "not_eligible", job };
   }
   const tradie = await getTradie(db, current.tradieId);

@@ -68,6 +68,11 @@ export default function Page() {
             log the job is the price you pay, even if we change the menu later.
           </li>
           <li>
+            <strong>No travel charge.</strong> The price is the same wherever your property is in the area we cover. Each property has an area (for
+            example Frankton, Arrowtown or Glenorchy), chosen from its suburb when you add it, and a job is offered to the tradies who cover that area.
+            If none of them can take it, it goes to our team, as when nobody accepts a job (section 4).
+          </li>
+          <li>
             <strong>Urgent</strong> (on site within 4 hours: the tradie drops what they are doing) adds a surcharge, and an urgent job asked for
             before 7am, after 4:30pm or at the weekend adds an after-hours surcharge. The amount of each is on the price list and shown before you
             choose it, and like the rest of the price it is fixed: nothing is added on the day. You pay each surcharge only for what actually
