@@ -30,8 +30,8 @@ CONFIG = {
     'phone_intl': '+64221780876',
     'email': 'amelia_asct@outlook.com',
     'facebook': 'https://www.facebook.com/profile.php?id=61593305327062',
-    'kai_name': 'Korina Grace',          # Kai Manager: Meals on Wheels orders
-    'kai_role': 'Kai Manager',
+    'kai_name': 'Korina Grace',          # runs the Kai Parcels (Meals on Wheels orders go to Amelia since 25/11/2026)
+    'kai_role': 'Kai Parcels',
     'kai_phone': '022 605 2361',
     'kai_phone_intl': '+64226052361',
     'site_url': 'https://arohaseniorscharitabletrust.com',   # live domain (bought on Cloudflare 27/10/2026)
@@ -62,7 +62,7 @@ PAGES = [
     ('get-involved', 'get-involved', f'Volunteer, Donate or Partner | {SITE_NAME}',
      'Volunteer, donate or partner with Aroha Seniors Charitable Trust in Auckland, and help make sure no older person in our community is left alone.'),
     ('contact', 'contact', 'Contact Aroha Seniors Charitable Trust | Flat Bush, Auckland',
-     'Contact Aroha Seniors Charitable Trust in Flat Bush, Auckland. Call or text Amelia on 022 178 0876, or Korina on 022 605 2361 for Meals on Wheels.'),
+     'Contact Aroha Seniors Charitable Trust in Flat Bush, Auckland. Call or text Amelia on 022 178 0876, or Korina on 022 605 2361 for Kai Parcels.'),
     ('policies', 'policies', f'Our Policies | {SITE_NAME}',
      'Public policies of Aroha Seniors Charitable Trust: privacy, client rights, safeguarding, elder abuse prevention, complaints, and donations and koha.'),
     ('404', '404', f'Page not found | {SITE_NAME}', 'Sorry, we can\'t find that page.'),
@@ -115,8 +115,8 @@ def json_ld(c, page):
             'areaServed': [{'@type': 'Place', 'name': n} for n in ('Flat Bush, Auckland', 'South Auckland', 'East Auckland')]
                           + [{'@type': 'City', 'name': 'Auckland'}],
             'contactPoint': [
-                {'@type': 'ContactPoint', 'name': c['contact_name'], 'telephone': c['phone_intl'], 'email': c['email'], 'contactType': 'general enquiries', 'areaServed': 'NZ'},
-                {'@type': 'ContactPoint', 'name': c['kai_name'], 'telephone': c['kai_phone_intl'], 'contactType': 'Meals on Wheels orders', 'areaServed': 'NZ'},
+                {'@type': 'ContactPoint', 'name': c['contact_name'], 'telephone': c['phone_intl'], 'email': c['email'], 'contactType': 'general enquiries and Meals on Wheels orders', 'areaServed': 'NZ'},
+                {'@type': 'ContactPoint', 'name': c['kai_name'], 'telephone': c['kai_phone_intl'], 'contactType': 'Kai Parcels', 'areaServed': 'NZ'},
             ],
             'identifier': {'@type': 'PropertyValue', 'propertyID': 'NZ Charities Register', 'value': c['charity_no']},
             'sameAs': [c['facebook'], c['register_url']],

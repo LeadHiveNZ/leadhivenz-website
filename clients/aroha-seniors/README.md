@@ -2,7 +2,8 @@
 
 Client: **Aroha Seniors Charitable Trust** (registered charity **CC63126**), Flat Bush, Auckland.
 Contact: **Amelia Kolio**, 022 178 0876, amelia_asct@outlook.com.
-Meals on Wheels orders: **Korina Grace** (Kai Manager), 022 605 2361.
+Meals on Wheels orders: **Amelia** (since 25/11/2026), cooked by **Chef Kasiano Timu** (Mac Chef).
+Kai Parcels: **Korina Grace**, 022 605 2361 (`kai_*` in `build.py`).
 Lead: LeadHive website demo request, 12/10/2026 (Resend notification to hello@leadhivenz.com).
 
 A six-page charity website in the trust's own branding: their heart logo, kawakawa green and
@@ -69,11 +70,31 @@ Wheels section in place of the cuppa photo, which is no longer on the site:
 
 | File                  | Photo                                  | Used on                                   |
 |-----------------------|----------------------------------------|-------------------------------------------|
-| `mow.jpg`, `meals.jpg`| Korina, cut from the left of the graphic (logo, text and "Made with AI" tag left out) | Home Meals on Wheels band; What we do, Meals on Wheels |
+| ~~`mow.jpg`, `meals.jpg`~~ | Korina's photo was here until 25/11/2026, when she moved to Kai Parcels (see below) | |
 | `korina.jpg`          | Same photo, square head and shoulders  | About, Korina's card (replaces her initials) |
 
-Her graphic gives her title as "Kai Services Manager". The site uses "Kai Manager", from Amelia's
-email. Change `kai_role` in `build.py` (and the "our Kai Manager" wording in the pages) if they prefer the longer title.
+Her graphic gives her title as "Kai Services Manager".
+
+## Changes from Amelia, 25/11/2026
+
+- **Korina** no longer does Meals on Wheels (Amelia does); she runs the **Kai Parcels**. `kai_role` is now
+  "Kai Parcels": her About card, the Contact card and the footer line say Kai Parcels. Every Meals on
+  Wheels call button, the FAQ and the structured data now go to Amelia. The Public Policies page still
+  lists "Korina G. — Kaiārahi / Kai Manager" because that's the trust's own document.
+- **Chef Kasiano Timu** (owner of Mac Chef) cooks the Meals on Wheels. Amelia's "Meet the man behind the
+  kai" text is a spotlight card under Meals on Wheels on What we do (`#chef`); the home page band says he
+  cooks the kai and links to him.
+- **Ukulele with Rena Mahauariki**: spotlight card under Friendship gatherings (`#ukulele`), with her poster
+  (full-size link) and the poster's wording.
+
+| Image | From | Used on |
+|---|---|---|
+| `mow.jpg`, `meals.jpg` | Mac Chef Instagram screenshot of packed meals, phone screen parts cropped off | Home Meals on Wheels band; What we do, Meals on Wheels |
+| `chef-kasiano.jpg` | Kasiano's mirror selfie, flipped so the "FUSION" sign and his jacket read the right way | What we do, chef card |
+| `ukulele-rena-poster.jpg` | The trust's ukulele poster (from webp) | What we do, ukulele card |
+
+The second Mac Chef screenshot (salads) is too motion-blurred to use. Spotlight cards (`.spot`) span both
+columns of a programme and always sit after its photo (`order:3`).
 
 **More photos:** save JPGs in `site/assets/img/` with these names and run `python3 build.py`.
 Each one replaces the illustration in its slot. Shape is portrait 4:5; on phones they crop to
