@@ -676,7 +676,7 @@ export async function coverage(db: Db, market: string, today: string): Promise<C
  * Change this when the agreement changes, and the page's date with it
  * (tests/unit/legal.test.ts).
  */
-export const TRADIE_AGREEMENT_VERSION = "26 November 2026";
+export const TRADIE_AGREEMENT_VERSION = "27 November 2026";
 
 /*
  * The 12-month no-direct-dealing rule and its NZ$250 release (DECISIONS.md, 2026-11-20) were dropped on

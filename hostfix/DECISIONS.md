@@ -9,6 +9,13 @@ price, a fee or a promise, add a line here saying what and why.
 
 ---
 
+## 2026-11-27 — Tradie agreement 27 November 2026: moving it to the company
+
+The agreement's other party is Joe Ingram for now (`brand.legalName`), with HostFix Limited being formed. Section 13
+now says the agreement, and everything owed under it, may be transferred to that company, the tradie is told by email,
+and nothing else changes, so nobody has to sign again when the company exists. `TRADIE_AGREEMENT_VERSION` is
+"27 November 2026"; the public sign-up form (Lovable) carries the same text.
+
 ## 2026-11-26 (third entry) — Emergency within the hour; each tradie's own hours instead of an after-hours tick
 
 Approved by the founder. Migration `20261208000000_emergency_and_tradie_hours.sql`. Tests: `tests/unit/emergency.test.ts`

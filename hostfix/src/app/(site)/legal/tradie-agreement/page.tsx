@@ -419,6 +419,11 @@ export default function Page() {
           before your next offer. We give you {FEE_NOTICE_DAYS} days&rsquo; notice by text before a change to the platform fee applies to you. New Zealand
           law applies.
         </p>
+        <p>
+          <strong>Moving this agreement to our company.</strong> {n} is run by Joe Ingram for now, and is moving to a limited company he controls
+          (HostFix Limited). We may transfer this agreement, and everything owed under it, to that company. We will tell you by email when we do. Nothing
+          else changes: the same terms, the same pay and the same record.
+        </p>
       </Section>
     </LegalPage>
   );
