@@ -9,6 +9,26 @@ price, a fee or a promise, add a line here saying what and why.
 
 ---
 
+## 2026-11-27 (third entry) — The first full run against Stripe's real test area; the card page takes cards only
+
+The app's own money code was run against the HostFix Stripe sandbox (`tests/unit/stripe-live.test.ts`, 11 checks, all
+passing; skipped unless `LIVE_STRIPE_RUN=1`): the hold at send-out, capture at Job done, cancel before and after Arrived,
+a declined hold, a failed charge with the tradie paid from the platform balance, the payout transfer tied to the charge,
+a refund with the tradie's share reversed (NZ$50 back: NZ$42.55 reversed), a refund made by hand in Stripe, a goodwill
+credit, the billing portal, a tradie payout account and its set-up link, and a NZ$750 BECS debit that cleared.
+
+- **Found and fixed:** `startCardSetup` did not name the payment methods, and Stripe's real page offered "NZ Direct Debit"
+  beside "Card". A bank account saved there would have been stored as the owner's card and made their default, and
+  every hold on it would fail. The page now passes `allowed_payment_method_types: ["card"]`, and
+  `cardFromSetupCheckout` returns nothing unless the saved method is a card.
+- **Learned:** a hold on a Visa carries `capture_before` 168 hours out (the app renews 12 hours before whatever Stripe
+  says, so nothing changes). A new payout account is not asked for a website. Stripe's messages for the test objects
+  reached the live webhook and were ignored with no failed delivery.
+- **Not covered by the run** (docs/STRIPE-TEST-CHECKLIST.md lists them): a person sending Stripe's card page and bank
+  page (they were opened and read; where the secret key is supplied by a network proxy it is also supplied to the page's
+  own calls, and Stripe refuses a card number sent with a secret key), a tradie completing Stripe's bank-details page,
+  paid memberships (none on sale), and bank disputes (the live site would raise a real queue item).
+
 ## 2026-11-27 — Tradie agreement 27 November 2026: moving it to the company
 
 The agreement's other party is Joe Ingram for now (`brand.legalName`), with HostFix Limited being formed. Section 13

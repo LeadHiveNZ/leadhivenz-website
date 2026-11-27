@@ -9,6 +9,34 @@ runs each of them once, in Stripe's test area, where no real money moves.
 stop, note the step number and what you saw, and bring it back to Claude. Do not go live with a step
 failing.
 
+## What has already been run for you (27 November 2026)
+
+Claude ran the app's own money code against Stripe's test area (`tests/unit/stripe-live.test.ts`, 11 checks, all
+passing). These steps below are **done** and do not need doing by hand again unless the money code changes:
+
+- **B2** the hold when a job is sent (NZ$235 held, "Uncaptured"), and the charge taken from it at Job done.
+- **B2a** cancel before Arrived (hold let go, no fee); cancel after Arrived (NZ$225 call-out taken from the NZ$235
+  hold); a card that declines the hold (job not sent, owner told). **A hold on a Visa lasted 168 hours (7 days).**
+- **B3** the tradie's NZ$200 sent to their Stripe account, tied to the owner's charge.
+- **B4** a card that fails at Job done: the tradie was still paid from HostFix's balance, and the card was charged
+  once fixed.
+- **B5/B6** a NZ$50 refund after the tradie was paid: NZ$42.55 came back from the tradie's account.
+- **B7** a credit on the owner's Stripe balance. **B8** a refund made by hand in Stripe was noticed and the
+  tradie's unsent payment cut by their share.
+- **B10** a NZ$750 direct debit from a saved NZ bank account went "processing" and cleared.
+- **B1 (part)** a tradie's payout account is created without Stripe asking for a website, and the set-up page opens.
+
+**Found and fixed by that run:** Stripe's "save your card" page was also offering "NZ Direct Debit". A bank account
+saved there would have been taken for a card, and a job's price cannot be held on one. The page now offers cards only.
+
+**Still to do by hand, once, in an ordinary browser, before real payments:**
+- **A1** save a card on Stripe's page as a pretend owner (the page opens and shows the right fields; sending it
+  could not be automated from where the test ran).
+- **B1** fill in Stripe's bank-details page as a pretend tradie, and check the site says "You can be paid".
+- **B9** a bank dispute (left out on purpose: it would put an item in the live team queue).
+- **A2 to A7** only if a paid membership or Portfolio is switched on. Essential is free, so they do not apply today.
+- Texts: every step that says "is texted" needs ClickSend connected.
+
 ## Before you start
 
 - [ ] `SETUP.md` steps 1 to 6 are done with Stripe's **test** key (`sk_test_...`), the webhook has all nine

@@ -292,8 +292,13 @@ npm run test:db                        # needs DATABASE_URL for a throwaway Post
 - Unit tests run on a real Postgres engine inside the test process (`tests/unit/db.ts`), with the real
   migrations. `npm run test:db` repeats them on a real server, which is where the same-second races are proven.
 - Outside services are tested against stand-ins (`tests/unit/helpers.ts`, `e2e/fake-stripe.mjs`, the demo
-  payment gateway). **The Stripe calls for memberships, job charges and tradie payouts have never run
-  against a real Stripe account.** `docs/STRIPE-TEST-CHECKLIST.md` is the manual run.
+  payment gateway). **Job money has also run against Stripe's real test area** (27 Nov 2026):
+  `tests/unit/stripe-live.test.ts` drives the app's own money code (hold, capture, cancel, charge, decline, payout
+  transfer, reversal, refund, credit, payout account, bank debit) with Stripe's test cards. It is skipped unless
+  `LIVE_STRIPE_RUN=1` (with `LIVE_STRIPE_KEY` a test key and `LIVE_STRIPE_PAYEE` a switched-on sandbox payout
+  account); run it after any change to `stripe-gateway.ts`, `settle.ts` or `card-holds.ts`. Not yet run for real:
+  a person sending Stripe's card page, a tradie filling in Stripe's bank-details page, paid memberships, and bank
+  disputes. `docs/STRIPE-TEST-CHECKLIST.md` says which steps are still by hand.
 - Read the provider's current documentation before changing any call to an outside service. Do not rely
   on memory.
 - To look at the product: `npm run demo`, then `/demo`. Delete `.data/` to reset the sample business.

@@ -27,7 +27,7 @@ import { stripeClient, type StripeAccount } from "./stripe";
  *  - A credit is a negative "customer balance transaction": Stripe takes it
  *    off the owner's next invoice by itself.
  *  - A free membership saves a card without charging it: Checkout in "setup"
- *    mode, with the customer and a currency. The finished page holds a
+ *    mode, with the customer, and cards as the only payment method allowed. The finished page holds a
  *    SetupIntent, and the SetupIntent holds the saved card (payment_method).
  *    Stripe sends checkout.session.completed for it, as for a paid page
  *    (docs.stripe.com, "Set up future payments" with Checkout, read Nov 2026).
@@ -58,10 +58,12 @@ import { stripeClient, type StripeAccount } from "./stripe";
  *    No manual capture, so no holds. Refunds within 90 days, 3 to 5 business days; one asked for before the
  *    debit is submitted cancels it. Default limits: NZ$10,000 a debit and NZ$10,000 a week until Stripe raises them.
  *
- * NOT YET RUN AGAINST A REAL STRIPE ACCOUNT. The shapes are checked against
- * Stripe's library by the compiler, and the rules around them are tested with
- * pretend money. Work through docs/STRIPE-TEST-CHECKLIST.md in Stripe's test
- * mode before taking real payments.
+ * RUN AGAINST STRIPE'S REAL TEST AREA on 27 Nov 2026 (tests/unit/stripe-live.test.ts, DECISIONS.md 2026-11-27,
+ * third entry): the hold, capture (whole and part), cancel, charge, decline, transfer (tied to a charge and from
+ * the platform balance), reversal, refund, credit, billing portal, payout account and its set-up link, and the
+ * bank debit, each through the app's own money code. Still to be done once by a person in an ordinary browser,
+ * before real payments: sending Stripe's card page and a tradie filling in Stripe's bank-details page
+ * (docs/STRIPE-TEST-CHECKLIST.md, A1 and B1). Paid memberships and bank disputes have only run against the stand-in.
  */
 
 function unix(seconds: number | null | undefined): Date {
@@ -231,7 +233,9 @@ export async function cardFromSetupCheckout(account: StripeAccount, sessionId: s
   if (intent.status !== "succeeded") return null;
   const propertyId = session.metadata?.hostfix_property ?? session.client_reference_id;
   const customerId = typeof session.customer === "string" ? session.customer : session.customer?.id;
-  const card = cardOf(intent.payment_method as Stripe.PaymentMethod | string | null);
+  const method = intent.payment_method as Stripe.PaymentMethod | string | null;
+  // Only a card counts: a job's price is held on it, and nothing else can be held on.
+  const card = method && typeof method !== "string" && method.type === "card" ? cardOf(method) : null;
   if (!propertyId || !customerId || !card) return null;
   // Make it the owner's default, so finished jobs can be charged to it.
   await stripe.customers.update(customerId, { invoice_settings: { default_payment_method: card.paymentMethodId } });
@@ -407,8 +411,9 @@ export function createStripeGateway(account: StripeAccount): PaymentsGateway {
       const session = await stripe.checkout.sessions.create({
         mode: "setup",
         customer: input.customerId,
-        // Setup mode needs a currency when the payment methods are not listed one by one.
-        currency: input.market.currency.toLowerCase(),
+        // Cards only. Left open, Stripe's page also offered "NZ Direct Debit" (seen on the real page, 27 Nov 2026),
+        // and a bank account saved here would be taken for the owner's card: a job's price cannot be held on one.
+        allowed_payment_method_types: ["card"],
         client_reference_id: input.propertyId,
         metadata,
         setup_intent_data: { metadata, description: `${brand.name} card on file: ${input.propertyName}`.slice(0, 500) },
