@@ -75,6 +75,16 @@ Built 26/11/2026, everything paused:
 - Callouts: Licensed Electricians, Free Security Quotes, CCTV & Alarm Installs, Local to Palmy & Kāpiti.
 - Sitelinks to the four service pages.
 
-Still to do: call asset with the Nimbata tracking number; at go-live enable the campaign,
-ad groups, ads and keywords (Windsor asks for a confirmation on each).
-Location option must be switched to "Presence" in the Google Ads UI (not settable via API).
+Audit 27/11/2026 (Windsor read-back):
+- Campaign status reads ENABLED; all 4 ad groups and 4 ads are PAUSED, so $0 spend so far.
+- Location option is already PRESENCE (it can also be set with Windsor `update_campaign_settings`).
+- Geo: the 8 radius zones are live, **plus a whole-region target, Manawatu-Whanganui Region
+  (geoTargetConstants/21305)**. That stretches to Whanganui, Taihape, Ruapehu and Dannevirke.
+  Remove it before go-live: `set_campaign_geo_targeting` with `locations: []` and the 8 proximities.
+- No overlap with Wellington Electrician (Wellington City, Karori, 6011, 6021 only).
+- Ads: Emergency Intent and Alarms & Security APPROVED. Quote Intent and CCTV DISAPPROVED for
+  "destination not working" (DNS not found, checked 26–27/11, before the domain resolved). All
+  pages return 200 now; Google re-checks on its own, or use Resubmit in Google Ads → Ads → policy.
+
+Still to do: remove the region target; call asset with the Nimbata number 06 882 0163; at
+go-live enable the ad groups, ads and keywords (Windsor asks for a confirmation on each).
