@@ -86,5 +86,11 @@ Audit 27/11/2026 (Windsor read-back):
   "destination not working" (DNS not found, checked 26–27/11, before the domain resolved). All
   pages return 200 now; Google re-checks on its own, or use Resubmit in Google Ads → Ads → policy.
 
-Still to do: remove the region target; call asset with the Nimbata number 06 882 0163; at
-go-live enable the ad groups, ads and keywords (Windsor asks for a confirmation on each).
+**Live 27/11/2026** (Duncan's $2,300 setup + first month confirmed paid by Joe):
+- Region target 21305 removed; geo is now the 8 radius zones only. Duncan's own words
+  (22/10): "confirming I'm not in whanganui… roughly paekakariki to palmy north/fielding".
+- Enabled: all 56 keywords, 4 ads, 4 ad groups (campaign was already enabled).
+- Call asset (added by Joe): 06 882 0164, Nimbata's call-extension number. The site's Nimbata
+  numbers are 06 882 0163 for direct visitors and 06 882 0162 for ad clicks (gclid).
+- Quote Intent and CCTV ads still show the old "destination not working" disapproval until
+  Google re-checks; Resubmit in the Google Ads UI to speed it up.
