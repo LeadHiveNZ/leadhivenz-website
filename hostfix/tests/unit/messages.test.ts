@@ -72,6 +72,7 @@ const samples: Record<string, string> = {
   disputeReceived: texts.disputeReceived({ number: 104237 }),
   reporterBooked: texts.reporterBooked({ property: longProperty, when, knock: true }),
   reporterDone: texts.reporterDone({ property: longProperty }),
+  marketLive: texts.marketLive({ market: "Queenstown Lakes", link: "https://hostfix.co.nz/app/properties" }),
   referralThanks: texts.referralThanks({ name: "Christopher Fitzgerald", link: "https://hostfix.co.nz/refer/Ab3xK9mQ2LpR" }),
   // DECISIONS.md, 2026-11-23: the hold on the card, cancelling after Arrived, quotes paid on approval, spot checks, own clients.
   cardNeededOne: texts.cardNeeded({ property: longProperty, title: longTitle, problem: "declined", link: billing }),

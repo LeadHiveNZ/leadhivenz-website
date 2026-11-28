@@ -8,7 +8,9 @@ import { Card, Notice, PageTitle } from "@/components/ui/Bits";
 import { requireOwner } from "@/lib/auth/current";
 import { getDb } from "@/lib/db";
 import { tierLine, tierPriceLabel } from "@/lib/markets/display";
-import { listMarkets, listTiers } from "@/lib/markets/store";
+import { joinableMarkets } from "@/lib/markets/launch";
+import { inPreLaunch, preLaunchWords } from "@/lib/markets/stage";
+import { listTiers } from "@/lib/markets/store";
 import { formatMoney } from "@/lib/money";
 import { openPortfolio } from "@/lib/properties/portfolio";
 
@@ -20,7 +22,8 @@ export default async function NewPropertyPage({ searchParams }: { searchParams: 
   const viewer = await requireOwner("/app/properties/new");
   const params = await searchParams;
   const db = await getDb();
-  const live = (await listMarkets(db)).filter((market) => market.stage === "live");
+  // Live markets first, then the ones in pre-launch (DECISIONS.md, 2026-11-27, second entry): a property can be added in either.
+  const live = await joinableMarkets(db);
   const ref = typeof params.ref === "string" ? params.ref.slice(0, 12) : "";
 
   if (live.length === 0) {
@@ -44,6 +47,7 @@ export default async function NewPropertyPage({ searchParams }: { searchParams: 
   const portfolioOffer = offered.find((tier) => tier.billingBasis === "per_account") ?? null;
   const portfolio = await openPortfolio(db, viewer.ownerId, market.slug);
   const preferred = tiers.find((tier) => tier.id === params.tier) ?? tiers[0];
+  const early = inPreLaunch(market);
 
   return (
     <div className="mx-auto max-w-xl">
@@ -69,6 +73,14 @@ export default async function NewPropertyPage({ searchParams }: { searchParams: 
               {candidate.name}
             </Link>
           ))}
+        </div>
+      )}
+
+      {early && (
+        <div className="mb-4">
+          <Notice tone="info" title={preLaunchWords.title(market.name)}>
+            Add your properties now and you are ready on day one. It is free, and no card is needed yet. We&rsquo;ll email you the day we go live.
+          </Notice>
         </div>
       )}
 
@@ -105,7 +117,11 @@ export default async function NewPropertyPage({ searchParams }: { searchParams: 
               <input type="hidden" name="tierId" value={portfolio.tierId} />
               <p className="rounded-xl bg-tint px-4 py-3 text-ink">
                 This property joins your Portfolio. There is nothing to pay for it on its own: your one monthly retainer covers it
-                {portfolio.status === "active" || portfolio.status === "past_due" ? " from today." : " once you start the retainer on the Billing page."}
+                {portfolio.status === "active" || portfolio.status === "past_due"
+                  ? " from today."
+                  : early
+                    ? ` once bookings open in ${market.name} and you start the retainer on the Billing page.`
+                    : " once you start the retainer on the Billing page."}
               </p>
               <p className="text-sm text-muted">Your retainer follows how many properties you have, from the next monthly payment. Jobs are charged at the fixed price when they are done.</p>
             </>
@@ -133,7 +149,9 @@ export default async function NewPropertyPage({ searchParams }: { searchParams: 
                 ]}
               />
               <p className="text-sm text-muted">
-                Nothing is charged now. On the next screen you add your card. Jobs are charged at the fixed price when they are done.
+                {early
+                  ? `Nothing is charged now, and no card is needed yet. You add one the day bookings open in ${market.name}. Jobs are charged at the fixed price when they are done.`
+                  : "Nothing is charged now. On the next screen you add your card. Jobs are charged at the fixed price when they are done."}
               </p>
             </>
           )}

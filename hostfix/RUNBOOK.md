@@ -443,6 +443,18 @@ tracked by the app: note it in `DECISIONS.md` and review it by hand.
 
 **Opening a new town.** More > Markets, prices and the menu > **Add a market**. See `SETUP.md`.
 
+**Letting owners set up before a town opens (pre-launch).** More > Markets > the market > Settings. With the
+stage on **Waiting list**, tick **Owners can set up their account and properties before launch** and save. Owners
+can then sign up and add every property. Nobody is asked for a card and nobody can book a job. The card
+"Set up before launch" on the same screen counts the owners and properties. Untick it to stop new sign-ups there;
+nothing already added is lost.
+
+**The day a town goes live.** Same screen: change **Stage** to **Live** and save. Every owner with a property there
+is emailed once ("HostFix is live in ... Add your card to be covered") with the link to add their card, and the
+screen says so. Saving again, or switching the stage back and forth, never emails anyone twice. More > Texts and
+emails shows each one; More > Audit log shows "market.went_live" with how many. From then on those owners see the
+usual "Add a card" step, and their QR cards and cleaners' links start working once the card is saved.
+
 **Paying referral rewards.** More > Referrals. Pay by bank transfer, then **I have paid this**.
 
 **Adding or removing a dispatcher.** More > Staff.

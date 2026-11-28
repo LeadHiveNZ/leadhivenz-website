@@ -46,6 +46,7 @@ it when you change one.
 | Who is on right now (Urgent and Emergency only offered then), after-hours cover per trade | `src/lib/tradies/cover.ts` |
 | The trades, which need a licence, which need an LBP number | `config/trades.ts` |
 | Service areas (no travel charge): each market's areas, a property's area from its suburb, the areas a tradie covers | `src/lib/markets/areas.ts`, `areas` in `config/markets.ts`, `setTradieAreas` and the `area` criterion in `src/lib/tradies/service.ts` |
+| Pre-launch: who can join, what is open before a market is live, the words, the one email on go-live | `src/lib/markets/stage.ts`, `src/lib/markets/launch.ts`, `markets.pre_launch`, `src/lib/owners/card-pages.ts` |
 | Everything the clock drives | `src/lib/dispatch/tick.ts`, called by `/api/cron/tick` |
 | Charging, paying tradies, credits, disputes, refunds | `src/lib/billing/settle.ts` |
 | Memberships and referrals | `src/lib/properties/service.ts` |
@@ -260,6 +261,12 @@ it when you change one.
   holding the `hf_team` cookie, which is set after a six-digit code to their mobile and signed against the
   link (`src/lib/team/`). A forwarded link shows the code screen and nothing else. The guest QR card stays
   per property and anonymous (DECISIONS.md, 2026-11-18).
+- **Before a market is live, nothing takes a card and nothing books a job** (DECISIONS.md, 2026-11-27, second entry).
+  A market on the waiting list with `pre_launch` on lets owners sign up and add properties, and nothing else. Never
+  check `stage === "live"` for an owner's screen or action: ask `ownersCanJoin`, `bookingOpen` or `inPreLaunch`
+  (`src/lib/markets/stage.ts`). Anything new that saves a card, starts a membership or logs a job must refuse in
+  pre-launch on the server, before any call to the payment company, with the words in `preLaunchWords`, and show a
+  `Notice` instead of its button. Going from waitlist to live emails each owner there once (`announceGoLive`).
 
 ### Next.js 16 with Cache Components: what bit us
 
@@ -284,7 +291,7 @@ it when you change one.
 
 ```bash
 npm run check                          # lint, types, unit tests
-npx next build && npm run test:e2e     # real browser, phone size, three copies of the site
+npx next build && npm run test:e2e     # real browser, phone size, four copies of the site
 npm run test:db                        # needs DATABASE_URL for a throwaway Postgres
 ```
 

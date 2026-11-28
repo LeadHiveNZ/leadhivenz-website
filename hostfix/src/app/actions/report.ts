@@ -23,7 +23,8 @@ import { ipKey } from "@/lib/request";
 import {
   openTeamPending, sealTeamDevice, sealTeamPending, TEAM_DEVICE_COOKIE, TEAM_DEVICE_DAYS, TEAM_PENDING_COOKIE, TEAM_PENDING_MINUTES, teamDeviceMatches,
 } from "@/lib/team/device";
-import { findTeamLink, houseForLink } from "@/lib/team/service";
+import { marketNames, preLaunchWords } from "@/lib/markets/stage";
+import { findTeamLink, houseForLink, waitingForLink } from "@/lib/team/service";
 
 /**
  * A REPORT FROM A LINK OR A QR CODE. The person has no account.
@@ -113,7 +114,13 @@ async function sendTeamReport(formData: FormData, token: string): Promise<FormSt
     return problem(formData, "This phone has not been checked yet. Open your link again and we will text you a code.");
   }
   const house = await houseForLink(db, link.id, text(formData, "propertyId"));
-  if (!house) return problem(formData, "That house is not on your list any more. Ask the owner if it should be.");
+  if (!house) {
+    // A house set up before its area opens (DECISIONS.md, 2026-11-27, second entry): the same friendly words as the page.
+    const waiting = await waitingForLink(db, link.id);
+    const early = waiting.houses.find((candidate) => candidate.propertyId === text(formData, "propertyId"));
+    if (early) return problem(formData, preLaunchWords.notOpenJobs(marketNames(waiting.markets.filter((market) => market.slug === early.market))));
+    return problem(formData, "That house is not on your list any more. Ask the owner if it should be.");
+  }
   if (!(await withinRateLimit(`report-property:${house.property.id}`, 24 * 60 * 60, 30))) {
     return problem(formData, "A lot has been reported for this property today. Please contact the owner directly.");
   }

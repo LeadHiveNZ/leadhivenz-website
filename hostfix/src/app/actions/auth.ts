@@ -12,7 +12,9 @@ import { getDb } from "@/lib/db";
 import type { Db } from "@/lib/db/types";
 import { appSecret, baseUrl, demoModeAllowed } from "@/lib/env";
 import { problem, text, type FormState } from "@/lib/forms";
+import { joinableMarkets, signUpRefusal } from "@/lib/markets/launch";
 import { publicMarket } from "@/lib/markets/public";
+import { bookingOpen, inPreLaunch, marketNames } from "@/lib/markets/stage";
 import { emailSettings } from "@/lib/notify/email";
 import { emails, texts } from "@/lib/notify/messages";
 import { enqueue, flushOutbox } from "@/lib/notify/outbox";
@@ -104,11 +106,18 @@ export async function startOwnerSignUp(_previous: FormState, formData: FormData)
   const phone = normalisePhone(text(formData, "phone"), country);
   const errors: Record<string, string> = {};
   if (name.length < 2) errors.name = "Enter your name.";
+  else if ([...name].length > 80) errors.name = "Keep your name to 80 letters or fewer.";
   if (!email) errors.email = "Enter your email address.";
   if (!phone) errors.phone = "Enter your mobile number. We text you when a job is booked and when it is done.";
   if (Object.keys(errors).length > 0) return problem(formData, "Please check the highlighted fields.", errors);
 
   const db = await getDb();
+  // An account can be made when at least one area is live, or on the waiting list with pre-launch on
+  // (DECISIONS.md, 2026-11-27, second entry). Checked here, not only by the page hiding the form.
+  const closed = await signUpRefusal(db);
+  if (closed) return problem(formData, closed);
+  const joinable = await joinableMarkets(db);
+  const chosen = joinable.find((market) => market.slug === text(formData, "market")) ?? null;
   if (await findUserByIdentifier(db, { kind: "email", value: email! })) {
     return problem(formData, "That email address already has an account. Sign in instead.", { email: "Already has an account." });
   }
@@ -118,7 +127,10 @@ export async function startOwnerSignUp(_previous: FormState, formData: FormData)
   const failed = await sendCode(db, secret, { kind: "email", value: email! }, {
     purpose: "owner_sign_up",
     next: null,
-    signUp: { name, email: email!, phone: phone!.e164, homeLocation: text(formData, "homeLocation") || null, ref: text(formData, "ref").toUpperCase().slice(0, 12) || null },
+    signUp: {
+      name, email: email!, phone: phone!.e164, homeLocation: text(formData, "homeLocation") || null, ref: text(formData, "ref").toUpperCase().slice(0, 12) || null,
+      market: chosen?.slug ?? null,
+    },
   });
   if (failed) return problem(formData, failed);
   redirect("/sign-in/code");
@@ -148,7 +160,11 @@ export async function finishSignIn(_previous: FormState, formData: FormData): Pr
       const created = await createOwnerAccount(db, pending.signUp);
       user = created.user;
       isNew = true;
-      const mail = emails.welcomeOwner({ name: created.user.name, link: `${baseUrl()}/app` });
+      // In pre-launch the welcome says so: set up now, no card yet, an email the day bookings open.
+      const joinable = await joinableMarkets(db);
+      const joining = joinable.find((market) => market.slug === pending.signUp?.market) ?? null;
+      const early = joining ? (inPreLaunch(joining) ? [joining] : []) : joinable.some(bookingOpen) ? [] : joinable;
+      const mail = emails.welcomeOwner({ name: created.user.name, link: `${baseUrl()}/app`, opensSoonIn: early.length > 0 ? marketNames(early) : null });
       await enqueue(db, { channel: "email", to: pending.signUp.email, template: "welcome_owner", subject: mail.subject, body: mail.body, userId: created.user.id });
       await flushOutbox(db);
     } catch (error) {
@@ -164,8 +180,10 @@ export async function finishSignIn(_previous: FormState, formData: FormData): Pr
   cookieStore.delete(PENDING_COOKIE);
 
   if (isNew) {
-    const ref = pending.signUp?.ref;
-    redirect(ref ? `/app/properties/new?ref=${encodeURIComponent(ref)}` : "/app/properties/new");
+    const query = new URLSearchParams();
+    if (pending.signUp?.market) query.set("market", pending.signUp.market);
+    if (pending.signUp?.ref) query.set("ref", pending.signUp.ref);
+    redirect(`/app/properties/new${query.size > 0 ? `?${query.toString()}` : ""}`);
   }
   redirect(safeNext(pending.next, homeFor(await viewerFor(db, user))));
 }

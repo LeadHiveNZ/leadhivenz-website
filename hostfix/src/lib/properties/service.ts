@@ -6,6 +6,7 @@ import type { Db } from "@/lib/db/types";
 import { randomToken } from "@/lib/ids";
 import { taxPortion } from "@/lib/jobs/pricing";
 import { areaForSuburb } from "@/lib/markets/areas";
+import { bookingOpen, inPreLaunch, ownersCanJoin, preLaunchWords } from "@/lib/markets/stage";
 import { getMarket, getTier, type Tier } from "@/lib/markets/store";
 import { texts } from "@/lib/notify/messages";
 import { enqueue } from "@/lib/notify/outbox";
@@ -149,7 +150,9 @@ async function tierForMarket(db: Db, tierId: string, market: string): Promise<Ti
 export async function createProperty(db: Db, ownerId: string, input: PropertyInput, gateway: PaymentsGateway | null = null): Promise<Property> {
   const created = await db.tx(async (tx) => {
     const market = await getMarket(tx, input.market);
-    if (!market || market.stage !== "live") throw new PropertyError("We are not taking new properties in that area yet.");
+    // Live, or on the waiting list with pre-launch on (DECISIONS.md, 2026-11-27, second entry): the property is
+    // saved either way. In pre-launch it stays "setup" until the market is live and a card is on file.
+    if (!market || !ownersCanJoin(market)) throw new PropertyError("We are not taking new properties in that area yet.");
     const chosen = await tierForMarket(tx, input.tierId, market.slug);
     const portfolio = chosen.billingBasis === "per_account" ? await ensurePortfolioIn(tx, ownerId, market.slug, chosen) : await openPortfolio(tx, ownerId, market.slug);
     const covered = portfolio && (portfolio.status === "active" || portfolio.status === "past_due") ? portfolio.status : null;
@@ -183,6 +186,39 @@ export async function createProperty(db: Db, ownerId: string, input: PropertyInp
   });
   if (created.rebandPortfolio) await rebandOrFlag(db, gateway, created.rebandPortfolio, `owner:${ownerId}`);
   return created.property;
+}
+
+export type PropertyRowInput = Pick<PropertyInput, "name" | "addressLine1" | "suburb" | "postcode" | "accessNotes">;
+
+/**
+ * "Add many at once": every row is saved in one step, each through the same
+ * path as adding one property, so Portfolio and the audit log work as usual.
+ * Free to join (DECISIONS.md, 2026-11-17): with a card already on file each
+ * one is covered straight away, exactly as pressing "Cover this property"
+ * would. In pre-launch (DECISIONS.md, 2026-11-27, second entry) they are only
+ * saved: nothing is covered and the payment company is never asked.
+ * `gatewayFor` makes the payment company's gateway for the step everything is
+ * saved in, so anything it writes is undone with the rest if a row fails.
+ */
+export async function createProperties(
+  db: Db, ownerId: string, input: { market: string; tierId: string; rows: PropertyRowInput[] }, gatewayFor: (inner: Db) => PaymentsGateway | null,
+): Promise<Property[]> {
+  const market = await getMarket(db, input.market);
+  if (!market || !ownersCanJoin(market)) throw new PropertyError("We are not taking new properties in that area yet.");
+  const open = bookingOpen(market);
+  return db.tx(async (tx) => {
+    const gateway = open ? gatewayFor(tx) : null;
+    const card = open ? await getBilling(tx, ownerId, market.country) : null;
+    const saved: Property[] = [];
+    for (const row of input.rows) {
+      const created = await createProperty(tx, ownerId, { ...row, market: market.slug, tierId: input.tierId }, gateway);
+      const covered = created.status === "setup" && card?.paymentMethodId && gateway && card.provider === gateway.provider
+        ? await activateFreeMembership(tx, { propertyId: created.id, ownerId, provider: card.provider, customerId: card.customerId, card: null })
+        : null;
+      saved.push(covered ?? created);
+    }
+    return saved;
+  });
 }
 
 /**
@@ -335,6 +371,11 @@ export async function startMembership(
   if (!property || !owner) return { kind: "error", message: "We could not find that property." };
   if (property.status === "active" || property.status === "past_due") return { kind: "active", property };
 
+  // Pre-launch (DECISIONS.md, 2026-11-27, second entry): no card is saved and nothing starts until the market is
+  // live. Refused here, before the payment company is asked for anything.
+  const where = await getMarket(db, property.market);
+  if (where && inPreLaunch(where)) return { kind: "error", message: preLaunchWords.noCardYet(where.name) };
+
   // An account on Portfolio: the property joins the one retainer instead of paying for itself.
   const portfolio = await openPortfolio(db, input.ownerId, property.market);
   if (portfolio) {
@@ -348,7 +389,7 @@ export async function startMembership(
   const market = await getMarket(db, property.market);
   const tier = await getTier(db, property.tierId);
   if (!market || !tier) return { kind: "error", message: "That membership is not available any more. Choose another." };
-  if (market.stage !== "live") return { kind: "error", message: "We are not taking new members in that area right now." };
+  if (!bookingOpen(market)) return { kind: "error", message: "We are not taking new members in that area right now." };
   if (tier.billingBasis === "per_account") return { kind: "error", message: "Portfolio is chosen once for your whole account, on the Billing page." };
 
   const existing = await getBilling(db, input.ownerId, market.country);
@@ -420,6 +461,8 @@ export async function activateFreeMembership(
     const market = await getMarket(tx, row.market);
     const tier = row.tier_id ? await getTier(tx, row.tier_id) : null;
     if (!market || !tier || tier.monthlyPriceCents !== 0) return null;
+    // Pre-launch (DECISIONS.md, 2026-11-27, second entry): no card is kept and no property is covered yet.
+    if (inPreLaunch(market)) return null;
 
     await saveBilling(tx, { ownerId: row.owner_id, country: market.country, provider: input.provider, customerId: input.customerId, card: input.card });
     if (row.status === "active" || row.status === "past_due") return rowToProperty(row);

@@ -9,6 +9,8 @@ import { requireOwner } from "@/lib/auth/current";
 import { DAY, now } from "@/lib/clock";
 import { getDb } from "@/lib/db";
 import { listJobsForOwner } from "@/lib/jobs/store";
+import { joinableMarkets, waitingMarkets } from "@/lib/markets/launch";
+import { bookingOpen, inPreLaunch, marketNames, preLaunchWords } from "@/lib/markets/stage";
 import { listMarkets } from "@/lib/markets/store";
 import { formatMoney } from "@/lib/money";
 import { unpaidJobs } from "@/lib/owners/service";
@@ -27,17 +29,31 @@ export default async function OwnerHome() {
   const at = now();
   const firstName = viewer.user.name.split(" ")[0] || viewer.user.name;
 
+  // Pre-launch (DECISIONS.md, 2026-11-27, second entry): areas this owner has set up in that are not open for bookings yet.
+  const waiting = waitingMarkets(properties, [...markets.values()]);
+  const opensSoon = (slug: string) => waiting.some((market) => market.slug === slug);
+
   if (properties.length === 0) {
+    const joinable = await joinableMarkets(db);
+    // Nowhere is open for bookings yet: the steps are about getting ready, and no card is asked for.
+    const early = joinable.length > 0 && !joinable.some(bookingOpen);
     return (
       <div className="mx-auto max-w-xl">
         <h1 className="display text-4xl text-ink">Welcome, {firstName}</h1>
-        <p className="mt-2 text-muted">Three steps and your property is covered.</p>
+        <p className="mt-2 text-muted">{early ? `Three steps and you are ready the day we open in ${marketNames(joinable.filter(inPreLaunch))}.` : "Three steps and your property is covered."}</p>
         <ol className="mt-6 space-y-3">
-          {[
-            ["Add your property", "The address and how a tradie gets in."],
-            ["Add a card", "Free to join. Nothing is charged until a job is done."],
-            ["Put the QR card in the property", "Your cleaner and your guests can report a problem in under a minute."],
-          ].map(([title, detail], index) => (
+          {(early
+            ? [
+                ["Add your properties", "The address and how a tradie gets in. One at a time, or paste a list."],
+                ["Add your cleaner and print the QR cards", "So everyone is ready to report a problem from day one."],
+                ["We email you the day bookings open", "Wherever you have added a property. You add a card then, and it is only charged when a job is done."],
+              ]
+            : [
+                ["Add your property", "The address and how a tradie gets in."],
+                ["Add a card", "Free to join. Nothing is charged until a job is done."],
+                ["Put the QR card in the property", "Your cleaner and your guests can report a problem in under a minute."],
+              ]
+          ).map(([title, detail], index) => (
             <li key={title} className="flex gap-4 rounded-2xl border border-line bg-surface p-4">
               <span className="display flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand text-lg text-accent">{index + 1}</span>
               <span>
@@ -60,7 +76,7 @@ export default async function OwnerHome() {
   const unpinned = properties.filter((property) => property.status !== "cancelled" && !property.pinConfirmedAt);
   const underWay = jobs.filter((job) => ["offering", "unfilled", "accepted", "on_site"].includes(job.status));
   const recent = jobs.filter((job) => job.status === "completed" && !toCheck(job) && job.completedAt && at.getTime() - job.completedAt.getTime() < 14 * DAY).slice(0, 4);
-  const notStarted = properties.filter((property) => property.status === "setup");
+  const notStarted = properties.filter((property) => property.status === "setup" && !opensSoon(property.market));
   const cardProblems = properties.filter((property) => property.status === "past_due");
   const unpaid = await unpaidJobs(db, viewer.ownerId);
   const covered = properties.filter(isCovered);
@@ -91,6 +107,11 @@ export default async function OwnerHome() {
           <Link href="/app/billing" className="font-semibold underline underline-offset-2">
             Update your card
           </Link>
+        </Notice>
+      ))}
+      {waiting.map((market) => (
+        <Notice key={market.slug} tone="info" title={preLaunchWords.title(market.name)}>
+          You&rsquo;re set up. {preLaunchWords.body}
         </Notice>
       ))}
       {notStarted.map((property) => (
@@ -158,7 +179,7 @@ export default async function OwnerHome() {
         </SectionTitle>
         <div className="space-y-2.5">
           {properties.map((property) => {
-            const membership = membershipLabel(property, zone(property.market));
+            const membership = membershipLabel(property, zone(property.market), opensSoon(property.market));
             return (
               <RowLink
                 key={property.id}

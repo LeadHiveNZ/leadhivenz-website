@@ -8,6 +8,7 @@ import { texts } from "@/lib/notify/messages";
 import { enqueue } from "@/lib/notify/outbox";
 import { isUuid } from "@/lib/uuid";
 import { bandProblem, lowestBand } from "./bands";
+import { announceGoLive } from "./launch";
 import { getMarket, listMenu, listTiers } from "./store";
 
 /**
@@ -39,6 +40,8 @@ function cents(value: number, what: string, max = 1_000_000): number {
 export type MarketPatch = Partial<{
   name: string;
   stage: MarketStage;
+  /** Owners can set up before launch. Only means something while the stage is "waitlist" (src/lib/markets/stage.ts). */
+  preLaunch: boolean;
   timezone: string;
   taxRate: number;
   taxName: string;
@@ -77,7 +80,7 @@ export type MarketPatch = Partial<{
 }>;
 
 const COLUMNS: Record<keyof MarketPatch, string> = {
-  name: "name", stage: "stage", timezone: "timezone", taxRate: "tax_rate", taxName: "tax_name", taxRegistered: "tax_registered",
+  name: "name", stage: "stage", preLaunch: "pre_launch", timezone: "timezone", taxRate: "tax_rate", taxName: "tax_name", taxRegistered: "tax_registered",
   taxNumber: "tax_number", platformFeeBps: "platform_fee_bps", urgentSurchargeCents: "urgent_surcharge_cents",
   afterHoursSurchargeCents: "after_hours_surcharge_cents", emergencySurchargeCents: "emergency_surcharge_cents",
   emergencyResponseMinutes: "emergency_response_minutes", emergencyStepDownMinutes: "emergency_step_down_minutes", diagnosisFeeCents: "diagnosis_fee_cents",
@@ -175,6 +178,11 @@ export async function updateMarket(db: Db, slug: string, patch: MarketPatch, act
     const values = entries.map(([key, value]) => (key === "name" && typeof value === "string" ? value.trim() : value));
     await tx.query(`update public.markets set ${sets.join(", ")}, updated_at = $${entries.length + 2}::timestamptz where slug = $1`, [slug, ...values, now().toISOString()]);
     await audit(tx, { actor, action: "market.updated", entity: "market", entityId: slug, detail: { changed: Object.fromEntries(entries) } });
+    // The day the market opens (DECISIONS.md, 2026-11-27, second entry): every owner who set up before launch is
+    // emailed once, in the same step as the change, so the stage never moves without the emails being queued.
+    if (current.stage === "waitlist" && rest.stage === "live") {
+      await announceGoLive(tx, { slug, name: typeof rest.name === "string" && rest.name.trim() ? rest.name.trim() : current.name }, actor);
+    }
   });
 }
 
@@ -425,7 +433,8 @@ export type NewMarket = { slug: string; name: string; country: CountryCode; time
 /**
  * Adds a market. Its tiers and menu are copied from an existing market as a
  * starting point. It starts as a draft: nothing is visible until you move it
- * to "waitlist" or "live". Prices are copied as numbers, so check them when
+ * to "waitlist" or "live". Pre-launch is never copied: it starts off, and is
+ * a tick on the new market's own screen once it is on the waiting list. Prices are copied as numbers, so check them when
  * the new market uses a different currency.
  */
 export async function createMarket(db: Db, input: NewMarket, actor: string): Promise<void> {
@@ -447,8 +456,8 @@ export async function createMarket(db: Db, input: NewMarket, actor: string): Pro
          platform_fee_bps, urgent_surcharge_cents, after_hours_surcharge_cents, diagnosis_fee_cents, diagnosis_payout_cents,
          approval_threshold_cents, parts_included_cents, parts_approval_cents, offer_minutes, hours_start, hours_end, work_days,
          payout_hold_hours, referral_reward_cents, referral_paid_months, unaccepted_alert_hours, counter_offer_hours,
-         min_minutes_on_site, owner_confirm_hours, payout_guarantee_cents, tier_threshold_cents, above_tier_fee_bps)
-       values ($1, $2::timestamptz, $2::timestamptz, $3, $4, $5, $6, 'draft', $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20::text[], $21, $22, $23, $24, $25, $26, $27, $28, $29, $30)`,
+         min_minutes_on_site, owner_confirm_hours, payout_guarantee_cents, tier_threshold_cents, above_tier_fee_bps, pre_launch)
+       values ($1, $2::timestamptz, $2::timestamptz, $3, $4, $5, $6, 'draft', $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20::text[], $21, $22, $23, $24, $25, $26, $27, $28, $29, $30, false)`,
       [
         slug, at, input.name.trim(), input.country, defaults.currency, input.timezone, defaults.taxRate, defaults.taxName,
         template?.platformFeeBps ?? 1500, template?.urgentSurchargeCents ?? 5000, template?.afterHoursSurchargeCents ?? 14000,

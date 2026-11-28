@@ -14,6 +14,7 @@ import { requireStaff } from "@/lib/auth/current";
 import { now } from "@/lib/clock";
 import { getDb } from "@/lib/db";
 import { listJobsForOwner } from "@/lib/jobs/store";
+import { inPreLaunch } from "@/lib/markets/stage";
 import { listMarkets, listTiers } from "@/lib/markets/store";
 import { tierPriceLabel } from "@/lib/markets/display";
 import { formatMoney } from "@/lib/money";
@@ -126,7 +127,8 @@ export default async function StaffOwnerPage({ params }: { params: Promise<{ id:
             {properties.map((property) => {
               const market = markets.get(property.market);
               const tier = property.tierId ? tiers.get(property.tierId) : null;
-              const label = membershipLabel(property, zone(property.market));
+              // In pre-launch (DECISIONS.md, 2026-11-27, second entry) a property with no card is as it should be: "Opens soon".
+              const label = membershipLabel(property, zone(property.market), Boolean(market && inPreLaunch(market)));
               return (
                 <Card key={property.id}>
                   <div className="flex flex-wrap items-start justify-between gap-2">

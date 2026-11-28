@@ -1,11 +1,14 @@
 import type { Metadata } from "next";
 import { QrCard } from "@/components/properties/QrCard";
-import { EmptyState, PageTitle } from "@/components/ui/Bits";
+import { EmptyState, Notice, PageTitle } from "@/components/ui/Bits";
 import { PrintButton } from "@/components/ui/Buttons";
 import { brand } from "@config/brand";
 import { requireOwner } from "@/lib/auth/current";
 import { getDb } from "@/lib/db";
 import { baseUrl } from "@/lib/env";
+import { waitingMarkets } from "@/lib/markets/launch";
+import { marketNames, preLaunchWords } from "@/lib/markets/stage";
+import { listMarkets } from "@/lib/markets/store";
 import { listProperties } from "@/lib/properties/service";
 import { qrSvg } from "@/lib/qr";
 
@@ -14,7 +17,11 @@ export const metadata: Metadata = { title: "Print every QR card" };
 /** Every covered property's guest QR card, one per printed page, for a home printer. */
 export default async function AllCardsPage() {
   const viewer = await requireOwner("/app/properties/cards");
-  const properties = (await listProperties(await getDb(), viewer.ownerId)).filter((property) => property.status === "active");
+  const db = await getDb();
+  const all = await listProperties(db, viewer.ownerId);
+  // In pre-launch (DECISIONS.md, 2026-11-27, second entry) the cards can be printed ahead: they start working once bookings open.
+  const waiting = waitingMarkets(all, await listMarkets(db));
+  const properties = all.filter((property) => property.status === "active" || (property.status === "setup" && waiting.some((market) => market.slug === property.market)));
   const cards = await Promise.all(
     properties.map(async (property) => {
       const url = `${baseUrl()}/r/${property.guestToken}`;
@@ -30,6 +37,13 @@ export default async function AllCardsPage() {
           back={{ href: "/app/properties", label: "Properties" }}
           intro={`${cards.length} ${cards.length === 1 ? "card" : "cards"}, one to a page, with the property's name under each so you know which goes where.`}
         />
+        {cards.length > 0 && waiting.length > 0 && (
+          <div className="mb-4">
+            <Notice tone="info" title={preLaunchWords.title(marketNames(waiting))}>
+              You can print the cards now. Each one starts working once bookings open there and your card is on file.
+            </Notice>
+          </div>
+        )}
         {cards.length > 0 && (
           <div className="mb-5">
             <PrintButton>Print all the cards</PrintButton>

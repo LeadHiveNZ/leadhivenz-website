@@ -9,6 +9,9 @@ import { Reveal } from "@/components/ui/Reveal";
 import { GROUPS_FROM, MemberFields } from "@/components/team/MemberFields";
 import { requireOwner } from "@/lib/auth/current";
 import { getDb } from "@/lib/db";
+import { waitingMarkets } from "@/lib/markets/launch";
+import { marketNames, preLaunchWords } from "@/lib/markets/stage";
+import { listMarkets } from "@/lib/markets/store";
 import { displayPhone } from "@/lib/phone";
 import { listProperties } from "@/lib/properties/service";
 import { housesCovered, listGroups, listTeam } from "@/lib/team/service";
@@ -25,6 +28,9 @@ export default async function TeamPage({ searchParams }: { searchParams: SearchP
   const [team, groups, all] = await Promise.all([listTeam(db, viewer.ownerId), listGroups(db, viewer.ownerId), listProperties(db, viewer.ownerId)]);
   const properties = all.filter((property) => property.status !== "cancelled");
   const showGroups = properties.length >= GROUPS_FROM;
+  // Pre-launch (DECISIONS.md, 2026-11-27, second entry): the team can be set up ahead. Their links open a page that
+  // says we are not open there yet, until the day bookings open.
+  const waiting = waitingMarkets(properties, await listMarkets(db));
 
   return (
     <div className="mx-auto max-w-xl space-y-6">
@@ -33,6 +39,11 @@ export default async function TeamPage({ searchParams }: { searchParams: SearchP
         back={{ href: "/app/properties", label: "Properties" }}
         intro="Cleaners and co-hosts who report problems for you. Each person gets one link that lists the houses you tick, and every report is signed with their name."
       />
+      {waiting.length > 0 && (
+        <Notice tone="info" title={preLaunchWords.title(marketNames(waiting))}>
+          You can add your team now. Each person is texted their link today. It lists your houses there once bookings open and your card is on file.
+        </Notice>
+      )}
       {query.removed && <Notice tone="good" title="Taken off your team">Your houses are gone from their list. Their link still works for any other owner who has added them.</Notice>}
       {query.group_deleted && <Notice tone="good" title="Group deleted">The houses in it are unchanged.</Notice>}
 

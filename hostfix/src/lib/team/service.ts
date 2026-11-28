@@ -3,6 +3,8 @@ import { now } from "@/lib/clock";
 import type { Db } from "@/lib/db/types";
 import { baseUrl } from "@/lib/env";
 import { randomToken } from "@/lib/ids";
+import { inPreLaunch } from "@/lib/markets/stage";
+import { listMarkets } from "@/lib/markets/store";
 import { texts } from "@/lib/notify/messages";
 import { enqueue } from "@/lib/notify/outbox";
 import { rowToProperty, type Property } from "@/lib/properties/service";
@@ -416,6 +418,31 @@ export async function housesForLink(db: Db, linkId: string): Promise<TeamHouse[]
       ownerFirstName: firstName(row.owner_name),
     }))
     .sort((a, b) => a.property.name.localeCompare(b.property.name));
+}
+
+/**
+ * Pre-launch (DECISIONS.md, 2026-11-27, second entry): the areas where an owner has put this person on their team
+ * for a house that is set up but not open for bookings yet. Only the area's name ever leaves here, never the house,
+ * so the link can say "not open in Wānaka yet" instead of "nothing on your list". `houses` is for the server's own
+ * check when a report is sent, and is never shown.
+ */
+export async function waitingForLink(db: Db, linkId: string): Promise<{ markets: { slug: string; name: string }[]; houses: { propertyId: string; market: string }[] }> {
+  if (!isUuid(linkId)) return { markets: [], houses: [] };
+  const rows = await db.query<{ id: string; market: string }>(
+    `select distinct p.id, p.market
+       from public.team_members m
+       join public.team_access a on a.member_id = m.id
+       left join public.property_group_members gm on gm.group_id = a.group_id
+       join public.properties p on p.id = coalesce(a.property_id, gm.property_id) and p.owner_id = m.owner_id
+      where m.link_id = $1::uuid and m.removed_at is null and p.status = 'setup'
+      order by p.market, p.id`,
+    [linkId],
+  );
+  if (rows.length === 0) return { markets: [], houses: [] };
+  const early = (await listMarkets(db)).filter(inPreLaunch);
+  const houses = rows.filter((row) => early.some((market) => market.slug === row.market)).map((row) => ({ propertyId: row.id, market: row.market }));
+  const markets = early.filter((market) => houses.some((house) => house.market === market.slug)).map((market) => ({ slug: market.slug, name: market.name }));
+  return { markets, houses };
 }
 
 /** One house on this person's list, or null if it is not on it. */

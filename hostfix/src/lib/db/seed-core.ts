@@ -113,7 +113,8 @@ export async function insertMarket(db: SeedTarget, market: Market): Promise<void
        unaccepted_alert_hours, counter_offer_hours,
        min_minutes_on_site, owner_confirm_hours, map_lat, map_lng, payout_guarantee_cents,
        tier_threshold_cents, above_tier_fee_bps, areas,
-       emergency_surcharge_cents, emergency_response_minutes, emergency_step_down_minutes
+       emergency_surcharge_cents, emergency_response_minutes, emergency_step_down_minutes,
+       pre_launch
      ) values (
        $1, $2, $3, $4, $5, $6,
        $7, $8, $9, $10,
@@ -126,7 +127,8 @@ export async function insertMarket(db: SeedTarget, market: Market): Promise<void
        $31, $32,
        $33, $34, $35, $36, $37,
        $38, $39, $40::jsonb,
-       $41, $42, $43
+       $41, $42, $43,
+       $44
      )`,
     [
       market.slug, market.name, market.country, market.currency, market.timezone, market.stage,
@@ -142,6 +144,7 @@ export async function insertMarket(db: SeedTarget, market: Market): Promise<void
       market.minMinutesOnSite, market.ownerConfirmHours, market.mapCentre?.lat ?? null, market.mapCentre?.lng ?? null, market.payoutGuaranteeCents,
       market.tierThresholdCents, market.aboveTierFeeBps, JSON.stringify(market.areas ?? []),
       market.emergencySurchargeCents, market.emergencyResponseMinutes, market.emergencyStepDownMinutes,
+      Boolean(market.preLaunch),
     ],
   );
 

@@ -78,7 +78,10 @@ describe("starting a membership", () => {
     expect(started).toHaveLength(1);
   });
 
-  it("is not possible in a market that is not live, or with another market's tier", async () => {
+  it("is not possible in a market that is not open to owners, or with another market's tier", async () => {
+    // A plain waiting list. Queenstown starts with pre-launch on (DECISIONS.md, 2026-11-27, second entry), where a
+    // property can be added before launch: tests/unit/pre-launch.test.ts covers that.
+    await t.db.query("update public.markets set pre_launch = false where slug = 'queenstown'");
     const owner = await makeOwner(t.db);
     const tiers = await listTiers(t.db, "queenstown");
     const input = { market: "queenstown", name: "Too early", addressLine1: "1 Main St", suburb: "", postcode: "", accessNotes: "", tierId: tiers[0]!.id };

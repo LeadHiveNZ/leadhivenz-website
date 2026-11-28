@@ -14,6 +14,8 @@ import { requireAdminRole } from "@/lib/auth/current";
 import { now } from "@/lib/clock";
 import { getDb } from "@/lib/db";
 import { centsToDollars } from "@/lib/forms";
+import { lastGoLive, setUpCounts } from "@/lib/markets/launch";
+import { inPreLaunch } from "@/lib/markets/stage";
 import { getMarket, listMenu, listTiers, type MenuItem, type Tier } from "@/lib/markets/store";
 import { formatMoney } from "@/lib/money";
 import { smsSettings } from "@/lib/notify/sms";
@@ -36,7 +38,7 @@ type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 const TRADE_OPTIONS = trades.filter((trade) => trade.key !== "other").map((trade) => ({ key: trade.key, label: trade.label }));
 const STAGES = [
   { key: "draft", label: "Draft: hidden from everyone" },
-  { key: "waitlist", label: "Waiting list: public pages collect interest, nobody can join yet" },
+  { key: "waitlist", label: "Waiting list: public pages collect interest. Owners can only set up early if the box below is ticked" },
   { key: "live", label: "Live: owners can join and log jobs" },
   { key: "paused", label: "Paused: no new members or jobs, existing jobs carry on" },
 ];
@@ -196,6 +198,9 @@ export default async function MarketPage({ params, searchParams }: { params: Pro
   const areaTrades = trades.filter((trade) => usedTrades.has(trade.key));
   const noPayments = paymentsProblem(market.country);
   const sms = smsSettings();
+  // Pre-launch (DECISIONS.md, 2026-11-27, second entry): who has set up here, and what happened the day it went live.
+  const setUp = await setUpCounts(db, market.slug);
+  const wentLive = await lastGoLive(db, market.slug);
 
   const checks = [
     { ok: tiers.some((tier) => tier.active), label: "At least one membership is on offer" },
@@ -215,7 +220,7 @@ export default async function MarketPage({ params, searchParams }: { params: Pro
         title={market.name}
         back={{ href: "/admin/markets", label: "Markets" }}
         intro={`${market.countryName} · ${market.currency} · short code ${market.slug}`}
-        action={<Chip tone={market.stage === "live" ? "done" : market.stage === "waitlist" ? "waiting" : market.stage === "paused" ? "alert" : "quiet"}>{market.stage}</Chip>}
+        action={<Chip tone={market.stage === "live" ? "done" : market.stage === "waitlist" ? "waiting" : market.stage === "paused" ? "alert" : "quiet"}>{inPreLaunch(market) ? "waitlist · owners setting up" : market.stage}</Chip>}
       />
 
       {query.created && (
@@ -251,6 +256,30 @@ export default async function MarketPage({ params, searchParams }: { params: Pro
           </Link>
         </div>
       </Card>
+
+      {(market.stage === "waitlist" || (wentLive && wentLive.owners > 0)) && (
+        <Card className="sm:p-6">
+          <SectionTitle>Set up before launch</SectionTitle>
+          {market.stage === "waitlist" ? (
+            <>
+              <p className="text-2xl font-bold text-ink" data-set-up-count>
+                {setUp.owners} {setUp.owners === 1 ? "owner" : "owners"} · {setUp.properties} {setUp.properties === 1 ? "property" : "properties"}
+              </p>
+              <p className="mt-1 text-sm text-muted">
+                {market.preLaunch
+                  ? "Owners who have made an account and added properties here. None has a card on file, and none can book a job, until you change the stage to Live. That day each is emailed once to add their card."
+                  : "Owners cannot set up here yet. Tick “Owners can set up their account and properties before launch” in Settings below to let them."}
+              </p>
+            </>
+          ) : wentLive ? (
+            <p className="text-muted">
+              Went live {formatDate(wentLive.at, market.timezone)} with <strong className="text-ink">{wentLive.owners} {wentLive.owners === 1 ? "owner" : "owners"}</strong> and{" "}
+              <strong className="text-ink">{wentLive.properties} {wentLive.properties === 1 ? "property" : "properties"}</strong> already set up. {wentLive.told} {wentLive.told === 1 ? "was" : "were"} told to add
+              their card that day.
+            </p>
+          ) : null}
+        </Card>
+      )}
 
       {market.areas.length > 0 && (
         <Card className="sm:p-6">
@@ -318,6 +347,12 @@ export default async function MarketPage({ params, searchParams }: { params: Pro
             <Field label="Timezone" name="timezone" required maxLength={40} defaultValue={market.timezone} hint="For example Pacific/Auckland." />
           </div>
           <Select label="Stage" name="stage" required placeholder="Choose" options={STAGES} defaultValue={market.stage} />
+          <Tick
+            name="preLaunch"
+            label="Owners can set up their account and properties before launch"
+            hint="Only matters while the stage is Waiting list. Owners can sign up and add every property now. No card is taken and no job can be booked until you change the stage to Live. That day, each owner with a property here is emailed once to add their card."
+            defaultChecked={market.preLaunch}
+          />
 
           <p className="border-t border-line pt-4 text-sm font-bold tracking-wide text-muted uppercase">Fees and surcharges ({market.currency})</p>
           <div className="grid gap-4 sm:grid-cols-2">

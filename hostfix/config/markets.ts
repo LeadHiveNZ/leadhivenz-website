@@ -20,6 +20,8 @@ export type CurrencyCode = "NZD" | "AUD";
 /**
  * draft: being set up, not visible. waitlist: landing pages collect interest.
  * live: owners can join and log jobs. paused: no new members or jobs.
+ * A waitlist market with `preLaunch` on also lets owners make their account and
+ * add properties, with no card and no jobs until it is live (src/lib/markets/stage.ts).
  */
 export type MarketStage = "draft" | "waitlist" | "live" | "paused";
 
@@ -86,6 +88,13 @@ export type Market = {
   /** Used to show dates and times in local time and to work out after-hours. */
   timezone: string;
   stage: MarketStage;
+  /**
+   * Pre-launch mode (DECISIONS.md, 2026-11-27, second entry). Only means something while the stage is "waitlist":
+   * owners can sign up, accept the terms and add their properties now. No card is taken and no job can be booked
+   * until the stage is "live", when each of them is emailed once. Ask `ownersCanJoin` and `bookingOpen`
+   * (src/lib/markets/stage.ts), never the stage itself.
+   */
+  preLaunch: boolean;
 
   /** Tax rate as a fraction. 0.15 means 15%. All prices include it. */
   taxRate: number;
@@ -230,6 +239,7 @@ export function defineMarket(input: MarketInput): Market {
   return {
     ...COUNTRY_DEFAULTS[input.country],
     stage: "waitlist",
+    preLaunch: false,
     taxRegistered: false,
     taxNumber: null,
     platformFeeBps: 1500,
@@ -288,6 +298,9 @@ export const markets: Market[] = [
     name: "Queenstown",
     country: "NZ",
     timezone: "Pacific/Auckland",
+    // Owners set up their account and properties before launch (DECISIONS.md, 2026-11-27, second entry). The same
+    // is in migration 20261209000000_pre_launch.sql for a database that already has the market.
+    preLaunch: true,
     // The middle of town, where the map opens for a property with no pin yet.
     mapCentre: { lat: -45.0312, lng: 168.6626 },
     // Service areas (DECISIONS.md, 2026-11-26). The same list is in migration 20261207000000_service_areas.sql
@@ -356,6 +369,7 @@ export const markets: Market[] = [
     name: "Wānaka",
     country: "NZ",
     timezone: "Pacific/Auckland",
+    preLaunch: true,
     mapCentre: { lat: -44.6998, lng: 169.1324 },
     areas: [
       { key: "wanaka-town", name: "Wānaka town", suburbs: ["Wānaka", "Wānaka town"] },

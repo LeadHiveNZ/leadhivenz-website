@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { connection } from "next/server";
 import { Suspense } from "react";
 import { brand } from "@config/brand";
@@ -10,6 +11,7 @@ import { getDb } from "@/lib/db";
 import { currentLead, isNewLead } from "@/lib/leads/current";
 import { currentMarket } from "@/lib/leads/founding";
 import { priceListFor, priceListNotes, type PriceList } from "@/lib/leads/price-list";
+import { inPreLaunch } from "@/lib/markets/stage";
 import { formatMoney } from "@/lib/money";
 import { emailSettings, usingResendTestSender } from "@/lib/notify/email";
 import type { Lead } from "@/lib/store/types";
@@ -53,6 +55,7 @@ async function ForThisOwner({ searchParams }: { searchParams: SearchParams }) {
         <p>
           Thanks. We&apos;ve got your details and we&apos;ll be in touch before {brand.name} opens in {market.name}.
         </p>
+        <SetUpNow market={market} />
         <NextSteps steps={steps(market)} />
       </>
     );
@@ -79,6 +82,7 @@ async function ForThisOwner({ searchParams }: { searchParams: SearchParams }) {
           ? `Here's the full ${market.name} price list${emailing ? ", and we're emailing you a copy" : ""}. We'll give you a call soon to answer any questions.`
           : "We'll give you a call soon to answer any questions."}
       </p>
+      {!owner.convertedAt && <SetUpNow market={market} />}
       <DepositNote owner={owner} market={market} />
       {list && list.count > 0 && (
         <section aria-labelledby="prices-title" className="rounded-2xl border border-line bg-surface p-5 sm:p-6">
@@ -98,6 +102,24 @@ async function ForThisOwner({ searchParams }: { searchParams: SearchParams }) {
       )}
       <NextSteps steps={steps(market)} />
     </>
+  );
+}
+
+/**
+ * Pre-launch (DECISIONS.md, 2026-11-27, second entry): while the area is on the waiting list with pre-launch on, an
+ * owner can make their account and add their properties straight away. One line and one link, read from the market
+ * as it is now. Nothing is emailed about it.
+ */
+function SetUpNow({ market }: { market: Market }) {
+  if (!inPreLaunch(market)) return null;
+  return (
+    <p className="rounded-2xl border border-brand/30 bg-surface p-5 text-base sm:p-6">
+      <span className="font-semibold text-ink">Want to be ready on day one?</span>{" "}
+      <Link href={`/sign-up?market=${market.slug}`} className="font-semibold text-brand underline underline-offset-2">
+        Set up your account and properties now.
+      </Link>{" "}
+      It&apos;s free, and no card is needed until bookings open.
+    </p>
   );
 }
 

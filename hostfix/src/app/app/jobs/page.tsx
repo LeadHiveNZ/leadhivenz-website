@@ -9,6 +9,8 @@ import { getDb } from "@/lib/db";
 import { isUuid } from "@/lib/ids";
 import { listJobsForOwner } from "@/lib/jobs/store";
 import { isOpen } from "@/lib/jobs/types";
+import { waitingMarkets } from "@/lib/markets/launch";
+import { marketNames, preLaunchWords } from "@/lib/markets/stage";
 import { listMarkets } from "@/lib/markets/store";
 import { listProperties } from "@/lib/properties/service";
 
@@ -24,6 +26,8 @@ export default async function OwnerJobsPage({ searchParams }: { searchParams: Se
   const chosen = typeof query.property === "string" && isUuid(query.property) ? properties.find((property) => property.id === query.property) : undefined;
   const jobs = await listJobsForOwner(db, viewer.ownerId, { propertyId: chosen?.id, limit: 200 });
   const markets = new Map((await listMarkets(db)).map((market) => [market.slug, market]));
+  // Pre-launch (DECISIONS.md, 2026-11-27, second entry): say when jobs can be booked, instead of an empty list with no reason.
+  const early = waitingMarkets(properties, [...markets.values()]);
   const zone = (slug: string) => markets.get(slug)?.timezone ?? "Pacific/Auckland";
   const at = now();
   const open = jobs.filter((job) => isOpen(job.status));
@@ -57,6 +61,7 @@ export default async function OwnerJobsPage({ searchParams }: { searchParams: Se
             ) : undefined
           }
         >
+          {early.length > 0 && !properties.some((property) => property.status === "active") ? `${preLaunchWords.title(marketNames(early))}. ` : ""}
           When something needs fixing, it shows up here with the tradie, the price and photos of the finished work.
         </EmptyState>
       ) : (

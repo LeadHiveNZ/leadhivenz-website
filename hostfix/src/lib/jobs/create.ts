@@ -7,6 +7,7 @@ import { addHours, now } from "@/lib/clock";
 import type { Db } from "@/lib/db/types";
 import { advanceCascade, startDispatch } from "@/lib/dispatch/cascade";
 import { attachUploads } from "@/lib/files/uploads";
+import { bookingOpen, inPreLaunch, preLaunchWords } from "@/lib/markets/stage";
 import { getMarket, getMenuItem, getTier, type Tier } from "@/lib/markets/store";
 import { texts } from "@/lib/notify/messages";
 import { enqueue } from "@/lib/notify/outbox";
@@ -188,8 +189,10 @@ async function createJobRecord(db: Db, input: NewJob): Promise<(NewJobResult & {
     const { property } = input;
     const market = await getMarket(tx, property.market);
     if (!market) return { ok: false, reason: "market_closed", message: "This property's area is not set up." };
-    if (market.stage !== "live" && input.reportedBy !== "staff") {
-      return { ok: false, reason: "market_closed", message: `We are not taking jobs in ${market.name} right now.` };
+    // Only a live market takes jobs. In pre-launch (DECISIONS.md, 2026-11-27, second entry) the owner, their team and
+    // their guests are told when, in the same friendly words as the screens. Staff can still log one by hand.
+    if (!bookingOpen(market) && input.reportedBy !== "staff") {
+      return { ok: false, reason: "market_closed", message: inPreLaunch(market) ? preLaunchWords.notOpenJobs(market.name) : `We are not taking jobs in ${market.name} right now.` };
     }
     // An owner whose access our team removed (owner terms, section 8) cannot have jobs sent at their cost.
     const closed = await tx.query("select 1 from public.owners o join public.users u on u.id = o.user_id where o.id = $1::uuid and u.disabled_at is not null", [property.ownerId]);

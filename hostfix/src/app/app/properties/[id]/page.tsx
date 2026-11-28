@@ -22,6 +22,7 @@ import { listUploads } from "@/lib/files/uploads";
 import { centsToDollars } from "@/lib/forms";
 import { listJobsForOwner } from "@/lib/jobs/store";
 import { tierLine, tierPriceLabel } from "@/lib/markets/display";
+import { inPreLaunch, preLaunchWords } from "@/lib/markets/stage";
 import { getMarket, listTiers } from "@/lib/markets/store";
 import { formatMoney } from "@/lib/money";
 import { getBilling, unusedDeposit } from "@/lib/owners/service";
@@ -66,8 +67,11 @@ export default async function PropertyPage({ params, searchParams }: { params: P
   const deposit = property.status === "setup" || property.status === "cancelled" ? await unusedDeposit(db, viewer.ownerId, market.currency) : null;
   const jobs = await listJobsForOwner(db, viewer.ownerId, { propertyId: property.id, limit: 6 });
   const photos = await listUploads(db, { propertyId: property.id, kinds: ["property"] });
-  const membership = membershipLabel(property, market.timezone);
   const member = property.status === "active" || property.status === "past_due";
+  // Pre-launch (DECISIONS.md, 2026-11-27, second entry): the property is set up, and nothing that needs a card or a
+  // tradie is open yet. No card form, no membership button: a calm "Opens soon" instead.
+  const waiting = inPreLaunch(market) && !member;
+  const membership = membershipLabel(property, market.timezone, waiting);
   const teamUrl = `${baseUrl()}/r/${property.teamToken}`;
   // A cleaner is a person, not a link (DECISIONS.md, 2026-11-18): who on the owner's team has this house on their list.
   const [team, groups] = await Promise.all([listTeam(db, viewer.ownerId), listGroups(db, viewer.ownerId)]);
@@ -75,7 +79,7 @@ export default async function PropertyPage({ params, searchParams }: { params: P
   const groupsHere = groups.filter((group) => group.propertyIds.includes(property.id)).map((group) => group.id);
   const onTeam = team.filter((member) => member.propertyIds.includes(property.id) || member.groupIds.some((id) => groupsHere.includes(id)));
   const guestUrl = `${baseUrl()}/r/${property.guestToken}`;
-  const qr = member ? await qrSvg(guestUrl, { dark: brand.colours.brandDark }) : "";
+  const qr = member || waiting ? await qrSvg(guestUrl, { dark: brand.colours.brandDark }) : "";
   const money = (cents: number) => formatMoney(cents, market.currency);
   const cardLine = billing?.cardLast4 ? `${(billing.cardBrand ?? "Card").replace(/^./, (letter) => letter.toUpperCase())} ending ${billing.cardLast4}` : null;
   const notReady = paymentsProblem(market.country);
@@ -84,7 +88,14 @@ export default async function PropertyPage({ params, searchParams }: { params: P
     <div className="space-y-5">
       <PageTitle title={property.name} back={{ href: "/app/properties", label: "Properties" }} intro={addressLine(property)} action={<Chip tone={membership.tone}>{membership.label}</Chip>} />
 
-      {query.added && property.status === "setup" && (
+      {waiting && (
+        <Notice tone={query.added ? "good" : "info"} title={query.added ? "You're set up" : preLaunchWords.title(market.name)}>
+          {query.added ? `${preLaunchWords.title(market.name)}. ` : ""}
+          {preLaunchWords.body}
+          {portfolio ? " Your Portfolio retainer starts from the Billing page then." : ""}
+        </Notice>
+      )}
+      {query.added && property.status === "setup" && !waiting && (
         <Notice tone="good" title="Saved. One step left">
           {portfolio
             ? "This property is on your Portfolio. Start the retainer on the Billing page and it is covered."
@@ -130,7 +141,7 @@ export default async function PropertyPage({ params, searchParams }: { params: P
       {!property.pinConfirmedAt && property.status !== "cancelled" && <PinCard property={property} centre={market.mapCentre} tiles={mapTiles()} />}
 
       {/* ON A PORTFOLIO, NOT COVERED: the retainer covers it, nothing to pay here */}
-      {!member && portfolio && (
+      {!member && !waiting && portfolio && (
         <Card className="border-brand/30 sm:p-6">
           <SectionTitle>On your Portfolio</SectionTitle>
           {portfolio.status === "active" || portfolio.status === "past_due" ? (
@@ -156,7 +167,7 @@ export default async function PropertyPage({ params, searchParams }: { params: P
       )}
 
       {/* NOT A MEMBER YET: starting the membership comes first */}
-      {!member && !portfolio && (
+      {!member && !waiting && !portfolio && (
         <Card className="border-brand/30 sm:p-6">
           <SectionTitle>{allFree ? (property.status === "cancelled" ? "Cover this property again" : "Cover this property") : property.status === "cancelled" ? "Start the membership again" : "Start the membership"}</SectionTitle>
           {notReady ? (
@@ -203,8 +214,16 @@ export default async function PropertyPage({ params, searchParams }: { params: P
         </Card>
       )}
 
-      {/* REPORT LINKS */}
-      {member && (
+      {/* REPORT LINKS: for a member, and in pre-launch as set-up that starts working the day bookings open */}
+      {waiting && (
+        <div>
+          <SectionTitle>Get ready for day one</SectionTitle>
+          <p className="text-muted">
+            Print the QR card and add your cleaner now. Until bookings open in {market.name}, their pages say {brand.name} isn&rsquo;t open there yet.
+          </p>
+        </div>
+      )}
+      {(member || waiting) && (
         <div className="grid gap-5 md:grid-cols-2">
           <Card>
             <SectionTitle>For guests: the QR card</SectionTitle>

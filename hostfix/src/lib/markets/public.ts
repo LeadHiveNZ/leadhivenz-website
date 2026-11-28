@@ -100,6 +100,23 @@ export async function publicMarketNow(slug: string): Promise<PublicMarket | null
   }
 }
 
+/**
+ * Every public market, read from the database this instant. For the few places where a kept copy up to an hour old
+ * would be wrong: whether owners can join (the sign-up page), and whether an area is in pre-launch (the thank-you
+ * page). Falls back to the kept copy when there is no database to ask. Call it only after `await connection()`.
+ */
+export async function publicMarketsNow(): Promise<PublicMarket[]> {
+  if (databaseKind() !== "none") {
+    try {
+      const found = await fromDatabase();
+      if (found.length > 0) return found;
+    } catch {
+      // Fall through to the kept copy.
+    }
+  }
+  return publicMarkets();
+}
+
 /** One market by its short code, or the main one when no code is given. Null if it does not exist. */
 export async function publicMarket(slug?: string | null): Promise<PublicMarket | null> {
   const all = await publicMarkets();

@@ -6,7 +6,9 @@ import { Card, Notice, PageTitle } from "@/components/ui/Bits";
 import { geocoder } from "@/lib/maps/geocode";
 import { requireOwner } from "@/lib/auth/current";
 import { getDb } from "@/lib/db";
-import { listMarkets, listTiers } from "@/lib/markets/store";
+import { joinableMarkets } from "@/lib/markets/launch";
+import { inPreLaunch } from "@/lib/markets/stage";
+import { listTiers } from "@/lib/markets/store";
 import { openPortfolio } from "@/lib/properties/portfolio";
 
 export const metadata: Metadata = { title: "Add many at once" };
@@ -18,7 +20,7 @@ export default async function ImportPropertiesPage({ searchParams }: { searchPar
   const viewer = await requireOwner("/app/properties/import");
   const params = await searchParams;
   const db = await getDb();
-  const live = (await listMarkets(db)).filter((market) => market.stage === "live");
+  const live = await joinableMarkets(db);
   if (live.length === 0) {
     return (
       <div className="mx-auto max-w-xl">
@@ -62,7 +64,9 @@ export default async function ImportPropertiesPage({ searchParams }: { searchPar
         <p className="mt-4 text-sm text-muted">
           {portfolio
             ? "They join your Portfolio: your one monthly retainer covers them."
-            : "Nothing is charged now. Each property is covered once a card is on file, and jobs are charged at the fixed price when they are done."}
+            : inPreLaunch(market)
+              ? `Nothing is charged now, and no card is needed yet. We'll email you the day bookings open in ${market.name}: you add a card then, and it's only charged when a job is done.`
+              : "Nothing is charged now. Each property is covered once a card is on file, and jobs are charged at the fixed price when they are done."}
         </p>
         <p className="mt-2 text-sm text-muted">
           {geocoder() ? "We look up each address on the map. Afterwards, open each property once to check its pin is on the house." : "Afterwards, open each property once to put its pin on the map."}
