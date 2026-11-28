@@ -7,6 +7,8 @@ import { requireOwner } from "@/lib/auth/current";
 import { getDb } from "@/lib/db";
 import { getJobForOwner } from "@/lib/jobs/store";
 import { DEPOSIT_ABOVE_CENTS } from "@/lib/jobs/pricing";
+import { cardsOpenSoon } from "@/lib/markets/launch";
+import { inPreLaunch, marketNames, preLaunchWords } from "@/lib/markets/stage";
 import { listMarkets } from "@/lib/markets/store";
 import { formatMoney } from "@/lib/money";
 import { getBilling } from "@/lib/owners/service";
@@ -28,8 +30,12 @@ export default async function BankAccountPage({ searchParams }: { searchParams: 
   const jobId = typeof query.job === "string" && isUuid(query.job) ? query.job : null;
   const job = jobId ? await getJobForOwner(db, viewer.ownerId, jobId) : null;
   const properties = await listProperties(db, viewer.ownerId);
-  const markets = (await listMarkets(db)).filter((market) => market.country === "NZ" && (job ? market.slug === job.market : properties.some((property) => property.market === market.slug)));
-  const market = markets[0] ?? null;
+  const allMarkets = await listMarkets(db);
+  const markets = allMarkets.filter((market) => market.country === "NZ" && (job ? market.slug === job.market : properties.some((property) => property.market === market.slug)));
+  // An area that is open for bookings first, so an owner who is also waiting on another one is never stopped here.
+  const market = markets.find((candidate) => !inPreLaunch(candidate)) ?? markets[0] ?? null;
+  // Pre-launch (DECISIONS.md, 2026-11-27, second entry): no bank account is taken until bookings open. The action refuses it too.
+  const soon = cardsOpenSoon(properties, allMarkets, "NZ");
   const billing = market ? await getBilling(db, viewer.ownerId, "NZ") : null;
   const big = formatMoney(DEPOSIT_ABOVE_CENTS, market?.currency ?? "NZD");
 
@@ -52,7 +58,13 @@ export default async function BankAccountPage({ searchParams }: { searchParams: 
           You add your account once, on Stripe&apos;s secure page, and agree to the direct debit there. Nothing is taken now. Stripe emails you before each debit. A
           debit usually takes 3-4 working days to clear, and the tradie starts the work once the deposit has. For urgent work you can pay by card instead.
         </p>
-        {market ? (
+        {soon.length > 0 ? (
+          <div className="mt-5">
+            <Notice tone="info" title="Opens soon">
+              {preLaunchWords.title(marketNames(soon))}. You can add your bank account from the day we go live. Nothing is needed from you until then.
+            </Notice>
+          </div>
+        ) : market ? (
           <ActionForm action={addBankAccount} className="mt-5">
             <input type="hidden" name="market" value={market.slug} />
             {job && <input type="hidden" name="job" value={job.id} />}

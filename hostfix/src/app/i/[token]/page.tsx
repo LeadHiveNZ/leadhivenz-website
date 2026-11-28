@@ -13,6 +13,9 @@ import { currentViewer } from "@/lib/auth/current";
 import { inviteFromLink } from "@/lib/clients/own-clients";
 import { getDb } from "@/lib/db";
 import { OWN_CLIENT_FEE_BPS } from "@/lib/jobs/pricing";
+import { waitingMarkets } from "@/lib/markets/launch";
+import { marketNames, preLaunchWords } from "@/lib/markets/stage";
+import { listMarkets } from "@/lib/markets/store";
 import { getPropertyForStaff, listProperties } from "@/lib/properties/service";
 import { getTradie } from "@/lib/tradies/service";
 
@@ -57,6 +60,8 @@ async function Invite({ params }: { params: Params }) {
     const tradie = invite.tradieId ? await getTradie(db, invite.tradieId) : null;
     const name = tradie?.businessName ?? "Your tradie";
     const properties = viewer?.ownerId ? (await listProperties(db, viewer.ownerId)).filter((property) => property.status !== "cancelled") : [];
+    // Pre-launch (DECISIONS.md, 2026-11-27, second entry): pairing up is only set-up, so it works now. Say when jobs can be booked.
+    const waiting = properties.length > 0 ? waitingMarkets(properties, await listMarkets(db)) : [];
     return (
       <div className="space-y-5">
         <h1 className="display text-4xl text-ink">{name} uses {brand.name}</h1>
@@ -86,6 +91,11 @@ async function Invite({ params }: { params: Params }) {
                 Book {name} through {brand.name} here
               </SubmitButton>
               <p className="text-sm text-muted">Nothing is booked or charged by pressing this. {name} becomes the first tradie we offer your jobs to there, in their trade.</p>
+              {waiting.length > 0 && (
+                <Notice tone="info" title={preLaunchWords.title(marketNames(waiting))}>
+                  You can pair up now. Jobs can be booked from the day we go live.
+                </Notice>
+              )}
             </ActionForm>
           </Card>
         )}

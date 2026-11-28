@@ -6,10 +6,13 @@ import { defineConfig, devices } from "@playwright/test";
  * These open the real site in a real (headless) browser at phone size and
  * click through it the way a person would.
  *
- * Three copies of the site run during the tests:
- *   - "plain":    nothing connected, and empty. Used for the public pages and leads.
- *   - "payments": card payments connected to a stand-in Stripe (e2e/fake-stripe.mjs).
- *   - "demo":     the made-up sample business, for the owner, tradie and team flows.
+ * Four copies of the site run during the tests:
+ *   - "plain":     nothing connected, and empty. Used for the public pages and leads.
+ *   - "payments":  card payments connected to a stand-in Stripe (e2e/fake-stripe.mjs).
+ *   - "demo":      the made-up sample business, for the owner, tradie and team flows.
+ *   - "prelaunch": empty, with Queenstown and Wānaka on the waiting list with pre-launch on, as production is
+ *                  (DECISIONS.md, 2026-11-27, second entry). Owners sign up and set up there before launch, then
+ *                  the team opens the market. Also where the soak run goes (SOAK=50, e2e/prelaunch-soak.spec.ts).
  *
  * Run with:  npm run build && npm run test:e2e
  */
@@ -17,12 +20,14 @@ import { defineConfig, devices } from "@playwright/test";
 const PLAIN_PORT = 3210;
 const PAYMENTS_PORT = 3211;
 const DEMO_PORT = 3212;
+const PRELAUNCH_PORT = 3213;
 const FAKE_STRIPE_PORT = 3299;
 
 export const E2E = {
   plainUrl: `http://localhost:${PLAIN_PORT}`,
   paymentsUrl: `http://localhost:${PAYMENTS_PORT}`,
   demoUrl: `http://localhost:${DEMO_PORT}`,
+  prelaunchUrl: `http://localhost:${PRELAUNCH_PORT}`,
   adminPassword: "e2e-admin-password",
   webhookSecret: "whsec_e2e_secret",
 };
@@ -119,6 +124,20 @@ export default defineConfig({
         ...sharedEnv,
         APP_URL: E2E.demoUrl,
         HOSTFIX_DATA_DIR: dataDir("demo"),
+        STRIPE_NZ_SECRET_KEY: "",
+        STRIPE_NZ_WEBHOOK_SECRET: "",
+      },
+    },
+    {
+      command: `npx next start -p ${PRELAUNCH_PORT}`,
+      url: `${E2E.prelaunchUrl}/robots.txt`,
+      reuseExistingServer: false,
+      timeout: 60_000,
+      env: {
+        ...sharedEnv,
+        APP_URL: E2E.prelaunchUrl,
+        HOSTFIX_DATA_DIR: dataDir("prelaunch"),
+        HOSTFIX_SAMPLE_DATA: "0",
         STRIPE_NZ_SECRET_KEY: "",
         STRIPE_NZ_WEBHOOK_SECRET: "",
       },

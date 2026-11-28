@@ -6,6 +6,7 @@ import { Card, Chip, PageTitle, RowLink, SectionTitle } from "@/components/ui/Bi
 import { requireAdminRole } from "@/lib/auth/current";
 import { getDb } from "@/lib/db";
 import type { StatusTone } from "@/lib/jobs/types";
+import { inPreLaunch } from "@/lib/markets/stage";
 import { listMarkets } from "@/lib/markets/store";
 
 export const metadata: Metadata = { title: "Markets" };
@@ -32,9 +33,10 @@ export default async function MarketsPage() {
   await requireAdminRole();
   const db = await getDb();
   const markets = await listMarkets(db);
-  const counts = await db.query<{ market: string; members: number; tradies: number }>(
+  const counts = await db.query<{ market: string; members: number; tradies: number; set_up: number }>(
     `select m.slug as market,
             (select count(*) from public.properties p where p.market = m.slug and p.status in ('active', 'past_due')) as members,
+            (select count(*) from public.properties p where p.market = m.slug and p.status = 'setup') as set_up,
             (select count(*) from public.tradies t where t.market = m.slug and t.status = 'approved') as tradies
        from public.markets m`,
   );
@@ -53,7 +55,7 @@ export default async function MarketsPage() {
               key={market.slug}
               href={`/admin/markets/${market.slug}`}
               title={market.name}
-              subtitle={`${market.countryName} · ${market.currency} · ${Number(row?.members ?? 0)} member properties · ${Number(row?.tradies ?? 0)} approved tradies`}
+              subtitle={`${market.countryName} · ${market.currency} · ${Number(row?.members ?? 0)} member properties${inPreLaunch(market) ? ` · ${Number(row?.set_up ?? 0)} set up before launch` : ""} · ${Number(row?.tradies ?? 0)} approved tradies`}
               right={<Chip tone={stage.tone}>{stage.label}</Chip>}
             />
           );

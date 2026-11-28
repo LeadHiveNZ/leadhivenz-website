@@ -12,6 +12,8 @@ import { requireOwner } from "@/lib/auth/current";
 import { ownerStatement } from "@/lib/billing/statements";
 import { now } from "@/lib/clock";
 import { getDb } from "@/lib/db";
+import { cardsOpenSoon, waitingMarkets } from "@/lib/markets/launch";
+import { inPreLaunch, marketNames, ownersCanJoin, preLaunchWords } from "@/lib/markets/stage";
 import { listMarkets, listTiers } from "@/lib/markets/store";
 import { formatMoney } from "@/lib/money";
 import { isMonthKey, shiftMonth } from "@/lib/months";
@@ -54,7 +56,11 @@ export default async function BillingPage({ searchParams }: { searchParams: Sear
   const tiers = new Map((await listTiers(db)).map((tier) => [tier.id, tier]));
   const countries = [...new Set(markets.map((candidate) => candidate.country))];
   const cards = [];
-  for (const country of countries) cards.push({ country, billing: await getBilling(db, viewer.ownerId, country) });
+  // Pre-launch (DECISIONS.md, 2026-11-27, second entry): `soon` is the areas this owner is waiting on when nothing of
+  // theirs in that country is open yet. No card and no bank account is asked for until one is.
+  for (const country of countries) cards.push({ country, billing: await getBilling(db, viewer.ownerId, country), soon: cardsOpenSoon(properties, allMarkets, country) });
+  const waiting = waitingMarkets(properties, allMarkets);
+  const opensSoon = (slug: string) => waiting.some((candidate) => candidate.slug === slug);
   const money = (cents: number) => formatMoney(cents, statement.currency);
   const link = (target: string) => `/app/billing?market=${market.slug}&month=${target}`;
 
@@ -120,7 +126,18 @@ export default async function BillingPage({ searchParams }: { searchParams: Sear
               </ActionForm>
             </div>
           )}
-          {portfolio.status === "setup" && (
+          {portfolio.status === "setup" && inPreLaunch(market) && (
+            <div className="mt-4 space-y-3">
+              <Notice tone="info" title={preLaunchWords.title(market.name)}>
+                The retainer starts here once we go live. {preLaunchWords.body}
+                {portfolioCount < portfolioMinimum ? ` Portfolio is for ${portfolioMinimum} or more properties: you have ${portfolioCount} so far.` : ""}
+              </Notice>
+              <Link href={`/app/properties/new?market=${market.slug}`} className={smallButtonClass}>
+                Add a property
+              </Link>
+            </div>
+          )}
+          {portfolio.status === "setup" && !inPreLaunch(market) && (
             <div className="mt-4 space-y-3">
               {portfolioCount < portfolioMinimum ? (
                 <>
@@ -162,7 +179,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Sear
         </Card>
       )}
 
-      {!portfolio && portfolioTierOffered && market.stage === "live" && (
+      {!portfolio && portfolioTierOffered && ownersCanJoin(market) && (
         <Card className="no-print">
           <SectionTitle>Managing 10 or more properties?</SectionTitle>
           <p className="text-muted">
@@ -179,10 +196,14 @@ export default async function BillingPage({ searchParams }: { searchParams: Sear
       )}
 
       <div className="no-print grid gap-5 md:grid-cols-2">
-        {cards.map(({ country, billing }) => (
+        {cards.map(({ country, billing, soon }) => (
           <Card key={country}>
             <SectionTitle>Card on file{countries.length > 1 ? ` (${country === "NZ" ? "New Zealand" : "Australia"})` : ""}</SectionTitle>
-            {billing?.cardLast4 ? (
+            {soon.length > 0 && !billing?.cardLast4 ? (
+              <Notice tone="info" title="Opens soon">
+                No card is needed yet. {preLaunchWords.title(marketNames(soon))}. {preLaunchWords.body}
+              </Notice>
+            ) : billing?.cardLast4 ? (
               <>
                 <p className="flex items-center gap-3 text-lg font-semibold text-ink">
                   <Icon name="card" className="text-brand" />
@@ -195,12 +216,16 @@ export default async function BillingPage({ searchParams }: { searchParams: Sear
                     Expires {String(billing.cardExpMonth).padStart(2, "0")}/{String(billing.cardExpYear).slice(-2)}
                   </p>
                 )}
-                <ActionForm action={changeCard} className="mt-4">
-                  <input type="hidden" name="country" value={country} />
-                  <SubmitButton variant="secondary" pendingLabel="Opening...">
-                    Change card
-                  </SubmitButton>
-                </ActionForm>
+                {soon.length > 0 ? (
+                  <p className="mt-3 text-sm font-semibold text-muted">{preLaunchWords.title(marketNames(soon))}: you can change it from the day we go live.</p>
+                ) : (
+                  <ActionForm action={changeCard} className="mt-4">
+                    <input type="hidden" name="country" value={country} />
+                    <SubmitButton variant="secondary" pendingLabel="Opening...">
+                      Change card
+                    </SubmitButton>
+                  </ActionForm>
+                )}
               </>
             ) : (
               <p className="text-muted">No card yet. It is added when you cover your first property.</p>
@@ -226,9 +251,13 @@ export default async function BillingPage({ searchParams }: { searchParams: Sear
                 <p className="text-muted">None yet. Work that takes a job over {formatMoney(DEPOSIT_ABOVE_CENTS, "NZD")} is paid half when you approve it and half at Job done, from your bank (no card fees) or by card.</p>
               );
             })()}
-            <Link href="/app/billing/bank" className={`${smallButtonClass} mt-4`}>
-              {cards.find(({ country }) => country === "NZ")?.billing?.bankPaymentMethodId ? "Change bank account" : "Add a bank account"}
-            </Link>
+            {(cards.find(({ country }) => country === "NZ")?.soon.length ?? 0) > 0 ? (
+              <p className="mt-3 text-sm font-semibold text-muted">Opens soon: you can add one from the day bookings open.</p>
+            ) : (
+              <Link href="/app/billing/bank" className={`${smallButtonClass} mt-4`}>
+                {cards.find(({ country }) => country === "NZ")?.billing?.bankPaymentMethodId ? "Change bank account" : "Add a bank account"}
+              </Link>
+            )}
           </Card>
         )}
 
@@ -238,7 +267,7 @@ export default async function BillingPage({ searchParams }: { searchParams: Sear
             {properties.map((property) => {
               const tier = property.tierId ? tiers.get(property.tierId) : null;
               const zone = allMarkets.find((candidate) => candidate.slug === property.market)?.timezone ?? market.timezone;
-              const label = membershipLabel(property, zone);
+              const label = membershipLabel(property, zone, opensSoon(property.market));
               return (
                 <li key={property.id} className="py-2.5">
                   <Link href={`/app/properties/${property.id}`} className="font-semibold text-brand underline underline-offset-2">

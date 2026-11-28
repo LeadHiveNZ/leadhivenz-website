@@ -12,9 +12,11 @@ import { acceptClientInvite, inviteClient, inviteFromLink, inviteOwnTradie, pair
 import { confirmPin, propertiesNeedingPin } from "@/lib/properties/pin";
 import { laterWindows } from "@/lib/jobs/arrival";
 import { loadJobView } from "@/lib/jobs/view";
-import { getMarket } from "@/lib/markets/store";
+import { updateMarket } from "@/lib/markets/admin";
+import { cardRefusal } from "@/lib/markets/launch";
+import { getMarket, listTiers } from "@/lib/markets/store";
 import { offerLinkCode, offerLinkMatches, ownerJobLinkCode, ownerJobLinkMatches, parseLinkCode } from "@/lib/links";
-import { changeTier, findPropertyByReportToken, getProperty, listProperties, requestCancel, rotateReportLink, updateProperty } from "@/lib/properties/service";
+import { changeTier, createProperty, findPropertyByReportToken, getProperty, listProperties, requestCancel, rotateReportLink, updateProperty } from "@/lib/properties/service";
 import { createDemoGateway } from "@/lib/payments/demo-gateway";
 import { cancelPortfolio, countPortfolioProperties, getPortfolio, joinPortfolio, listPortfolios, openPortfolio, removeFromPortfolio, startPortfolio } from "@/lib/properties/portfolio";
 import type { FileStore } from "@/lib/files/store";
@@ -24,7 +26,7 @@ import { getUser, viewerFor } from "@/lib/auth/users";
 import { TEAM_DEVICE_COOKIE, teamDeviceMatches } from "@/lib/team/device";
 import {
   addTeamMember, createGroup, deleteGroup, findTeamLink, getGroup, getTeamMember, houseForLink, housesForLink, listGroups, listTeam, removeTeamMember,
-  updateGroup, updateTeamMember,
+  updateGroup, updateTeamMember, waitingForLink,
 } from "@/lib/team/service";
 import { testDb } from "./db";
 import { arrive, auditActions, certificate, HOUSE, liveMarket, logJob, makeOwner, makePortfolio, makeProperty, makeTradie, MONDAY_10AM, offersFor, photo } from "./factory";
@@ -597,5 +599,52 @@ describe("own-client invites (DECISIONS.md, 2026-11-23)", () => {
     expect(await acceptClientInvite(t.db, invite.invite.token, alice.ownerId, aliceHome.id)).toMatchObject({ ok: true });
     expect((await pairsForProperty(t.db, bobHome.id))).toEqual([]);
     expect((await pairsForTradie(t.db, dave.tradieId)).map((pair) => pair.propertyId)).toEqual([aliceHome.id]);
+  });
+});
+
+describe("pre-launch (DECISIONS.md, 2026-11-27, second entry)", () => {
+  const MELE = "+64211239003";
+  const tierFor = async (market: string) => (await listTiers(t.db, market)).find((tier) => tier.key === "essential")!.id;
+  const early = async (ownerId: string, name: string) =>
+    createProperty(t.db, ownerId, { market: "wanaka", name, addressLine1: "1 Gunn Road", suburb: "Albert Town", postcode: "9305", accessNotes: "Lockbox 4821.", tierId: await tierFor("wanaka") });
+
+  it("a cleaner's link learns only the area's name for a house that is not open yet, and only for houses that owner gave them", async () => {
+    const alice = await makeOwner(t.db, { card: "none" });
+    const bob = await makeOwner(t.db, { card: "none" });
+    const aliceEarly = await early(alice.ownerId, "Alice's early bach");
+    const bobEarly = await early(bob.ownerId, "Bob's early flat");
+    const { member } = await addTeamMember(t.db, alice.ownerId, MELE, { name: "Mele", dispatch: "straight", propertyIds: [aliceEarly.id], groupIds: [] });
+    const waiting = await waitingForLink(t.db, member.linkId);
+    expect(waiting).toEqual({ markets: [{ slug: "wanaka", name: "Wānaka" }], houses: [{ propertyId: aliceEarly.id, market: "wanaka" }] });
+    // No name, address or access notes of any house, and nothing of Bob's.
+    expect(JSON.stringify(waiting)).not.toMatch(/bach|flat|Gunn|Lockbox/);
+    expect(JSON.stringify(waiting)).not.toContain(bobEarly.id);
+    expect(await housesForLink(t.db, member.linkId)).toEqual([]);
+    expect(await houseForLink(t.db, member.linkId, aliceEarly.id)).toBeNull();
+    // Bob cannot put Alice's house on his own cleaner's list: it is dropped, and his cleaner's link learns nothing of it.
+    const sione = await addTeamMember(t.db, bob.ownerId, "+64211239004", { name: "Sione", dispatch: "straight", propertyIds: [aliceEarly.id], groupIds: [] });
+    expect(sione.member.propertyIds).toEqual([]);
+    expect(await waitingForLink(t.db, sione.member.linkId)).toEqual({ markets: [], houses: [] });
+    // A link that is not a link opens nothing.
+    expect(await waitingForLink(t.db, "not-a-link")).toEqual({ markets: [], houses: [] });
+  });
+
+  it("the go-live email goes to each owner's own address with their own property, and one owner's wait says nothing of another's", async () => {
+    const alice = await makeOwner(t.db, { card: "none" });
+    const bob = await makeOwner(t.db, { card: "none" });
+    const aliceEarly = await early(alice.ownerId, "Alice's early bach");
+    const bobEarly = await early(bob.ownerId, "Bob's early flat");
+    // Each owner's card question is answered from their own properties only.
+    expect(await cardRefusal(t.db, alice.ownerId, "NZ")).toContain("Bookings open soon in Wānaka");
+    expect(await cardRefusal(t.db, "not-an-owner", "NZ")).toBeNull();
+    await updateMarket(t.db, "wanaka", { stage: "live" }, "admin");
+    const sent = await t.db.query<{ recipient: string; body: string }>("select recipient, body from public.notifications where template = 'market_live' order by recipient");
+    expect(sent.map((message) => message.recipient).sort()).toEqual([alice.user.email!, bob.user.email!].sort());
+    const toAlice = sent.find((message) => message.recipient === alice.user.email)!;
+    expect(toAlice.body).toContain(aliceEarly.id);
+    expect(toAlice.body).not.toContain(bobEarly.id);
+    expect(toAlice.body).not.toMatch(/Bob|Gunn Road|Lockbox/);
+    // The link in the email opens nothing by itself: another owner asking for that property gets nothing.
+    expect(await getProperty(t.db, bob.ownerId, aliceEarly.id)).toBeNull();
   });
 });

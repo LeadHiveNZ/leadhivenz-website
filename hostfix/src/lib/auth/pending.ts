@@ -14,7 +14,8 @@ export type Pending = {
   /** sign_in: an existing account. owner_sign_up: make the account once the code is right. */
   purpose: "sign_in" | "owner_sign_up";
   next: string | null;
-  signUp?: { name: string; email: string; phone: string | null; homeLocation: string | null; ref: string | null };
+  /** `market`: the area in the link they joined from, so the first property is added there. */
+  signUp?: { name: string; email: string; phone: string | null; homeLocation: string | null; ref: string | null; market?: string | null };
   /** Demo mode only, when no text or email service is connected: the code, so it can be shown on screen. */
   demoCode?: string;
   expiresAt: number;

@@ -108,6 +108,8 @@ export async function saveMarketSettings(_previous: FormState, formData: FormDat
   const patch: MarketPatch = {
     name: text(formData, "name"),
     stage: text(formData, "stage") as MarketStage,
+    // Owners can set up before launch. Only means something while the stage is "waitlist" (src/lib/markets/stage.ts).
+    preLaunch: ticked(formData, "preLaunch"),
     timezone: text(formData, "timezone"),
     taxName: text(formData, "taxName") || "GST",
     taxRegistered: ticked(formData, "taxRegistered"),
@@ -160,18 +162,23 @@ export async function saveMarketSettings(_previous: FormState, formData: FormDat
     else rates.push({ trade: trade.key, cents });
   }
   if (Object.keys(errors).length > 0) return problem(formData, "Please check the highlighted fields. Nothing was saved.", errors);
+  let wentLive = false;
   try {
     const db = await getDb();
+    const before = await getMarket(db, slug);
+    wentLive = before?.stage === "waitlist" && patch.stage === "live";
     const current = await hourlyRates(db, slug);
     for (const rate of rates) if (current[rate.trade] !== rate.cents) await saveHourlyRate(db, slug, rate.trade, rate.cents, staff.actor);
     for (const trade of noRate) if (current[trade] !== undefined) await clearHourlyRate(db, slug, trade, staff.actor);
     await updateMarket(db, slug, patch, staff.actor);
+    // Going live queues one email to each owner who set up before launch (announceGoLive): send them now.
+    if (wentLive) await sendQueued(db);
   } catch (error) {
     if (error instanceof AdminInputError) return problem(formData, `${error.message} Nothing was saved.`);
     throw error;
   }
   refreshMarkets(slug);
-  return { done: "Saved. New prices apply to jobs logged from now on. Jobs already logged keep the price they were logged at." };
+  return { done: `Saved. New prices apply to jobs logged from now on. Jobs already logged keep the price they were logged at.${wentLive ? " This market is now live: every owner who set up before launch has been emailed to add their card." : ""}` };
 }
 
 /** How many band rows the tier form shows. */

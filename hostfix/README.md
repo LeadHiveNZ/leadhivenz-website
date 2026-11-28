@@ -10,6 +10,10 @@ Nobody takes a call, writes a quote or sends an invoice.
 Property managers with 10 or more properties can pick Portfolio instead: one monthly retainer for the
 whole account, banded by how many properties are on it, with the same job prices and the same 15% fee.
 
+Before a town opens, owners can already make their account and add every property (pre-launch, `DECISIONS.md`,
+2026-11-27, second entry): no card is taken and no job can be booked until the team sets the town live, and each
+of those owners is emailed that day. Queenstown and Wānaka are in pre-launch now.
+
 Launch market: Queenstown, New Zealand. Built for many towns across New Zealand and Australia: nothing
 is tied to one town, one currency or one tax rate.
 

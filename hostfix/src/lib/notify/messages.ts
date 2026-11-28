@@ -282,6 +282,12 @@ export const texts = {
 
   reporterDone: (o: { property: string }) => `${B}: the problem you reported at ${clip(o.property, 28)} has been fixed. Thank you.`,
 
+  /**
+   * The day a market goes live (DECISIONS.md, 2026-11-27, second entry): to an owner who set up before launch and
+   * has no email address. Everyone else gets the email (emails.marketLive).
+   */
+  marketLive: (o: { market: string; link: string }) => `${B} is live in ${clip(o.market, 20)}. Add your card to be covered: ${o.link}`,
+
   referralThanks: (o: { name: string; link: string }) => `${B}: thanks ${clip(first(o.name), 12)}. Share this link with owners. We pay you once one stays 3 months: ${o.link}`,
 } as const;
 
@@ -291,9 +297,31 @@ export const emails = {
     body: `Your ${B} sign-in code is ${code}.\n\nIt works for 10 minutes. If you did not ask for it, you can ignore this email. Do not share the code with anyone.`,
   }),
 
-  welcomeOwner: (o: { name: string; link: string }) => ({
+  /** `opensSoonIn`: the area's name while it is in pre-launch (DECISIONS.md, 2026-11-27, second entry), so nothing here promises a booking yet. */
+  welcomeOwner: (o: { name: string; link: string; opensSoonIn?: string | null }) => ({
     subject: `Welcome to ${B}`,
-    body: `Hi ${first(o.name)},\n\nYour ${B} account is ready. Add your first property and choose a membership here:\n${o.link}\n\nOnce a property is a member you get a link and a QR code to put in the property, so your cleaner or a guest can report a problem in under a minute.`,
+    body: o.opensSoonIn
+      ? `Hi ${first(o.name)},\n\nYour ${B} account is ready. Add your properties here:\n${o.link}\n\nBookings are not open in ${o.opensSoonIn} yet. Set everything up now and you are ready on day one. It is free, and no card is needed yet. Once you have added a property, we will email you the day bookings open there. You add a card then, and it is only charged when a job is done.`
+      : `Hi ${first(o.name)},\n\nYour ${B} account is ready. Add your first property and choose a membership here:\n${o.link}\n\nOnce a property is a member you get a link and a QR code to put in the property, so your cleaner or a guest can report a problem in under a minute.`,
+  }),
+
+  /**
+   * The day a market goes live (DECISIONS.md, 2026-11-27, second entry): one email to each owner who has a property
+   * there, with the link to where they add their card. Sent once per owner and market (announceGoLive).
+   */
+  marketLive: (o: { name: string; market: string; link: string; properties: number; portfolio: boolean }) => ({
+    subject: `${B} is live in ${o.market}. Add your card to be covered`,
+    body: [
+      `Hi ${first(o.name)},`,
+      `${B} is live in ${o.market}. ${o.properties === 1 ? "Your property is" : `Your ${o.properties} properties are`} set up and ready.`,
+      o.portfolio
+        ? `Start your Portfolio retainer here and every property on it is covered:\n${o.link}`
+        : `Add your card to be covered:\n${o.link}`,
+      o.portfolio
+        ? "Jobs are charged at the fixed price when they are done."
+        : `It is free to join. Your card is only charged the fixed price of a job, when it is done.${o.properties > 1 ? " You add the card once. Then open each of your other properties and press Cover this property." : ""} Already have a card with us? Just press Cover this property.`,
+      "Once you are covered you can report a problem any time, and the QR card and your team's links start working.",
+    ].join("\n\n"),
   }),
 
   ownerInvite: (o: { name: string; link: string }) => ({

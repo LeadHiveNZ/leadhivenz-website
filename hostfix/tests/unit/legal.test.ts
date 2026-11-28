@@ -294,4 +294,11 @@ describe("the tiered fee and big work's 50% deposit (DECISIONS.md, 2026-11-23, s
     expect(agreement).toContain("We only offer you jobs, and only text or notify you about offers, inside those hours on those days.");
     expect(agreement).toContain("there is nothing extra to opt in to");
   });
+
+  it("the owner terms say an account and properties can be set up before an area opens: free, no card, an email the day bookings open (DECISIONS.md, 2026-11-27, second entry)", () => {
+    const terms = text(TermsPage);
+    expect(terms).toContain("Last updated 27 November 2026");
+    expect(terms).toContain("You can make your account and add your properties before HostFix opens in your area. That costs nothing.");
+    expect(terms).toContain("No card is taken and no job can be booked until bookings open there. Once you have added a property in an area, we email you the day bookings open there, and you add your card then.");
+  });
 });

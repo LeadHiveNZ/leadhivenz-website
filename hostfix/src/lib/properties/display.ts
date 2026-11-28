@@ -2,11 +2,14 @@ import type { StatusTone } from "@/lib/jobs/types";
 import { formatDate } from "@/lib/time";
 import type { Property } from "./service";
 
-/** What a property's membership is called on screen, and its colour. */
-export function membershipLabel(property: Property, timeZone: string): { label: string; tone: StatusTone } {
+/**
+ * What a property's membership is called on screen, and its colour. `opensSoon`: its market is in pre-launch
+ * (DECISIONS.md, 2026-11-27, second entry), so there is nothing for the owner to finish yet.
+ */
+export function membershipLabel(property: Property, timeZone: string, opensSoon = false): { label: string; tone: StatusTone } {
   switch (property.status) {
     case "setup":
-      return { label: "Not a member yet", tone: "waiting" };
+      return opensSoon ? { label: "Opens soon", tone: "quiet" } : { label: "Not a member yet", tone: "waiting" };
     case "past_due":
       return { label: "Card problem", tone: "alert" };
     case "cancelled":

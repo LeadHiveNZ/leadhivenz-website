@@ -4,6 +4,7 @@ import { now } from "@/lib/clock";
 import { isUniqueViolation, type Db } from "@/lib/db/types";
 import { taxPortion } from "@/lib/jobs/pricing";
 import { bandFor, highestPricedBand, lowestBand, minimumProperties } from "@/lib/markets/bands";
+import { bookingOpen, inPreLaunch, ownersCanJoin, preLaunchWords } from "@/lib/markets/stage";
 import { getMarket, getTier, listTiers, type Tier } from "@/lib/markets/store";
 import { formatMoney } from "@/lib/money";
 import { texts } from "@/lib/notify/messages";
@@ -220,10 +221,13 @@ export async function ensurePortfolioIn(tx: Db, ownerId: string, market: string,
   return portfolio;
 }
 
-/** The owner picks Portfolio for their account in one market. Safe to call twice. */
+/**
+ * The owner picks Portfolio for their account in one market. Safe to call twice. Choosing takes no card and starts
+ * nothing, so it is open in pre-launch too (DECISIONS.md, 2026-11-27, second entry); starting the retainer is not.
+ */
 export async function choosePortfolio(db: Db, ownerId: string, marketSlug: string): Promise<Portfolio> {
   const market = await getMarket(db, marketSlug);
-  if (!market || market.stage !== "live") throw new PortfolioError("We are not taking new members in that area right now.");
+  if (!market || !ownersCanJoin(market)) throw new PortfolioError("We are not taking new members in that area right now.");
   const tier = await portfolioTier(db, market.slug);
   if (!tier) throw new PortfolioError("Portfolio is not offered in that area yet.");
   try {
@@ -257,7 +261,10 @@ export async function startPortfolio(
   const market = await getMarket(db, portfolio.market);
   const tier = await getTier(db, portfolio.tierId);
   if (!market || !tier) return { kind: "error", message: "Portfolio is not available here any more. Please contact us." };
-  if (market.stage !== "live") return { kind: "error", message: "We are not taking new members in that area right now." };
+  // Pre-launch (DECISIONS.md, 2026-11-27, second entry): the retainer cannot start, and no card is asked for, until
+  // the market is live. Refused before the payment company is asked for anything.
+  if (inPreLaunch(market)) return { kind: "error", message: preLaunchWords.noCardYet(market.name) };
+  if (!bookingOpen(market)) return { kind: "error", message: "We are not taking new members in that area right now." };
 
   const count = await countPortfolioProperties(db, portfolio.id);
   const minimum = minimumProperties(tier);

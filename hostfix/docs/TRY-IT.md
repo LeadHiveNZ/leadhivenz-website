@@ -165,6 +165,22 @@ The owner's real phone number is visible to the tradie once they accept.
 **Not done in Phase 4:** existing members cannot be moved to a new price in bulk. Deleting a person's
 details on request needs a developer. Nothing warns you before a tradie's insurance runs out.
 
+## Pre-launch: owners setting up before a town opens
+
+In the demo Queenstown is live and **Wānaka is in pre-launch**: owners can set up there, and nothing that takes a
+card or books a job is open yet (`DECISIONS.md`, 2026-11-27, second entry).
+
+| Do this | You should see |
+| --- | --- |
+| Signed out, open `/sign-up?market=wanaka` | "Set up your account and properties now", "Free, and no card needed yet" |
+| Fill it in. The code is shown on screen in the demo. | **Add a property**, in Wānaka, saying no card is needed yet |
+| Save the property | "You're set up. Bookings open soon in Wānaka. We'll email you the day we go live. You'll add a card then, and it's only charged when a job is done." No card button anywhere. |
+| Open Home, Billing, and the **Report** button | Each says "Bookings open soon in Wānaka". No card form, no job form. |
+| On the property: **Print the QR card**, then open the address under the QR code | The card prints. The guest's page says "HostFix isn't open in Wānaka yet". |
+| **Be Admin**. More > Markets > Wānaka | "Set up before launch": 1 owner, 1 property. The tick box "Owners can set up their account and properties before launch". |
+| Change **Stage** to Live and **Save settings** | "This market is now live: every owner who set up before launch has been emailed to add their card." More > Texts and emails shows the one email. |
+| Go back to the owner's property | The usual **Add a card** step |
+
 ## Phase 5: planned, not built
 
 Seasonal packages, the quarterly property check, cleaner accounts, slot fees and connections to property

@@ -15,7 +15,9 @@ import { statusLabel } from "@/lib/jobs/types";
 import { displayPhone } from "@/lib/phone";
 import { addressLine, findPropertyByReportToken, type Property } from "@/lib/properties/service";
 import { maskedPhone, openTeamPending, TEAM_DEVICE_COOKIE, TEAM_PENDING_COOKIE, teamDeviceMatches } from "@/lib/team/device";
-import { findTeamLink, housesForLink, type TeamHouse, type TeamLink } from "@/lib/team/service";
+import { inPreLaunch, marketNames, preLaunchWords } from "@/lib/markets/stage";
+import { getMarket } from "@/lib/markets/store";
+import { findTeamLink, housesForLink, waitingForLink, type TeamHouse, type TeamLink } from "@/lib/team/service";
 
 type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
@@ -64,7 +66,21 @@ export default async function ReportPage({ params, searchParams }: { params: Pro
   const houses = await housesForLink(db, link.id);
   const chosen = typeof query.p === "string" ? houses.find((house) => house.property.id === query.p) : houses.length === 1 ? houses[0] : undefined;
   if (chosen) return <TeamHouseReport db={db} token={token} house={chosen} many={houses.length > 1} />;
-  return <HouseList token={token} houses={houses} />;
+  // Houses an owner has set up before their area opens (DECISIONS.md, 2026-11-27, second entry): only the area's name is said.
+  const waiting = await waitingForLink(db, link.id);
+  return <HouseList token={token} houses={houses} notOpenIn={waiting.markets} />;
+}
+
+/** Pre-launch: the page a guest's QR card or a cleaner's link opens before the area takes bookings. No form. */
+function NotOpenYet({ where, who }: { where: string; who: "guest" | "team" }) {
+  return (
+    <div className="space-y-4">
+      <h1 className="display text-4xl text-ink">{preLaunchWords.notOpen(where)}</h1>
+      <p className="text-lg text-muted">
+        Problems can be reported here once we open. Until then, please contact {who === "guest" ? "your host" : "the owner"} directly about anything that needs fixing.
+      </p>
+    </div>
+  );
 }
 
 /** A forwarded link opens nothing until the phone proves the number with a code, once. */
@@ -126,8 +142,9 @@ function CheckPhone({ link, pending }: { link: TeamLink; pending: { demoCode?: s
 }
 
 /** Every house this person may report on, across every owner who has added them. */
-function HouseList({ token, houses }: { token: string; houses: TeamHouse[] }) {
+function HouseList({ token, houses, notOpenIn }: { token: string; houses: TeamHouse[]; notOpenIn: { slug: string; name: string }[] }) {
   const owners = new Set(houses.map((house) => house.property.ownerId));
+  if (houses.length === 0 && notOpenIn.length > 0) return <NotOpenYet where={marketNames(notOpenIn)} who="team" />;
   return (
     <div className="space-y-6">
       <div>
@@ -154,6 +171,11 @@ function HouseList({ token, houses }: { token: string; houses: TeamHouse[] }) {
             />
           ))}
         </div>
+      )}
+      {houses.length > 0 && notOpenIn.length > 0 && (
+        <Notice tone="info" title={preLaunchWords.notOpen(marketNames(notOpenIn))}>
+          Houses there join this list once we open and the owner has finished setting up.
+        </Notice>
       )}
       <p className="text-center text-sm text-muted">Tip: add this page to your phone&apos;s home screen so it is one tap away next time.</p>
     </div>
@@ -246,6 +268,9 @@ async function TeamHouseReport({ db, token, house, many }: { db: Db; token: stri
 
 /** The guest QR card, or an older per-property team link. Unchanged for anyone who already has one. */
 async function PropertyReport({ db, token, property, via }: { db: Db; token: string; property: Property; via: "team" | "guest" }) {
+  // Pre-launch (DECISIONS.md, 2026-11-27, second entry): the owner has set up and may have printed the card already.
+  const market = await getMarket(db, property.market);
+  if (market && inPreLaunch(market)) return <NotOpenYet where={market.name} who={via} />;
   const data = property.status === "active" ? await reportFormData(db, property, via) : null;
   if (!data || data.items.length === 0) {
     return (

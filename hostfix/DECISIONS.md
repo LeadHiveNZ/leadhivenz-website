@@ -28,6 +28,54 @@ credit, the billing portal, a tradie payout account and its set-up link, and a N
   page (they were opened and read; where the secret key is supplied by a network proxy it is also supplied to the page's
   own calls, and Stripe refuses a card number sent with a secret key), a tradie completing Stripe's bank-details page,
   paid memberships (none on sale), and bank disputes (the live site would raise a real queue item).
+## 2026-11-27 (second entry) — Pre-launch mode: owners set up before an area opens
+
+The founder wants owners to **sign up, accept the terms and add all their properties now**, before launch, and be told
+"we'll let you know when you can book live jobs". Stripe is still in test mode, so **no card is taken and no job can be
+booked until the market is live**. Migration `20261209000000_pre_launch.sql`. Tests: `tests/unit/pre-launch.test.ts`,
+`tests/unit/access.test.ts`, `tests/unit/legal.test.ts`, `e2e/prelaunch.spec.ts`, `e2e/prelaunch-soak.spec.ts` (run with `SOAK=50`).
+
+- **A flag on the market, not a new stage**: `markets.pre_launch` (`Market.preLaunch`, default off). It only means something
+  while the stage is `waitlist`. **On for Queenstown and Wānaka**, in the migration (a database that has them) and in
+  `config/markets.ts` (a fresh one); a market added on the admin screen starts with it off. Three questions, asked everywhere
+  instead of the stage itself (`src/lib/markets/stage.ts`): `ownersCanJoin` (live, or waitlist with the flag), `bookingOpen`
+  (live), `inPreLaunch` (waitlist with the flag). The words an owner reads are in the same file (`preLaunchWords`).
+- **Sign-up** (`/sign-up`) is open when any market has `ownersCanJoin`, read on each visit, and the action checks it too
+  (`signUpRefusal`). In pre-launch it says: set up your account and properties now so you're ready on day one; free; no card
+  needed yet; add your properties and we'll email you the day bookings open (the email goes to owners who have a property there, so the
+  page ties it to adding one). The welcome email says the same. A link with `?market=` carries the area
+  through to the first "Add a property".
+- **Adding properties** (one, or a pasted spreadsheet: `createProperty`, `createProperties`) works in pre-launch. The property
+  is saved as `setup` (not covered) and the owner lands on it with "You're set up. Bookings open soon in {market}. We'll email
+  you the day we go live. You'll add a card then, and it's only charged when a job is done." Everything that is only set-up
+  stays open: details, area, map pin, access notes, hazards, guest setting, photos, team and groups, printing the QR card,
+  bring-your-own-tradie invites, choosing Portfolio.
+- **Anything that saves a card, starts a membership or a retainer, or logs a job shows a calm "Opens soon" notice instead of
+  the form or button, and the server refuses it in the same words before the payment company is asked for anything**:
+  `startMembership`, `startPortfolio`, `activateFreeMembership` (no card is kept), `openCardPage` and `openBankPage`
+  (`src/lib/owners/card-pages.ts`, `cardRefusal`), and `createJob` for the owner, their team and their guests (staff can still
+  log one by hand, as before). A paste into a pre-launch area never covers a property, even with a card on file from an area
+  that is live. An owner who also has a property somewhere that is not in pre-launch keeps their card pages.
+- **The public pages reached from set-up** (the guest QR card, the older per-property link, a cleaner's own link) say
+  "HostFix isn't open in {market} yet" instead of a form. A cleaner's link is told only the area's name (`waitingForLink`).
+- **Going live**: changing the stage from `waitlist` to `live` (`updateMarket`) queues, in the same database step, **one
+  message to every owner with a property there that is set up and waiting for its card** (closed accounts aside; an owner
+  whose properties there are all covered already has nothing to add and is not written to): an email, "HostFix is live
+  in {market}. Add your card to be covered", linking to their property (the list when they have several, Billing when they
+  chose Portfolio); a text for an owner with no email address. The dedupe key is `market_live:<market>:<owner>`, so flipping
+  the stage back and forth never sends it twice. Audit: `market.went_live` with how many owners, properties and messages.
+  After that those owners see the normal add-a-card step. Paused to live is not a launch and sends nothing.
+- **Admin > Markets**: a tick box, "Owners can set up their account and properties before launch", and a count of owners and
+  properties set up there (and, once live, how many there were that day). The leads screen already shows "Has joined" on a
+  lead whose email or mobile made an account, so no new chip was added.
+- **Leads**: the owner thank-you page adds one line and link, "Want to be ready on day one? Set up your account and properties
+  now.", only while that market is in pre-launch. Nothing is re-sent, and the waiting-list form and the tradie pages are unchanged.
+- **Terms** (27 November 2026, section 2): an account and properties can be set up before HostFix opens in an area, it costs
+  nothing, no card is taken and no job can be booked until bookings open, and we email when they do.
+
+**Not done, on purpose**: the "Invite to join" button on the leads screen still only shows for a live market (its email says
+"we are open"); an invite worded for pre-launch needs the founder's say-so before anything is sent to leads. An owner with
+several properties still presses "Cover this property" on each after saving their card once, as before.
 
 ## 2026-11-27 — Tradie agreement 27 November 2026: moving it to the company
 

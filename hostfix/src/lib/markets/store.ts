@@ -25,7 +25,7 @@ export type MenuItem = {
 };
 
 type MarketRow = {
-  slug: string; name: string; country: CountryCode; currency: CurrencyCode; timezone: string; stage: MarketStage;
+  slug: string; name: string; country: CountryCode; currency: CurrencyCode; timezone: string; stage: MarketStage; pre_launch?: boolean | null;
   tax_rate: number; tax_name: string; tax_registered: boolean; tax_number: string | null;
   platform_fee_bps: number; platform_fee_bps_next?: number | null; platform_fee_from?: Date | string | null; urgent_surcharge_cents: number; after_hours_surcharge_cents: number;
   emergency_surcharge_cents?: number | null; emergency_response_minutes?: number | null; emergency_step_down_minutes?: number | null;
@@ -100,6 +100,7 @@ function rowToMarket(row: MarketRow, tiers: Tier[]): Market {
     currency: row.currency,
     timezone: row.timezone,
     stage: row.stage,
+    preLaunch: Boolean(row.pre_launch),
     taxRate: Number(row.tax_rate),
     taxName: row.tax_name,
     taxRegistered: row.tax_registered,

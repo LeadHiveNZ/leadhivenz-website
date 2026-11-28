@@ -21,8 +21,10 @@ import { ownerObjects } from "@/lib/jobs/not-described";
 import { answerQuote as answerQuoteWithCharge, reportTradieAbsent } from "@/lib/jobs/work";
 import { confirmFixed } from "@/lib/jobs/confirm";
 import { guestFromForm } from "@/lib/jobs/guest-form";
+import { inPreLaunch, ownersCanJoin, preLaunchWords } from "@/lib/markets/stage";
 import { getMarket } from "@/lib/markets/store";
-import { getBilling, updateOwnerContact } from "@/lib/owners/service";
+import { openBankPage, openCardPage } from "@/lib/owners/card-pages";
+import { updateOwnerContact } from "@/lib/owners/service";
 import { paymentsFor } from "@/lib/payments";
 import { normalisePhone } from "@/lib/phone";
 import { isUuid } from "@/lib/uuid";
@@ -30,7 +32,7 @@ import { IMPORT_MAX_ROWS, parsePropertyRows } from "@/lib/properties/import";
 import { geocoder } from "@/lib/maps/geocode";
 import { confirmPin, fillMissingPins, lookUpPin } from "@/lib/properties/pin";
 import { cancelPortfolio, choosePortfolio, getPortfolio, PortfolioError, startPortfolio } from "@/lib/properties/portfolio";
-import { activateFreeMembership, changeTier, createProperty, getProperty, PropertyError, requestCancel, rotateReportLink, startMembership, updateProperty } from "@/lib/properties/service";
+import { changeTier, createProperties, createProperty, getProperty, PropertyError, requestCancel, rotateReportLink, startMembership, updateProperty } from "@/lib/properties/service";
 
 /**
  * EVERYTHING AN OWNER CAN DO. Each action starts by working out who is
@@ -53,9 +55,17 @@ function propertyFields(formData: FormData) {
     area: text(formData, "area") || null,
   };
   const errors: Record<string, string> = {};
+  // The same limits as the boxes on the form and the paste import, checked again here: a browser's own limit is a
+  // convenience, and a name the database would refuse must come back as words, never as an error page.
   if (fields.name.length < 1) errors.name = "Give the property a name you will recognise, like Lakeview Apartment.";
+  else if ([...fields.name].length > 80) errors.name = "Keep the name to 80 letters or fewer.";
   if (fields.addressLine1.length < 3) errors.addressLine1 = "Enter the street address.";
+  else if ([...fields.addressLine1].length > 120) errors.addressLine1 = "Keep the street address to 120 letters or fewer. Put the rest in the next box.";
+  if ((fields.addressLine2 ?? "").length > 120) errors.addressLine2 = "Keep this to 120 letters or fewer.";
   if (fields.suburb.length < 2) errors.suburb = "Enter the suburb or town.";
+  else if (fields.suburb.length > 60) errors.suburb = "Keep the suburb or town to 60 letters or fewer.";
+  if (fields.postcode.length > 10) errors.postcode = "Keep the postcode to 10 characters or fewer.";
+  if (fields.accessNotes.length > 3000) errors.accessNotes = "Keep the access notes shorter than this.";
   return { fields, errors };
 }
 
@@ -102,6 +112,8 @@ export async function beginPortfolio(_previous: FormState, formData: FormData): 
   const portfolio = await getPortfolio(db, viewer.ownerId, text(formData, "portfolioId"));
   if (!portfolio) return { message: "We could not find your Portfolio." };
   const market = await getMarket(db, portfolio.market);
+  // Pre-launch (DECISIONS.md, 2026-11-27, second entry): startPortfolio refuses it too, before any payment call.
+  if (market && inPreLaunch(market)) return { message: preLaunchWords.noCardYet(market.name) };
   const gateway = market ? paymentsFor(db, market.country) : null;
   if (!gateway) return { message: "Card payments are not switched on yet, so the retainer cannot start. Please try again soon." };
   let result;
@@ -183,6 +195,10 @@ export async function beginMembership(_previous: FormState, formData: FormData):
   const db = await getDb();
   const property = await getProperty(db, viewer.ownerId, propertyId);
   if (!property) return { message: "We could not find that property." };
+  const market = await getMarket(db, property.market);
+  // Pre-launch (DECISIONS.md, 2026-11-27, second entry): said here first, whatever else is or is not set up.
+  // startMembership refuses it too, before the payment company is asked for anything.
+  if (market && inPreLaunch(market)) return { message: preLaunchWords.noCardYet(market.name) };
   const tierId = text(formData, "tierId");
   if (tierId && tierId !== property.tierId) {
     try {
@@ -192,7 +208,6 @@ export async function beginMembership(_previous: FormState, formData: FormData):
       throw error;
     }
   }
-  const market = await getMarket(db, property.market);
   const gateway = market ? paymentsFor(db, market.country) : null;
   if (!gateway) return { message: "Card payments are not switched on yet, so memberships cannot start. Please try again soon." };
 
@@ -439,17 +454,10 @@ export async function changeCard(_previous: FormState, formData: FormData): Prom
   const viewer = await requireOwner("/app/billing");
   const db = await getDb();
   const country = text(formData, "country") === "AU" ? "AU" : "NZ";
-  const gateway = paymentsFor(db, country);
-  const billing = await getBilling(db, viewer.ownerId, country);
-  if (!gateway || !billing || billing.provider !== gateway.provider) return { message: "There is no card on file yet. It is added when you start a membership." };
-  let url: string;
-  try {
-    url = await gateway.billingPortalUrl({ customerId: billing.customerId, ownerId: viewer.ownerId, returnUrl: `${baseUrl()}/app/billing` });
-  } catch (error) {
-    console.error("[billing] opening the card page failed:", error instanceof Error ? error.message : error);
-    return { message: "The card page could not be opened just now. Please try again." };
-  }
-  redirect(url);
+  // Refused in pre-launch, before the payment company is asked for anything (src/lib/owners/card-pages.ts).
+  const page = await openCardPage(db, paymentsFor(db, country), { ownerId: viewer.ownerId, country, returnUrl: `${baseUrl()}/app/billing` });
+  if (!page.ok) return { message: page.message };
+  redirect(page.url);
 }
 
 /**
@@ -463,22 +471,13 @@ export async function addBankAccount(_previous: FormState, formData: FormData): 
   const jobId = text(formData, "job");
   const job = isUuid(jobId) ? await getJobForOwner(db, viewer.ownerId, jobId) : null;
   const market = await getMarket(db, job?.market ?? text(formData, "market"));
-  if (!market || market.country !== "NZ") return { message: "Paying from a bank account is only for New Zealand properties for now." };
-  const gateway = paymentsFor(db, market.country);
-  const billing = await getBilling(db, viewer.ownerId, market.country);
-  if (!gateway || !billing || billing.provider !== gateway.provider) return { message: "Add a card first: it is added when you cover your first property." };
-  const back = job ? `${baseUrl()}/app/jobs/${job.id}` : `${baseUrl()}/app/billing`;
-  let url: string;
-  try {
-    url = (await gateway.startBankSetup({
-      customerId: billing.customerId, ownerId: viewer.ownerId, market,
-      successUrl: `${baseUrl()}/app/billing/bank/return${job ? `?job=${job.id}` : ""}`, cancelUrl: back,
-    })).url;
-  } catch (error) {
-    console.error("[billing] opening the bank account page failed:", error instanceof Error ? error.message : error);
-    return { message: "The bank account page could not be opened just now. Please try again." };
-  }
-  redirect(url);
+  // Refused in pre-launch, before the payment company is asked for anything (src/lib/owners/card-pages.ts).
+  const page = await openBankPage(db, market ? paymentsFor(db, market.country) : null, {
+    ownerId: viewer.ownerId, market,
+    successUrl: `${baseUrl()}/app/billing/bank/return${job ? `?job=${job.id}` : ""}`, cancelUrl: job ? `${baseUrl()}/app/jobs/${job.id}` : `${baseUrl()}/app/billing`,
+  });
+  if (!page.ok) return { message: page.message };
+  redirect(page.url);
 }
 
 /** Photos that help a tradie find their way around: the lockbox, the switchboard, the water shut-off. */
@@ -524,24 +523,15 @@ export async function importProperties(_previous: FormState, formData: FormData)
 
   const db = await getDb();
   const market = await getMarket(db, text(formData, "market"));
-  if (!market || market.stage !== "live") return problem(formData, "We are not taking new properties in that area yet.");
+  if (!market || !ownersCanJoin(market)) return problem(formData, "We are not taking new properties in that area yet.");
   const tierId = text(formData, "tierId");
   if (!tierId) return problem(formData, "Choose a membership.");
   try {
-    await db.tx(async (tx) => {
-      const gateway = paymentsFor(tx, market.country);
-      // Free to join (DECISIONS.md, 2026-11-17): with a card already on file each one is covered straight away,
-      // exactly as pressing "Cover this property" would.
-      const card = await getBilling(tx, viewer.ownerId, market.country);
-      for (const row of good) {
-        const created = await createProperty(tx, viewer.ownerId, {
-          market: market.slug, name: row.name, addressLine1: row.addressLine1, suburb: row.suburb, postcode: row.postcode, accessNotes: row.accessNotes, tierId,
-        }, gateway);
-        if (created.status === "setup" && card?.paymentMethodId && gateway && card.provider === gateway.provider) {
-          await activateFreeMembership(tx, { propertyId: created.id, ownerId: viewer.ownerId, provider: card.provider, customerId: card.customerId, card: null });
-        }
-      }
-    });
+    // With a card already on file each one is covered straight away. In pre-launch they are only saved (createProperties).
+    await createProperties(db, viewer.ownerId, {
+      market: market.slug, tierId,
+      rows: good.map((row) => ({ name: row.name, addressLine1: row.addressLine1, suburb: row.suburb, postcode: row.postcode, accessNotes: row.accessNotes })),
+    }, (inner) => paymentsFor(inner, market.country));
   } catch (error) {
     if (error instanceof PropertyError) return problem(formData, `Nothing was saved. ${error.message}`);
     throw error;

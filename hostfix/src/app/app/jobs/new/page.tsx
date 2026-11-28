@@ -9,7 +9,9 @@ import { requireOwner } from "@/lib/auth/current";
 import { getDb } from "@/lib/db";
 import { reportFormData } from "@/lib/jobs/report-data";
 import { addressLine, listProperties } from "@/lib/properties/service";
-import { getMarket } from "@/lib/markets/store";
+import { waitingMarkets } from "@/lib/markets/launch";
+import { marketNames, preLaunchWords } from "@/lib/markets/stage";
+import { getMarket, listMarkets } from "@/lib/markets/store";
 import { cardProblem, cardProblemWords } from "@/lib/owners/service";
 import { now } from "@/lib/clock";
 
@@ -25,7 +27,24 @@ export default async function NewJobPage({ searchParams }: { searchParams: Searc
   const covered = properties.filter((property) => property.status === "active");
 
   if (covered.length === 0) {
-    const waiting = properties.find((property) => property.status === "setup" || property.status === "past_due");
+    // Pre-launch (DECISIONS.md, 2026-11-27, second entry): set up, but jobs cannot be booked in that area yet. A calm
+    // "Opens soon", with no way to a card page. An owner who also has a property to finish somewhere open sees that instead.
+    const early = waitingMarkets(properties, await listMarkets(db));
+    const toFinish = properties.some((property) => (property.status === "setup" || property.status === "past_due") && !early.some((market) => market.slug === property.market));
+    if (early.length > 0 && !toFinish) {
+      return (
+        <div className="mx-auto max-w-xl space-y-4">
+          <PageTitle title="Report a problem" back={{ href: "/app", label: "Home" }} />
+          <Notice tone="info" title={preLaunchWords.title(marketNames(early))}>
+            Jobs can be booked from the day we go live. {preLaunchWords.body}
+          </Notice>
+          <Link href="/app/properties" className="font-semibold text-brand underline underline-offset-2">
+            Your properties
+          </Link>
+        </div>
+      );
+    }
+    const waiting = properties.find((property) => (property.status === "setup" || property.status === "past_due") && !early.some((market) => market.slug === property.market));
     return (
       <div className="mx-auto max-w-xl">
         <PageTitle title="Report a problem" back={{ href: "/app", label: "Home" }} />

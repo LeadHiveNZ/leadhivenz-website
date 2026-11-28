@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   description: `How ${brand.name} works for property owners: free to join, fixed prices, charged when a job is done.`,
 };
 
-const UPDATED = "26 November 2026";
+const UPDATED = "27 November 2026";
 
 /**
  * The hours in section 4 come from the launch market's settings (config/markets.ts), so the page cannot say
@@ -59,6 +59,12 @@ export default function Page() {
           company. We never see your card number. Nothing is charged until a job is done at your property. When a job is sent out, its price is held on your
           card: a hold is not a charge, and it is let go if the job does not go ahead. For work that takes a job over {money(DEPOSIT_ABOVE_CENTS)} you can also add a
           New Zealand bank account, once, on Stripe&rsquo;s page, where you agree to the direct debit (section 6).
+        </p>
+        {/* Pre-launch (DECISIONS.md, 2026-11-27, second entry). Only what the app does: src/lib/markets/stage.ts and launch.ts. */}
+        <p>
+          You can make your account and add your properties before {n} opens in your area. That costs nothing. No card is taken and no job can be
+          booked until bookings open there. Once you have added a property in an area, we email you the day bookings open there, and you add your
+          card then.
         </p>
       </Section>
 
